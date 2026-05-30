@@ -17,11 +17,25 @@ echo "$DATA"
 
 ## Phase 3 — Extraction des hooks (seule phase LLM)
 
-À partir du `DATA` ci-dessus, produire une entrée JSON pour chaque hook présent dans `hooks` et `hooks_local`. Les contenus de `hook_scripts` alimentent `code_snippet`.
+À partir du `DATA` ci-dessus, produire une entrée JSON pour chaque **concept fonctionnel réutilisable** trouvé dans les scripts des hooks déclarés dans `hooks` et `hooks_local`. Les contenus de `hook_scripts` alimentent `code_snippet`.
 
-**Règle fondamentale** : ne créer une entrée que pour un hook explicitement déclaré sous la clé `hooks` (ou `hooks_local`). Ne jamais inventer un hook depuis un README, CLAUDE.md ou documentation.
+**Règle fondamentale** : ne créer une entrée que pour un comportement ancré dans un hook explicitement déclaré sous `hooks` (ou `hooks_local`). Ne jamais inventer un hook depuis un README, CLAUDE.md ou documentation.
+
+**Granularité sub-script** : si un script implémente plusieurs concepts distincts et indépendants, créer **une entrée par concept**, pas une seule entrée par événement. Exemples de concepts distincts dans un même script :
+- vérification lint ≠ vérification coverage globale ≠ coverage par fichier modifié
+- détection de tests manquants ≠ exécution des tests
+- Un concept est distinct s'il peut être extrait et réutilisé seul dans un autre projet sans nécessiter le reste du script.
+
+**Analyse des scripts** : lire chaque contenu de `hook_scripts` en entier. Identifier toutes les phases/blocs logiques du script. Pour chaque bloc indépendant, évaluer s'il constitue un pattern réutilisable méritant sa propre entrée dans le catalogue.
 
 **Déduplication** : si un slug figure dans `existing_slugs` → réutiliser ce slug ; le merge ajoutera l'exemple communautaire sans créer de doublon.
+
+**Adaptation obligatoire au projet cible** : les scripts sources peuvent être en bash (`.sh`), Python, etc. Peu importe le langage source, produire **toujours** :
+- `script_path` avec extension `.mjs`
+- `code_snippet` en Node.js pur (builtins uniquement : `fs`, `child_process`, `path`, `os`) — jamais du bash copié verbatim
+- La commande dans `implementation.config` doit référencer le script `.mjs` (ex. `node $CLAUDE_PROJECT_DIR/.claude/hooks/nom.mjs`)
+
+Le concept est **extrait et réimplémenté**, pas copié. Traduire la logique (ex. vérification de pattern dans un fichier) en Node.js idiomatique, avec `readFileSync(0, 'utf8')` pour lire le contexte stdin, `process.exit(0)` implicite, et `{ decision: 'block', reason: '...' }` sur stdout pour bloquer.
 
 Schema d'une entrée (toutes les clés sont requises) :
 
@@ -40,11 +54,11 @@ Schema d'une entrée (toutes les clés sont requises) :
     "type": "settings_json",
     "config": {
       "hooks": {
-        "<HookType>": [{ "matcher": "<trigger>", "hooks": [{ "type": "command", "command": "..." }] }]
+        "<HookType>": [{ "matcher": "<trigger>", "hooks": [{ "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/nom.mjs" }] }]
       }
     },
-    "script_path": ".claude/hooks/nom.sh",
-    "code_snippet": "contenu du script si présent dans hook_scripts, sinon omis"
+    "script_path": ".claude/hooks/nom.mjs",
+    "code_snippet": "implémentation Node.js du concept (jamais du bash)"
   },
   "community_examples": [
     { "repo": "$ARGUMENTS", "file_path": ".claude/settings.json", "added_by": "claude-code-analysis" }

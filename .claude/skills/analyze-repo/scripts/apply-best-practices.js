@@ -39,26 +39,60 @@ for (const [event, entries] of Object.entries(settings.hooks)) {
   }
 }
 
+// Extrait le nom de base d'un script depuis une commande (sans extension ni chemin).
+function scriptBaseName(command) {
+  const match = command.match(/([^/\s]+)\.(sh|mjs|js|py|rb)\b/)
+  return match ? match[1] : null
+}
+
+// Normalise une commande ou un chemin vers la convention .mjs du projet (.sh → .mjs).
+function toMjs(s) {
+  return s ? s.replace(/\.sh\b/g, '.mjs') : s
+}
+
+// Vérifie si une commande équivalente (même script, extension différente) est déjà déclarée.
+function hasEquivalentCommand(event, matcher, command) {
+  const base = scriptBaseName(command)
+  if (!base) return false
+  for (const key of existingCommands) {
+    const [kEvent, kMatcher, kCmd] = key.split(':')
+    if (kEvent === event && kMatcher === matcher && scriptBaseName(kCmd) === base) return true
+  }
+  return false
+}
+
 // Applique un hook dans settings si sa commande n'est pas déjà présente.
+// checkScriptExists : si true, normalise vers .mjs et vérifie que le script existe localement.
 // Retourne le nom du hook si appliqué, null sinon.
-function applyHook(hook, source) {
+function applyHook(hook, source, checkScriptExists = false) {
   const fragment = hook.implementation?.config?.hooks
   if (!fragment) return null
+
+  // Pour les hooks du scan : normaliser .sh → .mjs puis vérifier existence locale
+  if (checkScriptExists) {
+    const scriptPath = toMjs(hook.implementation?.script_path)
+    if (scriptPath && !existsSync(scriptPath)) return null
+  }
+
   let appliedCount = 0
   for (const [event, entries] of Object.entries(fragment)) {
     settings.hooks[event] ??= []
     for (const entry of entries) {
       const matcher = entry.matcher ?? '*'
       for (const h of entry.hooks ?? []) {
-        const key = `${event}:${matcher}:${h.command}`
+        // Normaliser la commande vers .mjs pour les hooks du scan
+        const command = checkScriptExists ? toMjs(h.command) : h.command
+        const key = `${event}:${matcher}:${command}`
         if (existingCommands.has(key)) continue
+        // Éviter les doublons fonctionnels (même script, extension .sh vs .mjs)
+        if (hasEquivalentCommand(event, matcher, command)) continue
         let group = settings.hooks[event].find((e) => (e.matcher ?? '*') === matcher)
         if (!group) {
           group = matcher !== '*' ? { matcher, hooks: [] } : { hooks: [] }
           settings.hooks[event].push(group)
         }
         group.hooks ??= []
-        group.hooks.push(h)
+        group.hooks.push({ ...h, command })
         existingCommands.add(key)
         appliedCount++
       }
@@ -85,7 +119,7 @@ if (candidatesFile && existsSync(candidatesFile)) {
   for (const hook of candidates) {
     // Skip les slugs déjà couverts par RECOMMENDED_SLUGS pour éviter le double affichage
     if (RECOMMENDED_SLUGS.includes(hook.slug)) continue
-    const name = applyHook(hook, 'scan')
+    const name = applyHook(hook, 'scan', true)  // vérifie que le script existe localement
     if (name) { appliedFromScan++; namesFromScan.push(name) }
   }
 }

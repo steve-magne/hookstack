@@ -759,5 +759,471 @@
       "onboarding"
     ],
     "votes": 0
+  },
+  {
+    "id": "pre-bash-enforce-package-managers",
+    "slug": "pre-bash-enforce-package-managers",
+    "name": "Imposer gestionnaires de paquets",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PreToolUse",
+    "trigger": "Bash",
+    "description": "Bloque les commandes pip, poetry, npm et yarn ; impose uv (Python) et pnpm (Node.js). Génère un message actionnable avec la commande de remplacement.",
+    "use_cases": [
+      "Standardiser les outils de gestion de paquets sur un monorepo Python+Node",
+      "Éviter les conflits d'environnements virtuels entre pip et uv"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "matcher": "Bash",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/enforce-package-managers.sh"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/enforce-package-managers.sh",
+      "code_snippet": "#!/bin/bash\n# PreToolUse — Bloque pip/poetry/npm/yarn, impose uv et pnpm.\nINPUT=$(cat)\nCMD=$(echo \"$INPUT\" | python3 -c \"import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))\" 2>/dev/null)\ncheck_forbidden() {\n    local pattern=\"$1\" replacement=\"$2\"\n    if echo \"$CMD\" | grep -qE \"$pattern\"; then\n        echo \"[BLOQUÉ] Commande interdite : $pattern → utiliser $replacement\"\n        exit 2\n    fi\n}\ncheck_forbidden '(^|[;&|[:space:]])pip3? '  'uv run / uv pip'\ncheck_forbidden '(^|[;&|[:space:]])poetry '  'uv'\ncheck_forbidden '(^|[;&|[:space:]])npm '     'pnpm'\ncheck_forbidden '(^|[;&|[:space:]])yarn '    'pnpm'\nexit 0"
+    },
+    "community_examples": [
+      {
+        "repo": "https://github.com/steve-magne/moving-live",
+        "file_path": ".claude/hooks/enforce-package-managers.sh",
+        "added_by": "claude-code-analysis"
+      }
+    ],
+    "tags": [
+      "package-manager",
+      "uv",
+      "pnpm",
+      "python",
+      "node",
+      "validation"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "pre-edit-worktree-guard",
+    "slug": "pre-edit-worktree-guard",
+    "name": "Garde-fou worktree (Edit/Write)",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PreToolUse",
+    "trigger": "Edit|Write",
+    "description": "Bloque tout Edit/Write dont le chemin absolu cible le repo principal au lieu du worktree actif. Suggère le chemin corrigé. Détecte le worktree via .claude/active-worktree ou via git rev-parse.",
+    "use_cases": [
+      "Prévenir les modifications accidentelles du repo principal en mode worktree",
+      "Workflows multi-agents parallèles avec isolement par worktree"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "matcher": "Edit|Write",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/worktree-guard.sh"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/worktree-guard.sh",
+      "code_snippet": "#!/bin/bash\n# PreToolUse — Bloque Edit/Write sur le repo principal quand un worktree est actif.\n# Sources : 1. .claude/active-worktree  2. git rev-parse --show-toplevel\nINPUT=$(cat)\nTOOL_NAME=$(python3 -c \"import sys,json; print(json.load(sys.stdin).get('tool_name',''))\" <<< \"$INPUT\" 2>/dev/null)\n[[ \"$TOOL_NAME\" != \"Edit\" && \"$TOOL_NAME\" != \"Write\" ]] && exit 0\nFILE_PATH=$(python3 -c \"import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('file_path',''))\" <<< \"$INPUT\" 2>/dev/null)\n[ -z \"$FILE_PATH\" ] && exit 0\nMAIN_PATH=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')\n[ -z \"$MAIN_PATH\" ] && exit 0\nACTIVE_WT=\"\"\n[ -f \"${MAIN_PATH}/.claude/active-worktree\" ] && ACTIVE_WT=$(tr -d '[:space:]' < \"${MAIN_PATH}/.claude/active-worktree\")\n[ -z \"$ACTIVE_WT\" ] && GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n \"$GIT_ROOT\" ] && [ \"$GIT_ROOT\" != \"$MAIN_PATH\" ] && ACTIVE_WT=\"$GIT_ROOT\"\n[ -z \"$ACTIVE_WT\" ] && exit 0\nif [[ \"$FILE_PATH\" == \"$MAIN_PATH/\"* ]] && [[ \"$FILE_PATH\" != \"$ACTIVE_WT/\"* ]]; then\n    printf \"WORKTREE GUARD — CHEMIN INCORRECT\\n  Reçu    : %s\\n  Correct : %s\\n\" \"$FILE_PATH\" \"${ACTIVE_WT}${FILE_PATH#$MAIN_PATH}\"\n    exit 2\nfi\nexit 0"
+    },
+    "community_examples": [
+      {
+        "repo": "https://github.com/steve-magne/moving-live",
+        "file_path": ".claude/hooks/worktree-guard.sh",
+        "added_by": "claude-code-analysis"
+      }
+    ],
+    "tags": [
+      "worktree",
+      "multi-agent",
+      "isolation",
+      "workflow"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "stop-quality-check",
+    "slug": "stop-quality-check",
+    "name": "Vérification qualité automatique (Stop)",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "Stop",
+    "trigger": "*",
+    "description": "Exécute une vérification qualité complète à chaque arrêt : lint, type-check, tests unitaires en parallèle, coverage ≥80% global et par fichier modifié, vérification de l'existence des tests. Auto-désactivation après 3 échecs consécutifs (asyncRewake).",
+    "use_cases": [
+      "Definition of Done automatique sans intervention manuelle",
+      "Bloquer les sessions qui laissent des erreurs de lint ou une couverture insuffisante",
+      "Paralléliser build + tests pour minimiser le temps d'attente"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/quality-check.sh",
+                  "timeout": 600,
+                  "statusMessage": "Vérification qualité en cours...",
+                  "asyncRewake": true,
+                  "rewakeMessage": "Des erreurs qualité ont été détectées après la dernière modification :",
+                  "rewakeSummary": "Erreurs qualité détectées"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/quality-check.sh",
+      "code_snippet": "#!/bin/bash\n# Hook Stop — Definition of Done automatique\n# Fail-fast lint → parallèle build/tests → coverage ≥80%\n# Auto-désactivation après ≥3 échecs consécutifs de session.\nCLAUDE_SESSION_PID=\"${PPID:-unknown}\"\nQC_DISABLE_FILE=\"/tmp/.claude-qc-disabled-${CLAUDE_SESSION_PID}\"\n[ -f \"$QC_DISABLE_FILE\" ] && { echo \"[quality-check] SUSPENDU.\"; exit 0; }\ncheck() { local name=\"$1\" cmd=\"$2\"; out=$(bash -c \"$cmd\" 2>&1) || ERRORS+=\"[FAIL] $name\\n$(printf '%s' \"$out\" | tail -10)\\n---\\n\"; }\n$HAS_PY && check ruff \"uv run ruff check --no-fix .\"\n$HAS_FE && check 'pnpm lint' 'cd frontend && pnpm lint'\n$HAS_FE && check type-check 'cd frontend && pnpm type-check'\n$HAS_PY && uv run pytest --cov=app -q & PID_PY=$!\n$HAS_FE && (cd frontend && pnpm test:unit -- --coverage --run) & PID_FE=$!\nwait $PID_PY $PID_FE\n# Coverage globale ≥80% et par fichier modifié"
+    },
+    "community_examples": [
+      {
+        "repo": "https://github.com/steve-magne/moving-live",
+        "file_path": ".claude/hooks/quality-check.sh",
+        "added_by": "claude-code-analysis"
+      }
+    ],
+    "tags": [
+      "quality",
+      "tests",
+      "coverage",
+      "lint",
+      "definition-of-done",
+      "asyncRewake"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "worktree-create-setup-env",
+    "slug": "worktree-create-setup-env",
+    "name": "Initialisation env worktree",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "WorktreeCreate",
+    "trigger": "*",
+    "description": "Copie les fichiers .env et alloue des ports dédiés lors de la création d'un worktree. Exécution asynchrone avec statusMessage visible dans l'UI Claude Code.",
+    "use_cases": [
+      "Isoler les variables d'environnement (ports, secrets) par worktree",
+      "Démarrer plusieurs agents en parallèle sans collision de ports"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "WorktreeCreate": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash setup-worktree-env.sh",
+                  "timeout": 60,
+                  "statusMessage": "Copie des .env et allocation des ports du worktree...",
+                  "async": true
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": "setup-worktree-env.sh"
+    },
+    "community_examples": [
+      {
+        "repo": "https://github.com/steve-magne/moving-live",
+        "file_path": "setup-worktree-env.sh",
+        "added_by": "claude-code-analysis"
+      }
+    ],
+    "tags": [
+      "worktree",
+      "env",
+      "ports",
+      "multi-agent",
+      "async"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "worktree-create-update-deps",
+    "slug": "worktree-create-update-deps",
+    "name": "Mise à jour dépendances worktree",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "WorktreeCreate",
+    "trigger": "*",
+    "description": "Lance la mise à jour des dépendances du projet lors de la création d'un worktree. Exécution asynchrone avec timeout de 300 s pour les installations longues.",
+    "use_cases": [
+      "Garantir que chaque worktree démarre avec des dépendances à jour",
+      "Automatiser le bootstrap d'un nouvel environnement d'agent isolé"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "WorktreeCreate": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash update-lib.sh",
+                  "timeout": 300,
+                  "statusMessage": "Mise à jour des dépendances du worktree...",
+                  "async": true
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": "update-lib.sh"
+    },
+    "community_examples": [
+      {
+        "repo": "https://github.com/steve-magne/moving-live",
+        "file_path": "update-lib.sh",
+        "added_by": "claude-code-analysis"
+      }
+    ],
+    "tags": [
+      "worktree",
+      "dependencies",
+      "bootstrap",
+      "async"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "stop-missing-test-detection",
+    "slug": "stop-missing-test-detection",
+    "name": "Détection des tests manquants (Stop)",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "Stop",
+    "trigger": "*",
+    "description": "À chaque arrêt de session, inspecte git diff pour lister les fichiers sources modifiés et vérifie qu'un fichier de test correspondant existe. Échoue avec la liste des fichiers non couverts si des tests sont absents.",
+    "use_cases": [
+      "Garantir qu'aucun fichier métier ne soit livré sans test associé",
+      "Intégrer un 'Definition of Done' léger sans lancer les tests complets"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/missing-test-detection.sh"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/missing-test-detection.sh",
+      "code_snippet": "#!/bin/bash\n# Stop — Détecte les fichiers sources modifiés sans test correspondant.\nBASE=$(git merge-base origin/main HEAD 2>/dev/null)\nif [ -z \"$BASE\" ] || [ \"$BASE\" = \"$(git rev-parse HEAD 2>/dev/null)\" ]; then\n    MODIFIED=$(git diff --name-only HEAD 2>/dev/null)\nelse\n    MODIFIED=$(git diff --name-only \"$BASE\" HEAD 2>/dev/null)\nfi\nMISSING=\"\"\nwhile IFS= read -r f; do\n    [ -z \"$f\" ] && continue\n    # Adapter le pattern aux dossiers métier du projet\n    case \"$f\" in\n        src/lib/*.ts|src/store/*.ts|src/hooks/*.ts) ;;\n        *) continue ;;\n    esac\n    filename=$(basename \"$f\" .ts)\n    if ! find src -name \"${filename}.test.ts\" -o -name \"${filename}.spec.ts\" 2>/dev/null | grep -q .; then\n        MISSING=\"${MISSING}  - ${f}\\n\"\n    fi\ndone <<< \"$MODIFIED\"\nif [ -n \"$MISSING\" ]; then\n    printf \"[FAIL] Tests manquants pour les fichiers modifiés :\\n%b→ Créer les fichiers de test correspondants.\\n\" \"$MISSING\"\n    exit 2\nfi\nexit 0"
+    },
+    "community_examples": [
+      {
+        "repo": "https://github.com/steve-magne/moving-live",
+        "file_path": ".claude/hooks/missing-test-detection.sh",
+        "added_by": "claude-code-analysis"
+      }
+    ],
+    "tags": [
+      "tests",
+      "missing-tests",
+      "definition-of-done",
+      "git-diff",
+      "coverage"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "stop-per-file-coverage",
+    "slug": "stop-per-file-coverage",
+    "name": "Coverage par fichier modifié (Stop)",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "Stop",
+    "trigger": "*",
+    "description": "Lit le rapport JSON de coverage (vitest/jest coverage-summary.json ou pytest coverage.json) et vérifie que chaque fichier modifié depuis la base merge atteint ≥80% de couverture de lignes. Signale les fichiers en dessous du seuil avec leur pourcentage exact.",
+    "use_cases": [
+      "Bloquer une session qui a baissé la coverage sur un fichier spécifique sans le voir dans la coverage globale",
+      "Cibler le feedback sur les fichiers réellement modifiés plutôt que le projet entier"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/per-file-coverage.sh"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/per-file-coverage.sh",
+      "code_snippet": "#!/bin/bash\n# Stop — Vérifie la coverage ≥80% pour chaque fichier modifié individuellement.\n# Lit coverage/coverage-summary.json (vitest) ou coverage.json (pytest).\nCOV_JSON=\"./coverage/coverage-summary.json\"\n[ ! -f \"$COV_JSON\" ] && exit 0  # Pas de rapport → skip silencieux\nBASE=$(git merge-base origin/main HEAD 2>/dev/null)\nif [ -z \"$BASE\" ] || [ \"$BASE\" = \"$(git rev-parse HEAD 2>/dev/null)\" ]; then\n    MODIFIED=$(git diff --name-only HEAD 2>/dev/null)\nelse\n    MODIFIED=$(git diff --name-only \"$BASE\" HEAD 2>/dev/null)\nfi\nLOW_COV=\"\"\nwhile IFS= read -r f; do\n    [ -z \"$f\" ] && continue\n    # Adapter le pattern et les exclusions au projet\n    [[ \"$f\" == src/*.ts ]] || [[ \"$f\" == src/*.tsx ]] || continue\n    case \"$f\" in src/types/*|src/constants/*|src/router/*|src/main.*) continue ;; esac\n    abs=\"$(pwd)/$f\"\n    pct=$(jq --arg p \"$abs\" '.[$p].lines.pct // -1' \"$COV_JSON\" 2>/dev/null)\n    [ \"$pct\" = \"-1\" ] || [ \"$pct\" = \"null\" ] && continue\n    if awk \"BEGIN {exit !($pct < 80)}\"; then\n        LOW_COV=\"${LOW_COV}  - ${f}: $(printf '%.0f' \"$pct\")%\\n\"\n    fi\ndone <<< \"$MODIFIED\"\nif [ -n \"$LOW_COV\" ]; then\n    printf \"[FAIL] Coverage < 80%% pour les fichiers modifiés :\\n%b→ Ajouter des tests pour atteindre le seuil.\\n\" \"$LOW_COV\"\n    exit 2\nfi\nexit 0"
+    },
+    "community_examples": [
+      {
+        "repo": "https://github.com/steve-magne/moving-live",
+        "file_path": ".claude/hooks/per-file-coverage.sh",
+        "added_by": "claude-code-analysis"
+      }
+    ],
+    "tags": [
+      "coverage",
+      "per-file",
+      "git-diff",
+      "vitest",
+      "pytest",
+      "definition-of-done"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "stop-session-dedup-autodisable",
+    "slug": "stop-session-dedup-autodisable",
+    "name": "Auto-désactivation hook Stop après N échecs",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "Stop",
+    "trigger": "*",
+    "description": "Mécanisme de déduplication par session : utilise $PPID comme identifiant de session stable, compte les échecs consécutifs dans /tmp, et désactive automatiquement le hook après ≥3 échecs sans correction. Affiche les instructions de réactivation. Réinitialise le compteur sur succès. Prévient les boucles de re-réveil asyncRewake infinies.",
+    "use_cases": [
+      "Éviter qu'un hook Stop flaky bloque indéfiniment une session via asyncRewake",
+      "Suspendre automatiquement les checks qualité quand les erreurs sont connues et en cours de correction",
+      "Protéger tout hook Stop potentiellement instable sans modifier sa logique principale"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/quality-check.sh",
+                  "asyncRewake": true
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/quality-check.sh",
+      "code_snippet": "#!/bin/bash\n# Mécanisme de déduplication de session — à intégrer en tête de tout hook Stop.\n# $PPID = PID du processus Claude Code parent, stable toute la session.\nCLAUDE_SESSION_PID=\"${PPID:-unknown}\"\nQC_COUNTER_FILE=\"/tmp/.claude-qc-count-${CLAUDE_SESSION_PID}\"\nQC_DISABLE_FILE=\"/tmp/.claude-qc-disabled-${CLAUDE_SESSION_PID}\"\n\n# Vérifier si désactivé pour cette session\nif [ -f \"$QC_DISABLE_FILE\" ]; then\n    echo \"[hook] SUSPENDU pour cette session (≥3 échecs consécutifs sans correction).\"\n    echo \"  → Corriger les erreurs, puis : rm '${QC_DISABLE_FILE}'\"\n    exit 0\nfi\n\n# Appeler cette fonction à la place de 'exit 2' pour comptabiliser l'échec\nemit_errors() {\n    local count\n    count=$(( $(cat \"$QC_COUNTER_FILE\" 2>/dev/null || echo 0) + 1 ))\n    echo \"$count\" > \"$QC_COUNTER_FILE\"\n    if [ \"$count\" -ge 3 ]; then\n        touch \"$QC_DISABLE_FILE\"\n        ERRORS=\"${ERRORS}[AUTO-DISABLE] hook suspendu après ${count} échecs consécutifs.\\n  rm '${QC_DISABLE_FILE}' pour réactiver.\\n---\\n\"\n    fi\n    printf \"%b\" \"$ERRORS\"\n    exit 2\n}\n\n# ... logique principale du hook ...\n\n# Sur succès : réinitialiser le compteur\nrm -f \"$QC_COUNTER_FILE\"\nexit 0"
+    },
+    "community_examples": [
+      {
+        "repo": "https://github.com/steve-magne/moving-live",
+        "file_path": ".claude/hooks/quality-check.sh",
+        "added_by": "claude-code-analysis"
+      }
+    ],
+    "tags": [
+      "dedup",
+      "session",
+      "auto-disable",
+      "asyncRewake",
+      "ppid",
+      "resilience"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "stop-i18n-validation",
+    "slug": "stop-i18n-validation",
+    "name": "Validation i18n complète (Stop)",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "Stop",
+    "trigger": "*",
+    "description": "Valide la cohérence des fichiers de traduction à chaque arrêt de session : toutes les clés utilisées dans le code existent dans les fichiers i18n, et aucune clé orpheline ne traîne. S'exécute uniquement si des fichiers frontend ont été modifiés.",
+    "use_cases": [
+      "Empêcher de livrer des chaînes non traduites ou des clés orphelines",
+      "Valider automatiquement les traductions sans attendre la CI"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/i18n-validation.sh"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/i18n-validation.sh",
+      "code_snippet": "#!/bin/bash\n# Stop — Valide la cohérence i18n si des fichiers frontend ont été modifiés.\n# Adapter la commande au gestionnaire i18n du projet (vue-i18n, i18next, etc.)\n\n# Vérifier si des fichiers frontend ont changé\nBASE=$(git merge-base origin/main HEAD 2>/dev/null)\nif [ -z \"$BASE\" ] || [ \"$BASE\" = \"$(git rev-parse HEAD 2>/dev/null)\" ]; then\n    MODIFIED=$(git diff --name-only HEAD 2>/dev/null)\nelse\n    MODIFIED=$(git diff --name-only \"$BASE\" HEAD 2>/dev/null)\nfi\n\nHAS_FE=false\nwhile IFS= read -r f; do\n    [[ \"$f\" == frontend/* ]] || [[ \"$f\" == src/* ]] && HAS_FE=true && break\ndone <<< \"$MODIFIED\"\n$HAS_FE || exit 0\n\n# Adapter selon le projet :\n# Vue + vue-i18n  : cd frontend && pnpm validate:translations\n# React + i18next : cd frontend && npx i18next-parser --fail-on-warnings\n# Python + babel  : pybabel compile -d app/translations --statistics\nif ! output=$(cd frontend && pnpm validate:translations 2>&1); then\n    printf \"[FAIL] i18n invalide :\\n%s\\n\" \"$output\"\n    exit 2\nfi\n\nexit 0"
+    },
+    "community_examples": [
+      {
+        "repo": "https://github.com/steve-magne/moving-live",
+        "file_path": ".claude/hooks/i18n-validation.sh",
+        "added_by": "claude-code-analysis"
+      }
+    ],
+    "tags": [
+      "i18n",
+      "translations",
+      "validation",
+      "frontend",
+      "definition-of-done"
+    ],
+    "votes": 0
   }
 ]

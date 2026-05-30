@@ -22,5 +22,13 @@
     "hooks_found": 1,
     "hooks_added": 1,
     "status": "success"
+  },
+  {
+    "url": "https://github.com/steve-magne/moving-live",
+    "name": "steve-magne/moving-live",
+    "scanned_at": "2026-05-30T00:45:08.861Z",
+    "hooks_found": 9,
+    "hooks_added": 2,
+    "status": "success"
   }
 ]

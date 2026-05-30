@@ -1,0 +1,52 @@
+// @vitest-environment node
+import { describe, it, expect } from 'vitest';
+import { run } from './enforce-package-managers.mjs';
+
+describe('enforce-package-managers', () => {
+  it('laisse passer un outil non-Bash', () => {
+    expect(run({ tool_name: 'Write', tool_input: { file_path: 'x.ts' } })).toBeNull();
+  });
+
+  it('laisse passer pnpm install', () => {
+    expect(run({ tool_name: 'Bash', tool_input: { command: 'pnpm install' } })).toBeNull();
+  });
+
+  it('laisse passer une commande sans gestionnaire de paquets', () => {
+    expect(run({ tool_name: 'Bash', tool_input: { command: 'echo hello' } })).toBeNull();
+  });
+
+  it('laisse passer si tool_input est absent', () => {
+    expect(run({ tool_name: 'Bash' })).toBeNull();
+  });
+
+  it('bloque npm install', () => {
+    const r = run({ tool_name: 'Bash', tool_input: { command: 'npm install' } });
+    expect(r?.decision).toBe('block');
+    expect(r?.reason).toContain('pnpm');
+  });
+
+  it('bloque npm seul', () => {
+    const r = run({ tool_name: 'Bash', tool_input: { command: 'npm' } });
+    expect(r?.decision).toBe('block');
+  });
+
+  it('bloque npm enchaîné après &&', () => {
+    const r = run({ tool_name: 'Bash', tool_input: { command: 'cd app && npm install' } });
+    expect(r?.decision).toBe('block');
+  });
+
+  it('bloque yarn add', () => {
+    const r = run({ tool_name: 'Bash', tool_input: { command: 'yarn add lodash' } });
+    expect(r?.decision).toBe('block');
+    expect(r?.reason).toContain('pnpm');
+  });
+
+  it('bloque yarn seul', () => {
+    const r = run({ tool_name: 'Bash', tool_input: { command: 'yarn' } });
+    expect(r?.decision).toBe('block');
+  });
+
+  it('ne bloque pas une commande contenant "npm" dans un nom de fichier', () => {
+    expect(run({ tool_name: 'Bash', tool_input: { command: 'cat package.json' } })).toBeNull();
+  });
+});

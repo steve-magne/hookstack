@@ -13,6 +13,7 @@ const VALID_CATEGORIES = ['security', 'context', 'validation', 'notification', '
 const VALID_HOOK_TYPES = [
   'PreToolUse', 'PostToolUse', 'UserPromptSubmit', 'Notification',
   'Stop', 'SubagentStop', 'PreCompact', 'SessionStart', 'SessionEnd',
+  'WorktreeCreate',
 ]
 
 // Commandes pouvant bloquer l'agent si utilisées en pre-hook sur trigger large

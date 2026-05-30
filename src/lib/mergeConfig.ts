@@ -23,7 +23,7 @@ export function mergeSettings(hooks: Hook[]): { hooks: HooksMap } {
         if (existing) {
           existing.hooks.push(...entry.hooks)
         } else {
-          merged[event].push({ ...entry })
+          merged[event].push({ ...entry, hooks: [...entry.hooks] })
         }
       }
     }

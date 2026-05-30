@@ -11,6 +11,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/block-destructive.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-package-managers.mjs"
           }
         ]
       },
@@ -20,6 +24,40 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/protect-paths.mjs"
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/setup-worktree-env.mjs",
+            "timeout": 30,
+            "statusMessage": "Copie des fichiers .env dans le worktree...",
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/update-deps.mjs",
+            "timeout": 300,
+            "statusMessage": "Installation des dépendances Node dans le worktree...",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/missing-test-detection.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/per-file-coverage.mjs"
           }
         ]
       }
