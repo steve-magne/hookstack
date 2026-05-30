@@ -1,12 +1,4 @@
-// Création de l'issue de soumission de repo sur le dépôt du registre.
-//
-// En POC, deux modes :
-//  1. Si Supabase est configuré, on enregistre la soumission et une Edge
-//     Function / GitHub App crée l'issue côté serveur (token non exposé).
-//  2. Sinon, on génère une URL "pré-remplie" GitHub que l'utilisateur valide
-//     lui-même — aucun token côté client, pattern sûr pour un POC public.
-
-const REGISTRY_REPO = import.meta.env.VITE_REGISTRY_REPO as string | undefined
+const REGISTRY_REPO = process.env.NEXT_PUBLIC_REGISTRY_REPO as string | undefined
 
 export interface SubmissionResult {
   mode: 'prefilled-url'
@@ -30,7 +22,6 @@ export function buildSubmissionIssueUrl(repoUrl: string): SubmissionResult {
   return { mode: 'prefilled-url', issueUrl }
 }
 
-/** Validation basique d'une URL de dépôt GitHub public. */
 export function isValidGitHubRepoUrl(value: string): boolean {
   return /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/?$/.test(value.trim())
 }

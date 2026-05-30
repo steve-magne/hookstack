@@ -1,20 +1,18 @@
+'use client'
+
 import { useMemo, useState } from 'react'
 import { FilterBar } from './FilterBar'
 import { HookCard } from './HookCard'
 import { HookConfigurator } from './HookConfigurator'
-import { allHooks, emptyFilters, filterHooks } from '../lib/hooks'
-import type { Category } from '../types/hook'
+import { allHooks, emptyFilters, filterHooks } from '@/lib/hooks'
+import type { Category } from '@/types/hook'
 
 interface Props {
   initialCategory?: Category | null
-  /** Affiche le configurateur sous la grille (true par défaut). */
   showConfigurator?: boolean
 }
 
-export function CatalogueExplorer({
-  initialCategory,
-  showConfigurator = true,
-}: Props) {
+export function CatalogueExplorer({ initialCategory, showConfigurator = true }: Props) {
   const [filters, setFilters] = useState({
     ...emptyFilters,
     categories: initialCategory ? [initialCategory] : [],
@@ -25,11 +23,7 @@ export function CatalogueExplorer({
   return (
     <div>
       <div className="mb-8">
-        <FilterBar
-          filters={filters}
-          onChange={setFilters}
-          resultCount={results.length}
-        />
+        <FilterBar filters={filters} onChange={setFilters} resultCount={results.length} />
       </div>
 
       {results.length > 0 ? (

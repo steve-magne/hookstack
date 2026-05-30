@@ -10,8 +10,7 @@
 }
 
 html,
-body,
-#root {
+body {
   height: 100%;
 }
 
@@ -25,20 +24,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Léger dégradé d'ambiance en haut de page */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background:
-    radial-gradient(60% 50% at 50% 0%, rgba(99, 102, 241, 0.12), transparent 70%);
+  background: radial-gradient(60% 50% at 50% 0%, rgba(99, 102, 241, 0.12), transparent 70%);
   pointer-events: none;
   z-index: 0;
-}
-
-#root {
-  position: relative;
-  z-index: 1;
 }
 
 code,

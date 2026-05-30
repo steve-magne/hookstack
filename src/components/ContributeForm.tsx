@@ -1,9 +1,8 @@
+'use client'
+
 import { useState } from 'react'
 import { ExternalLink, GitPullRequest } from 'lucide-react'
-import {
-  buildSubmissionIssueUrl,
-  isValidGitHubRepoUrl,
-} from '../lib/github'
+import { buildSubmissionIssueUrl, isValidGitHubRepoUrl } from '@/lib/github'
 
 export function ContributeForm() {
   const [repoUrl, setRepoUrl] = useState('')

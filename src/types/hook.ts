@@ -1,5 +1,3 @@
-// Types du domaine Hookit — alignés sur le schema registry.json
-
 export type Provider = 'claude-code' | 'copilot-vscode'
 
 export type Category =
@@ -10,7 +8,6 @@ export type Category =
   | 'workflow'
   | 'documentation'
 
-// Événements de hook supportés par Claude Code
 export type HookType =
   | 'PreToolUse'
   | 'PostToolUse'
@@ -30,13 +27,9 @@ export interface CommunityExample {
 }
 
 export interface HookImplementation {
-  // Type de livrable généré : un fragment de settings.json
   type: 'settings_json'
-  // Fragment `hooks` prêt à fusionner dans settings.json
   config: Record<string, unknown>
-  // Script associé (bash/python) référencé par la config, si applicable
   code_snippet?: string
-  // Chemin suggéré pour le script
   script_path?: string
 }
 
@@ -47,7 +40,6 @@ export interface Hook {
   category: Category
   provider: Provider[]
   hook_type: HookType
-  // Matcher (outil ciblé) — ex. "Bash", "Write|Edit", "*"
   trigger: string
   description: string
   use_cases: string[]
@@ -66,7 +58,6 @@ export interface ScannedRepo {
   status: 'success' | 'error' | 'no-hooks'
 }
 
-// Liste ordonnée des events pour les filtres (présents dans le seed en priorité)
 export const HOOK_TYPES: HookType[] = [
   'PreToolUse',
   'PostToolUse',

@@ -1,8 +1,10 @@
+'use client'
+
 import { useMemo, useState } from 'react'
 import { Check, Copy, Download, Trash2 } from 'lucide-react'
-import { useSelection } from '../store/selection'
-import { allHooks } from '../lib/hooks'
-import { collectScripts, toSettingsJson } from '../lib/mergeConfig'
+import { useSelection } from '@/store/selection'
+import { allHooks } from '@/lib/hooks'
+import { collectScripts, toSettingsJson } from '@/lib/mergeConfig'
 
 export function HookConfigurator() {
   const selected = useSelection((s) => s.selected)
@@ -10,10 +12,7 @@ export function HookConfigurator() {
   const clear = useSelection((s) => s.clear)
   const [copied, setCopied] = useState(false)
 
-  const hooks = useMemo(
-    () => allHooks.filter((h) => selected.includes(h.slug)),
-    [selected]
-  )
+  const hooks = useMemo(() => allHooks.filter((h) => selected.includes(h.slug)), [selected])
   const json = useMemo(() => toSettingsJson(hooks), [hooks])
   const scripts = useMemo(() => collectScripts(hooks), [hooks])
 
@@ -104,9 +103,7 @@ export function HookConfigurator() {
           <div className="space-y-3">
             {scripts.map((s) => (
               <div key={s.path}>
-                <div className="mb-1 font-mono text-xs text-indigo-300">
-                  {s.path}
-                </div>
+                <div className="mb-1 font-mono text-xs text-indigo-300">{s.path}</div>
                 <pre className="max-h-60 overflow-auto rounded-lg border border-[var(--color-border)] bg-[#0d0d14] p-3 text-xs text-zinc-200">
                   <code>{s.content}</code>
                 </pre>

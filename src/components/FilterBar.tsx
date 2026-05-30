@@ -1,3 +1,5 @@
+'use client'
+
 import { Search, X } from 'lucide-react'
 import {
   CATEGORY_LABELS,
@@ -6,8 +8,8 @@ import {
   type Category,
   type HookType,
   type Provider,
-} from '../types/hook'
-import { allHooks, type HookFilters } from '../lib/hooks'
+} from '@/types/hook'
+import { allHooks, type HookFilters } from '@/lib/hooks'
 
 interface Props {
   filters: HookFilters
@@ -17,7 +19,6 @@ interface Props {
 
 const categories = Object.keys(CATEGORY_LABELS) as Category[]
 const providers = Object.keys(PROVIDER_LABELS) as Provider[]
-// On ne propose que les events réellement présents dans le catalogue.
 const presentEvents = new Set(allHooks.map((h) => h.hook_type))
 const events = HOOK_TYPES.filter((e) => presentEvents.has(e))
 
@@ -47,10 +48,7 @@ export function FilterBar({ filters, onChange, resultCount }: Props) {
     })
 
   const hasActive =
-    filters.query ||
-    filters.categories.length ||
-    filters.providers.length ||
-    filters.events.length
+    filters.query || filters.categories.length || filters.providers.length || filters.events.length
 
   const chip = (active: boolean) =>
     `rounded-full px-3 py-1 text-sm font-medium transition-colors ${
@@ -72,39 +70,25 @@ export function FilterBar({ filters, onChange, resultCount }: Props) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs uppercase tracking-wide text-zinc-500">
-          Catégorie
-        </span>
+        <span className="text-xs uppercase tracking-wide text-zinc-500">Catégorie</span>
         {categories.map((c) => (
-          <button
-            key={c}
-            onClick={() => toggleCategory(c)}
-            className={chip(filters.categories.includes(c))}
-          >
+          <button key={c} onClick={() => toggleCategory(c)} className={chip(filters.categories.includes(c))}>
             {CATEGORY_LABELS[c]}
           </button>
         ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs uppercase tracking-wide text-zinc-500">
-          Provider
-        </span>
+        <span className="text-xs uppercase tracking-wide text-zinc-500">Provider</span>
         {providers.map((p) => (
-          <button
-            key={p}
-            onClick={() => toggleProvider(p)}
-            className={chip(filters.providers.includes(p))}
-          >
+          <button key={p} onClick={() => toggleProvider(p)} className={chip(filters.providers.includes(p))}>
             {PROVIDER_LABELS[p]}
           </button>
         ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs uppercase tracking-wide text-zinc-500">
-          Event
-        </span>
+        <span className="text-xs uppercase tracking-wide text-zinc-500">Event</span>
         {events.map((e) => (
           <button
             key={e}
@@ -117,12 +101,12 @@ export function FilterBar({ filters, onChange, resultCount }: Props) {
       </div>
 
       <div className="flex items-center justify-between text-sm text-zinc-500">
-        <span>{resultCount} hook{resultCount > 1 ? 's' : ''}</span>
+        <span>
+          {resultCount} hook{resultCount > 1 ? 's' : ''}
+        </span>
         {hasActive && (
           <button
-            onClick={() =>
-              onChange({ query: '', categories: [], providers: [], events: [] })
-            }
+            onClick={() => onChange({ query: '', categories: [], providers: [], events: [] })}
             className="flex items-center gap-1 text-zinc-400 hover:text-white"
           >
             <X className="size-3.5" /> Réinitialiser

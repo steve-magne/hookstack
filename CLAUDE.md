@@ -1,18 +1,75 @@
 # CLAUDE.md
 
+## Toolstack
+
+| Outil | Version | Rôle |
+|---|---|---|
+| Next.js | 15 (App Router) | Framework React — SSR, routing, Server Components |
+| TypeScript | 5.x | Typage statique |
+| Tailwind CSS | v4 | Styles utilitaires |
+| Zustand | latest | État global client (sélection de hooks) |
+| Supabase | latest | Auth GitHub + persistance des soumissions (optionnel) |
+| pnpm | 9.x | Gestionnaire de paquets |
+
+## Structure de projet
+
+```
+hookit/
+├── src/
+│   ├── app/                         # Pages Next.js App Router (Server Components)
+│   │   ├── page.tsx                 # Route / — Home (hero + catalogue)
+│   │   ├── layout.tsx               # Layout racine (HTML, polices, providers)
+│   │   ├── globals.css              # Styles globaux Tailwind
+│   │   ├── contribute/              # Route /contribute — soumission de dépôt GitHub
+│   │   └── hook/[slug]/             # Route /hook/[slug] — détail d'un hook
+│   ├── components/                  # Composants React (tous marqués 'use client')
+│   │   ├── Header.tsx               # Barre de navigation principale
+│   │   ├── HookCard.tsx             # Carte d'un hook dans le catalogue
+│   │   ├── HookConfigurator.tsx     # Panneau sélection + génération settings.json
+│   │   ├── CatalogueExplorer.tsx    # Grille de hooks filtrables
+│   │   ├── FilterBar.tsx            # Filtres catégorie / provider / recherche
+│   │   ├── Badge.tsx                # Badge générique (catégorie, provider…)
+│   │   └── ContributeForm.tsx       # Formulaire de soumission de dépôt
+│   ├── lib/
+│   │   ├── hooks.ts                 # allHooks — charge registry.json, point d'accès aux données
+│   │   ├── mergeConfig.ts           # Fusionne les hooks sélectionnés → settings.json valide
+│   │   ├── supabase.ts              # Client Supabase (auth + soumissions, optionnel)
+│   │   └── github.ts               # Appels GitHub API (stars, metadata dépôts)
+│   ├── store/
+│   │   └── selection.ts             # Zustand — slugs sélectionnés, persistés localStorage
+│   └── types/
+│       └── hook.ts                  # Type Hook et types dérivés
+├── registry/
+│   ├── registry.json                # Source de vérité unique du catalogue (tous les hooks)
+│   └── scanned-repos.json           # Dépôts déjà analysés (évite les doublons CI)
+├── .claude/
+│   ├── settings.json                # Config hooks Claude Code actifs pour ce projet
+│   ├── hooks/                       # Scripts hooks Node.js (.mjs) — sécurité, qualité
+│   └── skills/analyze-repo/         # Skill CI : analyse un dépôt GitHub → PR registre
+├── .github/
+│   └── workflows/analyze-repo.yml   # Action déclenchée sur issue labelisée repo-submission
+├── supabase/
+│   └── schema.sql                   # Schéma BDD Supabase (table soumissions)
+├── doc/hookit/                      # Documentation produit (personas, valeur, hook 101…)
+├── public/                          # Assets statiques (logo, favicon…)
+├── next.config.ts                   # Config Next.js
+├── postcss.config.mjs               # Config PostCSS / Tailwind v4
+└── tsconfig.json                    # Config TypeScript
+```
+
 ## Commandes
 
 ```bash
-npm run dev          # Serveur de développement Vite
-npm run build        # tsc -b + vite build (prod)
-npm run typecheck    # Vérification TypeScript sans émission
-npm run lint         # ESLint
-npm run preview      # Prévisualisation du build prod
+pnpm dev             # Serveur de développement Next.js (port 3000)
+pnpm build           # Build de production Next.js
+pnpm start           # Serveur de production
+pnpm typecheck       # Vérification TypeScript sans émission
+pnpm lint            # ESLint via next lint
 ```
 
 ## Architecture
 
-Hookit est un catalogue communautaire de hooks agentiques (Claude Code, GitHub Copilot). POC React + Vite + TypeScript + Tailwind v4.
+Hookit est un catalogue communautaire de hooks agentiques (Claude Code, GitHub Copilot). Next.js 15 (App Router) + TypeScript + Tailwind v4.
 
 **Source de données** : `registry/registry.json` est la seule source de vérité — lue directement par `src/lib/hooks.ts` (via `allHooks`). Supabase (via `src/lib/supabase.ts`) est optionnel — il n'active que l'auth GitHub et la persistance des soumissions. Sans `.env`, tout fonctionne en mode registre local.
 
@@ -24,7 +81,9 @@ Hookit est un catalogue communautaire de hooks agentiques (Claude Code, GitHub C
 
 **Type `Hook`** (`src/types/hook.ts`) : chaque hook a un `slug`, une `category`, un ou plusieurs `provider[]`, un `hook_type` (événement Claude Code), un `trigger` (matcher d'outil, ex. `"Bash"`, `"Write|Edit"`, `"*"`), et une `implementation` de type `settings_json` avec un fragment `config` prêt à fusionner.
 
-**Routes** : `/` (Home), `/catalogue` (liste filtrée), `/hook/:slug` (détail), `/contribute` (soumission de dépôt).
+**Routes** : `/` (Home = hero + catalogue), `/hook/[slug]` (détail), `/contribute` (soumission de dépôt).
+
+**Composants** : tous marqués `'use client'` (Zustand + state). Les pages (`app/`) sont des Server Components sauf `hook/[slug]/page.tsx` (utilise `useParams` + Zustand).
 
 ## Ajouter un hook au registre
 
@@ -59,4 +118,4 @@ Ajouter une entrée dans `registry/registry.json` en respectant le type `Hook`. 
 
 ## Variables d'environnement
 
-Voir `.env.example` : `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_REGISTRY_REPO` (format `org/repo`). Toutes optionnelles pour le développement local.
+Voir `.env.example` : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_REGISTRY_REPO` (format `org/repo`). Toutes optionnelles pour le développement local.

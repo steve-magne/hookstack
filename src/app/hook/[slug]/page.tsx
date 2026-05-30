@@ -1,12 +1,15 @@
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, Plus } from 'lucide-react'
-import { getHookBySlug } from '../lib/hooks'
-import { useSelection } from '../store/selection'
-import { CategoryBadge, HookTypeBadge } from '../components/Badge'
-import { PROVIDER_LABELS } from '../types/hook'
+'use client'
 
-export function HookDetail() {
-  const { slug } = useParams()
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
+import { ArrowLeft, Check, Plus } from 'lucide-react'
+import { getHookBySlug } from '@/lib/hooks'
+import { useSelection } from '@/store/selection'
+import { CategoryBadge, HookTypeBadge } from '@/components/Badge'
+import { PROVIDER_LABELS } from '@/types/hook'
+
+export default function HookDetailPage() {
+  const { slug } = useParams<{ slug: string }>()
   const hook = slug ? getHookBySlug(slug) : undefined
   const selected = useSelection((s) => (slug ? s.selected.includes(slug) : false))
   const toggle = useSelection((s) => s.toggle)
@@ -15,7 +18,7 @@ export function HookDetail() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center text-zinc-400">
         <p>Hook introuvable.</p>
-        <Link to="/catalogue" className="mt-4 inline-block text-indigo-300 underline">
+        <Link href="/" className="mt-4 inline-block text-indigo-300 underline">
           Retour au catalogue
         </Link>
       </div>
@@ -27,7 +30,7 @@ export function HookDetail() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <Link
-        to="/catalogue"
+        href="/"
         className="mb-6 inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white"
       >
         <ArrowLeft className="size-4" /> Catalogue

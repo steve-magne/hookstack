@@ -6,6 +6,8 @@ dist/
 dist-ssr/
 *.local
 *.tsbuildinfo
+coverage
+.next
 
 # Env
 .env
@@ -30,4 +32,3 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
-coverage

@@ -1,7 +1,9 @@
-import { Link } from 'react-router-dom'
+'use client'
+
+import Link from 'next/link'
 import { Check, Plus } from 'lucide-react'
-import type { Hook } from '../types/hook'
-import { useSelection } from '../store/selection'
+import type { Hook } from '@/types/hook'
+import { useSelection } from '@/store/selection'
 import { CategoryBadge, HookTypeBadge } from './Badge'
 
 export function HookCard({ hook }: { hook: Hook }) {
@@ -25,13 +27,11 @@ export function HookCard({ hook }: { hook: Hook }) {
         </button>
       </div>
 
-      <Link to={`/hook/${hook.slug}`} className="flex-1">
+      <Link href={`/hook/${hook.slug}`} className="flex-1">
         <h3 className="mb-1 font-semibold leading-snug text-zinc-100 group-hover:text-white">
           {hook.name}
         </h3>
-        <p className="mb-3 line-clamp-3 text-sm text-zinc-400">
-          {hook.description}
-        </p>
+        <p className="mb-3 line-clamp-3 text-sm text-zinc-400">{hook.description}</p>
       </Link>
 
       <div className="mt-auto flex flex-wrap items-center gap-2">

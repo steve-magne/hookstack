@@ -1,8 +1,8 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 interface SelectionState {
-  selected: string[] // slugs
+  selected: string[]
   toggle: (slug: string) => void
   add: (slug: string) => void
   remove: (slug: string) => void
@@ -22,15 +22,17 @@ export const useSelection = create<SelectionState>()(
         })),
       add: (slug) =>
         set((s) => ({
-          selected: s.selected.includes(slug)
-            ? s.selected
-            : [...s.selected, slug],
+          selected: s.selected.includes(slug) ? s.selected : [...s.selected, slug],
         })),
-      remove: (slug) =>
-        set((s) => ({ selected: s.selected.filter((x) => x !== slug) })),
+      remove: (slug) => set((s) => ({ selected: s.selected.filter((x) => x !== slug) })),
       clear: () => set({ selected: [] }),
       has: (slug) => get().selected.includes(slug),
     }),
-    { name: 'hookit-selection' }
+    {
+      name: 'hookit-selection',
+      storage: createJSONStorage(() =>
+        typeof window !== 'undefined' ? localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} }
+      ),
+    }
   )
 )
