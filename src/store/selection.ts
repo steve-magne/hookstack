@@ -29,7 +29,7 @@ export const useSelection = create<SelectionState>()(
       has: (slug) => get().selected.includes(slug),
     }),
     {
-      name: 'hookit-selection',
+      name: 'claudehooks-selection',
       storage: createJSONStorage(() =>
         typeof window !== 'undefined' ? localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} }
       ),

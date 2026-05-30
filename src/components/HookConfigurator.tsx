@@ -3,19 +3,23 @@
 import { useMemo, useState } from 'react'
 import { Check, Copy, Download, Terminal, Trash2 } from 'lucide-react'
 import { useSelection } from '@/store/selection'
-import { allHooks } from '@/lib/hooks'
+import { allHooks, localizeHook } from '@/lib/hooks'
 import { collectScripts, generateInstallScript, toSettingsJson } from '@/lib/mergeConfig'
-import { useT } from '@/lib/locale-context'
+import { useLocale, useT } from '@/lib/locale-context'
 
 export function HookConfigurator() {
   const T = useT()
+  const locale = useLocale()
   const selected = useSelection((s) => s.selected)
   const remove = useSelection((s) => s.remove)
   const clear = useSelection((s) => s.clear)
   const [copied, setCopied] = useState(false)
   const [scriptCopied, setScriptCopied] = useState(false)
 
-  const hooks = useMemo(() => allHooks.filter((h) => selected.includes(h.slug)), [selected])
+  const hooks = useMemo(
+    () => allHooks.filter((h) => selected.includes(h.slug)).map((h) => localizeHook(h, locale)),
+    [selected, locale]
+  )
   const json = useMemo(() => toSettingsJson(hooks), [hooks])
   const scripts = useMemo(() => collectScripts(hooks), [hooks])
 
@@ -70,28 +74,28 @@ export function HookConfigurator() {
         <div className="flex gap-2">
           <button
             onClick={copy}
-            className="flex items-center gap-2 rounded-lg bg-[var(--color-brand)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-2)]"
+            className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-100 transition-colors"
           >
             {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
             {copied ? T.copied : T.copy}
           </button>
           <button
             onClick={copyInstallScript}
-            className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-[var(--color-surface-2)]"
+            className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-zinc-200 hover:bg-[var(--color-surface-2)] hover:border-zinc-500 transition-colors"
             title="node install-hooks.mjs"
           >
-            {scriptCopied ? <Check className="size-4 text-emerald-400" /> : <Terminal className="size-4" />}
+            {scriptCopied ? <Check className="size-4 text-zinc-200" /> : <Terminal className="size-4" />}
             {scriptCopied ? T.installScriptCopied : T.installScript}
           </button>
           <button
             onClick={download}
-            className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-[var(--color-surface-2)]"
+            className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-zinc-200 hover:bg-[var(--color-surface-2)] hover:border-zinc-500 transition-colors"
           >
             <Download className="size-4" /> settings.json
           </button>
           <button
             onClick={clear}
-            className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-zinc-400 hover:text-rose-300"
+            className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:border-white/30 transition-colors"
           >
             <Trash2 className="size-4" />
           </button>
@@ -106,13 +110,13 @@ export function HookConfigurator() {
             className="group flex items-center gap-1.5 rounded-full bg-[var(--color-surface-2)] px-3 py-1 text-xs text-zinc-300 ring-1 ring-inset ring-[var(--color-border)]"
           >
             {h.name}
-            <span className="text-zinc-500 group-hover:text-rose-300">✕</span>
+            <span className="text-zinc-500 group-hover:text-zinc-200">✕</span>
           </button>
         ))}
       </div>
 
       <div>
-        <div className="mb-1 text-xs uppercase tracking-wide text-zinc-500">
+        <div className="mb-1 text-xs uppercase tracking-wide text-zinc-400">
           ~/.claude/settings.json (ou .claude/settings.json du projet)
         </div>
         <pre className="max-h-96 overflow-auto rounded-xl border border-[var(--color-border)] bg-[#0d0d14] p-4 text-xs leading-relaxed text-zinc-200">
@@ -122,13 +126,13 @@ export function HookConfigurator() {
 
       {scripts.length > 0 && (
         <div>
-          <div className="mb-2 text-xs uppercase tracking-wide text-zinc-500">
+          <div className="mb-2 text-xs uppercase tracking-wide text-zinc-400">
             {T.scriptsToCreate} ({scripts.length})
           </div>
           <div className="space-y-3">
             {scripts.map((s) => (
               <div key={s.path}>
-                <div className="mb-1 font-mono text-xs text-indigo-300">{s.path}</div>
+                <div className="mb-1 font-mono text-xs text-zinc-300">{s.path}</div>
                 <pre className="max-h-60 overflow-auto rounded-lg border border-[var(--color-border)] bg-[#0d0d14] p-3 text-xs text-zinc-200">
                   <code>{s.content}</code>
                 </pre>

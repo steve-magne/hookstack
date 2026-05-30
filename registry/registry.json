@@ -48,7 +48,18 @@
       "secrets",
       "devsecops"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Secret detection before Bash execution",
+        "description": "Intercepts every shell command and scans it for API keys, tokens or plaintext passwords before execution. Blocks the command if a secret pattern is found.",
+        "use_cases": [
+          "Credential protection",
+          "DevSecOps audit",
+          "Leak prevention in CI/CD"
+        ]
+      }
+    }
   },
   {
     "id": "pre-bash-block-destructive",
@@ -99,7 +110,18 @@
       "safety",
       "guardrail"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Destructive command blocking",
+        "description": "Blocks potentially destructive shell commands (rm -rf /, mkfs, dd to a disk, git reset --hard on sensitive paths) before the agent runs them.",
+        "use_cases": [
+          "Guardrail on dev machines",
+          "Data loss prevention",
+          "Shared environments"
+        ]
+      }
+    }
   },
   {
     "id": "pre-edit-protect-paths",
@@ -150,7 +172,18 @@
       "protection",
       "secrets"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Sensitive file write protection",
+        "description": "Prevents the agent from modifying sensitive files (.env, secrets, private keys, CI lockfiles) by intercepting the Write and Edit tools and checking the target path.",
+        "use_cases": [
+          "Configuration protection",
+          "Compliance",
+          "Local secrets integrity"
+        ]
+      }
+    }
   },
   {
     "id": "pre-bash-guard-git-push-main",
@@ -195,7 +228,18 @@
       "workflow",
       "guardrail"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "git push to main guardrail",
+        "description": "Detects direct git push commands to main/master and blocks them to force going through a branch and a pull request.",
+        "use_cases": [
+          "Branch discipline",
+          "Main branch protection",
+          "GitFlow workflow"
+        ]
+      }
+    }
   },
   {
     "id": "user-prompt-inject-conventions",
@@ -239,7 +283,18 @@
       "prompt",
       "standards"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Project conventions injection",
+        "description": "On every user prompt, automatically injects the project conventions (stack, style rules, constraints) by reading a conventions file, so the agent stays aligned without manual reminders.",
+        "use_cases": [
+          "Code consistency",
+          "Agent onboarding",
+          "Team standards"
+        ]
+      }
+    }
   },
   {
     "id": "session-start-load-git-context",
@@ -289,7 +344,18 @@
       "session",
       "awareness"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Load Git context at startup",
+        "description": "At session start, injects the repository state: current branch, git status, latest commits. The agent starts with a clear view of the project state.",
+        "use_cases": [
+          "Context resumption",
+          "Git awareness",
+          "Multiple sessions"
+        ]
+      }
+    }
   },
   {
     "id": "user-prompt-inject-datetime",
@@ -332,7 +398,18 @@
       "datetime",
       "prompt"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Current date and time injection",
+        "description": "Adds the current date and time to the context of every prompt, preventing the agent from reasoning with an incorrect cutoff date.",
+        "use_cases": [
+          "Correct temporal reasoning",
+          "Timestamped logs",
+          "Changelogs"
+        ]
+      }
+    }
   },
   {
     "id": "post-write-autoformat",
@@ -377,7 +454,18 @@
       "format",
       "quality"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Automatic formatting after write",
+        "description": "After every file write or edit, runs Prettier on the modified file to ensure consistent formatting without agent intervention.",
+        "use_cases": [
+          "Style consistency",
+          "Reduced diff noise",
+          "Code quality"
+        ]
+      }
+    }
   },
   {
     "id": "post-write-eslint",
@@ -422,7 +510,18 @@
       "lint",
       "quality"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "ESLint lint after write",
+        "description": "Runs ESLint on the file just written and returns the errors to the agent so it fixes them immediately within the same loop.",
+        "use_cases": [
+          "Continuous quality",
+          "Auto-fix loop",
+          "Lint standards"
+        ]
+      }
+    }
   },
   {
     "id": "post-edit-typecheck",
@@ -467,7 +566,18 @@
       "typecheck",
       "quality"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "TypeScript type checking",
+        "description": "Runs the TypeScript compiler in no-emit mode after a .ts/.tsx file is modified and reports typing errors back to the agent.",
+        "use_cases": [
+          "Type safety",
+          "Early error detection",
+          "Strict TypeScript projects"
+        ]
+      }
+    }
   },
   {
     "id": "stop-run-tests",
@@ -511,7 +621,18 @@
       "ci",
       "quality"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Run tests at end of response",
+        "description": "When the agent finishes its response, runs the test suite. If tests fail, sends the agent back to work to fix them before handing back control.",
+        "use_cases": [
+          "Assisted TDD",
+          "Regression safety net",
+          "Quality before handoff"
+        ]
+      }
+    }
   },
   {
     "id": "notification-slack",
@@ -555,7 +676,18 @@
       "webhook",
       "monitoring"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Slack notification on agent event",
+        "description": "Relays agent notifications (permission request, awaiting input) to a Slack channel via webhook, useful for long or unattended sessions.",
+        "use_cases": [
+          "Long sessions",
+          "Remote supervision",
+          "Team collaboration"
+        ]
+      }
+    }
   },
   {
     "id": "session-end-audit-log",
@@ -605,7 +737,18 @@
       "logging",
       "devsecops"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "End-of-session audit log",
+        "description": "At session end, writes an audit line (timestamp, end reason, directory) to a local log file for DevSecOps traceability.",
+        "use_cases": [
+          "Traceability",
+          "DevSecOps audit",
+          "Usage reporting"
+        ]
+      }
+    }
   },
   {
     "id": "pre-webfetch-domain-allowlist",
@@ -650,7 +793,18 @@
       "webfetch",
       "allowlist"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Domain allowlist for WebFetch",
+        "description": "Controls the agent's network access by only allowing WebFetch to a list of approved domains. Any other URL is blocked.",
+        "use_cases": [
+          "Network control",
+          "Data compliance",
+          "Restricted environments"
+        ]
+      }
+    }
   },
   {
     "id": "post-bash-cost-tracker",
@@ -694,7 +848,18 @@
       "metrics",
       "finops"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Tool usage tracking",
+        "description": "Increments a counter per tool type after each use and logs the activity, providing a view of the agent's usage intensity per session.",
+        "use_cases": [
+          "Observability",
+          "Usage analysis",
+          "Agentic FinOps"
+        ]
+      }
+    }
   },
   {
     "id": "stop-generate-changelog",
@@ -738,7 +903,18 @@
       "git",
       "summary"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Session summary generation",
+        "description": "At session end, captures the diff of modified files and appends it to a timestamped change log, creating an automatic changelog of what the agent produced.",
+        "use_cases": [
+          "Automatic changelog",
+          "Change traceability",
+          "Post-hoc review"
+        ]
+      }
+    }
   },
   {
     "id": "session-start-load-instructions",
@@ -788,7 +964,18 @@
       "instructions",
       "onboarding"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Load project instructions at startup",
+        "description": "At session start, automatically injects the contents of the .claude/instructions.md file into the agent's context, excluding specific subdirectories (e.g. compiler). The agent starts with the project conventions and instructions without manual reminders.",
+        "use_cases": [
+          "Agent onboarding",
+          "Persistent project context",
+          "Automatic team instructions"
+        ]
+      }
+    }
   },
   {
     "id": "pre-bash-enforce-package-managers",
@@ -840,7 +1027,17 @@
       "node",
       "validation"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Enforce package managers",
+        "description": "Blocks pip, poetry, npm and yarn commands; enforces uv (Python) and pnpm (Node.js). Generates an actionable message with the replacement command.",
+        "use_cases": [
+          "Standardize package management tooling across a Python+Node monorepo",
+          "Avoid virtual environment conflicts between pip and uv"
+        ]
+      }
+    }
   },
   {
     "id": "pre-edit-worktree-guard",
@@ -890,7 +1087,17 @@
       "isolation",
       "workflow"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Worktree guardrail (Edit/Write)",
+        "description": "Blocks any Edit/Write whose absolute path targets the main repo instead of the active worktree. Suggests the corrected path. Detects the worktree via .claude/active-worktree or via git rev-parse.",
+        "use_cases": [
+          "Prevent accidental changes to the main repo in worktree mode",
+          "Parallel multi-agent workflows with per-worktree isolation"
+        ]
+      }
+    }
   },
   {
     "id": "stop-quality-check",
@@ -947,7 +1154,18 @@
       "definition-of-done",
       "asyncRewake"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Automatic quality check (Stop)",
+        "description": "Runs a full quality check on every stop: lint, type-check, unit tests in parallel, coverage ≥80% globally and per modified file, and verification that tests exist. Auto-disables after 3 consecutive failures (asyncRewake).",
+        "use_cases": [
+          "Automatic Definition of Done with no manual intervention",
+          "Block sessions that leave lint errors or insufficient coverage",
+          "Parallelize build + tests to minimize wait time"
+        ]
+      }
+    }
   },
   {
     "id": "worktree-create-setup-env",
@@ -999,7 +1217,17 @@
       "multi-agent",
       "async"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Worktree env initialization",
+        "description": "Copies .env files and allocates dedicated ports when a worktree is created. Runs asynchronously with a statusMessage visible in the Claude Code UI.",
+        "use_cases": [
+          "Isolate environment variables (ports, secrets) per worktree",
+          "Start multiple agents in parallel without port collisions"
+        ]
+      }
+    }
   },
   {
     "id": "worktree-create-update-deps",
@@ -1050,7 +1278,17 @@
       "bootstrap",
       "async"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Worktree dependency update",
+        "description": "Runs the project dependency update when a worktree is created. Runs asynchronously with a 300 s timeout for long installs.",
+        "use_cases": [
+          "Ensure every worktree starts with up-to-date dependencies",
+          "Automate bootstrapping of a new isolated agent environment"
+        ]
+      }
+    }
   },
   {
     "id": "stop-missing-test-detection",
@@ -1100,7 +1338,17 @@
       "git-diff",
       "coverage"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Missing test detection (Stop)",
+        "description": "On every session stop, inspects git diff to list modified source files and checks that a matching test file exists. Fails with the list of uncovered files if tests are missing.",
+        "use_cases": [
+          "Ensure no business file ships without an associated test",
+          "Integrate a lightweight 'Definition of Done' without running the full test suite"
+        ]
+      }
+    }
   },
   {
     "id": "stop-per-file-coverage",
@@ -1151,7 +1399,17 @@
       "pytest",
       "definition-of-done"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Per-modified-file coverage (Stop)",
+        "description": "Reads the JSON coverage report (vitest/jest coverage-summary.json or pytest coverage.json) and checks that each file modified since the merge base reaches ≥80% line coverage. Reports files below the threshold with their exact percentage.",
+        "use_cases": [
+          "Block a session that lowered coverage on a specific file without seeing it in global coverage",
+          "Focus feedback on the files actually modified rather than the whole project"
+        ]
+      }
+    }
   },
   {
     "id": "stop-session-dedup-autodisable",
@@ -1204,7 +1462,18 @@
       "ppid",
       "resilience"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Auto-disable Stop hook after N failures",
+        "description": "Per-session deduplication mechanism: uses $PPID as a stable session identifier, counts consecutive failures in /tmp, and automatically disables the hook after ≥3 failures without a fix. Shows reactivation instructions. Resets the counter on success. Prevents infinite asyncRewake re-wake loops.",
+        "use_cases": [
+          "Prevent a flaky Stop hook from blocking a session indefinitely via asyncRewake",
+          "Automatically suspend quality checks when errors are known and being fixed",
+          "Protect any potentially unstable Stop hook without changing its core logic"
+        ]
+      }
+    }
   },
   {
     "id": "stop-i18n-validation",
@@ -1254,7 +1523,17 @@
       "frontend",
       "definition-of-done"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Full i18n validation (Stop)",
+        "description": "Validates the consistency of translation files on every session stop: every key used in the code exists in the i18n files, and no orphan key lingers. Runs only if frontend files were modified.",
+        "use_cases": [
+          "Prevent shipping untranslated strings or orphan keys",
+          "Validate translations automatically without waiting for CI"
+        ]
+      }
+    }
   },
   {
     "id": "notification-tts-voice",
@@ -1305,7 +1584,17 @@
       "audio",
       "attention"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "TTS voice notification",
+        "description": "Announces out loud via the system text-to-speech (say/espeak) when the agent needs the user's attention.",
+        "use_cases": [
+          "Alert the user during long autonomous runs",
+          "Audible notification when the agent awaits a validation"
+        ]
+      }
+    }
   },
   {
     "id": "stop-tts-completion",
@@ -1356,7 +1645,17 @@
       "completion",
       "audio"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Voice task-completion announcement",
+        "description": "Announces out loud via TTS that the agent has finished its task, with a random completion message.",
+        "use_cases": [
+          "Get notified without watching the screen when the task is done",
+          "Audio feedback at the end of a long session"
+        ]
+      }
+    }
   },
   {
     "id": "subagent-start-tts-announce",
@@ -1407,7 +1706,17 @@
       "parallel-agents",
       "audio"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Subagent start voice announcement",
+        "description": "Announces out loud via TTS when a subagent starts, to track parallel agent activity.",
+        "use_cases": [
+          "Audio traceability of parallel agents",
+          "Track subagent startup without a visual interface"
+        ]
+      }
+    }
   },
   {
     "id": "subagent-stop-tts-summary",
@@ -1459,7 +1768,17 @@
       "locking",
       "audio"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Subagent end voice summary",
+        "description": "Announces the end of a subagent with a voice message. Uses a file lock to avoid TTS overlap when several subagents finish in parallel.",
+        "use_cases": [
+          "Audio tracking of completed parallel tasks",
+          "Ordered subagent-end announcements without sound collisions"
+        ]
+      }
+    }
   },
   {
     "id": "user-prompt-log-session",
@@ -1509,7 +1828,17 @@
       "prompt",
       "history"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Per-session prompt log",
+        "description": "Persists every user prompt into a per-session JSON file, allowing the exchange history to be retrieved.",
+        "use_cases": [
+          "Audit prompts submitted per session",
+          "Replay or analyze a past session"
+        ]
+      }
+    }
   },
   {
     "id": "user-prompt-llm-agent-name",
@@ -1559,7 +1888,17 @@
       "identity",
       "personalization"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Automatic session naming",
+        "description": "Automatically generates a creative one-word name for each session (e.g. Phoenix, Sage, Nova) on the first prompt, for more human-friendly session tracking.",
+        "use_cases": [
+          "Identify sessions in logs by a memorable name",
+          "Personalize subagent TTS announcements"
+        ]
+      }
+    }
   },
   {
     "id": "pre-compact-transcript-backup",
@@ -1610,7 +1949,17 @@
       "context",
       "audit"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Transcript backup before compaction",
+        "description": "Automatically backs up the JSONL transcript file before every context compaction, to allow auditing or restoration.",
+        "use_cases": [
+          "Keep a full history before compaction",
+          "Audit long sessions"
+        ]
+      }
+    }
   },
   {
     "id": "permission-request-auto-allow-readonly",
@@ -1661,7 +2010,17 @@
       "readonly",
       "policy"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Auto-approve read-only permissions",
+        "description": "Automatically approves permission requests for read-only operations (Read, Glob, Grep, safe Bash commands) without manual intervention.",
+        "use_cases": [
+          "Reduce interruptions for non-destructive operations",
+          "Automated security policy based on command safety"
+        ]
+      }
+    }
   },
   {
     "id": "post-tool-failure-log",
@@ -1712,7 +2071,17 @@
       "audit",
       "error-tracking"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Structured tool failure log",
+        "description": "Records every tool failure into a structured JSON file with timestamp, tool name, input and error, for debugging and auditing.",
+        "use_cases": [
+          "Debug tools that fail during autonomous sessions",
+          "Detect recurring failure patterns"
+        ]
+      }
+    }
   },
   {
     "id": "setup-check-install-deps",
@@ -1764,7 +2133,17 @@
       "uv",
       "install"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Dependency check and install at startup",
+        "description": "Checks for the required system tools and automatically installs the project dependencies (npm ci, uv sync) at session startup.",
+        "use_cases": [
+          "Environment always ready as soon as a session opens",
+          "Automatic onboarding on a new project"
+        ]
+      }
+    }
   },
   {
     "id": "session-end-cleanup-temp",
@@ -1814,7 +2193,17 @@
       "temp-files",
       "maintenance"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Temporary file cleanup at session end",
+        "description": "Automatically removes temporary files (.tmp) and stale artifacts from the logs directory at session end.",
+        "use_cases": [
+          "Keep a clean logs directory without manual intervention",
+          "Free disk space at the end of a long session"
+        ]
+      }
+    }
   },
   {
     "id": "session-start-reinject-after-compact",
@@ -1865,7 +2254,18 @@
       "session",
       "conventions"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Re-inject context after compaction",
+        "description": "Re-injects the project conventions and critical context into the session after Claude Code compacts the context window, preventing the loss of important information.",
+        "use_cases": [
+          "Recall the project conventions (package manager, code style) after compaction",
+          "Re-inject the current sprint or critical tasks",
+          "Recall important test or build commands"
+        ]
+      }
+    }
   },
   {
     "id": "config-change-audit-log",
@@ -1916,7 +2316,18 @@
       "compliance",
       "logging"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Configuration change audit log",
+        "description": "Records every change to a Claude Code configuration file (settings.json, skills, etc.) into a timestamped audit log for traceability and compliance.",
+        "use_cases": [
+          "Track who changed the Claude Code configuration and when",
+          "Compliance audit on settings.json changes",
+          "Detect unauthorized configuration changes"
+        ]
+      }
+    }
   },
   {
     "id": "cwd-changed-reload-direnv",
@@ -1978,7 +2389,18 @@
       "cwd",
       "monorepo"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Reload direnv on directory change",
+        "description": "Automatically reloads environment variables via direnv when Claude changes its working directory, ensuring Bash commands use the right environment for the current directory.",
+        "use_cases": [
+          "Mono-repo projects with different environments per subfolder",
+          "Automatic .envrc management with direnv",
+          "Sync CLAUDE_ENV_FILE with the current directory's environment"
+        ]
+      }
+    }
   },
   {
     "id": "permission-request-auto-allow-exit-plan",
@@ -2029,7 +2451,18 @@
       "automation",
       "approval"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Automatic ExitPlanMode approval",
+        "description": "Automatically approves the ExitPlanMode permission request, removing the interactive dialog every time Claude finishes presenting a plan and asks to proceed.",
+        "use_cases": [
+          "Planning workflows where manual approval is always granted",
+          "CI/CD automation with plan mode enabled",
+          "Reduce interruptions during intensive interactive sessions"
+        ]
+      }
+    }
   },
   {
     "id": "post-bash-command-log",
@@ -2080,6 +2513,17 @@
       "audit",
       "history"
     ],
-    "votes": 0
+    "votes": 0,
+    "i18n": {
+      "en": {
+        "name": "Bash command log",
+        "description": "Records every Bash command executed by Claude into a timestamped log file for audit, debugging and a history of the session's actions.",
+        "use_cases": [
+          "Audit all shell commands executed by Claude",
+          "Debug Claude Code sessions after the fact",
+          "Action history for compliance or documentation"
+        ]
+      }
+    }
   }
 ]

@@ -70,8 +70,8 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
               onClick={() => toggle(hook.slug)}
               className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
                 selected
-                  ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30'
-                  : 'bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-2)]'
+                  ? 'bg-white/10 text-white ring-1 ring-inset ring-white/25'
+                  : 'bg-white text-zinc-900 hover:bg-zinc-100'
               }`}
             >
               {selected ? <Check className="size-4" /> : <Plus className="size-4" />}
@@ -88,27 +88,27 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
 
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">
                 {T.useCases}
               </h3>
               <ul className="space-y-1.5 text-sm text-zinc-300">
                 {hook.use_cases.map((u) => (
                   <li key={u} className="flex items-start gap-2">
-                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[var(--color-brand)]" />
+                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-white/60" />
                     {u}
                   </li>
                 ))}
               </ul>
             </div>
             <div>
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">
                 {T.providersAndTags}
               </h3>
               <div className="mb-3 flex flex-wrap gap-2">
                 {hook.provider.map((p) => (
                   <span
                     key={p}
-                    className="rounded-md bg-[var(--color-surface-2)] px-2 py-0.5 text-xs text-zinc-300 ring-1 ring-inset ring-[var(--color-border)]"
+                    className="rounded-md bg-[var(--color-surface-2)] px-2 py-0.5 text-xs text-zinc-200 ring-1 ring-inset ring-zinc-600/60"
                   >
                     {PROVIDER_LABELS[p]}
                   </span>
@@ -116,7 +116,7 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {hook.tags.map((t) => (
-                  <span key={t} className="text-xs text-zinc-500">
+                  <span key={t} className="text-xs text-zinc-400">
                     #{t}
                   </span>
                 ))}
@@ -126,14 +126,14 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
 
           <div className="mt-6">
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
                 {T.settingsFragment}
               </h3>
               <button
                 onClick={copyFragment}
-                className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-2.5 py-1 text-xs font-medium text-zinc-300 transition-colors hover:bg-[var(--color-surface-2)]"
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-600 bg-[var(--color-surface-2)] px-2.5 py-1 text-xs font-medium text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-[var(--color-surface-2)]/80"
               >
-                {copied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
+                {copied ? <Check className="size-3.5 text-zinc-200" /> : <Copy className="size-3.5" />}
                 {copied ? T.copied : T.copy}
               </button>
             </div>
@@ -144,7 +144,7 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
 
           {hook.implementation.code_snippet && (
             <div className="mt-6">
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">
                 Script · {hook.implementation.script_path}
               </h3>
               <pre className="max-h-72 overflow-auto rounded-xl border border-[var(--color-border)] bg-[#0d0d14] p-4 text-xs text-zinc-200">

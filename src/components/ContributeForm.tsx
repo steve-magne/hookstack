@@ -33,14 +33,14 @@ export function ContributeForm() {
             value={repoUrl}
             onChange={(e) => setRepoUrl(e.target.value)}
             placeholder="https://github.com/org/repo"
-            className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-[var(--color-brand)] focus:outline-none"
+            className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2.5 text-sm text-zinc-100 placeholder:text-[var(--color-text-muted)] focus:border-white/40 focus:ring-1 focus:ring-white/10 focus:outline-none transition-colors"
           />
-          {error && <p className="mt-1.5 text-sm text-rose-400">{error}</p>}
+          {error && <p className="mt-1.5 text-sm text-zinc-400">{error}</p>}
         </div>
 
         <button
           type="submit"
-          className="flex items-center gap-2 rounded-lg bg-[var(--color-brand)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-2)]"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 hover:bg-zinc-100 transition-colors"
         >
           <GitPullRequest className="size-4" />
           {T.contributeSubmitBtn}
@@ -48,17 +48,17 @@ export function ContributeForm() {
       </form>
 
       {issueUrl && (
-        <div className="mt-5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
-          <p className="mb-2 text-sm text-emerald-200">{T.contributeSuccessText}</p>
+        <div className="mt-5 rounded-lg border border-white/15 bg-white/6 p-4">
+          <p className="mb-2 text-sm text-zinc-200">{T.contributeSuccessText}</p>
           <a
             href={issueUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 text-sm font-medium text-emerald-300 underline"
+            className="inline-flex items-center gap-2 text-sm font-medium text-white underline underline-offset-2"
           >
             <ExternalLink className="size-4" /> {T.contributeIssueLink}
           </a>
-          <p className="mt-3 text-xs text-emerald-200/70">
+          <p className="mt-3 text-xs text-zinc-500">
             {T.contributeNote.split('repo-submission').map((part, i, arr) =>
               i < arr.length - 1 ? (
                 <span key={i}>

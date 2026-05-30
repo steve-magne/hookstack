@@ -100,6 +100,8 @@ Produire une entrée JSON pour chaque **principe d'automatisation concret** iden
 
 Le concept est **réimplémenté en Node.js idiomatique** : `readFileSync(0, 'utf8')` pour lire stdin, `process.exit(0)` implicite si pas de blocage, `{ decision: 'block', reason: '...' }` sur stdout pour bloquer.
 
+**Contenu bilingue obligatoire** : le catalogue est multilingue. Le **français est canonique** (champs racine `name`, `description`, `use_cases`). Produire **toujours** un overlay `i18n.en` traduisant ces trois champs en anglais. Seuls ces champs en langage naturel sont traduits — jamais `slug`, `tags`, `trigger`, `code_snippet`, ni la config. Le tableau `i18n.en.use_cases` doit avoir le même nombre d'éléments que `use_cases`.
+
 **Schema d'une entrée** (toutes les clés requises) :
 
 ```json
@@ -113,6 +115,13 @@ Le concept est **réimplémenté en Node.js idiomatique** : `readFileSync(0, 'ut
   "trigger": "Bash|Write|Edit|WebFetch|*",
   "description": "Ce que fait ce hook, en français.",
   "use_cases": ["cas 1", "cas 2"],
+  "i18n": {
+    "en": {
+      "name": "Short English name",
+      "description": "What this hook does, in English.",
+      "use_cases": ["case 1", "case 2"]
+    }
+  },
   "implementation": {
     "type": "settings_json",
     "config": {

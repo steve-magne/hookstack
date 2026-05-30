@@ -34,6 +34,7 @@ const hooks = JSON.parse(readFileSync(hooksFile, 'utf8'))
 const validated = []
 const rejected = []
 const recommended = []
+const i18nNotices = [] // overlay EN manquant/incomplet — non bloquant (fallback FR)
 
 for (const hook of hooks) {
   const errors = []
@@ -88,6 +89,14 @@ for (const hook of hooks) {
 
   validated.push(hook)
 
+  // — Overlay de traduction (catalogue multilingue, fallback FR si absent) —
+  const en = hook.i18n?.en
+  if (!en || !en.name || !en.description || !Array.isArray(en.use_cases) || en.use_cases.length === 0) {
+    i18nNotices.push(`${hook.slug}: overlay i18n.en absent ou incomplet`)
+  } else if (en.use_cases.length !== hook.use_cases.length) {
+    i18nNotices.push(`${hook.slug}: i18n.en.use_cases (${en.use_cases.length}) ≠ use_cases (${hook.use_cases.length})`)
+  }
+
   // — Critères d'application automatique au projet courant —
   // Bénéfiques universellement : sécurité et validation, implémentation concrète, sans effets réseau en pre-hook
   const isSafeForProject =
@@ -109,6 +118,10 @@ console.log(`Validation : ${validated.length}/${total} valide(s), ${rejected.len
 if (rejected.length > 0) {
   console.log('Rejetés :')
   for (const r of rejected) console.log(`  ✗ ${r.slug}: ${r.errors.join('; ')}`)
+}
+if (i18nNotices.length > 0) {
+  console.log('Traductions EN à compléter (non bloquant) :')
+  for (const n of i18nNotices) console.log(`  · ${n}`)
 }
 if (validated.some(h => {
   const cmds = Object.values(h.implementation?.config?.hooks ?? {}).flat().flatMap(e => e.hooks ?? [])

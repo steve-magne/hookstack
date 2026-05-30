@@ -2,9 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Github, Webhook } from 'lucide-react'
+import { Webhook } from 'lucide-react'
 import { useSelection } from '@/store/selection'
-import { isSupabaseEnabled, signInWithGitHub } from '@/lib/supabase'
 import { useLocale, useT } from '@/lib/locale-context'
 import type { Locale } from '@/lib/i18n'
 
@@ -32,8 +31,8 @@ export function Header() {
     <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-bg)]/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3">
         <Link href={`/${locale}`} className="flex items-center gap-2 font-semibold">
-          <Webhook className="size-6 text-[var(--color-brand)]" />
-          <span className="text-lg">Hookit</span>
+          <Webhook className="size-6 text-white" />
+          <span className="text-lg">Claude Hooks</span>
         </Link>
 
         <nav className="ml-6 flex items-center gap-1">
@@ -49,7 +48,7 @@ export function Header() {
           {count > 0 && (
             <a
               href="#config"
-              className="rounded-full bg-[var(--color-brand)]/15 px-3 py-1 text-sm font-medium text-indigo-300 ring-1 ring-[var(--color-brand)]/30"
+              className="rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white ring-1 ring-white/20"
             >
               {count} {count > 1 ? T.hooksSelectedMany : T.hooksSelectedOne}
             </a>
@@ -71,15 +70,6 @@ export function Header() {
             </Link>
           </div>
 
-          <button
-            onClick={() => isSupabaseEnabled && signInWithGitHub()}
-            title={isSupabaseEnabled ? T.signInTitle : T.signInTitleDisabled}
-            className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-[var(--color-surface-2)] disabled:opacity-50"
-            disabled={!isSupabaseEnabled}
-          >
-            <Github className="size-4" />
-            <span className="hidden sm:inline">{T.signIn}</span>
-          </button>
         </div>
       </div>
     </header>

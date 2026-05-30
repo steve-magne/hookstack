@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowLeft, Check, Plus } from 'lucide-react'
-import { getHookBySlug } from '@/lib/hooks'
+import { getHookBySlug, localizeHook } from '@/lib/hooks'
 import { useSelection } from '@/store/selection'
 import { useT, useLocale } from '@/lib/locale-context'
 import { CategoryBadge, HookTypeBadge } from '@/components/Badge'
@@ -13,7 +13,8 @@ export default function HookDetailPage() {
   const { slug } = useParams<{ slug: string; locale: string }>()
   const locale = useLocale()
   const T = useT()
-  const hook = slug ? getHookBySlug(slug) : undefined
+  const base = slug ? getHookBySlug(slug) : undefined
+  const hook = base ? localizeHook(base, locale) : undefined
   const selected = useSelection((s) => (slug ? s.selected.includes(slug) : false))
   const toggle = useSelection((s) => s.toggle)
 

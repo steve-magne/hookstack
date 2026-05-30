@@ -33,6 +33,17 @@ export interface HookImplementation {
   script_path?: string
 }
 
+/**
+ * Overlay de traduction d'un hook. Seuls les champs en langage naturel sont
+ * traduits ; le français reste la langue canonique (champs racine du Hook).
+ * Clé = code de locale (ex. "en"). Voir localizeHook dans lib/hooks.ts.
+ */
+export interface HookI18n {
+  name?: string
+  description?: string
+  use_cases?: string[]
+}
+
 export interface Hook {
   id: string
   slug: string
@@ -47,6 +58,7 @@ export interface Hook {
   community_examples: CommunityExample[]
   tags: string[]
   votes: number
+  i18n?: Record<string, HookI18n>
 }
 
 export interface ScannedRepo {
@@ -56,6 +68,23 @@ export interface ScannedRepo {
   hooks_found: number
   hooks_added: number
   status: 'success' | 'error' | 'no-hooks'
+}
+
+export interface HookTypeInfo {
+  label: string
+  blocking: boolean | null
+}
+
+export const HOOK_TYPE_INFO: Record<HookType, HookTypeInfo> = {
+  PreToolUse:       { label: "Avant l'exécution d'un outil · peut bloquer",        blocking: true  },
+  PostToolUse:      { label: "Après l'exécution d'un outil · non bloquant",         blocking: false },
+  UserPromptSubmit: { label: "À la soumission du prompt · peut enrichir l'input",  blocking: true  },
+  Notification:     { label: "Quand Claude veut notifier l'utilisateur",            blocking: false },
+  Stop:             { label: "Quand l'agent termine sa tâche",                      blocking: false },
+  SubagentStop:     { label: "Quand un sous-agent termine",                         blocking: false },
+  PreCompact:       { label: "Avant la compaction du contexte · peut injecter",     blocking: true  },
+  SessionStart:     { label: "Au démarrage d'une session Claude Code",              blocking: false },
+  SessionEnd:       { label: "À la fermeture d'une session Claude Code",            blocking: false },
 }
 
 export const HOOK_TYPES: HookType[] = [
@@ -80,12 +109,12 @@ export const CATEGORY_LABELS: Record<Category, string> = {
 }
 
 export const CATEGORY_COLORS: Record<Category, string> = {
-  security: 'bg-rose-500/15 text-rose-300 ring-rose-500/30',
-  context: 'bg-sky-500/15 text-sky-300 ring-sky-500/30',
-  validation: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30',
-  notification: 'bg-amber-500/15 text-amber-300 ring-amber-500/30',
-  workflow: 'bg-violet-500/15 text-violet-300 ring-violet-500/30',
-  documentation: 'bg-teal-500/15 text-teal-300 ring-teal-500/30',
+  security:      'bg-white/8 text-zinc-200 ring-white/15',
+  context:       'bg-white/6 text-zinc-300 ring-white/12',
+  validation:    'bg-white/8 text-zinc-200 ring-white/15',
+  notification:  'bg-white/6 text-zinc-300 ring-white/12',
+  workflow:      'bg-white/8 text-zinc-200 ring-white/15',
+  documentation: 'bg-white/6 text-zinc-300 ring-white/12',
 }
 
 export const PROVIDER_LABELS: Record<Provider, string> = {
