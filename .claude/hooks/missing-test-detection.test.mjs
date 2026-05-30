@@ -44,6 +44,17 @@ describe('missing-test-detection', () => {
     expect(result.exitCode).toBe(0);
   });
 
+  it('ignore les fichiers de test eux-mêmes (.test.ts / .spec.ts)', () => {
+    const exec = (cmd) => {
+      if (cmd.includes('merge-base')) return 'abc';
+      if (cmd.includes('rev-parse')) return 'def';
+      if (cmd.includes('diff')) return 'src/lib/i18n.test.ts\nsrc/lib/mergeConfig.spec.ts';
+      return '';
+    };
+    const result = run(makeOpts({ exec }));
+    expect(result.exitCode).toBe(0);
+  });
+
   it('retourne exitCode 0 si les tests existent', () => {
     const exec = (cmd) => {
       if (cmd.includes('merge-base')) return 'abc';

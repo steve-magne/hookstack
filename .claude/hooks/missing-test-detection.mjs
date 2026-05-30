@@ -34,6 +34,7 @@ export function run({
   const missing = [];
   for (const f of raw.split('\n').filter(Boolean)) {
     if (!/^src\/(lib|store|hooks)\/[^/]+\.ts$/.test(f)) continue;
+    if (/\.(test|spec)\.ts$/.test(f)) continue; // un fichier de test n'exige pas son propre test
     const name = basename(f, '.ts');
     const found = exec(`find src -name "${name}.test.ts" -o -name "${name}.spec.ts"`);
     if (!found) missing.push(f);

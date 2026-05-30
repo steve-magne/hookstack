@@ -20,6 +20,10 @@ export interface Translations {
   filterCategory: string
   filterProvider: string
   filterEvent: string
+  groupByEvent: string
+  groupByCategory: string
+  viewFullPage: string
+  close: string
   reset: string
   removeFromSelection: string
   addToSelection: string
@@ -70,6 +74,10 @@ const fr: Translations = {
   filterCategory: 'Catégorie',
   filterProvider: 'Provider',
   filterEvent: 'Event',
+  groupByEvent: "Par type d'event",
+  groupByCategory: 'Par catégorie',
+  viewFullPage: 'Voir la page complète',
+  close: 'Fermer',
   reset: 'Réinitialiser',
   removeFromSelection: 'Retirer de la sélection',
   addToSelection: 'Ajouter à la sélection',
@@ -135,6 +143,10 @@ const en: Translations = {
   filterCategory: 'Category',
   filterProvider: 'Provider',
   filterEvent: 'Event',
+  groupByEvent: 'By event type',
+  groupByCategory: 'By category',
+  viewFullPage: 'View full page',
+  close: 'Close',
   reset: 'Reset',
   removeFromSelection: 'Remove from selection',
   addToSelection: 'Add to selection',

@@ -34,10 +34,10 @@ hookit/
 │   │   └── hook/[slug]/             # Route /hook/[slug] — détail d'un hook
 │   ├── components/                  # Composants React (tous marqués 'use client')
 │   │   ├── Header.tsx               # Barre de navigation principale
-│   │   ├── HookCard.tsx             # Carte d'un hook dans le catalogue
+│   │   ├── HookRow.tsx              # Ligne de hook (liste groupée) — survol = détail, clic = modale
+│   │   ├── HookModal.tsx            # Modale de détail complet d'un hook (cas d'usage, config, script)
 │   │   ├── HookConfigurator.tsx     # Panneau sélection + génération settings.json
-│   │   ├── CatalogueExplorer.tsx    # Grille de hooks filtrables
-│   │   ├── FilterBar.tsx            # Filtres catégorie / provider / recherche
+│   │   ├── CatalogueExplorer.tsx    # Catalogue : recherche + bascule de regroupement (event/catégorie) + liste groupée + modale
 │   │   ├── Badge.tsx                # Badge générique (catégorie, provider…)
 │   │   └── ContributeForm.tsx       # Formulaire de soumission de dépôt
 │   ├── lib/
