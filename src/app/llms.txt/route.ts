@@ -23,12 +23,7 @@ export async function GET() {
     .map(([cat, hooks]) => {
       const label = CATEGORY_LABELS[cat as Category] ?? cat
       const lines = hooks
-        .map((h) => {
-          const en = h.i18n?.en
-          const name = en?.name ?? h.name
-          const desc = en?.description ?? h.description
-          return `- [${name}](${BASE}/en/hook/${h.slug}): ${desc}`
-        })
+        .map((h) => `- [${h.name}](${BASE}/hook/${h.slug}): ${h.description}`)
         .join('\n')
       return `### ${label} (${hooks.length})\n\n${lines}`
     })
@@ -57,11 +52,11 @@ A hook is a script executed by Claude Code at specific events:
 
 ## How to install hooks
 
-1. Visit ${BASE}/en to browse and select hooks
+1. Visit ${BASE} to browse and select hooks
 2. Click + on any hook to add it to your selection
 3. Copy the generated \`.claude/settings.json\` fragment
 4. Run the generated install script to create hook files under \`.claude/hooks/\`
-5. Or contribute your own hooks at ${BASE}/en/contribute
+5. Or contribute your own hooks at ${BASE}/contribute
 
 ## Hook script conventions
 
@@ -77,10 +72,9 @@ ${hookSections}
 
 ## Links
 
-- Catalogue: ${BASE}/en
-- Contribute a repository: ${BASE}/en/contribute
+- Catalogue: ${BASE}
+- Contribute a repository: ${BASE}/contribute
 - Sitemap: ${BASE}/sitemap.xml
-- Full content: ${BASE}/llms-full.txt
 `
 
   return new NextResponse(content, {

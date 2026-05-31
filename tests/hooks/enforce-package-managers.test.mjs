@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { run } from './enforce-package-managers.mjs';
+import { run } from '../../.claude/hooks/enforce-package-managers.mjs';
 
 describe('enforce-package-managers', () => {
   it('laisse passer un outil non-Bash', () => {

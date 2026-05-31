@@ -1,14 +1,13 @@
-import { getT, type Locale } from '@/lib/i18n'
+import { T } from '@/lib/i18n'
 import { ContributeForm } from '@/components/ContributeForm'
+import type { Metadata } from 'next'
 
-export default async function ContributePage({
-  params,
-}: {
-  params: Promise<{ locale: string }>
-}) {
-  const { locale } = await params
-  const T = getT(locale as Locale)
+export const metadata: Metadata = {
+  title: T.contributeTitle,
+  description: T.contributeSubtitle,
+}
 
+export default function ContributePage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="mb-2 text-2xl font-bold text-white">{T.contributeTitle}</h1>

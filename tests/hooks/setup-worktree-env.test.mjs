@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
-import { run } from './setup-worktree-env.mjs';
+import { run } from '../../.claude/hooks/setup-worktree-env.mjs';
 
 const MAIN = '/repos/hookit';
 const WORKTREE = '/repos/hookit-wt';

@@ -39,17 +39,6 @@ export interface HookImplementation {
   script_path?: string
 }
 
-/**
- * Overlay de traduction d'un hook. Seuls les champs en langage naturel sont
- * traduits ; le français reste la langue canonique (champs racine du Hook).
- * Clé = code de locale (ex. "en"). Voir localizeHook dans lib/hooks.ts.
- */
-export interface HookI18n {
-  name?: string
-  description?: string
-  use_cases?: string[]
-}
-
 export interface Hook {
   id: string
   slug: string
@@ -65,7 +54,6 @@ export interface Hook {
   tags: string[]
   votes: number
   is_must?: boolean
-  i18n?: Record<string, HookI18n>
 }
 
 export interface ScannedRepo {
@@ -83,21 +71,21 @@ export interface HookTypeInfo {
 }
 
 export const HOOK_TYPE_INFO: Record<HookType, HookTypeInfo> = {
-  PreToolUse:          { label: "Avant l'exécution d'un outil · peut bloquer",        blocking: true  },
-  PostToolUse:         { label: "Après l'exécution d'un outil · non bloquant",         blocking: false },
-  PostToolUseFailure:  { label: "Après l'échec d'un outil · non bloquant",             blocking: false },
-  UserPromptSubmit:    { label: "À la soumission du prompt · peut enrichir l'input",  blocking: true  },
-  Notification:        { label: "Quand Claude veut notifier l'utilisateur",            blocking: false },
-  Stop:                { label: "Quand l'agent termine sa tâche",                      blocking: false },
-  SubagentStop:        { label: "Quand un sous-agent termine",                         blocking: false },
-  SubagentStart:       { label: "Au démarrage d'un sous-agent",                        blocking: false },
-  PreCompact:          { label: "Avant la compaction du contexte · peut injecter",     blocking: true  },
-  SessionStart:        { label: "Au démarrage d'une session Claude Code",              blocking: false },
-  SessionEnd:          { label: "À la fermeture d'une session Claude Code",            blocking: false },
-  WorktreeCreate:      { label: "À la création d'un worktree",                         blocking: false },
-  PermissionRequest:   { label: "Lors d'une demande de permission · peut bloquer",     blocking: true  },
-  CwdChanged:          { label: "Quand le répertoire de travail change",               blocking: false },
-  ConfigChange:        { label: "Quand la configuration change",                       blocking: false },
+  PreToolUse:          { label: 'Before tool execution · can block',          blocking: true  },
+  PostToolUse:         { label: 'After tool execution · non-blocking',         blocking: false },
+  PostToolUseFailure:  { label: 'After tool failure · non-blocking',           blocking: false },
+  UserPromptSubmit:    { label: 'On prompt submit · can enrich input',         blocking: true  },
+  Notification:        { label: 'When Claude wants to notify the user',        blocking: false },
+  Stop:                { label: 'When the agent finishes its task',            blocking: false },
+  SubagentStop:        { label: 'When a subagent finishes',                    blocking: false },
+  SubagentStart:       { label: 'When a subagent starts',                      blocking: false },
+  PreCompact:          { label: 'Before context compaction · can inject',      blocking: true  },
+  SessionStart:        { label: 'On Claude Code session start',                blocking: false },
+  SessionEnd:          { label: 'On Claude Code session end',                  blocking: false },
+  WorktreeCreate:      { label: 'On worktree creation',                        blocking: false },
+  PermissionRequest:   { label: 'On permission request · can block',           blocking: true  },
+  CwdChanged:          { label: 'When working directory changes',              blocking: false },
+  ConfigChange:        { label: 'When configuration changes',                  blocking: false },
 }
 
 export const HOOK_TYPES: HookType[] = [
@@ -119,11 +107,11 @@ export const HOOK_TYPES: HookType[] = [
 ]
 
 export const CATEGORY_LABELS: Record<Category, string> = {
-  security: 'Sécurité',
-  context: 'Contexte',
-  validation: 'Validation',
-  notification: 'Notification',
-  workflow: 'Workflow',
+  security:      'Security',
+  context:       'Context',
+  validation:    'Validation',
+  notification:  'Notification',
+  workflow:      'Workflow',
   documentation: 'Documentation',
 }
 

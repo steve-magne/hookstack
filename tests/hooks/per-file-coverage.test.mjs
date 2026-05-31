@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
-import { run } from './per-file-coverage.mjs';
+import { run } from '../../.claude/hooks/per-file-coverage.mjs';
 
 const COUNTER = '/tmp/.test-cov-counter';
 const DISABLE = '/tmp/.test-cov-disable';

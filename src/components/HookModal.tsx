@@ -7,12 +7,11 @@ import { ArrowUpRight, Check, Plus, X } from 'lucide-react'
 import type { Hook } from '@/types/hook'
 import { PROVIDER_LABELS } from '@/types/hook'
 import { useSelection } from '@/store/selection'
-import { useLocale, useT } from '@/lib/locale-context'
+import { useT } from '@/lib/locale-context'
 import { CategoryBadge, HookTypeBadge } from './Badge'
 import { CopySwap } from './CopySwap'
 import { spring } from '@/lib/motion'
 
-/** Bascule mobile (< sm) — détermine le comportement bottom-sheet + drag. */
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => {
@@ -27,7 +26,6 @@ function useIsMobile() {
 
 export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }) {
   const T = useT()
-  const locale = useLocale()
   const selected = useSelection((s) => s.selected.includes(hook.slug))
   const toggle = useSelection((s) => s.toggle)
   const [copied, setCopied] = useState(false)
@@ -53,7 +51,6 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
     setTimeout(() => setCopied(false), 1500)
   }
 
-  // Desktop : on monte en fondu+scale. Mobile : feuille qui glisse depuis le bas.
   const sheet = isMobile
     ? { initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' } }
     : {
@@ -90,7 +87,7 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
         onDragEnd={handleDragEnd}
         className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/60 sm:rounded-2xl"
       >
-        {/* Poignée de glissement — mobile uniquement */}
+        {/* Drag handle — mobile only */}
         <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-zinc-600 sm:hidden" />
 
         <button
@@ -137,7 +134,7 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
               {selected ? T.addedToSelection : T.addToMyConfig}
             </m.button>
             <Link
-              href={`/${locale}/hook/${hook.slug}`}
+              href={`/hook/${hook.slug}`}
               className="flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-white"
             >
               {T.viewFullPage}

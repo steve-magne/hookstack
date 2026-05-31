@@ -2,18 +2,18 @@
   {
     "id": "pre-bash-secret-detection",
     "slug": "pre-bash-secret-detection",
-    "name": "Détection de secrets avant exécution Bash",
+    "name": "Secret detection before Bash execution",
     "category": "security",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PreToolUse",
     "trigger": "Bash",
-    "description": "Intercepte toute commande shell et analyse la commande pour détecter des clés API, tokens ou mots de passe en clair avant exécution. Bloque la commande si un pattern de secret est trouvé.",
+    "description": "Intercepts every shell command and scans it for API keys, tokens or plaintext passwords before execution. Blocks the command if a secret pattern is found.",
     "use_cases": [
-      "Protection de credentials",
-      "Audit DevSecOps",
-      "Prévention de fuites en CI/CD"
+      "Credential protection",
+      "DevSecOps audit",
+      "Leak prevention in CI/CD"
     ],
     "implementation": {
       "type": "settings_json",
@@ -25,15 +25,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/detect-secrets.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/detect-secrets.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/detect-secrets.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ninput=$(cat)\ncommand=$(echo \"$input\" | jq -r '.tool_input.command // \"\"')\nif echo \"$command\" | grep -qiE '(sk-[a-z0-9]{20,}|ghp_[a-z0-9]{36}|AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----|password=)'; then\n  echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Secret potentiel détecté dans la commande shell.\"}}'\n  exit 0\nfi\nexit 0\n"
+      "script_path": ".claude/hooks/detect-secrets.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Bloc les commandes Bash contenant des secrets potentiels (PreToolUse)\nimport { readFileSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst command = input.tool_input?.command ?? '';\n\nconst SECRET_PATTERNS = [\n  /(?:ANTHROPIC|OPENAI|CLAUDE|GEMINI|GROQ)_API_KEY\\s*=\\s*['\"]?\\S{20,}/i,\n  /sk-(?:ant-|proj-)?[a-zA-Z0-9_-]{32,}/,\n  /ghp_[a-zA-Z0-9]{36}/,\n  /-----BEGIN (?:RSA |EC )?PRIVATE KEY/,\n  /(?:password|passwd|secret|token)\\s*=\\s*['\"][^'\"]{6,}/i,\n];\n\nconst match = SECRET_PATTERNS.find(p => p.test(command));\nif (match) {\n  process.stdout.write(JSON.stringify({\n    decision: 'block',\n    reason: 'Secret potentiel détecté dans la commande. Vérifiez avant de continuer.',\n  }));\n}\n"
     },
     "community_examples": [
       {
@@ -49,34 +49,23 @@
       "devsecops"
     ],
     "votes": 0,
-    "is_must": true,
-    "i18n": {
-      "en": {
-        "name": "Secret detection before Bash execution",
-        "description": "Intercepts every shell command and scans it for API keys, tokens or plaintext passwords before execution. Blocks the command if a secret pattern is found.",
-        "use_cases": [
-          "Credential protection",
-          "DevSecOps audit",
-          "Leak prevention in CI/CD"
-        ]
-      }
-    }
+    "is_must": true
   },
   {
     "id": "pre-bash-block-destructive",
     "slug": "pre-bash-block-destructive",
-    "name": "Blocage des commandes destructives",
+    "name": "Destructive command blocking",
     "category": "security",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PreToolUse",
     "trigger": "Bash",
-    "description": "Bloque les commandes shell potentiellement destructives (rm -rf /, mkfs, dd vers un disque, git reset --hard sur des paths sensibles) avant qu'elles ne soient exécutées par l'agent.",
+    "description": "Blocks potentially destructive shell commands (rm -rf /, mkfs, dd to a disk, git reset --hard on sensitive paths) before the agent runs them.",
     "use_cases": [
-      "Garde-fou sur poste de dev",
-      "Prévention de perte de données",
-      "Environnements partagés"
+      "Guardrail on dev machines",
+      "Data loss prevention",
+      "Shared environments"
     ],
     "implementation": {
       "type": "settings_json",
@@ -88,15 +77,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/block-destructive.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/block-destructive.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/block-destructive.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ninput=$(cat)\ncommand=$(echo \"$input\" | jq -r '.tool_input.command // \"\"')\nif echo \"$command\" | grep -qiE '(rm[[:space:]]+-rf[[:space:]]+/|mkfs|dd[[:space:]]+if=.*of=/dev/|:\\(\\)\\{|chmod[[:space:]]+-R[[:space:]]+777[[:space:]]+/)'; then\n  echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Commande destructive bloquée par le hook de sécurité.\"}}'\n  exit 0\nfi\nexit 0\n"
+      "script_path": ".claude/hooks/block-destructive.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Bloc les commandes Bash destructives irréversibles (PreToolUse)\nimport { readFileSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst command = input.tool_input?.command ?? '';\n\nconst BLOCKED = [\n  [/rm\\s+-rf?\\s+\\/(?:\\s|$)/, 'rm -rf / interdit'],\n  [/git\\s+push\\s+.*--force(?:-with-lease)?\\s+.*(?:main|master)/, 'force-push sur main/master interdit'],\n  [/DROP\\s+(?:TABLE|DATABASE)\\s+\\w+/i, 'DROP TABLE/DATABASE interdit sans confirmation explicite'],\n  [/>\\s*\\/dev\\/(?:sda|nvme|disk)\\d*/i, 'Écriture directe sur disque bloquée'],\n  [/chmod\\s+-R\\s+777\\s+\\//i, 'chmod 777 récursif sur / interdit'],\n];\n\nconst blocked = BLOCKED.find(([pattern]) => pattern.test(command));\nif (blocked) {\n  process.stdout.write(JSON.stringify({\n    decision: 'block',\n    reason: `Commande destructive bloquée : ${blocked[1]}`,\n  }));\n}\n"
     },
     "community_examples": [
       {
@@ -112,34 +101,23 @@
       "guardrail"
     ],
     "votes": 0,
-    "is_must": true,
-    "i18n": {
-      "en": {
-        "name": "Destructive command blocking",
-        "description": "Blocks potentially destructive shell commands (rm -rf /, mkfs, dd to a disk, git reset --hard on sensitive paths) before the agent runs them.",
-        "use_cases": [
-          "Guardrail on dev machines",
-          "Data loss prevention",
-          "Shared environments"
-        ]
-      }
-    }
+    "is_must": true
   },
   {
     "id": "pre-edit-protect-paths",
     "slug": "pre-edit-protect-paths",
-    "name": "Protection des fichiers sensibles en écriture",
+    "name": "Sensitive file write protection",
     "category": "security",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PreToolUse",
     "trigger": "Write|Edit",
-    "description": "Empêche l'agent de modifier des fichiers sensibles (.env, secrets, clés privées, lockfiles CI) en interceptant les outils Write et Edit et en vérifiant le chemin cible.",
+    "description": "Prevents the agent from modifying sensitive files (.env, secrets, private keys, CI lockfiles) by intercepting the Write and Edit tools and checking the target path.",
     "use_cases": [
-      "Protection de configuration",
-      "Conformité",
-      "Intégrité des secrets locaux"
+      "Configuration protection",
+      "Compliance",
+      "Local secrets integrity"
     ],
     "implementation": {
       "type": "settings_json",
@@ -151,15 +129,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/protect-paths.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/protect-paths.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/protect-paths.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ninput=$(cat)\npath=$(echo \"$input\" | jq -r '.tool_input.file_path // \"\"')\nif echo \"$path\" | grep -qiE '(\\.env($|\\.)|/secrets/|\\.pem$|id_rsa|credentials)'; then\n  echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Fichier protégé — édition refusée par le hook.\"}}'\n  exit 0\nfi\nexit 0\n"
+      "script_path": ".claude/hooks/protect-paths.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Protège les fichiers sensibles contre l'écriture (PreToolUse Write|Edit)\nimport { readFileSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? '';\n\nconst PROTECTED = [\n  /\\/\\.env$/,\n  /\\/\\.env\\.local$/,\n  /\\/\\.env\\.production/,\n  /\\/secrets\\//,\n  /\\/(id_rsa|id_ed25519|.*\\.pem)$/,\n];\n\nconst blocked = PROTECTED.find(p => p.test(filePath));\nif (blocked) {\n  process.stdout.write(JSON.stringify({\n    decision: 'block',\n    reason: `Fichier protégé : ${filePath}. Modifiez manuellement si intentionnel.`,\n  }));\n}\n"
     },
     "community_examples": [
       {
@@ -175,34 +153,23 @@
       "secrets"
     ],
     "votes": 0,
-    "is_must": true,
-    "i18n": {
-      "en": {
-        "name": "Sensitive file write protection",
-        "description": "Prevents the agent from modifying sensitive files (.env, secrets, private keys, CI lockfiles) by intercepting the Write and Edit tools and checking the target path.",
-        "use_cases": [
-          "Configuration protection",
-          "Compliance",
-          "Local secrets integrity"
-        ]
-      }
-    }
+    "is_must": true
   },
   {
     "id": "pre-bash-guard-git-push-main",
     "slug": "pre-bash-guard-git-push-main",
-    "name": "Garde-fou git push vers main",
+    "name": "git push to main guardrail",
     "category": "security",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PreToolUse",
     "trigger": "Bash",
-    "description": "Détecte les commandes git push directes vers main/master et les bloque pour forcer le passage par une branche et une pull request.",
+    "description": "Detects direct git push commands to main/master and blocks them to force going through a branch and a pull request.",
     "use_cases": [
-      "Discipline de branche",
-      "Protection de la branche principale",
-      "Workflow GitFlow"
+      "Branch discipline",
+      "Main branch protection",
+      "GitFlow workflow"
     ],
     "implementation": {
       "type": "settings_json",
@@ -214,15 +181,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/guard-push-main.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/guard-push-main.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/guard-push-main.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ninput=$(cat)\ncommand=$(echo \"$input\" | jq -r '.tool_input.command // \"\"')\nif echo \"$command\" | grep -qiE 'git[[:space:]]+push.*(origin[[:space:]]+(main|master)|--force)'; then\n  echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"Push direct vers main/master ou force-push — confirmation requise.\"}}'\n  exit 0\nfi\nexit 0\n"
+      "script_path": ".claude/hooks/guard-push-main.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Bloque git push --force vers main/master (PreToolUse Bash)\nimport { readFileSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst command = input.tool_input?.command ?? '';\n\nconst isForce = /git\\s+push\\b.*--force(?:-with-lease)?/.test(command) ||\n                /git\\s+push\\b.*-f\\b/.test(command);\nconst isMain  = /\\b(main|master)\\b/.test(command);\n\nif (isForce && isMain) {\n  process.stdout.write(JSON.stringify({\n    decision: 'block',\n    reason: 'Force-push vers main/master interdit. Créez une PR ou demandez confirmation explicite.',\n  }));\n}\n"
     },
     "community_examples": [],
     "tags": [
@@ -231,34 +198,23 @@
       "workflow",
       "guardrail"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "git push to main guardrail",
-        "description": "Detects direct git push commands to main/master and blocks them to force going through a branch and a pull request.",
-        "use_cases": [
-          "Branch discipline",
-          "Main branch protection",
-          "GitFlow workflow"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "user-prompt-inject-conventions",
     "slug": "user-prompt-inject-conventions",
-    "name": "Injection des conventions du projet",
+    "name": "Project conventions injection",
     "category": "context",
     "provider": [
       "claude-code"
     ],
     "hook_type": "UserPromptSubmit",
     "trigger": "*",
-    "description": "À chaque prompt utilisateur, injecte automatiquement les conventions du projet (stack, règles de style, contraintes) en lisant un fichier de conventions, afin que l'agent reste aligné sans rappel manuel.",
+    "description": "On every user prompt, automatically injects the project conventions (stack, style rules, constraints) by reading a conventions file, so the agent stays aligned without manual reminders.",
     "use_cases": [
-      "Cohérence de code",
-      "Onboarding agent",
-      "Standards d'équipe"
+      "Code consistency",
+      "Agent onboarding",
+      "Team standards"
     ],
     "implementation": {
       "type": "settings_json",
@@ -269,15 +225,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/inject-conventions.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/inject-conventions.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/inject-conventions.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\nconv=\"$CLAUDE_PROJECT_DIR/.claude/conventions.md\"\nif [ -f \"$conv\" ]; then\n  echo \"### Conventions du projet (injectées automatiquement)\"\n  cat \"$conv\"\nfi\nexit 0\n"
+      "script_path": ".claude/hooks/inject-conventions.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Injecte les règles d'agent dans chaque prompt (UserPromptSubmit)\nimport { readFileSync, existsSync } from 'fs';\nimport { join } from 'path';\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\n\n// Priorité : .claude/agent-rules.md > CONVENTIONS.md > absent (no-op)\nconst candidates = [\n  join(projectDir, '.claude', 'agent-rules.md'),\n  join(projectDir, 'CONVENTIONS.md'),\n];\n\nconst target = candidates.find(existsSync);\nif (!target) process.exit(0);\n\nconst content = readFileSync(target, 'utf8').trim();\nif (!content) process.exit(0);\n\nprocess.stdout.write(`### Conventions du projet (injectées automatiquement)\\n\\n${content}\\n`);\n"
     },
     "community_examples": [],
     "tags": [
@@ -286,34 +242,23 @@
       "prompt",
       "standards"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Project conventions injection",
-        "description": "On every user prompt, automatically injects the project conventions (stack, style rules, constraints) by reading a conventions file, so the agent stays aligned without manual reminders.",
-        "use_cases": [
-          "Code consistency",
-          "Agent onboarding",
-          "Team standards"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "session-start-load-git-context",
     "slug": "session-start-load-git-context",
-    "name": "Chargement du contexte Git au démarrage",
+    "name": "Load Git context at startup",
     "category": "context",
     "provider": [
       "claude-code"
     ],
     "hook_type": "SessionStart",
     "trigger": "*",
-    "description": "Au démarrage de session, injecte l'état du dépôt : branche courante, statut git, derniers commits. L'agent démarre avec une vision claire de l'état du projet.",
+    "description": "At session start, injects the repository state: current branch, git status, latest commits. The agent starts with a clear view of the project state.",
     "use_cases": [
-      "Reprise de contexte",
-      "Awareness Git",
-      "Sessions multiples"
+      "Context resumption",
+      "Git awareness",
+      "Multiple sessions"
     ],
     "implementation": {
       "type": "settings_json",
@@ -324,15 +269,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/load-git-context.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/load-git-context.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/load-git-context.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ncd \"$CLAUDE_PROJECT_DIR\"\necho \"### Contexte Git\"\necho \"Branche: $(git branch --show-current 2>/dev/null || echo n/a)\"\necho \"Statut:\"\ngit status --short 2>/dev/null | head -20\necho \"Derniers commits:\"\ngit log --oneline -5 2>/dev/null\nexit 0\n"
+      "script_path": ".claude/hooks/load-git-context.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Injecte le contexte git (branche, statut) dans chaque prompt (UserPromptSubmit)\nimport { execSync } from 'child_process';\n\nfunction exec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 5_000 }).trim(); } catch { return ''; }\n}\n\nconst branch  = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');\nconst commit  = exec('git log -1 --pretty=\"%h %s\"');\nconst status  = exec('git status --short');\n\nif (!branch) process.exit(0);\n\nconst lines = [`## Contexte Git`, `- Branche : \\`${branch}\\``];\nif (commit)  lines.push(`- Dernier commit : ${commit}`);\nif (status)  lines.push(`- Fichiers modifiés :\\n${status.split('\\n').map(l => `  ${l}`).join('\\n')}`);\nelse         lines.push('- Répertoire de travail propre');\n\nprocess.stdout.write(lines.join('\\n') + '\\n');\n"
     },
     "community_examples": [
       {
@@ -347,33 +292,22 @@
       "session",
       "awareness"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Load Git context at startup",
-        "description": "At session start, injects the repository state: current branch, git status, latest commits. The agent starts with a clear view of the project state.",
-        "use_cases": [
-          "Context resumption",
-          "Git awareness",
-          "Multiple sessions"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "user-prompt-inject-datetime",
     "slug": "user-prompt-inject-datetime",
-    "name": "Injection de la date et heure courantes",
+    "name": "Current date and time injection",
     "category": "context",
     "provider": [
       "claude-code"
     ],
     "hook_type": "UserPromptSubmit",
     "trigger": "*",
-    "description": "Ajoute la date et l'heure actuelles au contexte de chaque prompt, ce qui évite à l'agent de raisonner avec une date de cutoff erronée.",
+    "description": "Adds the current date and time to the context of every prompt, preventing the agent from reasoning with an incorrect cutoff date.",
     "use_cases": [
-      "Raisonnement temporel correct",
-      "Logs horodatés",
+      "Correct temporal reasoning",
+      "Timestamped logs",
       "Changelogs"
     ],
     "implementation": {
@@ -392,8 +326,8 @@
           ]
         }
       },
-      "script_path": "",
-      "code_snippet": ""
+      "script_path": ".claude/hooks/inject-datetime.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Injecte la date et l'heure courantes dans chaque prompt (UserPromptSubmit)\nconst now = new Date();\nconst formatted = now.toLocaleString('fr-FR', {\n  weekday: 'long',\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric',\n  hour: '2-digit',\n  minute: '2-digit',\n  timeZoneName: 'short',\n});\nprocess.stdout.write(`Date et heure courantes : ${formatted}\\n`);\n"
     },
     "community_examples": [],
     "tags": [
@@ -401,34 +335,23 @@
       "datetime",
       "prompt"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Current date and time injection",
-        "description": "Adds the current date and time to the context of every prompt, preventing the agent from reasoning with an incorrect cutoff date.",
-        "use_cases": [
-          "Correct temporal reasoning",
-          "Timestamped logs",
-          "Changelogs"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "post-write-autoformat",
     "slug": "post-write-autoformat",
-    "name": "Formatage automatique après écriture",
+    "name": "Automatic formatting after write",
     "category": "validation",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PostToolUse",
     "trigger": "Write|Edit",
-    "description": "Après chaque écriture ou édition de fichier, lance Prettier sur le fichier modifié pour garantir un formatage cohérent sans intervention de l'agent.",
+    "description": "After every file write or edit, runs Prettier on the modified file to ensure consistent formatting without agent intervention.",
     "use_cases": [
-      "Cohérence de style",
-      "Réduction du bruit en diff",
-      "Qualité de code"
+      "Style consistency",
+      "Reduced diff noise",
+      "Code quality"
     ],
     "implementation": {
       "type": "settings_json",
@@ -440,15 +363,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/autoformat.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/autoformat.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/autoformat.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ninput=$(cat)\npath=$(echo \"$input\" | jq -r '.tool_input.file_path // \"\"')\nif [ -n \"$path\" ] && echo \"$path\" | grep -qE '\\.(ts|tsx|js|jsx|json|css|md)$'; then\n  npx prettier --write \"$path\" >/dev/null 2>&1 || true\nfi\nexit 0\n"
+      "script_path": ".claude/hooks/autoformat.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Formate le fichier avec prettier après écriture (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? '';\n\nif (!filePath) process.exit(0);\n\ntry {\n  execSync(`npx --no-install prettier --write \"${filePath}\"`, {\n    stdio: 'ignore',\n    timeout: 10_000,\n  });\n} catch {\n  // prettier absent ou erreur de format — non bloquant\n}\n"
     },
     "community_examples": [],
     "tags": [
@@ -457,34 +380,23 @@
       "format",
       "quality"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Automatic formatting after write",
-        "description": "After every file write or edit, runs Prettier on the modified file to ensure consistent formatting without agent intervention.",
-        "use_cases": [
-          "Style consistency",
-          "Reduced diff noise",
-          "Code quality"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "post-write-eslint",
     "slug": "post-write-eslint",
-    "name": "Lint ESLint après écriture",
+    "name": "ESLint lint after write",
     "category": "validation",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PostToolUse",
     "trigger": "Write|Edit",
-    "description": "Exécute ESLint sur le fichier qui vient d'être écrit et renvoie les erreurs à l'agent pour qu'il les corrige immédiatement dans la même boucle.",
+    "description": "Runs ESLint on the file just written and returns the errors to the agent so it fixes them immediately within the same loop.",
     "use_cases": [
-      "Qualité continue",
-      "Boucle de correction auto",
-      "Standards lint"
+      "Continuous quality",
+      "Auto-fix loop",
+      "Lint standards"
     ],
     "implementation": {
       "type": "settings_json",
@@ -496,15 +408,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/eslint-check.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/eslint-check.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/eslint-check.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ninput=$(cat)\npath=$(echo \"$input\" | jq -r '.tool_input.file_path // \"\"')\nif [ -n \"$path\" ] && echo \"$path\" | grep -qE '\\.(ts|tsx|js|jsx)$'; then\n  out=$(npx eslint \"$path\" 2>&1) || {\n    echo \"ESLint a relevé des problèmes dans $path:\" >&2\n    echo \"$out\" >&2\n    exit 2\n  }\nfi\nexit 0\n"
+      "script_path": ".claude/hooks/eslint-check.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Vérifie le fichier avec ESLint après écriture (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? '';\n\nif (!filePath || !/\\.[cm]?[jt]sx?$/.test(filePath)) process.exit(0);\n\ntry {\n  execSync(`npx --no-install eslint --max-warnings=0 \"${filePath}\"`, {\n    stdio: 'pipe',\n    timeout: 15_000,\n  });\n} catch (err) {\n  const output = err.stdout?.toString() ?? '';\n  if (output) process.stderr.write(`ESLint: ${output.trim()}\\n`);\n}\n"
     },
     "community_examples": [],
     "tags": [
@@ -513,34 +425,23 @@
       "lint",
       "quality"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "ESLint lint after write",
-        "description": "Runs ESLint on the file just written and returns the errors to the agent so it fixes them immediately within the same loop.",
-        "use_cases": [
-          "Continuous quality",
-          "Auto-fix loop",
-          "Lint standards"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "post-edit-typecheck",
     "slug": "post-edit-typecheck",
-    "name": "Vérification de types TypeScript",
+    "name": "TypeScript type checking",
     "category": "validation",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PostToolUse",
     "trigger": "Write|Edit",
-    "description": "Lance le compilateur TypeScript en mode no-emit après modification d'un fichier .ts/.tsx et remonte les erreurs de typage à l'agent.",
+    "description": "Runs the TypeScript compiler in no-emit mode after a .ts/.tsx file is modified and reports typing errors back to the agent.",
     "use_cases": [
-      "Sécurité de typage",
-      "Détection précoce d'erreurs",
-      "Projets TypeScript stricts"
+      "Type safety",
+      "Early error detection",
+      "Strict TypeScript projects"
     ],
     "implementation": {
       "type": "settings_json",
@@ -552,15 +453,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/typecheck.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/typecheck.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/typecheck.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ninput=$(cat)\npath=$(echo \"$input\" | jq -r '.tool_input.file_path // \"\"')\nif echo \"$path\" | grep -qE '\\.(ts|tsx)$'; then\n  out=$(npx tsc --noEmit 2>&1) || {\n    echo \"Erreurs TypeScript:\" >&2\n    echo \"$out\" | head -30 >&2\n    exit 2\n  }\nfi\nexit 0\n"
+      "script_path": ".claude/hooks/typecheck.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Vérifie les types TypeScript après écriture (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { resolve, dirname } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? '';\n\nif (!filePath || !/\\.tsx?$/.test(filePath)) process.exit(0);\n\n// Remonte jusqu'à trouver un tsconfig.json\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? dirname(filePath);\n\ntry {\n  execSync('npx --no-install tsc --noEmit', {\n    cwd: projectDir,\n    stdio: 'pipe',\n    timeout: 30_000,\n  });\n} catch (err) {\n  const output = err.stdout?.toString() ?? '';\n  if (output) process.stderr.write(`TypeScript: ${output.trim()}\\n`);\n}\n"
     },
     "community_examples": [],
     "tags": [
@@ -569,34 +470,23 @@
       "typecheck",
       "quality"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "TypeScript type checking",
-        "description": "Runs the TypeScript compiler in no-emit mode after a .ts/.tsx file is modified and reports typing errors back to the agent.",
-        "use_cases": [
-          "Type safety",
-          "Early error detection",
-          "Strict TypeScript projects"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "stop-run-tests",
     "slug": "stop-run-tests",
-    "name": "Lancement des tests en fin de réponse",
+    "name": "Run tests at end of response",
     "category": "validation",
     "provider": [
       "claude-code"
     ],
     "hook_type": "Stop",
     "trigger": "*",
-    "description": "Quand l'agent termine sa réponse, exécute la suite de tests. Si des tests échouent, renvoie l'agent au travail pour les corriger avant de rendre la main.",
+    "description": "When the agent finishes its response, runs the test suite. If tests fail, sends the agent back to work to fix them before handing back control.",
     "use_cases": [
-      "TDD assisté",
-      "Garantie de non-régression",
-      "Qualité avant remise"
+      "Assisted TDD",
+      "Regression safety net",
+      "Quality before handoff"
     ],
     "implementation": {
       "type": "settings_json",
@@ -607,15 +497,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/run-tests.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-tests.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/run-tests.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ncd \"$CLAUDE_PROJECT_DIR\"\nif out=$(npm test --silent 2>&1); then\n  exit 0\nelse\n  echo '{\"decision\":\"block\",\"reason\":\"Des tests échouent. Corrige-les avant de terminer.\"}'\n  exit 0\nfi\n"
+      "script_path": ".claude/hooks/run-tests.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Exécute la suite de tests à la fin d'une session (Stop)\nimport { execSync, spawnSync } from 'child_process';\nimport { existsSync, readFileSync } from 'fs';\nimport { join } from 'path';\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\n\nfunction detect() {\n  const pkg = join(projectDir, 'package.json');\n  if (existsSync(pkg)) {\n    try {\n      const scripts = JSON.parse(readFileSync(pkg, 'utf8')).scripts ?? {};\n      if (scripts.test) return ['pnpm', ['test', '--run']];\n    } catch {}\n  }\n  if (existsSync(join(projectDir, 'pytest.ini')) || existsSync(join(projectDir, 'pyproject.toml')))\n    return ['python', ['-m', 'pytest', '--tb=short', '-q']];\n  if (existsSync(join(projectDir, 'go.mod')))\n    return ['go', ['test', './...']];\n  return null;\n}\n\nconst runner = detect();\nif (!runner) process.exit(0);\n\nconst [cmd, args] = runner;\nprocess.stderr.write(`[run-tests] Exécution : ${cmd} ${args.join(' ')}\\n`);\n\nconst result = spawnSync(cmd, args, {\n  cwd: projectDir,\n  encoding: 'utf8',\n  timeout: 120_000,\n  stdio: ['ignore', 'pipe', 'pipe'],\n});\n\nconst out = (result.stdout ?? '') + (result.stderr ?? '');\nif (result.status !== 0) {\n  process.stderr.write(`[run-tests] ÉCHEC (exit ${result.status})\\n${out.slice(-2000)}\\n`);\n} else {\n  const last = out.split('\\n').filter(Boolean).slice(-5).join('\\n');\n  process.stderr.write(`[run-tests] ✓ Tests passés\\n${last}\\n`);\n}\n"
     },
     "community_examples": [],
     "tags": [
@@ -624,34 +514,23 @@
       "ci",
       "quality"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Run tests at end of response",
-        "description": "When the agent finishes its response, runs the test suite. If tests fail, sends the agent back to work to fix them before handing back control.",
-        "use_cases": [
-          "Assisted TDD",
-          "Regression safety net",
-          "Quality before handoff"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "notification-slack",
     "slug": "notification-slack",
-    "name": "Notification Slack sur événement agent",
+    "name": "Slack notification on agent event",
     "category": "notification",
     "provider": [
       "claude-code"
     ],
     "hook_type": "Notification",
     "trigger": "*",
-    "description": "Relaie les notifications de l'agent (demande de permission, attente d'input) vers un canal Slack via webhook, utile pour les sessions longues ou non surveillées.",
+    "description": "Relays agent notifications (permission request, awaiting input) to a Slack channel via webhook, useful for long or unattended sessions.",
     "use_cases": [
-      "Sessions longues",
-      "Supervision distante",
-      "Collaboration d'équipe"
+      "Long sessions",
+      "Remote supervision",
+      "Team collaboration"
     ],
     "implementation": {
       "type": "settings_json",
@@ -662,15 +541,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/notify-slack.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/notify-slack.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/notify-slack.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ninput=$(cat)\nmsg=$(echo \"$input\" | jq -r '.message // \"Claude Code a besoin de votre attention\"')\ncurl -s -X POST -H 'Content-type: application/json' \\\n  --data \"{\\\"text\\\":\\\"🤖 $msg\\\"}\" \\\n  \"$SLACK_WEBHOOK_URL\" >/dev/null 2>&1 || true\nexit 0\n"
+      "script_path": ".claude/hooks/notify-slack.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Envoie une notification Slack quand Claude veut notifier l'utilisateur (Notification)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst WEBHOOK = process.env.SLACK_WEBHOOK_URL ?? '';\nif (!WEBHOOK) process.exit(0);\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst message = input.message ?? input.notification ?? '';\nif (!message) process.exit(0);\n\nconst project = process.env.CLAUDE_PROJECT_DIR?.split('/').pop() ?? 'Claude';\nconst payload = JSON.stringify({\n  text: `*[${project}]* ${message}`,\n});\n\ntry {\n  execSync(`curl -s -X POST -H 'Content-type: application/json' --data '${payload.replace(/'/g, \"'\\\\''\")}' '${WEBHOOK}'`, {\n    stdio: 'ignore',\n    timeout: 10_000,\n  });\n} catch {\n  // Échec réseau — non bloquant\n}\n"
     },
     "community_examples": [],
     "tags": [
@@ -679,34 +558,23 @@
       "webhook",
       "monitoring"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Slack notification on agent event",
-        "description": "Relays agent notifications (permission request, awaiting input) to a Slack channel via webhook, useful for long or unattended sessions.",
-        "use_cases": [
-          "Long sessions",
-          "Remote supervision",
-          "Team collaboration"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "session-end-audit-log",
     "slug": "session-end-audit-log",
-    "name": "Journal d'audit de fin de session",
+    "name": "End-of-session audit log",
     "category": "notification",
     "provider": [
       "claude-code"
     ],
     "hook_type": "SessionEnd",
     "trigger": "*",
-    "description": "En fin de session, écrit une ligne d'audit (horodatage, raison de fin, répertoire) dans un fichier de log local pour la traçabilité DevSecOps.",
+    "description": "At session end, writes an audit line (timestamp, end reason, directory) to a local log file for DevSecOps traceability.",
     "use_cases": [
-      "Traçabilité",
-      "Audit DevSecOps",
-      "Reporting d'usage"
+      "Traceability",
+      "DevSecOps audit",
+      "Usage reporting"
     ],
     "implementation": {
       "type": "settings_json",
@@ -717,15 +585,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/audit-log.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/audit-log.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/audit-log.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ninput=$(cat)\nreason=$(echo \"$input\" | jq -r '.reason // \"unknown\"')\nlog=\"$CLAUDE_PROJECT_DIR/.claude/session-audit.log\"\necho \"$(date -u +%Y-%m-%dT%H:%M:%SZ) session_end reason=$reason cwd=$CLAUDE_PROJECT_DIR\" >> \"$log\"\nexit 0\n"
+      "script_path": ".claude/hooks/audit-log.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Enregistre un résumé de session dans ~/.claude/audit-log.jsonl (SessionEnd)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join, dirname } from 'path';\nimport { homedir } from 'os';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\n\nconst logDir = join(homedir(), '.claude');\nmkdirSync(logDir, { recursive: true });\nconst logFile = join(logDir, 'audit-log.jsonl');\n\nconst entry = {\n  timestamp: new Date().toISOString(),\n  project: process.env.CLAUDE_PROJECT_DIR?.split('/').pop() ?? 'unknown',\n  session_id: input.session_id ?? null,\n  total_cost_usd: input.total_cost_usd ?? null,\n  num_turns: input.num_turns ?? null,\n};\n\nappendFileSync(logFile, JSON.stringify(entry) + '\\n');\n"
     },
     "community_examples": [
       {
@@ -740,34 +608,23 @@
       "logging",
       "devsecops"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "End-of-session audit log",
-        "description": "At session end, writes an audit line (timestamp, end reason, directory) to a local log file for DevSecOps traceability.",
-        "use_cases": [
-          "Traceability",
-          "DevSecOps audit",
-          "Usage reporting"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "pre-webfetch-domain-allowlist",
     "slug": "pre-webfetch-domain-allowlist",
-    "name": "Allowlist de domaines pour WebFetch",
+    "name": "Domain allowlist for WebFetch",
     "category": "workflow",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PreToolUse",
     "trigger": "WebFetch",
-    "description": "Contrôle les accès réseau de l'agent en n'autorisant WebFetch que vers une liste de domaines approuvés. Toute autre URL est bloquée.",
+    "description": "Controls the agent's network access by only allowing WebFetch to a list of approved domains. Any other URL is blocked.",
     "use_cases": [
-      "Contrôle réseau",
-      "Conformité data",
-      "Environnements restreints"
+      "Network control",
+      "Data compliance",
+      "Restricted environments"
     ],
     "implementation": {
       "type": "settings_json",
@@ -779,15 +636,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/webfetch-allowlist.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/webfetch-allowlist.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/webfetch-allowlist.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ninput=$(cat)\nurl=$(echo \"$input\" | jq -r '.tool_input.url // \"\"')\nallowed='(docs\\.anthropic\\.com|github\\.com|developer\\.mozilla\\.org)'\nif echo \"$url\" | grep -qiE \"^https?://([a-z0-9.-]*\\.)?$allowed\"; then\n  exit 0\nfi\necho '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Domaine non autorisé par l allowlist réseau.\"}}'\nexit 0\n"
+      "script_path": ".claude/hooks/webfetch-allowlist.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Vérifie que l'URL est dans la liste des domaines autorisés (PreToolUse WebFetch)\nimport { readFileSync, existsSync } from 'fs';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst url = input.tool_input?.url ?? '';\nif (!url) process.exit(0);\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\nconst allowlistFile = join(projectDir, '.claude', 'webfetch-allowlist.json');\n\nconst DEFAULT_DOMAINS = [\n  'github.com', 'raw.githubusercontent.com', 'npmjs.com',\n  'docs.anthropic.com', 'developer.mozilla.org', 'nodejs.org',\n  'www.typescriptlang.org', 'nextjs.org', 'tailwindcss.com',\n  'supabase.com', 'vercel.com',\n];\n\nconst allowed = existsSync(allowlistFile)\n  ? JSON.parse(readFileSync(allowlistFile, 'utf8'))\n  : DEFAULT_DOMAINS;\n\ntry {\n  const hostname = new URL(url).hostname;\n  const ok = allowed.some(d => hostname === d || hostname.endsWith('.' + d));\n  if (!ok) {\n    process.stdout.write(JSON.stringify({\n      decision: 'block',\n      reason: `Domaine non autorisé : ${hostname}. Ajoutez-le à .claude/webfetch-allowlist.json si nécessaire.`,\n    }));\n  }\n} catch {\n  // URL invalide — laisser passer\n}\n"
     },
     "community_examples": [],
     "tags": [
@@ -796,34 +653,23 @@
       "webfetch",
       "allowlist"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Domain allowlist for WebFetch",
-        "description": "Controls the agent's network access by only allowing WebFetch to a list of approved domains. Any other URL is blocked.",
-        "use_cases": [
-          "Network control",
-          "Data compliance",
-          "Restricted environments"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "post-bash-cost-tracker",
     "slug": "post-bash-cost-tracker",
-    "name": "Suivi d'usage des outils",
+    "name": "Tool usage tracking",
     "category": "notification",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PostToolUse",
     "trigger": "*",
-    "description": "Incrémente un compteur par type d'outil après chaque utilisation et journalise l'activité, offrant une vue de l'intensité d'usage de l'agent par session.",
+    "description": "Increments a counter per tool type after each use and logs the activity, providing a view of the agent's usage intensity per session.",
     "use_cases": [
-      "Observabilité",
-      "Analyse d'usage",
-      "FinOps agentique"
+      "Observability",
+      "Usage analysis",
+      "Agentic FinOps"
     ],
     "implementation": {
       "type": "settings_json",
@@ -834,15 +680,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/tool-usage.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/tool-usage.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/tool-usage.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ninput=$(cat)\ntool=$(echo \"$input\" | jq -r '.tool_name // \"unknown\"')\nlog=\"$CLAUDE_PROJECT_DIR/.claude/tool-usage.log\"\necho \"$(date -u +%Y-%m-%dT%H:%M:%SZ) $tool\" >> \"$log\"\nexit 0\n"
+      "script_path": ".claude/hooks/tool-usage.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Journalise les commandes Bash avec leur durée (PostToolUse Bash)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst command = input.tool_input?.command ?? '';\nif (!command) process.exit(0);\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\nconst logDir = join(projectDir, '.claude', 'data');\nmkdirSync(logDir, { recursive: true });\n\nconst entry = {\n  ts: new Date().toISOString(),\n  cmd: command.slice(0, 500),\n  exit: input.tool_response?.exit_code ?? null,\n};\n\nappendFileSync(join(logDir, 'bash-history.jsonl'), JSON.stringify(entry) + '\\n');\n"
     },
     "community_examples": [],
     "tags": [
@@ -851,34 +697,23 @@
       "metrics",
       "finops"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Tool usage tracking",
-        "description": "Increments a counter per tool type after each use and logs the activity, providing a view of the agent's usage intensity per session.",
-        "use_cases": [
-          "Observability",
-          "Usage analysis",
-          "Agentic FinOps"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "stop-generate-changelog",
     "slug": "stop-generate-changelog",
-    "name": "Génération de résumé de session",
+    "name": "Session summary generation",
     "category": "documentation",
     "provider": [
       "claude-code"
     ],
     "hook_type": "Stop",
     "trigger": "*",
-    "description": "En fin de session, capture le diff des fichiers modifiés et l'ajoute à un journal de changements horodaté, créant un changelog automatique de ce que l'agent a produit.",
+    "description": "At session end, captures the diff of modified files and appends it to a timestamped change log, creating an automatic changelog of what the agent produced.",
     "use_cases": [
-      "Changelog automatique",
-      "Traçabilité des changements",
-      "Revue a posteriori"
+      "Automatic changelog",
+      "Change traceability",
+      "Post-hoc review"
     ],
     "implementation": {
       "type": "settings_json",
@@ -889,15 +724,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-changelog.sh"
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-changelog.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/session-changelog.sh",
-      "code_snippet": "#!/usr/bin/env bash\nset -euo pipefail\ncd \"$CLAUDE_PROJECT_DIR\"\nlog=\".claude/session-changelog.md\"\nchanged=$(git status --short 2>/dev/null)\nif [ -n \"$changed\" ]; then\n  {\n    echo \"## Session $(date -u +%Y-%m-%dT%H:%M:%SZ)\"\n    echo '```'\n    echo \"$changed\"\n    echo '```'\n    echo\n  } >> \"$log\"\nfi\nexit 0\n"
+      "script_path": ".claude/hooks/session-changelog.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Génère une entrée de changelog depuis le diff git de la session (Stop)\nimport { execSync } from 'child_process';\nimport { appendFileSync, existsSync } from 'fs';\nimport { join } from 'path';\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\n\nfunction exec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000, cwd: projectDir }).trim(); } catch { return ''; }\n}\n\nconst branch  = exec('git branch --show-current');\nconst diff    = exec('git diff --stat HEAD~1 HEAD 2>/dev/null || git diff --stat HEAD');\nconst commits = exec('git log -5 --pretty=\"- %s (%h)\"');\n\nif (!diff && !commits) process.exit(0);\n\nconst date    = new Date().toISOString().split('T')[0];\nconst entry   = [\n  `\\n## ${date} — Session sur \\`${branch || 'main'}\\``,\n  '',\n  commits ? `### Commits\\n${commits}` : '',\n  diff    ? `### Fichiers modifiés\\n\\`\\`\\`\\n${diff}\\n\\`\\`\\`` : '',\n].filter(Boolean).join('\\n');\n\nconst changelogPath = join(projectDir, 'CHANGELOG.md');\nif (!existsSync(changelogPath)) {\n  process.stderr.write('[session-changelog] CHANGELOG.md absent — entrée ignorée.\\n');\n  process.exit(0);\n}\n\nappendFileSync(changelogPath, entry + '\\n');\nprocess.stderr.write(`[session-changelog] ✓ Entrée ajoutée dans CHANGELOG.md\\n`);\n"
     },
     "community_examples": [],
     "tags": [
@@ -906,34 +741,23 @@
       "git",
       "summary"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Session summary generation",
-        "description": "At session end, captures the diff of modified files and appends it to a timestamped change log, creating an automatic changelog of what the agent produced.",
-        "use_cases": [
-          "Automatic changelog",
-          "Change traceability",
-          "Post-hoc review"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "session-start-load-instructions",
     "slug": "session-start-load-instructions",
-    "name": "Chargement des instructions projet au démarrage",
+    "name": "Load project instructions at startup",
     "category": "context",
     "provider": [
       "claude-code"
     ],
     "hook_type": "SessionStart",
     "trigger": "*",
-    "description": "Au démarrage de session, injecte automatiquement le contenu du fichier .claude/instructions.md dans le contexte de l'agent, en excluant les sous-répertoires spécifiques (ex: compilateur). L'agent démarre avec les conventions et instructions du projet sans rappel manuel.",
+    "description": "At session start, automatically injects the contents of the .claude/instructions.md file into the agent's context, excluding specific subdirectories (e.g. compiler). The agent starts with the project conventions and instructions without manual reminders.",
     "use_cases": [
-      "Onboarding agent",
-      "Contexte projet persistant",
-      "Instructions d'équipe automatiques"
+      "Agent onboarding",
+      "Persistent project context",
+      "Automatic team instructions"
     ],
     "implementation": {
       "type": "settings_json",
@@ -951,8 +775,8 @@
           ]
         }
       },
-      "script_path": ".claude/instructions.md",
-      "code_snippet": "if [[ \"$PWD\" != */compiler* ]]; then cat .claude/instructions.md 2>/dev/null || true; fi"
+      "script_path": ".claude/hooks/load-instructions.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Charge les instructions agent depuis .claude/instructions.md au démarrage (SessionStart)\nimport { readFileSync, writeFileSync, existsSync } from 'fs';\nimport { join } from 'path';\nimport { tmpdir } from 'os';\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\nconst instructionsPath = join(projectDir, '.claude', 'instructions.md');\n\nif (!existsSync(instructionsPath)) process.exit(0);\n\nconst content = readFileSync(instructionsPath, 'utf8').trim();\nif (!content) process.exit(0);\n\n// Sauvegarde dans /tmp pour que d'autres hooks puissent le lire\nconst tmpFile = join(tmpdir(), `claude-instructions-${process.pid}.md`);\nwriteFileSync(tmpFile, content);\nprocess.stderr.write(`[load-instructions] Instructions chargées depuis .claude/instructions.md\\n`);\n"
     },
     "community_examples": [
       {
@@ -967,33 +791,22 @@
       "instructions",
       "onboarding"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Load project instructions at startup",
-        "description": "At session start, automatically injects the contents of the .claude/instructions.md file into the agent's context, excluding specific subdirectories (e.g. compiler). The agent starts with the project conventions and instructions without manual reminders.",
-        "use_cases": [
-          "Agent onboarding",
-          "Persistent project context",
-          "Automatic team instructions"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "pre-bash-enforce-package-managers",
     "slug": "pre-bash-enforce-package-managers",
-    "name": "Imposer gestionnaires de paquets",
+    "name": "Enforce package managers",
     "category": "validation",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PreToolUse",
     "trigger": "Bash",
-    "description": "Bloque les commandes pip, poetry, npm et yarn ; impose uv (Python) et pnpm (Node.js). Génère un message actionnable avec la commande de remplacement.",
+    "description": "Blocks pip, poetry, npm and yarn commands; enforces uv (Python) and pnpm (Node.js). Generates an actionable message with the replacement command.",
     "use_cases": [
-      "Standardiser les outils de gestion de paquets sur un monorepo Python+Node",
-      "Éviter les conflits d'environnements virtuels entre pip et uv"
+      "Standardize package management tooling across a Python+Node monorepo",
+      "Avoid virtual environment conflicts between pip and uv"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1005,15 +818,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "bash .claude/hooks/enforce-package-managers.sh"
+                  "command": "node bash .claude/hooks/enforce-package-managers.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/enforce-package-managers.sh",
-      "code_snippet": "#!/bin/bash\n# PreToolUse — Bloque pip/poetry/npm/yarn, impose uv et pnpm.\nINPUT=$(cat)\nCMD=$(echo \"$INPUT\" | python3 -c \"import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))\" 2>/dev/null)\ncheck_forbidden() {\n    local pattern=\"$1\" replacement=\"$2\"\n    if echo \"$CMD\" | grep -qE \"$pattern\"; then\n        echo \"[BLOQUÉ] Commande interdite : $pattern → utiliser $replacement\"\n        exit 2\n    fi\n}\ncheck_forbidden '(^|[;&|[:space:]])pip3? '  'uv run / uv pip'\ncheck_forbidden '(^|[;&|[:space:]])poetry '  'uv'\ncheck_forbidden '(^|[;&|[:space:]])npm '     'pnpm'\ncheck_forbidden '(^|[;&|[:space:]])yarn '    'pnpm'\nexit 0"
+      "script_path": ".claude/hooks/enforce-package-managers.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Bloque npm et yarn, impose pnpm pour ce projet Node.js (PreToolUse Bash)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst FORBIDDEN = [\n  { pattern: /(^|[;&|\\s])npm(\\s|$)/, replacement: 'pnpm' },\n  { pattern: /(^|[;&|\\s])yarn(\\s|$)/, replacement: 'pnpm' },\n];\n\nexport function run(input) {\n  if (input.tool_name !== 'Bash') return null;\n  const cmd = input.tool_input?.command ?? '';\n  const hit = FORBIDDEN.find(({ pattern }) => pattern.test(cmd));\n  return hit\n    ? { decision: 'block', reason: `Utiliser '${hit.replacement}' à la place. Ce projet impose pnpm (pas npm ni yarn).` }\n    : null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n"
     },
     "community_examples": [
       {
@@ -1030,32 +843,22 @@
       "node",
       "validation"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Enforce package managers",
-        "description": "Blocks pip, poetry, npm and yarn commands; enforces uv (Python) and pnpm (Node.js). Generates an actionable message with the replacement command.",
-        "use_cases": [
-          "Standardize package management tooling across a Python+Node monorepo",
-          "Avoid virtual environment conflicts between pip and uv"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "pre-edit-worktree-guard",
     "slug": "pre-edit-worktree-guard",
-    "name": "Garde-fou worktree (Edit/Write)",
+    "name": "Worktree guardrail (Edit/Write)",
     "category": "workflow",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PreToolUse",
     "trigger": "Edit|Write",
-    "description": "Bloque tout Edit/Write dont le chemin absolu cible le repo principal au lieu du worktree actif. Suggère le chemin corrigé. Détecte le worktree via .claude/active-worktree ou via git rev-parse.",
+    "description": "Blocks any Edit/Write whose absolute path targets the main repo instead of the active worktree. Suggests the corrected path. Detects the worktree via .claude/active-worktree or via git rev-parse.",
     "use_cases": [
-      "Prévenir les modifications accidentelles du repo principal en mode worktree",
-      "Workflows multi-agents parallèles avec isolement par worktree"
+      "Prevent accidental changes to the main repo in worktree mode",
+      "Parallel multi-agent workflows with per-worktree isolation"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1067,15 +870,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "bash .claude/hooks/worktree-guard.sh"
+                  "command": "node bash .claude/hooks/worktree-guard.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/worktree-guard.sh",
-      "code_snippet": "#!/bin/bash\n# PreToolUse — Bloque Edit/Write sur le repo principal quand un worktree est actif.\n# Sources : 1. .claude/active-worktree  2. git rev-parse --show-toplevel\nINPUT=$(cat)\nTOOL_NAME=$(python3 -c \"import sys,json; print(json.load(sys.stdin).get('tool_name',''))\" <<< \"$INPUT\" 2>/dev/null)\n[[ \"$TOOL_NAME\" != \"Edit\" && \"$TOOL_NAME\" != \"Write\" ]] && exit 0\nFILE_PATH=$(python3 -c \"import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('file_path',''))\" <<< \"$INPUT\" 2>/dev/null)\n[ -z \"$FILE_PATH\" ] && exit 0\nMAIN_PATH=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')\n[ -z \"$MAIN_PATH\" ] && exit 0\nACTIVE_WT=\"\"\n[ -f \"${MAIN_PATH}/.claude/active-worktree\" ] && ACTIVE_WT=$(tr -d '[:space:]' < \"${MAIN_PATH}/.claude/active-worktree\")\n[ -z \"$ACTIVE_WT\" ] && GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n \"$GIT_ROOT\" ] && [ \"$GIT_ROOT\" != \"$MAIN_PATH\" ] && ACTIVE_WT=\"$GIT_ROOT\"\n[ -z \"$ACTIVE_WT\" ] && exit 0\nif [[ \"$FILE_PATH\" == \"$MAIN_PATH/\"* ]] && [[ \"$FILE_PATH\" != \"$ACTIVE_WT/\"* ]]; then\n    printf \"WORKTREE GUARD — CHEMIN INCORRECT\\n  Reçu    : %s\\n  Correct : %s\\n\" \"$FILE_PATH\" \"${ACTIVE_WT}${FILE_PATH#$MAIN_PATH}\"\n    exit 2\nfi\nexit 0"
+      "script_path": ".claude/hooks/worktree-guard.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Empêche l'édition de fichiers hors du worktree courant (PreToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { resolve } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? '';\nif (!filePath) process.exit(0);\n\ntry {\n  const worktreeRoot = execSync('git rev-parse --show-toplevel', {\n    encoding: 'utf8', timeout: 5_000,\n  }).trim();\n\n  const worktreeLines = execSync('git worktree list', {\n    encoding: 'utf8', timeout: 5_000,\n  }).trim().split('\\n');\n\n  const mainRoot = worktreeLines[0]?.split(/\\s+/)[0] ?? '';\n\n  // Only enforce guard when we're in a non-main worktree\n  if (!mainRoot || worktreeRoot === mainRoot) process.exit(0);\n\n  const absFile = resolve(filePath);\n  if (!absFile.startsWith(worktreeRoot + '/')) {\n    process.stdout.write(JSON.stringify({\n      decision: 'block',\n      reason: `Écriture hors du worktree courant (${worktreeRoot}). Vérifiez le chemin cible.`,\n    }));\n  }\n} catch {\n  // git absent ou pas dans un repo — laisser passer\n}\n"
     },
     "community_examples": [
       {
@@ -1090,33 +893,23 @@
       "isolation",
       "workflow"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Worktree guardrail (Edit/Write)",
-        "description": "Blocks any Edit/Write whose absolute path targets the main repo instead of the active worktree. Suggests the corrected path. Detects the worktree via .claude/active-worktree or via git rev-parse.",
-        "use_cases": [
-          "Prevent accidental changes to the main repo in worktree mode",
-          "Parallel multi-agent workflows with per-worktree isolation"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "stop-quality-check",
     "slug": "stop-quality-check",
-    "name": "Vérification qualité automatique (Stop)",
+    "name": "Automatic quality check (Stop)",
     "category": "validation",
     "provider": [
       "claude-code"
     ],
     "hook_type": "Stop",
     "trigger": "*",
-    "description": "Exécute une vérification qualité complète à chaque arrêt : lint, type-check, tests unitaires en parallèle, coverage ≥80% global et par fichier modifié, vérification de l'existence des tests. Auto-désactivation après 3 échecs consécutifs (asyncRewake).",
+    "description": "Runs a full quality check on every stop: lint, type-check, unit tests in parallel, coverage ≥80% globally and per modified file, and verification that tests exist. Auto-disables after 3 consecutive failures (asyncRewake).",
     "use_cases": [
-      "Definition of Done automatique sans intervention manuelle",
-      "Bloquer les sessions qui laissent des erreurs de lint ou une couverture insuffisante",
-      "Paralléliser build + tests pour minimiser le temps d'attente"
+      "Automatic Definition of Done with no manual intervention",
+      "Block sessions that leave lint errors or insufficient coverage",
+      "Parallelize build + tests to minimize wait time"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1127,7 +920,7 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "bash .claude/hooks/quality-check.sh",
+                  "command": "node bash .claude/hooks/quality-check.mjs",
                   "timeout": 600,
                   "statusMessage": "Vérification qualité en cours...",
                   "asyncRewake": true,
@@ -1139,8 +932,8 @@
           ]
         }
       },
-      "script_path": ".claude/hooks/quality-check.sh",
-      "code_snippet": "#!/bin/bash\n# Hook Stop — Definition of Done automatique\n# Fail-fast lint → parallèle build/tests → coverage ≥80%\n# Auto-désactivation après ≥3 échecs consécutifs de session.\nCLAUDE_SESSION_PID=\"${PPID:-unknown}\"\nQC_DISABLE_FILE=\"/tmp/.claude-qc-disabled-${CLAUDE_SESSION_PID}\"\n[ -f \"$QC_DISABLE_FILE\" ] && { echo \"[quality-check] SUSPENDU.\"; exit 0; }\ncheck() { local name=\"$1\" cmd=\"$2\"; out=$(bash -c \"$cmd\" 2>&1) || ERRORS+=\"[FAIL] $name\\n$(printf '%s' \"$out\" | tail -10)\\n---\\n\"; }\n$HAS_PY && check ruff \"uv run ruff check --no-fix .\"\n$HAS_FE && check 'pnpm lint' 'cd frontend && pnpm lint'\n$HAS_FE && check type-check 'cd frontend && pnpm type-check'\n$HAS_PY && uv run pytest --cov=app -q & PID_PY=$!\n$HAS_FE && (cd frontend && pnpm test:unit -- --coverage --run) & PID_FE=$!\nwait $PID_PY $PID_FE\n# Coverage globale ≥80% et par fichier modifié"
+      "script_path": ".claude/hooks/quality-check.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Bilan qualité complet à la fin d'une session : typecheck + lint + tests (Stop)\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\nimport { join } from 'path';\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\n\nfunction run(label, cmd) {\n  try {\n    execSync(cmd, { cwd: projectDir, stdio: 'pipe', timeout: 60_000 });\n    process.stderr.write(`[quality-check] ✓ ${label}\\n`);\n    return true;\n  } catch (err) {\n    const out = err.stdout?.toString()?.trim() ?? '';\n    process.stderr.write(`[quality-check] ✗ ${label}\\n${out ? out.slice(-500) + '\\n' : ''}`);\n    return false;\n  }\n}\n\nconst checks = [];\nconst hasPkg = existsSync(join(projectDir, 'package.json'));\n\nif (hasPkg && existsSync(join(projectDir, 'tsconfig.json')))\n  checks.push(['TypeScript', 'npx --no-install tsc --noEmit']);\nif (hasPkg)\n  checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 .']);\nif (hasPkg)\n  checks.push(['Tests', 'pnpm test --run 2>/dev/null || npx --no-install vitest run 2>/dev/null || true']);\n\nconst results = checks.map(([label, cmd]) => run(label, cmd));\nconst failed  = results.filter(r => !r).length;\n\nif (failed > 0)\n  process.stderr.write(`[quality-check] ${failed}/${checks.length} vérification(s) échouée(s).\\n`);\nelse if (checks.length > 0)\n  process.stderr.write(`[quality-check] ✓ Tous les contrôles qualité passent.\\n`);\n"
     },
     "community_examples": [
       {
@@ -1157,33 +950,22 @@
       "definition-of-done",
       "asyncRewake"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Automatic quality check (Stop)",
-        "description": "Runs a full quality check on every stop: lint, type-check, unit tests in parallel, coverage ≥80% globally and per modified file, and verification that tests exist. Auto-disables after 3 consecutive failures (asyncRewake).",
-        "use_cases": [
-          "Automatic Definition of Done with no manual intervention",
-          "Block sessions that leave lint errors or insufficient coverage",
-          "Parallelize build + tests to minimize wait time"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "worktree-create-setup-env",
     "slug": "worktree-create-setup-env",
-    "name": "Initialisation env worktree",
+    "name": "Worktree env initialization",
     "category": "workflow",
     "provider": [
       "claude-code"
     ],
     "hook_type": "WorktreeCreate",
     "trigger": "*",
-    "description": "Copie les fichiers .env et alloue des ports dédiés lors de la création d'un worktree. Exécution asynchrone avec statusMessage visible dans l'UI Claude Code.",
+    "description": "Copies .env files and allocates dedicated ports when a worktree is created. Runs asynchronously with a statusMessage visible in the Claude Code UI.",
     "use_cases": [
-      "Isoler les variables d'environnement (ports, secrets) par worktree",
-      "Démarrer plusieurs agents en parallèle sans collision de ports"
+      "Isolate environment variables (ports, secrets) per worktree",
+      "Start multiple agents in parallel without port collisions"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1194,7 +976,7 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "bash setup-worktree-env.sh",
+                  "command": "node bash setup-worktree-env.mjs",
                   "timeout": 60,
                   "statusMessage": "Copie des .env et allocation des ports du worktree...",
                   "async": true
@@ -1204,7 +986,8 @@
           ]
         }
       },
-      "script_path": "setup-worktree-env.sh"
+      "script_path": ".claude/hooks/setup-worktree-env.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Copie les fichiers .env du dépôt principal vers le worktree (WorktreeCreate)\nimport { execSync } from 'child_process';\nimport { existsSync, copyFileSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nexport function run({\n  exec = defaultExec,\n  exists = existsSync,\n  copy = copyFileSync,\n} = {}) {\n  const worktreeList = exec('git worktree list');\n  const mainDir = worktreeList.split('\\n')[0]?.split(/\\s+/)[0] ?? '';\n  const worktreeDir = exec('git rev-parse --show-toplevel');\n\n  if (!mainDir || !worktreeDir || mainDir === worktreeDir) return;\n\n  for (const envFile of ['.env', '.env.local', '.env.development.local']) {\n    const src = join(mainDir, envFile);\n    const dst = join(worktreeDir, envFile);\n    if (exists(src) && !exists(dst)) {\n      copy(src, dst);\n      process.stderr.write(`Copié : ${envFile} → ${worktreeDir}\\n`);\n    }\n  }\n}\n\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  run();\n}\n"
     },
     "community_examples": [
       {
@@ -1220,32 +1003,22 @@
       "multi-agent",
       "async"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Worktree env initialization",
-        "description": "Copies .env files and allocates dedicated ports when a worktree is created. Runs asynchronously with a statusMessage visible in the Claude Code UI.",
-        "use_cases": [
-          "Isolate environment variables (ports, secrets) per worktree",
-          "Start multiple agents in parallel without port collisions"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "worktree-create-update-deps",
     "slug": "worktree-create-update-deps",
-    "name": "Mise à jour dépendances worktree",
+    "name": "Worktree dependency update",
     "category": "workflow",
     "provider": [
       "claude-code"
     ],
     "hook_type": "WorktreeCreate",
     "trigger": "*",
-    "description": "Lance la mise à jour des dépendances du projet lors de la création d'un worktree. Exécution asynchrone avec timeout de 300 s pour les installations longues.",
+    "description": "Runs the project dependency update when a worktree is created. Runs asynchronously with a 300 s timeout for long installs.",
     "use_cases": [
-      "Garantir que chaque worktree démarre avec des dépendances à jour",
-      "Automatiser le bootstrap d'un nouvel environnement d'agent isolé"
+      "Ensure every worktree starts with up-to-date dependencies",
+      "Automate bootstrapping of a new isolated agent environment"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1256,7 +1029,7 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "bash update-lib.sh",
+                  "command": "node bash update-deps.mjs",
                   "timeout": 300,
                   "statusMessage": "Mise à jour des dépendances du worktree...",
                   "async": true
@@ -1266,7 +1039,8 @@
           ]
         }
       },
-      "script_path": "update-lib.sh"
+      "script_path": ".claude/hooks/update-deps.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Installe les dépendances Node dans le worktree nouvellement créé (WorktreeCreate)\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\n/* v8 ignore next 3 */\nfunction defaultExec(cmd, opts = {}) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 300_000, ...opts }).trim(); } catch { return ''; }\n}\n\nexport function run({\n  exec = defaultExec,\n  exists = existsSync,\n} = {}) {\n  const worktreeDir = exec('git rev-parse --show-toplevel');\n  if (!worktreeDir || !exists(`${worktreeDir}/package.json`)) return;\n\n  const hasPnpm = exec('which pnpm');\n  const out = hasPnpm\n    ? exec('pnpm install --frozen-lockfile', { cwd: worktreeDir })\n    : exec('npm ci', { cwd: worktreeDir });\n\n  const tail = out.split('\\n').slice(-5).join('\\n');\n  if (tail) process.stderr.write(tail + '\\n');\n}\n\n/* v8 ignore next 3 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  run();\n}\n"
     },
     "community_examples": [
       {
@@ -1281,32 +1055,22 @@
       "bootstrap",
       "async"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Worktree dependency update",
-        "description": "Runs the project dependency update when a worktree is created. Runs asynchronously with a 300 s timeout for long installs.",
-        "use_cases": [
-          "Ensure every worktree starts with up-to-date dependencies",
-          "Automate bootstrapping of a new isolated agent environment"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "stop-missing-test-detection",
     "slug": "stop-missing-test-detection",
-    "name": "Détection des tests manquants (Stop)",
+    "name": "Missing test detection (Stop)",
     "category": "validation",
     "provider": [
       "claude-code"
     ],
     "hook_type": "Stop",
     "trigger": "*",
-    "description": "À chaque arrêt de session, inspecte git diff pour lister les fichiers sources modifiés et vérifie qu'un fichier de test correspondant existe. Échoue avec la liste des fichiers non couverts si des tests sont absents.",
+    "description": "On every session stop, inspects git diff to list modified source files and checks that a matching test file exists. Fails with the list of uncovered files if tests are missing.",
     "use_cases": [
-      "Garantir qu'aucun fichier métier ne soit livré sans test associé",
-      "Intégrer un 'Definition of Done' léger sans lancer les tests complets"
+      "Ensure no business file ships without an associated test",
+      "Integrate a lightweight 'Definition of Done' without running the full test suite"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1317,15 +1081,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/missing-test-detection.sh"
+                  "command": "node bash $CLAUDE_PROJECT_DIR/.claude/hooks/missing-test-detection.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/missing-test-detection.sh",
-      "code_snippet": "#!/bin/bash\n# Stop — Détecte les fichiers sources modifiés sans test correspondant.\nBASE=$(git merge-base origin/main HEAD 2>/dev/null)\nif [ -z \"$BASE\" ] || [ \"$BASE\" = \"$(git rev-parse HEAD 2>/dev/null)\" ]; then\n    MODIFIED=$(git diff --name-only HEAD 2>/dev/null)\nelse\n    MODIFIED=$(git diff --name-only \"$BASE\" HEAD 2>/dev/null)\nfi\nMISSING=\"\"\nwhile IFS= read -r f; do\n    [ -z \"$f\" ] && continue\n    # Adapter le pattern aux dossiers métier du projet\n    case \"$f\" in\n        src/lib/*.ts|src/store/*.ts|src/hooks/*.ts) ;;\n        *) continue ;;\n    esac\n    filename=$(basename \"$f\" .ts)\n    if ! find src -name \"${filename}.test.ts\" -o -name \"${filename}.spec.ts\" 2>/dev/null | grep -q .; then\n        MISSING=\"${MISSING}  - ${f}\\n\"\n    fi\ndone <<< \"$MODIFIED\"\nif [ -n \"$MISSING\" ]; then\n    printf \"[FAIL] Tests manquants pour les fichiers modifiés :\\n%b→ Créer les fichiers de test correspondants.\\n\" \"$MISSING\"\n    exit 2\nfi\nexit 0"
+      "script_path": ".claude/hooks/missing-test-detection.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Détecte les fichiers sources modifiés sans test correspondant (Stop)\nimport { readFileSync, existsSync, writeFileSync, unlinkSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { basename } from 'path';\nimport { fileURLToPath } from 'url';\n\nconst pid = process.ppid ?? 'unknown';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nexport function run({\n  exec = defaultExec,\n  exists = existsSync,\n  readFile = readFileSync,\n  writeFile = writeFileSync,\n  unlink = unlinkSync,\n  counterFile = `/tmp/.claude-missing-tests-count-${pid}`,\n  disableFile = `/tmp/.claude-missing-tests-disabled-${pid}`,\n} = {}) {\n  if (exists(disableFile)) {\n    process.stderr.write(`[missing-test-detection] SUSPENDU (≥3 échecs). rm '${disableFile}' pour réactiver.\\n`);\n    return { exitCode: 0 };\n  }\n\n  const base = exec('git merge-base origin/main HEAD');\n  const head = exec('git rev-parse HEAD');\n  const raw = base && base !== head\n    ? exec(`git diff --name-only ${base} HEAD`)\n    : exec('git diff --name-only HEAD');\n\n  const missing = [];\n  for (const f of raw.split('\\n').filter(Boolean)) {\n    if (!/^src\\/(lib|store|hooks)\\/[^/]+\\.ts$/.test(f)) continue;\n    if (/\\.(test|spec)\\.ts$/.test(f)) continue; // un fichier de test n'exige pas son propre test\n    const name = basename(f, '.ts');\n    const found = exec(`find src -name \"${name}.test.ts\" -o -name \"${name}.spec.ts\"`);\n    if (!found) missing.push(f);\n  }\n\n  if (!missing.length) {\n    try { unlink(counterFile); } catch {}\n    process.stderr.write('[missing-test-detection] ✓ Aucun fichier source sans test détecté.\\n');\n    return { exitCode: 0 };\n  }\n\n  let count = 0;\n  try { count = parseInt(readFile(counterFile, 'utf8').trim(), 10) || 0; } catch {}\n  count++;\n  writeFile(counterFile, String(count));\n\n  let msg = `[FAIL] Tests manquants pour les fichiers modifiés :\\n${missing.map(f => `  - ${f}`).join('\\n')}\\n→ Créer les fichiers de test correspondants.\\n`;\n  if (count >= 3) {\n    writeFile(disableFile, '');\n    msg += `[AUTO-DISABLE] hook suspendu après ${count} échecs. rm '${disableFile}' pour réactiver.\\n`;\n  }\n\n  return { exitCode: 2, message: msg };\n}\n\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result.message) process.stderr.write(result.message);\n  process.exit(result.exitCode);\n}\n"
     },
     "community_examples": [
       {
@@ -1341,32 +1105,22 @@
       "git-diff",
       "coverage"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Missing test detection (Stop)",
-        "description": "On every session stop, inspects git diff to list modified source files and checks that a matching test file exists. Fails with the list of uncovered files if tests are missing.",
-        "use_cases": [
-          "Ensure no business file ships without an associated test",
-          "Integrate a lightweight 'Definition of Done' without running the full test suite"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "stop-per-file-coverage",
     "slug": "stop-per-file-coverage",
-    "name": "Coverage par fichier modifié (Stop)",
+    "name": "Per-modified-file coverage (Stop)",
     "category": "validation",
     "provider": [
       "claude-code"
     ],
     "hook_type": "Stop",
     "trigger": "*",
-    "description": "Lit le rapport JSON de coverage (vitest/jest coverage-summary.json ou pytest coverage.json) et vérifie que chaque fichier modifié depuis la base merge atteint ≥80% de couverture de lignes. Signale les fichiers en dessous du seuil avec leur pourcentage exact.",
+    "description": "Reads the JSON coverage report (vitest/jest coverage-summary.json or pytest coverage.json) and checks that each file modified since the merge base reaches ≥80% line coverage. Reports files below the threshold with their exact percentage.",
     "use_cases": [
-      "Bloquer une session qui a baissé la coverage sur un fichier spécifique sans le voir dans la coverage globale",
-      "Cibler le feedback sur les fichiers réellement modifiés plutôt que le projet entier"
+      "Block a session that lowered coverage on a specific file without seeing it in global coverage",
+      "Focus feedback on the files actually modified rather than the whole project"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1377,15 +1131,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/per-file-coverage.sh"
+                  "command": "node bash $CLAUDE_PROJECT_DIR/.claude/hooks/per-file-coverage.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/per-file-coverage.sh",
-      "code_snippet": "#!/bin/bash\n# Stop — Vérifie la coverage ≥80% pour chaque fichier modifié individuellement.\n# Lit coverage/coverage-summary.json (vitest) ou coverage.json (pytest).\nCOV_JSON=\"./coverage/coverage-summary.json\"\n[ ! -f \"$COV_JSON\" ] && exit 0  # Pas de rapport → skip silencieux\nBASE=$(git merge-base origin/main HEAD 2>/dev/null)\nif [ -z \"$BASE\" ] || [ \"$BASE\" = \"$(git rev-parse HEAD 2>/dev/null)\" ]; then\n    MODIFIED=$(git diff --name-only HEAD 2>/dev/null)\nelse\n    MODIFIED=$(git diff --name-only \"$BASE\" HEAD 2>/dev/null)\nfi\nLOW_COV=\"\"\nwhile IFS= read -r f; do\n    [ -z \"$f\" ] && continue\n    # Adapter le pattern et les exclusions au projet\n    [[ \"$f\" == src/*.ts ]] || [[ \"$f\" == src/*.tsx ]] || continue\n    case \"$f\" in src/types/*|src/constants/*|src/router/*|src/main.*) continue ;; esac\n    abs=\"$(pwd)/$f\"\n    pct=$(jq --arg p \"$abs\" '.[$p].lines.pct // -1' \"$COV_JSON\" 2>/dev/null)\n    [ \"$pct\" = \"-1\" ] || [ \"$pct\" = \"null\" ] && continue\n    if awk \"BEGIN {exit !($pct < 80)}\"; then\n        LOW_COV=\"${LOW_COV}  - ${f}: $(printf '%.0f' \"$pct\")%\\n\"\n    fi\ndone <<< \"$MODIFIED\"\nif [ -n \"$LOW_COV\" ]; then\n    printf \"[FAIL] Coverage < 80%% pour les fichiers modifiés :\\n%b→ Ajouter des tests pour atteindre le seuil.\\n\" \"$LOW_COV\"\n    exit 2\nfi\nexit 0"
+      "script_path": ".claude/hooks/per-file-coverage.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Vérifie la coverage ≥80% par fichier .ts/.tsx modifié (Stop)\nimport { readFileSync, existsSync, writeFileSync, unlinkSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst pid = process.ppid ?? 'unknown';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nconst SKIP = /^src\\/(types|constants|router|main)\\//;\n\nexport function run({\n  exec = defaultExec,\n  exists = existsSync,\n  readFile = readFileSync,\n  writeFile = writeFileSync,\n  unlink = unlinkSync,\n  cwd = process.cwd(),\n  counterFile = `/tmp/.claude-per-cov-count-${pid}`,\n  disableFile = `/tmp/.claude-per-cov-disabled-${pid}`,\n  covJson = './coverage/coverage-summary.json',\n} = {}) {\n  if (exists(disableFile)) {\n    process.stderr.write(`[per-file-coverage] SUSPENDU (≥3 échecs). rm '${disableFile}' pour réactiver.\\n`);\n    return { exitCode: 0 };\n  }\n\n  if (!exists(covJson)) return { exitCode: 0 };\n\n  const base = exec('git merge-base origin/main HEAD');\n  const head = exec('git rev-parse HEAD');\n  const raw = base && base !== head\n    ? exec(`git diff --name-only ${base} HEAD`)\n    : exec('git diff --name-only HEAD');\n\n  let coverage;\n  try { coverage = JSON.parse(readFile(covJson, 'utf8')); } catch { return { exitCode: 0 }; }\n\n  const lowCov = [];\n  for (const f of raw.split('\\n').filter(Boolean)) {\n    if (!/^src\\/.*\\.tsx?$/.test(f) || SKIP.test(f)) continue;\n    const pct = coverage[`${cwd}/${f}`]?.lines?.pct;\n    if (pct != null && pct < 80) lowCov.push({ f, pct });\n  }\n\n  if (!lowCov.length) {\n    try { unlink(counterFile); } catch {}\n    return { exitCode: 0 };\n  }\n\n  let count = 0;\n  try { count = parseInt(readFile(counterFile, 'utf8').trim(), 10) || 0; } catch {}\n  count++;\n  writeFile(counterFile, String(count));\n\n  let msg = `[FAIL] Coverage < 80% pour les fichiers modifiés :\\n${lowCov.map(({ f, pct }) => `  - ${f}: ${Math.round(pct)}%`).join('\\n')}\\n→ Ajouter des tests pour atteindre le seuil.\\n`;\n  if (count >= 3) {\n    writeFile(disableFile, '');\n    msg += `[AUTO-DISABLE] hook suspendu après ${count} échecs. rm '${disableFile}' pour réactiver.\\n`;\n  }\n\n  return { exitCode: 2, message: msg };\n}\n\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result.message) process.stdout.write(result.message);\n  process.exit(result.exitCode);\n}\n"
     },
     "community_examples": [
       {
@@ -1402,33 +1156,23 @@
       "pytest",
       "definition-of-done"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Per-modified-file coverage (Stop)",
-        "description": "Reads the JSON coverage report (vitest/jest coverage-summary.json or pytest coverage.json) and checks that each file modified since the merge base reaches ≥80% line coverage. Reports files below the threshold with their exact percentage.",
-        "use_cases": [
-          "Block a session that lowered coverage on a specific file without seeing it in global coverage",
-          "Focus feedback on the files actually modified rather than the whole project"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "stop-session-dedup-autodisable",
     "slug": "stop-session-dedup-autodisable",
-    "name": "Auto-désactivation hook Stop après N échecs",
+    "name": "Auto-disable Stop hook after N failures",
     "category": "workflow",
     "provider": [
       "claude-code"
     ],
     "hook_type": "Stop",
     "trigger": "*",
-    "description": "Mécanisme de déduplication par session : utilise $PPID comme identifiant de session stable, compte les échecs consécutifs dans /tmp, et désactive automatiquement le hook après ≥3 échecs sans correction. Affiche les instructions de réactivation. Réinitialise le compteur sur succès. Prévient les boucles de re-réveil asyncRewake infinies.",
+    "description": "Per-session deduplication mechanism: uses $PPID as a stable session identifier, counts consecutive failures in /tmp, and automatically disables the hook after ≥3 failures without a fix. Shows reactivation instructions. Resets the counter on success. Prevents infinite asyncRewake re-wake loops.",
     "use_cases": [
-      "Éviter qu'un hook Stop flaky bloque indéfiniment une session via asyncRewake",
-      "Suspendre automatiquement les checks qualité quand les erreurs sont connues et en cours de correction",
-      "Protéger tout hook Stop potentiellement instable sans modifier sa logique principale"
+      "Prevent a flaky Stop hook from blocking a session indefinitely via asyncRewake",
+      "Automatically suspend quality checks when errors are known and being fixed",
+      "Protect any potentially unstable Stop hook without changing its core logic"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1439,7 +1183,7 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "bash .claude/hooks/quality-check.sh",
+                  "command": "node bash .claude/hooks/quality-check.mjs",
                   "asyncRewake": true
                 }
               ]
@@ -1447,8 +1191,8 @@
           ]
         }
       },
-      "script_path": ".claude/hooks/quality-check.sh",
-      "code_snippet": "#!/bin/bash\n# Mécanisme de déduplication de session — à intégrer en tête de tout hook Stop.\n# $PPID = PID du processus Claude Code parent, stable toute la session.\nCLAUDE_SESSION_PID=\"${PPID:-unknown}\"\nQC_COUNTER_FILE=\"/tmp/.claude-qc-count-${CLAUDE_SESSION_PID}\"\nQC_DISABLE_FILE=\"/tmp/.claude-qc-disabled-${CLAUDE_SESSION_PID}\"\n\n# Vérifier si désactivé pour cette session\nif [ -f \"$QC_DISABLE_FILE\" ]; then\n    echo \"[hook] SUSPENDU pour cette session (≥3 échecs consécutifs sans correction).\"\n    echo \"  → Corriger les erreurs, puis : rm '${QC_DISABLE_FILE}'\"\n    exit 0\nfi\n\n# Appeler cette fonction à la place de 'exit 2' pour comptabiliser l'échec\nemit_errors() {\n    local count\n    count=$(( $(cat \"$QC_COUNTER_FILE\" 2>/dev/null || echo 0) + 1 ))\n    echo \"$count\" > \"$QC_COUNTER_FILE\"\n    if [ \"$count\" -ge 3 ]; then\n        touch \"$QC_DISABLE_FILE\"\n        ERRORS=\"${ERRORS}[AUTO-DISABLE] hook suspendu après ${count} échecs consécutifs.\\n  rm '${QC_DISABLE_FILE}' pour réactiver.\\n---\\n\"\n    fi\n    printf \"%b\" \"$ERRORS\"\n    exit 2\n}\n\n# ... logique principale du hook ...\n\n# Sur succès : réinitialiser le compteur\nrm -f \"$QC_COUNTER_FILE\"\nexit 0"
+      "script_path": ".claude/hooks/session-dedup-autodisable.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Auto-désactive les hooks Stop qui ont échoué ≥ N fois de suite (Stop)\nimport { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';\nimport { join } from 'path';\n\nconst MAX_FAILURES = 3;\nconst COUNTER_DIR = '/tmp/claude-hook-counters';\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\nconst settingsPath = join(projectDir, '.claude', 'settings.json');\n\nif (!existsSync(COUNTER_DIR)) process.exit(0);\n\ntry {\n  const counters = readdirSync(COUNTER_DIR).filter(f => f.endsWith('.counter'));\n  const toDisable = counters\n    .map(f => {\n      try {\n        const count = parseInt(readFileSync(join(COUNTER_DIR, f), 'utf8').trim(), 10);\n        return count >= MAX_FAILURES ? f.replace('.counter', '') : null;\n      } catch { return null; }\n    })\n    .filter(Boolean);\n\n  if (!toDisable.length) process.exit(0);\n\n  process.stderr.write(`[session-dedup] Hooks à désactiver (${MAX_FAILURES}+ échecs) : ${toDisable.join(', ')}\\n`);\n  process.stderr.write('[session-dedup] Supprimez les fichiers /tmp/claude-hook-counters/*.counter pour réactiver.\\n');\n} catch {\n  // Erreur de lecture — ignorer silencieusement\n}\n"
     },
     "community_examples": [
       {
@@ -1465,33 +1209,22 @@
       "ppid",
       "resilience"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Auto-disable Stop hook after N failures",
-        "description": "Per-session deduplication mechanism: uses $PPID as a stable session identifier, counts consecutive failures in /tmp, and automatically disables the hook after ≥3 failures without a fix. Shows reactivation instructions. Resets the counter on success. Prevents infinite asyncRewake re-wake loops.",
-        "use_cases": [
-          "Prevent a flaky Stop hook from blocking a session indefinitely via asyncRewake",
-          "Automatically suspend quality checks when errors are known and being fixed",
-          "Protect any potentially unstable Stop hook without changing its core logic"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "stop-i18n-validation",
     "slug": "stop-i18n-validation",
-    "name": "Validation i18n complète (Stop)",
+    "name": "Full i18n validation (Stop)",
     "category": "validation",
     "provider": [
       "claude-code"
     ],
     "hook_type": "Stop",
     "trigger": "*",
-    "description": "Valide la cohérence des fichiers de traduction à chaque arrêt de session : toutes les clés utilisées dans le code existent dans les fichiers i18n, et aucune clé orpheline ne traîne. S'exécute uniquement si des fichiers frontend ont été modifiés.",
+    "description": "Validates the consistency of translation files on every session stop: every key used in the code exists in the i18n files, and no orphan key lingers. Runs only if frontend files were modified.",
     "use_cases": [
-      "Empêcher de livrer des chaînes non traduites ou des clés orphelines",
-      "Valider automatiquement les traductions sans attendre la CI"
+      "Prevent shipping untranslated strings or orphan keys",
+      "Validate translations automatically without waiting for CI"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1502,15 +1235,15 @@
               "hooks": [
                 {
                   "type": "command",
-                  "command": "bash .claude/hooks/i18n-validation.sh"
+                  "command": "node bash .claude/hooks/i18n-validation.mjs"
                 }
               ]
             }
           ]
         }
       },
-      "script_path": ".claude/hooks/i18n-validation.sh",
-      "code_snippet": "#!/bin/bash\n# Stop — Valide la cohérence i18n si des fichiers frontend ont été modifiés.\n# Adapter la commande au gestionnaire i18n du projet (vue-i18n, i18next, etc.)\n\n# Vérifier si des fichiers frontend ont changé\nBASE=$(git merge-base origin/main HEAD 2>/dev/null)\nif [ -z \"$BASE\" ] || [ \"$BASE\" = \"$(git rev-parse HEAD 2>/dev/null)\" ]; then\n    MODIFIED=$(git diff --name-only HEAD 2>/dev/null)\nelse\n    MODIFIED=$(git diff --name-only \"$BASE\" HEAD 2>/dev/null)\nfi\n\nHAS_FE=false\nwhile IFS= read -r f; do\n    [[ \"$f\" == frontend/* ]] || [[ \"$f\" == src/* ]] && HAS_FE=true && break\ndone <<< \"$MODIFIED\"\n$HAS_FE || exit 0\n\n# Adapter selon le projet :\n# Vue + vue-i18n  : cd frontend && pnpm validate:translations\n# React + i18next : cd frontend && npx i18next-parser --fail-on-warnings\n# Python + babel  : pybabel compile -d app/translations --statistics\nif ! output=$(cd frontend && pnpm validate:translations 2>&1); then\n    printf \"[FAIL] i18n invalide :\\n%s\\n\" \"$output\"\n    exit 2\nfi\n\nexit 0"
+      "script_path": ".claude/hooks/i18n-validation.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Valide la cohérence des fichiers de traduction (Stop)\nimport { readFileSync, existsSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { join } from 'path';\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\n\nfunction exec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 5_000, cwd: projectDir }).trim(); } catch { return ''; }\n}\n\n// Cherche les fichiers de traduction JSON (ex: locales/fr.json, messages/en.json)\nconst i18nFiles = exec('find . -path ./node_modules -prune -o -name \"*.json\" -print')\n  .split('\\n')\n  .filter(f => /\\/(locales?|messages?|i18n)\\//i.test(f) && f.endsWith('.json'));\n\nif (i18nFiles.length < 2) process.exit(0);\n\n// Groupe par répertoire et vérifie la cohérence des clés\nconst byDir = {};\nfor (const f of i18nFiles) {\n  const dir = f.split('/').slice(0, -1).join('/');\n  byDir[dir] ??= [];\n  byDir[dir].push(f);\n}\n\nconst issues = [];\nfor (const [dir, files] of Object.entries(byDir)) {\n  if (files.length < 2) continue;\n  const parsed = files.map(f => {\n    try { return { f, keys: new Set(Object.keys(JSON.parse(readFileSync(join(projectDir, f), 'utf8')))) }; } catch { return null; }\n  }).filter(Boolean);\n\n  const allKeys = new Set(parsed.flatMap(p => [...p.keys]));\n  for (const { f, keys } of parsed) {\n    const missing = [...allKeys].filter(k => !keys.has(k));\n    if (missing.length > 0)\n      issues.push(`${f} manque ${missing.length} clé(s) : ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? '…' : ''}`);\n  }\n}\n\nif (issues.length > 0)\n  process.stderr.write(`[i18n-validation] Incohérences détectées :\\n${issues.map(i => `  - ${i}`).join('\\n')}\\n`);\nelse\n  process.stderr.write('[i18n-validation] ✓ Fichiers de traduction cohérents.\\n');\n"
     },
     "community_examples": [
       {
@@ -1526,32 +1259,22 @@
       "frontend",
       "definition-of-done"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Full i18n validation (Stop)",
-        "description": "Validates the consistency of translation files on every session stop: every key used in the code exists in the i18n files, and no orphan key lingers. Runs only if frontend files were modified.",
-        "use_cases": [
-          "Prevent shipping untranslated strings or orphan keys",
-          "Validate translations automatically without waiting for CI"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "notification-tts-voice",
     "slug": "notification-tts-voice",
-    "name": "Notification vocale TTS",
+    "name": "TTS voice notification",
     "category": "notification",
     "provider": [
       "claude-code"
     ],
     "hook_type": "Notification",
     "trigger": "*",
-    "description": "Annonce vocalement via la synthèse vocale système (say/espeak) quand l'agent a besoin de l'attention de l'utilisateur.",
+    "description": "Announces out loud via the system text-to-speech (say/espeak) when the agent needs the user's attention.",
     "use_cases": [
-      "Alerter l'utilisateur en mode autonome longue durée",
-      "Notification sonore quand l'agent attend une validation"
+      "Alert the user during long autonomous runs",
+      "Audible notification when the agent awaits a validation"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1571,7 +1294,7 @@
         }
       },
       "script_path": ".claude/hooks/notification-tts.mjs",
-      "code_snippet": "import { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst engineerName = (process.env.ENGINEER_NAME || '').trim();\nconst personalized = engineerName && Math.random() < 0.3;\nconst msg = personalized\n  ? `${engineerName}, your agent needs your input`\n  : 'Your agent needs your input';\n\ntry {\n  if (process.platform === 'darwin') {\n    execSync(`say \"${msg.replace(/\"/g, '')}\"`, { timeout: 10000, stdio: 'ignore' });\n  } else {\n    execSync(`espeak \"${msg.replace(/\"/g, '')}\"`, { timeout: 10000, stdio: 'ignore' });\n  }\n} catch {}"
+      "code_snippet": "#!/usr/bin/env node\n// Lit les notifications Claude à voix haute via le TTS système (Notification)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst message = input.message ?? input.notification ?? '';\nif (!message) process.exit(0);\n\nconst text = message.replace(/[`*_#]/g, '').slice(0, 200);\n\ntry {\n  // macOS: say, Linux: espeak / spd-say\n  if (process.platform === 'darwin') {\n    execSync(`say \"${text.replace(/\"/g, '\\\\\"')}\"`, { timeout: 15_000, stdio: 'ignore' });\n  } else {\n    execSync(`espeak \"${text.replace(/\"/g, '\\\\\"')}\" 2>/dev/null || spd-say \"${text.replace(/\"/g, '\\\\\"')}\"`, {\n      timeout: 15_000, stdio: 'ignore', shell: true,\n    });\n  }\n} catch {\n  // TTS absent ou erreur — non bloquant\n}\n"
     },
     "community_examples": [
       {
@@ -1587,32 +1310,22 @@
       "audio",
       "attention"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "TTS voice notification",
-        "description": "Announces out loud via the system text-to-speech (say/espeak) when the agent needs the user's attention.",
-        "use_cases": [
-          "Alert the user during long autonomous runs",
-          "Audible notification when the agent awaits a validation"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "stop-tts-completion",
     "slug": "stop-tts-completion",
-    "name": "Annonce vocale de fin de tâche",
+    "name": "Voice task-completion announcement",
     "category": "notification",
     "provider": [
       "claude-code"
     ],
     "hook_type": "Stop",
     "trigger": "*",
-    "description": "Annonce vocalement via TTS que l'agent a terminé sa tâche, avec un message de complétion aléatoire.",
+    "description": "Announces out loud via TTS that the agent has finished its task, with a random completion message.",
     "use_cases": [
-      "Notifier sans regarder l'écran quand la tâche est finie",
-      "Feedback audio en fin de session longue"
+      "Get notified without watching the screen when the task is done",
+      "Audio feedback at the end of a long session"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1632,7 +1345,7 @@
         }
       },
       "script_path": ".claude/hooks/stop-tts.mjs",
-      "code_snippet": "import { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nJSON.parse(readFileSync(0, 'utf8'));\nconst messages = ['Work complete!', 'All done!', 'Task finished!', 'Job complete!', 'Ready for next task!'];\nconst msg = messages[Math.floor(Math.random() * messages.length)];\n\ntry {\n  if (process.platform === 'darwin') {\n    execSync(`say \"${msg}\"`, { timeout: 10000, stdio: 'ignore' });\n  } else {\n    execSync(`espeak \"${msg}\"`, { timeout: 10000, stdio: 'ignore' });\n  }\n} catch {}"
+      "code_snippet": "#!/usr/bin/env node\n// Annonce la fin de session Claude par TTS (Stop)\nimport { execSync } from 'child_process';\n\nconst project = process.env.CLAUDE_PROJECT_DIR?.split('/').pop() ?? 'Claude';\nconst text = `Tâche terminée sur ${project}`;\n\ntry {\n  if (process.platform === 'darwin') {\n    execSync(`say \"${text}\"`, { timeout: 10_000, stdio: 'ignore' });\n  } else {\n    execSync(`espeak \"${text}\" 2>/dev/null || spd-say \"${text}\"`, {\n      timeout: 10_000, stdio: 'ignore', shell: true,\n    });\n  }\n} catch {\n  // TTS absent — non bloquant\n}\n"
     },
     "community_examples": [
       {
@@ -1648,32 +1361,22 @@
       "completion",
       "audio"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Voice task-completion announcement",
-        "description": "Announces out loud via TTS that the agent has finished its task, with a random completion message.",
-        "use_cases": [
-          "Get notified without watching the screen when the task is done",
-          "Audio feedback at the end of a long session"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "subagent-start-tts-announce",
     "slug": "subagent-start-tts-announce",
-    "name": "Annonce vocale de démarrage de sous-agent",
+    "name": "Subagent start voice announcement",
     "category": "notification",
     "provider": [
       "claude-code"
     ],
     "hook_type": "SubagentStart",
     "trigger": "*",
-    "description": "Annonce vocalement via TTS quand un sous-agent démarre, pour suivre l'activité parallèle des agents.",
+    "description": "Announces out loud via TTS when a subagent starts, to track parallel agent activity.",
     "use_cases": [
-      "Traçabilité audio des agents parallèles",
-      "Suivi sans interface visuelle du démarrage de sous-agents"
+      "Audio traceability of parallel agents",
+      "Track subagent startup without a visual interface"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1693,7 +1396,7 @@
         }
       },
       "script_path": ".claude/hooks/subagent-start-tts.mjs",
-      "code_snippet": "import { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst agentName = input.agent_name || '';\nconst msg = agentName ? `Subagent ${agentName} started` : 'Subagent started';\n\ntry {\n  if (process.platform === 'darwin') {\n    execSync(`say \"${msg.replace(/\"/g, '')}\"`, { timeout: 10000, stdio: 'ignore' });\n  } else {\n    execSync(`espeak \"${msg.replace(/\"/g, '')}\"`, { timeout: 10000, stdio: 'ignore' });\n  }\n} catch {}"
+      "code_snippet": "#!/usr/bin/env node\n// Annonce le démarrage d'un sous-agent par TTS (SubagentStart)\nimport { execSync } from 'child_process';\n\nconst text = 'Sous-agent démarré';\n\ntry {\n  if (process.platform === 'darwin') {\n    execSync(`say \"${text}\"`, { timeout: 10_000, stdio: 'ignore' });\n  } else {\n    execSync(`espeak \"${text}\" 2>/dev/null || spd-say \"${text}\"`, {\n      timeout: 10_000, stdio: 'ignore', shell: true,\n    });\n  }\n} catch {}\n"
     },
     "community_examples": [
       {
@@ -1709,32 +1412,22 @@
       "parallel-agents",
       "audio"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Subagent start voice announcement",
-        "description": "Announces out loud via TTS when a subagent starts, to track parallel agent activity.",
-        "use_cases": [
-          "Audio traceability of parallel agents",
-          "Track subagent startup without a visual interface"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "subagent-stop-tts-summary",
     "slug": "subagent-stop-tts-summary",
-    "name": "Résumé vocal de fin de sous-agent",
+    "name": "Subagent end voice summary",
     "category": "notification",
     "provider": [
       "claude-code"
     ],
     "hook_type": "SubagentStop",
     "trigger": "*",
-    "description": "Annonce la fin d'un sous-agent avec un message vocal. Utilise un verrou de fichier pour éviter les chevauchements TTS quand plusieurs sous-agents se terminent en parallèle.",
+    "description": "Announces the end of a subagent with a voice message. Uses a file lock to avoid TTS overlap when several subagents finish in parallel.",
     "use_cases": [
-      "Suivi audio des tâches parallèles complétées",
-      "Annonce ordonnée de fin de sous-agents sans collision sonore"
+      "Audio tracking of completed parallel tasks",
+      "Ordered subagent-end announcements without sound collisions"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1754,7 +1447,7 @@
         }
       },
       "script_path": ".claude/hooks/subagent-stop-tts.mjs",
-      "code_snippet": "import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from 'fs';\nimport { join } from 'path';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst agentName = input.agent_name || '';\nconst lockDir = join(process.cwd(), '.claude', 'data', 'tts_queue');\nconst lockFile = join(lockDir, 'tts.lock');\nmkdirSync(lockDir, { recursive: true });\n\nconst deadline = Date.now() + 30000;\nwhile (existsSync(lockFile) && Date.now() < deadline) {\n  try { execSync('sleep 0.1', { stdio: 'ignore', timeout: 200 }); } catch { break; }\n}\ntry { writeFileSync(lockFile, JSON.stringify({ pid: process.pid, ts: new Date().toISOString() })); } catch {}\n\nconst messages = ['Subagent complete', 'Agent task done', 'Subagent finished'];\nconst base = messages[Math.floor(Math.random() * messages.length)];\nconst msg = agentName ? `${agentName} complete` : base;\n\ntry {\n  if (process.platform === 'darwin') {\n    execSync(`say \"${msg.replace(/\"/g, '')}\"`, { timeout: 10000, stdio: 'ignore' });\n  } else {\n    execSync(`espeak \"${msg.replace(/\"/g, '')}\"`, { timeout: 10000, stdio: 'ignore' });\n  }\n} finally {\n  try { unlinkSync(lockFile); } catch {}\n}"
+      "code_snippet": "#!/usr/bin/env node\n// Annonce la fin d'un sous-agent par TTS (SubagentStop)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nlet summary = '';\ntry {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  summary = input.summary ?? '';\n} catch {}\n\nconst text = summary\n  ? `Sous-agent terminé : ${summary.slice(0, 100).replace(/[`*_#]/g, '')}`\n  : 'Sous-agent terminé';\n\ntry {\n  if (process.platform === 'darwin') {\n    execSync(`say \"${text.replace(/\"/g, '\\\\\"')}\"`, { timeout: 10_000, stdio: 'ignore' });\n  } else {\n    execSync(`espeak \"${text.replace(/\"/g, '\\\\\"')}\" 2>/dev/null`, {\n      timeout: 10_000, stdio: 'ignore', shell: true,\n    });\n  }\n} catch {}\n"
     },
     "community_examples": [
       {
@@ -1771,32 +1464,22 @@
       "locking",
       "audio"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Subagent end voice summary",
-        "description": "Announces the end of a subagent with a voice message. Uses a file lock to avoid TTS overlap when several subagents finish in parallel.",
-        "use_cases": [
-          "Audio tracking of completed parallel tasks",
-          "Ordered subagent-end announcements without sound collisions"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "user-prompt-log-session",
     "slug": "user-prompt-log-session",
-    "name": "Journal des prompts par session",
+    "name": "Per-session prompt log",
     "category": "context",
     "provider": [
       "claude-code"
     ],
     "hook_type": "UserPromptSubmit",
     "trigger": "*",
-    "description": "Persiste chaque prompt utilisateur dans un fichier JSON par session, permettant de retrouver l'historique des échanges.",
+    "description": "Persists every user prompt into a per-session JSON file, allowing the exchange history to be retrieved.",
     "use_cases": [
-      "Audit des prompts soumis par session",
-      "Rejouer ou analyser une session passée"
+      "Audit prompts submitted per session",
+      "Replay or analyze a past session"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1815,7 +1498,7 @@
         }
       },
       "script_path": ".claude/hooks/user-prompt-log.mjs",
-      "code_snippet": "import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst sessionId = input.session_id || 'unknown';\nconst sessionsDir = join(process.cwd(), '.claude', 'data', 'sessions');\nmkdirSync(sessionsDir, { recursive: true });\nconst sessionFile = join(sessionsDir, `${sessionId}.json`);\n\nlet sessionData = { session_id: sessionId, prompts: [] };\nif (existsSync(sessionFile)) {\n  try { sessionData = JSON.parse(readFileSync(sessionFile, 'utf8')); } catch {}\n}\nsessionData.prompts = sessionData.prompts || [];\nsessionData.prompts.push({ prompt: input.prompt, timestamp: new Date().toISOString() });\nwriteFileSync(sessionFile, JSON.stringify(sessionData, null, 2));"
+      "code_snippet": "#!/usr/bin/env node\n// Journalise chaque prompt utilisateur dans .claude/data/sessions/ (UserPromptSubmit)\nimport { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst sessionId = input.session_id ?? 'unknown';\nconst prompt    = input.prompt ?? '';\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\nconst dir = join(projectDir, '.claude', 'data', 'sessions');\nmkdirSync(dir, { recursive: true });\n\nconst file = join(dir, `${sessionId}.json`);\nlet data = { session_id: sessionId, prompts: [] };\nif (existsSync(file)) {\n  try { data = JSON.parse(readFileSync(file, 'utf8')); } catch {}\n}\ndata.prompts ??= [];\ndata.prompts.push({ prompt, timestamp: new Date().toISOString() });\nwriteFileSync(file, JSON.stringify(data, null, 2));\n"
     },
     "community_examples": [
       {
@@ -1831,32 +1514,22 @@
       "prompt",
       "history"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Per-session prompt log",
-        "description": "Persists every user prompt into a per-session JSON file, allowing the exchange history to be retrieved.",
-        "use_cases": [
-          "Audit prompts submitted per session",
-          "Replay or analyze a past session"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "user-prompt-llm-agent-name",
     "slug": "user-prompt-llm-agent-name",
-    "name": "Nommage automatique de session",
+    "name": "Automatic session naming",
     "category": "context",
     "provider": [
       "claude-code"
     ],
     "hook_type": "UserPromptSubmit",
     "trigger": "*",
-    "description": "Génère automatiquement un nom créatif en un mot pour chaque session (ex : Phoenix, Sage, Nova) au premier prompt, pour un suivi plus humain des sessions.",
+    "description": "Automatically generates a creative one-word name for each session (e.g. Phoenix, Sage, Nova) on the first prompt, for more human-friendly session tracking.",
     "use_cases": [
-      "Identifier les sessions dans les logs par un nom mémorable",
-      "Personnaliser les annonces TTS de sous-agents"
+      "Identify sessions in logs by a memorable name",
+      "Personalize subagent TTS announcements"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1875,7 +1548,7 @@
         }
       },
       "script_path": ".claude/hooks/user-prompt-name-agent.mjs",
-      "code_snippet": "import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst sessionId = input.session_id || 'unknown';\nconst sessionsDir = join(process.cwd(), '.claude', 'data', 'sessions');\nmkdirSync(sessionsDir, { recursive: true });\nconst sessionFile = join(sessionsDir, `${sessionId}.json`);\n\nlet sessionData = { session_id: sessionId };\nif (existsSync(sessionFile)) {\n  try { sessionData = JSON.parse(readFileSync(sessionFile, 'utf8')); } catch {}\n}\n\nif (!sessionData.agent_name && input.prompt) {\n  const fallback = ['Phoenix', 'Sage', 'Nova', 'Echo', 'Atlas', 'Cipher', 'Nexus', 'Oracle', 'Aurora', 'Vortex'];\n  sessionData.agent_name = fallback[Math.floor(Math.random() * fallback.length)];\n  writeFileSync(sessionFile, JSON.stringify(sessionData, null, 2));\n}"
+      "code_snippet": "#!/usr/bin/env node\n// Attribue un nom à l'agent pour la session courante (UserPromptSubmit)\nimport { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst sessionId = input.session_id ?? 'unknown';\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\nconst dir = join(projectDir, '.claude', 'data', 'sessions');\nmkdirSync(dir, { recursive: true });\n\nconst file = join(dir, `${sessionId}.json`);\nlet data = { session_id: sessionId };\nif (existsSync(file)) {\n  try { data = JSON.parse(readFileSync(file, 'utf8')); } catch {}\n}\n\nif (!data.agent_name) {\n  const NAMES = ['Phoenix', 'Sage', 'Nova', 'Echo', 'Atlas', 'Cipher', 'Nexus', 'Oracle', 'Aurora', 'Vortex'];\n  data.agent_name = NAMES[Math.floor(Math.random() * NAMES.length)];\n  writeFileSync(file, JSON.stringify(data, null, 2));\n  process.stdout.write(`Tu t'appelles **${data.agent_name}** pour cette session.\\n`);\n}\n"
     },
     "community_examples": [
       {
@@ -1891,32 +1564,22 @@
       "identity",
       "personalization"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Automatic session naming",
-        "description": "Automatically generates a creative one-word name for each session (e.g. Phoenix, Sage, Nova) on the first prompt, for more human-friendly session tracking.",
-        "use_cases": [
-          "Identify sessions in logs by a memorable name",
-          "Personalize subagent TTS announcements"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "pre-compact-transcript-backup",
     "slug": "pre-compact-transcript-backup",
-    "name": "Sauvegarde du transcript avant compaction",
+    "name": "Transcript backup before compaction",
     "category": "workflow",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PreCompact",
     "trigger": "*",
-    "description": "Sauvegarde automatiquement le fichier transcript JSONL avant chaque compaction de contexte, pour permettre l'audit ou la restauration.",
+    "description": "Automatically backs up the JSONL transcript file before every context compaction, to allow auditing or restoration.",
     "use_cases": [
-      "Conserver un historique complet avant compaction",
-      "Audit des sessions longues"
+      "Keep a full history before compaction",
+      "Audit long sessions"
     ],
     "implementation": {
       "type": "settings_json",
@@ -1936,7 +1599,7 @@
         }
       },
       "script_path": ".claude/hooks/pre-compact-backup.mjs",
-      "code_snippet": "import { readFileSync, copyFileSync, mkdirSync, existsSync } from 'fs';\nimport { join, basename } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst transcriptPath = input.transcript_path || '';\nconst trigger = input.trigger || 'unknown';\n\nif (transcriptPath && existsSync(transcriptPath)) {\n  const backupDir = join(process.cwd(), 'logs', 'transcript_backups');\n  mkdirSync(backupDir, { recursive: true });\n  const timestamp = new Date().toISOString().replace(/[:.]/g, '').slice(0, 15);\n  const stem = basename(transcriptPath).replace(/\\.jsonl$/, '');\n  const dest = join(backupDir, `${stem}_pre_compact_${trigger}_${timestamp}.jsonl`);\n  try { copyFileSync(transcriptPath, dest); } catch {}\n}"
+      "code_snippet": "#!/usr/bin/env node\n// Sauvegarde le résumé de compaction dans un fichier temporaire (PreCompact)\nimport { readFileSync, writeFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst summary  = input.summary ?? '';\nconst sessionId = input.session_id ?? `session-${Date.now()}`;\n\nif (!summary) process.exit(0);\n\nconst backupDir = '/tmp/claude-compact-backups';\nmkdirSync(backupDir, { recursive: true });\n\nconst file = join(backupDir, `${sessionId}.json`);\nwriteFileSync(file, JSON.stringify({\n  session_id: sessionId,\n  saved_at: new Date().toISOString(),\n  summary,\n}, null, 2));\n\nprocess.stderr.write(`[pre-compact-backup] Contexte sauvegardé → ${file}\\n`);\n"
     },
     "community_examples": [
       {
@@ -1952,32 +1615,22 @@
       "context",
       "audit"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Transcript backup before compaction",
-        "description": "Automatically backs up the JSONL transcript file before every context compaction, to allow auditing or restoration.",
-        "use_cases": [
-          "Keep a full history before compaction",
-          "Audit long sessions"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "permission-request-auto-allow-readonly",
     "slug": "permission-request-auto-allow-readonly",
-    "name": "Auto-approbation des permissions lecture seule",
+    "name": "Auto-approve read-only permissions",
     "category": "security",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PermissionRequest",
     "trigger": "*",
-    "description": "Approuve automatiquement les demandes de permission pour les opérations en lecture seule (Read, Glob, Grep, commandes Bash sûres) sans intervention manuelle.",
+    "description": "Automatically approves permission requests for read-only operations (Read, Glob, Grep, safe Bash commands) without manual intervention.",
     "use_cases": [
-      "Réduire les interruptions pour les opérations non-destructives",
-      "Politique de sécurité automatisée basée sur la sûreté des commandes"
+      "Reduce interruptions for non-destructive operations",
+      "Automated security policy based on command safety"
     ],
     "implementation": {
       "type": "settings_json",
@@ -2013,32 +1666,22 @@
       "readonly",
       "policy"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Auto-approve read-only permissions",
-        "description": "Automatically approves permission requests for read-only operations (Read, Glob, Grep, safe Bash commands) without manual intervention.",
-        "use_cases": [
-          "Reduce interruptions for non-destructive operations",
-          "Automated security policy based on command safety"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "post-tool-failure-log",
     "slug": "post-tool-failure-log",
-    "name": "Journal structuré des échecs d'outils",
+    "name": "Structured tool failure log",
     "category": "context",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PostToolUseFailure",
     "trigger": "*",
-    "description": "Enregistre chaque échec d'outil dans un fichier JSON structuré avec horodatage, nom d'outil, input et erreur, pour le débogage et l'audit.",
+    "description": "Records every tool failure into a structured JSON file with timestamp, tool name, input and error, for debugging and auditing.",
     "use_cases": [
-      "Débogage des outils qui échouent en session autonome",
-      "Détection de patterns d'échec récurrents"
+      "Debug tools that fail during autonomous sessions",
+      "Detect recurring failure patterns"
     ],
     "implementation": {
       "type": "settings_json",
@@ -2058,7 +1701,7 @@
         }
       },
       "script_path": ".claude/hooks/post-tool-failure-log.mjs",
-      "code_snippet": "import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst logDir = join(process.cwd(), 'logs');\nmkdirSync(logDir, { recursive: true });\nconst logPath = join(logDir, 'tool_failures.json');\n\nconst entry = {\n  timestamp: new Date().toISOString(),\n  session_id: input.session_id || '',\n  tool_name: input.tool_name || 'unknown',\n  tool_use_id: input.tool_use_id || '',\n  tool_input: input.tool_input || {},\n  error: input.error || {}\n};\n\nlet log = [];\nif (existsSync(logPath)) {\n  try { log = JSON.parse(readFileSync(logPath, 'utf8')); } catch {}\n}\nlog.push(entry);\nwriteFileSync(logPath, JSON.stringify(log, null, 2));"
+      "code_snippet": "#!/usr/bin/env node\n// Journalise les échecs d'outils pour le débogage (PostToolUseFailure)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\nconst logDir = join(projectDir, '.claude', 'data');\nmkdirSync(logDir, { recursive: true });\n\nconst entry = {\n  ts: new Date().toISOString(),\n  tool: input.tool_name ?? 'unknown',\n  input: input.tool_input ?? {},\n  error: input.error ?? input.tool_response ?? null,\n};\n\nappendFileSync(join(logDir, 'tool-failures.jsonl'), JSON.stringify(entry) + '\\n');\nprocess.stderr.write(`[post-tool-failure] Échec journalisé : ${entry.tool}\\n`);\n"
     },
     "community_examples": [
       {
@@ -2074,32 +1717,22 @@
       "audit",
       "error-tracking"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Structured tool failure log",
-        "description": "Records every tool failure into a structured JSON file with timestamp, tool name, input and error, for debugging and auditing.",
-        "use_cases": [
-          "Debug tools that fail during autonomous sessions",
-          "Detect recurring failure patterns"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "setup-check-install-deps",
     "slug": "setup-check-install-deps",
-    "name": "Vérification et installation des dépendances au démarrage",
+    "name": "Dependency check and install at startup",
     "category": "workflow",
     "provider": [
       "claude-code"
     ],
     "hook_type": "SessionStart",
     "trigger": "*",
-    "description": "Vérifie la présence des outils système nécessaires et installe automatiquement les dépendances du projet (npm ci, uv sync) au démarrage de la session.",
+    "description": "Checks for the required system tools and automatically installs the project dependencies (npm ci, uv sync) at session startup.",
     "use_cases": [
-      "Environnement toujours prêt dès l'ouverture d'une session",
-      "Onboarding automatique sur un nouveau projet"
+      "Environment always ready as soon as a session opens",
+      "Automatic onboarding on a new project"
     ],
     "implementation": {
       "type": "settings_json",
@@ -2119,7 +1752,7 @@
         }
       },
       "script_path": ".claude/hooks/setup-check-deps.mjs",
-      "code_snippet": "import { readFileSync, existsSync } from 'fs';\nimport { execSync } from 'child_process';\n\nJSON.parse(readFileSync(0, 'utf8'));\n\nfunction available(cmd) {\n  try { execSync(`which ${cmd}`, { stdio: 'ignore', timeout: 3000 }); return true; } catch { return false; }\n}\n\nfor (const dep of ['node', 'git']) {\n  if (!available(dep)) process.stderr.write(`Warning: ${dep} not found in PATH\\n`);\n}\n\nif (existsSync('package.json') && existsSync('package-lock.json')) {\n  try { execSync('npm ci --prefer-offline', { timeout: 60000, stdio: 'ignore' }); } catch {\n    try { execSync('npm install', { timeout: 60000, stdio: 'ignore' }); } catch {}\n  }\n} else if (existsSync('pyproject.toml') || existsSync('uv.lock')) {\n  try { execSync('uv sync', { timeout: 60000, stdio: 'ignore' }); } catch {}\n}"
+      "code_snippet": "#!/usr/bin/env node\n// Vérifie que les dépendances du projet sont à jour au démarrage de session (SessionStart)\nimport { execSync } from 'child_process';\nimport { existsSync, statSync } from 'fs';\nimport { join } from 'path';\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\n\nfunction check(lockfile, modulesDir, installCmd) {\n  const lock = join(projectDir, lockfile);\n  const mods = join(projectDir, modulesDir);\n  if (!existsSync(lock)) return;\n  if (!existsSync(mods)) {\n    process.stderr.write(`[setup-check-deps] ⚠ ${modulesDir} absent — lancez : ${installCmd}\\n`);\n    return;\n  }\n  const lockMtime = statSync(lock).mtimeMs;\n  const modsMtime = statSync(mods).mtimeMs;\n  if (lockMtime > modsMtime) {\n    process.stderr.write(`[setup-check-deps] ⚠ ${lockfile} plus récent que ${modulesDir} — lancez : ${installCmd}\\n`);\n  }\n}\n\ncheck('pnpm-lock.yaml', 'node_modules', 'pnpm install');\ncheck('package-lock.json', 'node_modules', 'npm ci');\ncheck('yarn.lock', 'node_modules', 'yarn install --frozen-lockfile');\ncheck('requirements.txt', '.venv', 'pip install -r requirements.txt');\n"
     },
     "community_examples": [
       {
@@ -2136,32 +1769,22 @@
       "uv",
       "install"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Dependency check and install at startup",
-        "description": "Checks for the required system tools and automatically installs the project dependencies (npm ci, uv sync) at session startup.",
-        "use_cases": [
-          "Environment always ready as soon as a session opens",
-          "Automatic onboarding on a new project"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "session-end-cleanup-temp",
     "slug": "session-end-cleanup-temp",
-    "name": "Nettoyage des fichiers temporaires en fin de session",
+    "name": "Temporary file cleanup at session end",
     "category": "workflow",
     "provider": [
       "claude-code"
     ],
     "hook_type": "SessionEnd",
     "trigger": "*",
-    "description": "Supprime automatiquement les fichiers temporaires (.tmp) et les artefacts périmés du répertoire logs en fin de session.",
+    "description": "Automatically removes temporary files (.tmp) and stale artifacts from the logs directory at session end.",
     "use_cases": [
-      "Maintenir un répertoire logs propre sans intervention manuelle",
-      "Libérer de l'espace disque en fin de session longue"
+      "Keep a clean logs directory without manual intervention",
+      "Free disk space at the end of a long session"
     ],
     "implementation": {
       "type": "settings_json",
@@ -2181,7 +1804,7 @@
         }
       },
       "script_path": ".claude/hooks/session-end-cleanup.mjs",
-      "code_snippet": "import { readFileSync, readdirSync, unlinkSync, statSync } from 'fs';\nimport { join } from 'path';\n\nJSON.parse(readFileSync(0, 'utf8'));\nconst logDir = join(process.cwd(), 'logs');\n\ntry {\n  const files = readdirSync(logDir);\n  for (const f of files) {\n    const fullPath = join(logDir, f);\n    if (f.endsWith('.tmp')) {\n      try { unlinkSync(fullPath); } catch {}\n    }\n    if (f === 'chat.json') {\n      try {\n        const age = Date.now() - statSync(fullPath).mtimeMs;\n        if (age > 86400000) unlinkSync(fullPath);\n      } catch {}\n    }\n  }\n} catch {}"
+      "code_snippet": "#!/usr/bin/env node\n// Nettoie les fichiers temporaires Claude datant de plus de 24h (SessionEnd)\nimport { readdirSync, statSync, unlinkSync, existsSync } from 'fs';\nimport { join } from 'path';\n\nconst TMP = '/tmp';\nconst MAX_AGE_MS = 24 * 60 * 60 * 1_000;\nconst PREFIX = 'claude-';\n\nlet cleaned = 0;\ntry {\n  for (const f of readdirSync(TMP)) {\n    if (!f.startsWith(PREFIX)) continue;\n    const fp = join(TMP, f);\n    try {\n      const age = Date.now() - statSync(fp).mtimeMs;\n      if (age > MAX_AGE_MS) { unlinkSync(fp); cleaned++; }\n    } catch {}\n  }\n} catch {}\n\nif (cleaned > 0)\n  process.stderr.write(`[session-end-cleanup] ${cleaned} fichier(s) temporaire(s) supprimé(s).\\n`);\n"
     },
     "community_examples": [
       {
@@ -2196,33 +1819,23 @@
       "temp-files",
       "maintenance"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Temporary file cleanup at session end",
-        "description": "Automatically removes temporary files (.tmp) and stale artifacts from the logs directory at session end.",
-        "use_cases": [
-          "Keep a clean logs directory without manual intervention",
-          "Free disk space at the end of a long session"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "session-start-reinject-after-compact",
     "slug": "session-start-reinject-after-compact",
-    "name": "Réinjecter le contexte après compaction",
+    "name": "Re-inject context after compaction",
     "category": "context",
     "provider": [
       "claude-code"
     ],
     "hook_type": "SessionStart",
     "trigger": "compact",
-    "description": "Réinjecte les conventions et le contexte critique du projet dans la session après que Claude Code ait compacté la fenêtre de contexte, évitant ainsi la perte d'informations importantes.",
+    "description": "Re-injects the project conventions and critical context into the session after Claude Code compacts the context window, preventing the loss of important information.",
     "use_cases": [
-      "Rappeler les conventions du projet (gestionnaire de paquets, style de code) après compaction",
-      "Réinjecter le sprint en cours ou les tâches critiques",
-      "Rappeler les commandes de test ou de build importantes"
+      "Recall the project conventions (package manager, code style) after compaction",
+      "Re-inject the current sprint or critical tasks",
+      "Recall important test or build commands"
     ],
     "implementation": {
       "type": "settings_json",
@@ -2242,7 +1855,7 @@
         }
       },
       "script_path": ".claude/hooks/reinject-after-compact.mjs",
-      "code_snippet": "import { readFileSync } from 'fs';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\n\nif (input.source !== 'compact') process.exit(0);\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();\nlet context = '';\n\ntry {\n  const claudeMd = readFileSync(join(projectDir, 'CLAUDE.md'), 'utf8');\n  // Extract key conventions section only\n  const match = claudeMd.match(/##[\\s\\S]{0,500}/);\n  context = match ? match[0] : claudeMd.substring(0, 500);\n} catch {\n  context = 'Context compacted — please review CLAUDE.md for project conventions.';\n}\n\nprocess.stdout.write(`[Post-compaction reminder]\\n${context}\\n`);\nprocess.exit(0);"
+      "code_snippet": "#!/usr/bin/env node\n// Réinjecte le contexte sauvegardé avant la dernière compaction (SessionStart)\nimport { readFileSync, existsSync, readdirSync } from 'fs';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst sessionId = input.session_id ?? '';\n\nconst backupDir = '/tmp/claude-compact-backups';\nif (!existsSync(backupDir)) process.exit(0);\n\n// Cherche le backup de la session courante en priorité, sinon le plus récent\nlet backupFile = sessionId ? join(backupDir, `${sessionId}.json`) : null;\n\nif (!backupFile || !existsSync(backupFile)) {\n  const files = readdirSync(backupDir)\n    .filter(f => f.endsWith('.json'))\n    .map(f => ({ f, mtime: new Date(readFileSync(join(backupDir, f), 'utf8').split('\"saved_at\":\"')[1]?.split('\"')[0] ?? 0) }))\n    .sort((a, b) => b.mtime - a.mtime);\n  backupFile = files[0] ? join(backupDir, files[0].f) : null;\n}\n\nif (!backupFile || !existsSync(backupFile)) process.exit(0);\n\ntry {\n  const { summary, saved_at } = JSON.parse(readFileSync(backupFile, 'utf8'));\n  if (summary) {\n    process.stdout.write(`## Contexte de la session précédente (avant compaction du ${saved_at})\\n\\n${summary}\\n`);\n  }\n} catch {\n  // Fichier corrompu — ignorer silencieusement\n}\n"
     },
     "community_examples": [
       {
@@ -2257,34 +1870,23 @@
       "session",
       "conventions"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Re-inject context after compaction",
-        "description": "Re-injects the project conventions and critical context into the session after Claude Code compacts the context window, preventing the loss of important information.",
-        "use_cases": [
-          "Recall the project conventions (package manager, code style) after compaction",
-          "Re-inject the current sprint or critical tasks",
-          "Recall important test or build commands"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "config-change-audit-log",
     "slug": "config-change-audit-log",
-    "name": "Journal d'audit des changements de configuration",
+    "name": "Configuration change audit log",
     "category": "workflow",
     "provider": [
       "claude-code"
     ],
     "hook_type": "ConfigChange",
     "trigger": "*",
-    "description": "Enregistre chaque modification de fichier de configuration Claude Code (settings.json, skills, etc.) dans un journal d'audit horodaté pour traçabilité et conformité.",
+    "description": "Records every change to a Claude Code configuration file (settings.json, skills, etc.) into a timestamped audit log for traceability and compliance.",
     "use_cases": [
-      "Suivre qui a modifié la configuration Claude Code et quand",
-      "Audit de conformité sur les modifications de settings.json",
-      "Détecter des modifications non autorisées de la configuration"
+      "Track who changed the Claude Code configuration and when",
+      "Compliance audit on settings.json changes",
+      "Detect unauthorized configuration changes"
     ],
     "implementation": {
       "type": "settings_json",
@@ -2304,7 +1906,7 @@
         }
       },
       "script_path": ".claude/hooks/config-audit-log.mjs",
-      "code_snippet": "import { readFileSync, appendFileSync } from 'fs';\nimport { homedir } from 'os';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\n\nconst entry = JSON.stringify({\n  timestamp: new Date().toISOString(),\n  source: input.source,\n  file: input.file_path,\n  session_id: input.session_id\n});\n\nconst logPath = join(homedir(), '.claude', 'config-audit.log');\nappendFileSync(logPath, entry + '\\n');\nprocess.exit(0);"
+      "code_snippet": "#!/usr/bin/env node\n// Journalise les changements de configuration Claude Code (ConfigChange)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\nimport { homedir } from 'os';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\n\nconst logDir = join(homedir(), '.claude');\nmkdirSync(logDir, { recursive: true });\n\nconst entry = {\n  ts: new Date().toISOString(),\n  project: process.env.CLAUDE_PROJECT_DIR?.split('/').pop() ?? 'unknown',\n  change: input.change ?? input,\n};\n\nappendFileSync(join(logDir, 'config-changes.jsonl'), JSON.stringify(entry) + '\\n');\nprocess.stderr.write(`[config-audit] Changement journalise.\\n`);\n"
     },
     "community_examples": [
       {
@@ -2319,34 +1921,23 @@
       "compliance",
       "logging"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Configuration change audit log",
-        "description": "Records every change to a Claude Code configuration file (settings.json, skills, etc.) into a timestamped audit log for traceability and compliance.",
-        "use_cases": [
-          "Track who changed the Claude Code configuration and when",
-          "Compliance audit on settings.json changes",
-          "Detect unauthorized configuration changes"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "cwd-changed-reload-direnv",
     "slug": "cwd-changed-reload-direnv",
-    "name": "Recharger direnv au changement de répertoire",
+    "name": "Reload direnv on directory change",
     "category": "workflow",
     "provider": [
       "claude-code"
     ],
     "hook_type": "CwdChanged",
     "trigger": "*",
-    "description": "Recharge automatiquement les variables d'environnement via direnv lorsque Claude change de répertoire de travail, garantissant que les commandes Bash utilisent le bon environnement selon le répertoire courant.",
+    "description": "Automatically reloads environment variables via direnv when Claude changes its working directory, ensuring Bash commands use the right environment for the current directory.",
     "use_cases": [
-      "Projets mono-repo avec des environnements différents par sous-dossier",
-      "Gestion automatique de .envrc avec direnv",
-      "Synchroniser CLAUDE_ENV_FILE avec l'environnement du répertoire courant"
+      "Mono-repo projects with different environments per subfolder",
+      "Automatic .envrc management with direnv",
+      "Sync CLAUDE_ENV_FILE with the current directory's environment"
     ],
     "implementation": {
       "type": "settings_json",
@@ -2377,7 +1968,7 @@
         }
       },
       "script_path": ".claude/hooks/reload-direnv.mjs",
-      "code_snippet": "import { execSync } from 'child_process';\nimport { existsSync } from 'fs';\n\nconst envFile = process.env.CLAUDE_ENV_FILE;\nif (!envFile) process.exit(0);\n\ntry {\n  // Check direnv is available\n  execSync('which direnv', { stdio: 'ignore', timeout: 3000 });\n  execSync(`direnv export bash > \"${envFile}\"`, { timeout: 5000 });\n} catch {\n  // direnv not installed or .envrc not present — skip silently\n}\nprocess.exit(0);"
+      "code_snippet": "#!/usr/bin/env node\n// Recharge direnv quand le répertoire de travail change (CwdChanged)\nimport { readFileSync, existsSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst newCwd = input.cwd ?? input.new_cwd ?? process.cwd();\n\nconst envrc = `${newCwd}/.envrc`;\nif (!existsSync(envrc)) process.exit(0);\n\ntry {\n  execSync('direnv allow .', { cwd: newCwd, stdio: 'ignore', timeout: 5_000 });\n  process.stderr.write(`[reload-direnv] direnv rechargé dans ${newCwd}\\n`);\n} catch {\n  // direnv absent — non bloquant\n}\n"
     },
     "community_examples": [
       {
@@ -2392,34 +1983,23 @@
       "cwd",
       "monorepo"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Reload direnv on directory change",
-        "description": "Automatically reloads environment variables via direnv when Claude changes its working directory, ensuring Bash commands use the right environment for the current directory.",
-        "use_cases": [
-          "Mono-repo projects with different environments per subfolder",
-          "Automatic .envrc management with direnv",
-          "Sync CLAUDE_ENV_FILE with the current directory's environment"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "permission-request-auto-allow-exit-plan",
     "slug": "permission-request-auto-allow-exit-plan",
-    "name": "Approbation automatique de ExitPlanMode",
+    "name": "Automatic ExitPlanMode approval",
     "category": "workflow",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PermissionRequest",
     "trigger": "ExitPlanMode",
-    "description": "Approuve automatiquement la demande de permission ExitPlanMode, supprimant la boîte de dialogue interactive à chaque fois que Claude termine de présenter un plan et demande de procéder.",
+    "description": "Automatically approves the ExitPlanMode permission request, removing the interactive dialog every time Claude finishes presenting a plan and asks to proceed.",
     "use_cases": [
-      "Workflows de planification où l'approbation manuelle est toujours accordée",
-      "Automatisation CI/CD avec mode plan activé",
-      "Réduire les interruptions lors de sessions interactives intensives"
+      "Planning workflows where manual approval is always granted",
+      "CI/CD automation with plan mode enabled",
+      "Reduce interruptions during intensive interactive sessions"
     ],
     "implementation": {
       "type": "settings_json",
@@ -2439,7 +2019,7 @@
         }
       },
       "script_path": ".claude/hooks/auto-allow-exit-plan.mjs",
-      "code_snippet": "import { readFileSync } from 'fs';\n\nreadFileSync(0, 'utf8'); // consume stdin\n\nprocess.stdout.write(JSON.stringify({\n  hookSpecificOutput: {\n    hookEventName: 'PermissionRequest',\n    decision: { behavior: 'allow' }\n  }\n}));\nprocess.exit(0);"
+      "code_snippet": "#!/usr/bin/env node\n// Auto-autorise la sortie du mode plan (PermissionRequest)\nimport { readFileSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst toolName = input.tool_name ?? input.tool ?? '';\n\nif (toolName === 'exit_plan_mode') {\n  process.stdout.write(JSON.stringify({\n    hookSpecificOutput: {\n      hookEventName: 'PermissionRequest',\n      decision: { behavior: 'allow' },\n    },\n  }));\n}\n"
     },
     "community_examples": [
       {
@@ -2454,34 +2034,23 @@
       "automation",
       "approval"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Automatic ExitPlanMode approval",
-        "description": "Automatically approves the ExitPlanMode permission request, removing the interactive dialog every time Claude finishes presenting a plan and asks to proceed.",
-        "use_cases": [
-          "Planning workflows where manual approval is always granted",
-          "CI/CD automation with plan mode enabled",
-          "Reduce interruptions during intensive interactive sessions"
-        ]
-      }
-    }
+    "votes": 0
   },
   {
     "id": "post-bash-command-log",
     "slug": "post-bash-command-log",
-    "name": "Journal des commandes Bash",
+    "name": "Bash command log",
     "category": "workflow",
     "provider": [
       "claude-code"
     ],
     "hook_type": "PostToolUse",
     "trigger": "Bash",
-    "description": "Enregistre chaque commande Bash exécutée par Claude dans un fichier journal horodaté pour audit, débogage et historique des actions de la session.",
+    "description": "Records every Bash command executed by Claude into a timestamped log file for audit, debugging and a history of the session's actions.",
     "use_cases": [
-      "Auditer toutes les commandes shell exécutées par Claude",
-      "Déboguer les sessions Claude Code après coup",
-      "Historique des actions pour conformité ou documentation"
+      "Audit all shell commands executed by Claude",
+      "Debug Claude Code sessions after the fact",
+      "Action history for compliance or documentation"
     ],
     "implementation": {
       "type": "settings_json",
@@ -2501,7 +2070,7 @@
         }
       },
       "script_path": ".claude/hooks/bash-command-log.mjs",
-      "code_snippet": "import { readFileSync, appendFileSync } from 'fs';\nimport { homedir } from 'os';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst command = input?.tool_input?.command || '';\nif (!command) process.exit(0);\n\nconst entry = `[${new Date().toISOString()}] ${command}\\n`;\nappendFileSync(join(homedir(), '.claude', 'bash-commands.log'), entry);\nprocess.exit(0);"
+      "code_snippet": "#!/usr/bin/env node\n// Journalise toutes les commandes Bash exécutées (PostToolUse Bash)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst command = input.tool_input?.command ?? '';\nif (!command) process.exit(0);\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\nconst logDir = join(projectDir, '.claude', 'data');\nmkdirSync(logDir, { recursive: true });\n\nconst entry = {\n  ts: new Date().toISOString(),\n  cmd: command.slice(0, 1000),\n  exit: input.tool_response?.exit_code ?? null,\n  cwd: process.cwd(),\n};\n\nappendFileSync(join(logDir, 'bash-log.jsonl'), JSON.stringify(entry) + '\\n');\n"
     },
     "community_examples": [
       {
@@ -2516,17 +2085,6 @@
       "audit",
       "history"
     ],
-    "votes": 0,
-    "i18n": {
-      "en": {
-        "name": "Bash command log",
-        "description": "Records every Bash command executed by Claude into a timestamped log file for audit, debugging and a history of the session's actions.",
-        "use_cases": [
-          "Audit all shell commands executed by Claude",
-          "Debug Claude Code sessions after the fact",
-          "Action history for compliance or documentation"
-        ]
-      }
-    }
+    "votes": 0
   }
 ]

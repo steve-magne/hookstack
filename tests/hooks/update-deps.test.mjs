@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
-import { run } from './update-deps.mjs';
+import { run } from '../../.claude/hooks/update-deps.mjs';
 
 const DIR = '/repos/hookit';
 

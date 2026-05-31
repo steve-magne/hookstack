@@ -95,11 +95,11 @@ Hookit est un catalogue communautaire de hooks agentiques (Claude Code, GitHub C
 
 **Type `Hook`** (`src/types/hook.ts`) : chaque hook a un `slug`, une `category`, un ou plusieurs `provider[]`, un `hook_type` (événement Claude Code), un `trigger` (matcher d'outil, ex. `"Bash"`, `"Write|Edit"`, `"*"`), et une `implementation` de type `settings_json` avec un fragment `config` prêt à fusionner.
 
-**Catalogue multilingue** : le contenu en langage naturel d'un hook (`name`, `description`, `use_cases`) est traduit via un overlay optionnel `i18n` (`{ en: { name, description, use_cases } }`). Le **français reste canonique** (champs racine). `localizeHook(hook, locale)` (`src/lib/hooks.ts`) applique l'overlay champ par champ avec fallback FR ; il est appliqué dans `CatalogueExplorer`, `HookConfigurator` et la page détail avant filtrage/rendu. Seuls ces 3 champs sont traduits — `slug`, `tags`, `trigger`, `implementation` restent neutres.
+**Langue** : tout est en anglais. Pas d'i18n, pas de routing `/[locale]`. Le registre est canoniquement en anglais — `name`, `description`, `use_cases` directement dans les champs racine, sans overlay `i18n`. Les textes UI sont dans `src/lib/i18n.ts` (constante `T` exportée, anglais uniquement). `useT()` (`src/lib/locale-context.tsx`) retourne simplement `T` — utilisable dans les composants client.
 
 **Routes** : `/` (Home = hero + catalogue), `/hook/[slug]` (détail), `/contribute` (soumission de dépôt).
 
-**Composants** : tous marqués `'use client'` (Zustand + state). Les pages (`app/`) sont des Server Components sauf `hook/[slug]/page.tsx` (utilise `useParams` + Zustand).
+**Composants** : tous marqués `'use client'` (Zustand + state). Les pages (`app/`) sont des Server Components — elles importent `T` directement depuis `src/lib/i18n.ts`. Les composants client utilisent `useT()` depuis `src/lib/locale-context.tsx`.
 
 ## Motion / Animations
 
@@ -115,7 +115,7 @@ Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/re
 
 ## Ajouter un hook au registre
 
-Ajouter une entrée dans `registry/registry.json` en respectant le type `Hook`. Le champ `implementation.config` doit être un fragment `{ hooks: { [EventName]: [...] } }` directement fusionnable dans `settings.json`. Toujours fournir l'overlay `i18n.en` (traduction de `name`, `description`, `use_cases` — même nombre d'éléments que `use_cases`).
+Ajouter une entrée dans `registry/registry.json` en respectant le type `Hook`. Les champs `name`, `description`, `use_cases` sont directement en anglais dans les champs racine — pas d'overlay `i18n`. Le champ `implementation.config` doit être un fragment `{ hooks: { [EventName]: [...] } }` directement fusionnable dans `settings.json`.
 
 ## Conventions hooks Claude Code
 

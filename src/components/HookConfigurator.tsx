@@ -3,21 +3,20 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, m } from 'motion/react'
 import { useSelection } from '@/store/selection'
-import { allHooks, localizeHook } from '@/lib/hooks'
-import { useLocale, useT } from '@/lib/locale-context'
+import { allHooks } from '@/lib/hooks'
+import { useT } from '@/lib/locale-context'
 import { CopySwap } from './CopySwap'
 import { spring } from '@/lib/motion'
 
 export function HookConfigurator() {
   const T = useT()
-  const locale = useLocale()
   const selected = useSelection((s) => s.selected)
   const remove = useSelection((s) => s.remove)
   const [pluginCopiedBottom, setPluginCopiedBottom] = useState(false)
 
   const hooks = useMemo(
-    () => allHooks.filter((h) => selected.includes(h.slug)).map((h) => localizeHook(h, locale)),
-    [selected, locale]
+    () => allHooks.filter((h) => selected.includes(h.slug)),
+    [selected]
   )
   const pluginCmd = `claude --plugin-url https://claudehooks.vercel.app/api/plugin?hooks=${hooks.map(h => h.slug).join(',')}`
 

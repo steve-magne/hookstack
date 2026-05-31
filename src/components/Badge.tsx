@@ -35,7 +35,7 @@ export function HookTypeBadge({ type, trigger }: { type: string; trigger: string
                 ? 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
                 : 'bg-zinc-500/10 text-zinc-400 ring-zinc-500/20'
             }`}>
-              {info.blocking ? '⚡ bloquant' : '· non bloquant'}
+              {info.blocking ? '⚡ blocking' : '· non-blocking'}
             </span>
           )}
           <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />

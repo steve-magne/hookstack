@@ -8,8 +8,8 @@ import { HookModal } from './HookModal'
 import { HookConfigurator } from './HookConfigurator'
 import { CopySwap } from './CopySwap'
 import { sectionReveal, spring, staggerContainer } from '@/lib/motion'
-import { allHooks, filterHooks, localizeHook } from '@/lib/hooks'
-import { useLocale, useT } from '@/lib/locale-context'
+import { allHooks, filterHooks } from '@/lib/hooks'
+import { useT } from '@/lib/locale-context'
 import { useSelection } from '@/store/selection'
 import {
   HOOK_TYPE_INFO,
@@ -71,7 +71,6 @@ function buildGroups(hooks: Hook[], groupBy: GroupBy, categoryLabels: Record<str
 
 export function CatalogueExplorer({ initialCategory, showConfigurator = true }: Props) {
   const T = useT()
-  const locale = useLocale()
   const initMust = useSelection((s) => s.initMust)
   const [groupBy, setGroupBy] = useState<GroupBy>('event')
   const [query, setQuery] = useState('')
@@ -86,12 +85,12 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   const selectedSlugs = useSelection((s) => s.selected)
   const selectedCount = selectedSlugs.length
 
-  const mustHooks = useMemo(
-    () => allHooks.filter((h) => h.is_must).map((h) => localizeHook(h, locale)),
-    [locale]
+  const mustSlugs = useMemo(
+    () => allHooks.filter((h) => h.is_must).map((h) => h.slug),
+    []
   )
 
-  // La bannière sticky reflète la sélection en direct : cocher un hook modifie ce lien.
+  // Sticky banner reflects live selection: checking a hook updates this command.
   const installCmd = useMemo(
     () =>
       `claude --plugin-url https://claudehooks.vercel.app/api/plugin?hooks=${allHooks
@@ -102,11 +101,10 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   )
 
   useEffect(() => {
-    initMust(mustHooks.map((h) => h.slug))
-  }, [initMust, mustHooks])
+    initMust(mustSlugs)
+  }, [initMust, mustSlugs])
 
-  // Pulse de la bannière quand la sélection change → « le lien a été modifié ».
-  // Garde-fou 800 ms : ne pas pulser sur l'init (initMust ajoute les must hooks au mount).
+  // Pulse the banner when selection changes — guard 800ms to skip init.
   const ringControls = useAnimationControls()
   const countControls = useAnimationControls()
   const prevCount = useRef(selectedCount)
@@ -143,20 +141,15 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
     hideTimer.current = setTimeout(() => setPreview(null), 90)
   }, [])
 
-  const localizedHooks = useMemo(
-    () => allHooks.map((h) => localizeHook(h, locale)),
-    [locale]
-  )
-
   const results = useMemo(
     () =>
-      filterHooks(localizedHooks, {
+      filterHooks(allHooks, {
         query,
         categories: initialCategory ? [initialCategory] : [],
         providers: [],
         events: [],
       }),
-    [localizedHooks, query, initialCategory]
+    [query, initialCategory]
   )
 
   const groups = useMemo(() => buildGroups(results, groupBy, T.categoryLabels), [results, groupBy, T])
@@ -166,7 +159,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
 
   return (
     <div>
-      {/* Bannière d'installation — sticky, reflète la sélection en direct + pulse au changement */}
+      {/* Sticky install banner — reflects live selection + pulses on change */}
       <div className="sticky top-14 z-30 mb-8 rounded-xl border border-zinc-700 bg-[#0d0d14] px-4 py-3 shadow-lg shadow-black/30">
         <m.span
           aria-hidden
@@ -202,7 +195,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
         </div>
       </div>
 
-      {/* Contrôles */}
+      {/* Controls */}
       <div className="mb-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
@@ -223,7 +216,6 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
             )}
           </div>
 
-          {/* Bascule de regroupement */}
           <div className="inline-flex self-end shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 sm:self-auto">
             {(['event', 'category'] as GroupBy[]).map((g) => (
               <button
@@ -250,7 +242,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
         </div>
       </div>
 
-      {/* Liste groupée — cascade à l'entrée, FLIP au filtrage */}
+      {/* Grouped list — cascade on enter, FLIP on filter */}
       {results.length > 0 ? (
         <m.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-8">
           <AnimatePresence mode="popLayout">
@@ -307,7 +299,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
         {active && <HookModal key="hook-modal" hook={active} onClose={() => setActive(null)} />}
       </AnimatePresence>
 
-      {/* Carte de prévisualisation flottante — position: fixed, aucun impact sur le flux */}
+      {/* Floating preview card — position: fixed, no layout impact */}
       {preview && (
         <div
           style={{
@@ -348,7 +340,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                       ? 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
                       : 'bg-zinc-500/10 text-zinc-400 ring-zinc-500/20'
                   }`}>
-                    {info.blocking ? '⚡ bloquant' : '· non bloquant'}
+                    {info.blocking ? '⚡ blocking' : '· non-blocking'}
                   </span>
                   <span className="font-mono text-[11px] text-zinc-500">
                     {preview.count} hook{preview.count > 1 ? 's' : ''}

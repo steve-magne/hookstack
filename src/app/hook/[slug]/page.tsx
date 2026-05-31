@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { allHooks, getHookBySlug, localizeHook } from '@/lib/hooks'
-import { getT, type Locale } from '@/lib/i18n'
+import { allHooks, getHookBySlug } from '@/lib/hooks'
+import { T } from '@/lib/i18n'
 import { CategoryBadge, HookTypeBadge } from '@/components/Badge'
 import { PROVIDER_LABELS } from '@/types/hook'
 import { HookSelectButton } from '@/components/HookSelectButton'
@@ -16,12 +16,11 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: string; slug: string }>
+  params: Promise<{ slug: string }>
 }): Promise<Metadata> {
-  const { locale, slug } = await params
-  const base = getHookBySlug(slug)
-  if (!base) return {}
-  const hook = localizeHook(base, locale as Locale)
+  const { slug } = await params
+  const hook = getHookBySlug(slug)
+  if (!hook) return {}
 
   return {
     title: hook.name,
@@ -30,7 +29,7 @@ export async function generateMetadata({
     openGraph: {
       title: hook.name,
       description: hook.description,
-      url: `${BASE}/${locale}/hook/${slug}`,
+      url: `${BASE}/hook/${slug}`,
       siteName: 'Claude Hooks',
       type: 'article',
     },
@@ -39,31 +38,23 @@ export async function generateMetadata({
       title: hook.name,
       description: hook.description,
     },
-    alternates: {
-      canonical: `${BASE}/${locale}/hook/${slug}`,
-      languages: {
-        en: `${BASE}/en/hook/${slug}`,
-        fr: `${BASE}/fr/hook/${slug}`,
-      },
-    },
+    alternates: { canonical: `${BASE}/hook/${slug}` },
   }
 }
 
 export default async function HookDetailPage({
   params,
 }: {
-  params: Promise<{ locale: string; slug: string }>
+  params: Promise<{ slug: string }>
 }) {
-  const { locale, slug } = await params
-  const T = getT(locale as Locale)
-  const base = getHookBySlug(slug)
-  const hook = base ? localizeHook(base, locale as Locale) : undefined
+  const { slug } = await params
+  const hook = getHookBySlug(slug)
 
   if (!hook) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center text-zinc-400">
         <p>{T.hookNotFound}</p>
-        <Link href={`/${locale}`} className="mt-4 inline-block text-indigo-300 underline">
+        <Link href="/" className="mt-4 inline-block text-indigo-300 underline">
           {T.backToCatalogue}
         </Link>
       </div>
@@ -79,7 +70,7 @@ export default async function HookDetailPage({
     description: hook.description,
     keywords: hook.tags.join(', '),
     programmingLanguage: 'JavaScript',
-    url: `${BASE}/${locale}/hook/${hook.slug}`,
+    url: `${BASE}/hook/${hook.slug}`,
     isPartOf: {
       '@type': 'WebSite',
       name: 'Claude Hooks',
@@ -95,7 +86,7 @@ export default async function HookDetailPage({
       />
       <div className="mx-auto max-w-3xl px-4 py-8">
         <Link
-          href={`/${locale}`}
+          href="/"
           className="mb-6 inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white"
         >
           <ArrowLeft className="size-4" /> {T.backToCatalogue}

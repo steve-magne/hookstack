@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
-import { run } from './missing-test-detection.mjs';
+import { run } from '../../.claude/hooks/missing-test-detection.mjs';
 
 const COUNTER = '/tmp/.test-counter';
 const DISABLE = '/tmp/.test-disable';
