@@ -11,13 +11,19 @@ export type Category =
 export type HookType =
   | 'PreToolUse'
   | 'PostToolUse'
+  | 'PostToolUseFailure'
   | 'UserPromptSubmit'
   | 'Notification'
   | 'Stop'
   | 'SubagentStop'
+  | 'SubagentStart'
   | 'PreCompact'
   | 'SessionStart'
   | 'SessionEnd'
+  | 'WorktreeCreate'
+  | 'PermissionRequest'
+  | 'CwdChanged'
+  | 'ConfigChange'
 
 export interface CommunityExample {
   repo: string
@@ -77,27 +83,39 @@ export interface HookTypeInfo {
 }
 
 export const HOOK_TYPE_INFO: Record<HookType, HookTypeInfo> = {
-  PreToolUse:       { label: "Avant l'exécution d'un outil · peut bloquer",        blocking: true  },
-  PostToolUse:      { label: "Après l'exécution d'un outil · non bloquant",         blocking: false },
-  UserPromptSubmit: { label: "À la soumission du prompt · peut enrichir l'input",  blocking: true  },
-  Notification:     { label: "Quand Claude veut notifier l'utilisateur",            blocking: false },
-  Stop:             { label: "Quand l'agent termine sa tâche",                      blocking: false },
-  SubagentStop:     { label: "Quand un sous-agent termine",                         blocking: false },
-  PreCompact:       { label: "Avant la compaction du contexte · peut injecter",     blocking: true  },
-  SessionStart:     { label: "Au démarrage d'une session Claude Code",              blocking: false },
-  SessionEnd:       { label: "À la fermeture d'une session Claude Code",            blocking: false },
+  PreToolUse:          { label: "Avant l'exécution d'un outil · peut bloquer",        blocking: true  },
+  PostToolUse:         { label: "Après l'exécution d'un outil · non bloquant",         blocking: false },
+  PostToolUseFailure:  { label: "Après l'échec d'un outil · non bloquant",             blocking: false },
+  UserPromptSubmit:    { label: "À la soumission du prompt · peut enrichir l'input",  blocking: true  },
+  Notification:        { label: "Quand Claude veut notifier l'utilisateur",            blocking: false },
+  Stop:                { label: "Quand l'agent termine sa tâche",                      blocking: false },
+  SubagentStop:        { label: "Quand un sous-agent termine",                         blocking: false },
+  SubagentStart:       { label: "Au démarrage d'un sous-agent",                        blocking: false },
+  PreCompact:          { label: "Avant la compaction du contexte · peut injecter",     blocking: true  },
+  SessionStart:        { label: "Au démarrage d'une session Claude Code",              blocking: false },
+  SessionEnd:          { label: "À la fermeture d'une session Claude Code",            blocking: false },
+  WorktreeCreate:      { label: "À la création d'un worktree",                         blocking: false },
+  PermissionRequest:   { label: "Lors d'une demande de permission · peut bloquer",     blocking: true  },
+  CwdChanged:          { label: "Quand le répertoire de travail change",               blocking: false },
+  ConfigChange:        { label: "Quand la configuration change",                       blocking: false },
 }
 
 export const HOOK_TYPES: HookType[] = [
   'PreToolUse',
   'PostToolUse',
+  'PostToolUseFailure',
   'UserPromptSubmit',
+  'PermissionRequest',
   'Notification',
   'Stop',
   'SubagentStop',
+  'SubagentStart',
   'PreCompact',
   'SessionStart',
   'SessionEnd',
+  'WorktreeCreate',
+  'CwdChanged',
+  'ConfigChange',
 ]
 
 export const CATEGORY_LABELS: Record<Category, string> = {

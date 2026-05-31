@@ -1,72 +1,98 @@
-# Skill Detail Page
+# DESIGN.md — Claude Hooks
 
-## 1. Overview
+Spec de direction artistique du site. Ce document définit **l'esprit** visuel et
+le **langage de motion**. Toute évolution UI/animation doit s'y conformer — ou le
+faire évoluer explicitement.
 
-This document specifies the design for the Skill Detail Page, focusing on presenting information about a specific AI skill, "Humanizer." The page aims to inform users about the skill's functionality and provide clear calls to action.
+---
 
-## 2. Experience Goals
+## 1. L'esprit
 
-*   **Inform:** Clearly present the skill's features and benefits.
-*   **Engage:** Encourage users to explore related content or actions.
-*   **Actionable:** Provide prominent options to interact with the skill (e.g., copy prompt, download).
+Le public, ce sont des **développeurs front-end**. Ils ne disent pas « wow »
+devant un effet tape-à-l'œil — ils le disent devant **une physique juste, un
+timing précis et une cohérence totale**.
 
-## 3. Information Architecture
+> Le wow vient de la *retenue maîtrisée*, pas du nombre d'effets.
 
-*   **Header:** Brand logo and navigation back to the store.
-*   **Hero:** Skill title, version, status (e.g., FREE), and a concise description.
-*   **Main Content:** Detailed skill description, usage instructions, and related links.
-*   **Sidebar:** (Inferred) Potentially related links or external resources.
-*   **Footer:** (Not detected, confirm design decision)
+Conséquences directes :
 
-## 4. Layout System
+- **Chaque animation justifie sa présence** : elle sert la compréhension (où va
+  cet élément ?) ou le feedback (mon action a-t-elle été prise en compte ?).
+  Jamais la décoration pure.
+- **Un seul langage** : toute la grammaire vit dans `src/lib/motion.ts`. Rien
+  n'invente sa propre physique localement. C'est ce qui produit la signature.
+- **Le contenu reste instantané** : pas de transitions de page lourdes, pas de
+  gating du contenu derrière une animation.
 
-The page utilizes a combination of CSS Grid and Flexbox for layout.
+## 2. Identité visuelle (existant)
 
-*   **Desktop:** A two-column grid (`grid-template-columns: 300px 1fr`) is used for the main content area, likely for a sidebar and primary content.
-*   **Mobile:** Layouts adapt using `@media (max-width: 768px)`, likely collapsing to a single column or adjusting padding.
-*   **Alignment:** Elements are frequently `align-items: center` or `flex-start`, with `justify-content: space-between` or `center` for distribution.
+- **Thème** : dark sobre. `--color-bg #0a0a0a`, surfaces `#141414` / `#1c1c1c`,
+  bordures `#2e2e2e`. Texte `#f0f0f0` / muted `#909090`.
+- **Accent** : dégradé indigo→violet (réservé au highlight du hero et aux
+  signaux `is_must`). Le reste du site est neutre (blanc/zinc) — l'accent garde
+  sa valeur parce qu'il est rare.
+- **Halo** : un radial-gradient blanc très faible en haut de page (`body::before`).
+- **Formes** : coins arrondis généreux (`rounded-xl` / `rounded-2xl`),
+  `ring-1 ring-inset` pour les surfaces, `divide-y` pour les listes.
+- **Typo** : sans-serif système ; mono (`ui-monospace`) pour code, noms
+  d'événements (`PreToolUse`…) et commandes.
 
-## 5. Section-by-Section Design Spec
+## 3. Le système de motion — `src/lib/motion.ts`
 
-### 5.1. Header
+La librairie est **Motion** (ex-Framer Motion, paquet `motion`, import
+`motion/react`). Tous les tokens partagés :
 
-*   **Content:** "FlowOS" brand link, "Retour au store" link.
-*   **Layout:** `display: flex`, `align-items: center`, `justify-content: space-between`.
-*   **Padding:** `20px 56px` (desktop), `16px 20px` (mobile).
+| Token | Valeur | Usage |
+|---|---|---|
+| `EASE_OUT` | `[0.16, 1, 0.3, 1]` | Easing maison (expo-out) — révélations |
+| `spring.snappy` | stiffness 500 / damping 32 | Micro-gestes directs : checkbox, toggle, tap, copy |
+| `spring.smooth` | stiffness 300 / damping 30 | Surfaces & reflows : modale, FLIP, layout |
+| `spring.gentle` | stiffness 200 / damping 28 | Suivi continu (réservé) |
+| `duration` | micro .15 · base .3 · reveal .4 | Durées de référence (s) |
+| `fadeUp` | y 12→0, opacity 0→1 | Variant de révélation de base |
+| `staggerContainer` | staggerChildren .04 | Orchestration de cascade |
+| `sectionReveal` | fade + staggerChildren .025 | Section qui s'éclaircit *et* cascade ses lignes |
 
-### 5.2. Hero Section
+### Provider — `src/components/MotionProvider.tsx`
 
-*   **Content:** H1 "Humanizer", version (e.g., "v1.0"), status (e.g., "FREE"), and a descriptive paragraph.
-*   **Components:** Pill-shaped tags for version/status.
+Monté à la racine (`src/app/layout.tsx`). Deux responsabilités :
 
-### 5.3. Main Content Area
+1. `LazyMotion features={domMax} strict` — features (layout, drag, gestures)
+   chargées à la demande. **Condition impérative** : on utilise `m.*`, jamais
+   `motion.*` (le mode `strict` lève une erreur sinon).
+2. `MotionConfig reducedMotion="user"` — l'accessibilité est **automatique** sur
+   100 % des effets. Pour `prefers-reduced-motion`, Motion neutralise
+   transform/layout et ne garde que l'opacity. **On n'écrit aucune media query
+   motion manuelle.**
 
-*   **Content:** Detailed description of the skill, including how it builds a voice profile.
-*   **Components:** Action buttons ("Copier le prompt", "Télécharger .zip").
-*   **Related Content:** "Pour aller plus loin" section with links to "Réserver un diagnostic" and "YouTube".
+## 4. Inventaire des effets
 
-## 6. Component Inventory
+| # | Effet | Où | Intention |
+|---|---|---|---|
+| ① | Cascade d'entrée | `CatalogueExplorer` | Révéler le catalogue avec qualité au 1er paint (joué une seule fois) |
+| ② | Filtrage vivant (FLIP) | `CatalogueExplorer` + `HookRow` | Les lignes *glissent* au filtre/regroupement au lieu de sauter |
+| ③ | Modale spring + drag | `HookModal` | Vraie animation d'entrée/sortie ; bottom-sheet glissable sur mobile |
+| ④ | Checkbox / Plus→Check | `AnimatedCheck`, `HookRow`, `HookModal` | Le ✓ se *dessine* (pathLength) ; geste central rendu satisfaisant |
+| ⑤ | Toggle glissant | `CatalogueExplorer` | Indicateur `layoutId` partagé qui glisse sous l'onglet actif |
+| ⑥ | Compteur + chips | `Header`, `HookConfigurator` | Pill qui pulse au changement ; chips qui entrent/sortent en reflow |
+| ⑦ | Copy→Check | `CopySwap` | Swap d'icône unique et cohérent sur les 3 boutons « Copier » |
+| ⑧ | Bannière d'install sticky + pulse | `CatalogueExplorer` | Commande épinglée en haut, reflète la sélection en direct, et pulse (anneau indigo + badge de compte) à chaque coche/décoche : « le lien vient d'être modifié ». Garde-fou 800 ms contre le pulse d'init. |
 
-*   **Buttons:** Primary action buttons.
-*   **Pills:** Small, rounded tags for metadata.
-*   **Cards:** Used for grouping related content, e.g., "Pour aller plus loin."
-*   **Links:** Standard text links.
+## 5. Règles de contribution motion
 
-## 7. Visual Design Specification
+1. **Importer les tokens** depuis `@/lib/motion`. Ne pas redéfinir un spring ou
+   un easing en local. Si un nouveau besoin émerge → l'ajouter à `motion.ts`.
+2. **`m.*` uniquement** (jamais `motion.*`) — sinon `LazyMotion strict` casse.
+3. **Transform & opacity seulement** (+ `layout` pour le FLIP). Jamais d'animation
+   de `width`/`height`/`top`/`left` brute.
+4. **Une entrée = une sortie** : tout élément conditionnel (`{x && …}`) animé doit
+   vivre sous `<AnimatePresence>` avec un `exit`.
+5. **Pas de media query motion** : laisser `reducedMotion="user"` gérer l'a11y.
+6. **Doser** : si l'effet ne répond pas à « ça sert la compréhension ou le
+   feedback ? », il ne va pas dans le site.
 
-### 7.1. Design System Tokens
+## 6. Ce qu'on n'implémente PAS
 
-*   **Colors:**
-*   `--color-white`: `#FFFFFF`, `#fff`
-*   `--color-gray-dark`: `#3A3A3C`, `#1c1c1e`
-*   `--color-gray-medium`: `#8E8E93`, `#a2aaad`
-*   `--color-gray-light`: `#D1D1D6`
-*   `--color-black`: `#000`
-*   **Transparencies:** `--color-gray-dark-8f`: `#1c1c1e8f`, `--color-gray-dark-b3`: `#3a3a3cb3`, `--color-black-06`: `#0006`, `--color-gray-dark-66`: `#3a3a3c66`, `--color-white-0a`: `#ffffff0a`, `--color-white-2e`: `#ffffff2e`, `--color-black-8c`: `#0000008c`, `--color-gray-dark-d9`: `#3a3a3cd9`, `--color-gray-dark-8c`: `#3a3a3c8c`, `--color-gray-medium-21`: `#a2aaad21`, `--color-gray-medium-1a`: `#8e8e931a`, `--color-black-0a`: `#0a0a0a`, `--color-black-16`: `#16161a`, `--color-black-0c`: `#0a0a0c`, `--color-gray-dark-73`: `#3a3a3c73`
-*   **Shadows:**
-*   `--shadow-glass`: `var(--fos-glass-shadow)` (confirm exact values)
-*   `--shadow-accent-outline`: `0 0 0 4px var(--fos-accent)15`
-*   `--shadow-card`: `0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)`
-*   **Border Radius:**
-*   `--radius-pill`: `999px`
-*   `--radius
+❌ Parallax · ❌ scroll-reveal sur chaque bloc · ❌ hover `scale-1.1` généralisé ·
+❌ transitions de page lourdes · ❌ animation des blocs de code · ❌ effets
+purement décoratifs sans rôle fonctionnel.

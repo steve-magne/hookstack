@@ -39,9 +39,13 @@ hookit/
 │   │   ├── HookConfigurator.tsx     # Panneau sélection + génération settings.json
 │   │   ├── CatalogueExplorer.tsx    # Catalogue : recherche + bascule de regroupement (event/catégorie) + liste groupée + modale
 │   │   ├── Badge.tsx                # Badge générique (catégorie, provider…)
-│   │   └── ContributeForm.tsx       # Formulaire de soumission de dépôt
+│   │   ├── ContributeForm.tsx       # Formulaire de soumission de dépôt
+│   │   ├── MotionProvider.tsx       # Racine motion : LazyMotion (domMax) + MotionConfig reducedMotion
+│   │   ├── CopySwap.tsx             # Icône Copy↔Check animée — partagée par tous les boutons « Copier »
+│   │   └── AnimatedCheck.tsx        # Coche SVG qui se dessine (pathLength) — geste de sélection
 │   ├── lib/
 │   │   ├── hooks.ts                 # allHooks — charge registry.json, point d'accès aux données
+│   │   ├── motion.ts                # Tokens de motion partagés (springs, easings, variants) — langage unique
 │   │   ├── mergeConfig.ts           # Fusionne les hooks sélectionnés → settings.json valide
 │   │   ├── supabase.ts              # Client Supabase (auth + soumissions, optionnel)
 │   │   └── github.ts               # Appels GitHub API (stars, metadata dépôts)
@@ -96,6 +100,18 @@ Hookit est un catalogue communautaire de hooks agentiques (Claude Code, GitHub C
 **Routes** : `/` (Home = hero + catalogue), `/hook/[slug]` (détail), `/contribute` (soumission de dépôt).
 
 **Composants** : tous marqués `'use client'` (Zustand + state). Les pages (`app/`) sont des Server Components sauf `hook/[slug]/page.tsx` (utilise `useParams` + Zustand).
+
+## Motion / Animations
+
+Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/react`). La direction artistique complète et l'inventaire des effets sont dans **`DESIGN.md`** — à lire avant toute évolution UI. Esprit : public dev front-end, le wow vient de la *retenue maîtrisée*, pas du volume d'effets.
+
+**Règles non négociables** :
+- **Langage unique** : tous les springs / easings / variants viennent de `src/lib/motion.ts`. Ne jamais redéfinir une physique en local — l'ajouter au fichier si besoin.
+- **`m.*` uniquement, jamais `motion.*`** : `<MotionProvider>` (`src/app/layout.tsx`) utilise `LazyMotion features={domMax} strict` — `motion.*` lève une erreur runtime.
+- **A11y automatique** : `MotionConfig reducedMotion="user"` gère `prefers-reduced-motion` globalement. **Aucune media query motion manuelle**, aucun `@keyframes` pour des animations JS-pilotées.
+- **Transform/opacity seulement** (+ `layout` pour le FLIP). Jamais d'animation brute de `width`/`height`/`top`/`left`.
+- **Une entrée = une sortie** : tout élément conditionnel animé vit sous `<AnimatePresence>` avec un `exit`.
+- **Doser** : une animation doit servir la compréhension ou le feedback, sinon elle ne va pas dans le site.
 
 ## Ajouter un hook au registre
 

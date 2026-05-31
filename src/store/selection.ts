@@ -28,11 +28,11 @@ export const useSelection = create<SelectionState>()(
           selected: s.selected.includes(slug) ? s.selected : [...s.selected, slug],
         })),
       remove: (slug) => set((s) => ({ selected: s.selected.filter((x) => x !== slug) })),
-      clear: () => set({ selected: [] }),
+      clear: () => set({ selected: [], mustInitialized: false }),
       has: (slug) => get().selected.includes(slug),
       initMust: (slugs) =>
         set((s) => {
-          if (s.mustInitialized) return s
+          if (s.mustInitialized && s.selected.length > 0) return s
           const added = slugs.filter((sl) => !s.selected.includes(sl))
           return {
             mustInitialized: true,

@@ -3,12 +3,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Webhook } from 'lucide-react'
-import { useSelection } from '@/store/selection'
 import { useLocale, useT } from '@/lib/locale-context'
 import type { Locale } from '@/lib/i18n'
 
 export function Header() {
-  const count = useSelection((s) => s.selected.length)
   const pathname = usePathname()
   const locale = useLocale()
   const T = useT()
@@ -32,10 +30,10 @@ export function Header() {
       <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3">
         <Link href={`/${locale}`} className="flex items-center gap-2 font-semibold">
           <Webhook className="size-6 text-white" />
-          <span className="text-lg">Claude Hooks</span>
+          <span className="hidden text-lg sm:inline">Claude Hooks</span>
         </Link>
 
-        <nav className="ml-6 flex items-center gap-1">
+        <nav className="ml-2 flex items-center gap-0.5 sm:ml-6 sm:gap-1">
           <Link href={`/${locale}`} className={linkClass('/')}>
             {T.navCatalogue}
           </Link>
@@ -45,15 +43,6 @@ export function Header() {
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
-          {count > 0 && (
-            <a
-              href="#config"
-              className="rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white ring-1 ring-white/20"
-            >
-              {count} {count > 1 ? T.hooksSelectedMany : T.hooksSelectedOne}
-            </a>
-          )}
-
           <div className="flex items-center rounded-lg border border-[var(--color-border)] text-xs font-medium overflow-hidden">
             <Link
               href={localeSwitcher('fr')}

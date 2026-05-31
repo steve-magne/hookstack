@@ -2,12 +2,28 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, Check, Copy, Plus, X } from 'lucide-react'
+import { AnimatePresence, m, type PanInfo } from 'motion/react'
+import { ArrowUpRight, Check, Plus, X } from 'lucide-react'
 import type { Hook } from '@/types/hook'
 import { PROVIDER_LABELS } from '@/types/hook'
 import { useSelection } from '@/store/selection'
 import { useLocale, useT } from '@/lib/locale-context'
 import { CategoryBadge, HookTypeBadge } from './Badge'
+import { CopySwap } from './CopySwap'
+import { spring } from '@/lib/motion'
+
+/** Bascule mobile (< sm) — détermine le comportement bottom-sheet + drag. */
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  return isMobile
+}
 
 export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }) {
   const T = useT()
@@ -15,6 +31,7 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
   const selected = useSelection((s) => s.selected.includes(hook.slug))
   const toggle = useSelection((s) => s.toggle)
   const [copied, setCopied] = useState(false)
+  const isMobile = useIsMobile()
 
   const settingsFragment = JSON.stringify(hook.implementation.config, null, 2)
 
@@ -36,18 +53,46 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
     setTimeout(() => setCopied(false), 1500)
   }
 
+  // Desktop : on monte en fondu+scale. Mobile : feuille qui glisse depuis le bas.
+  const sheet = isMobile
+    ? { initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' } }
+    : {
+        initial: { opacity: 0, y: 16, scale: 0.98 },
+        animate: { opacity: 1, y: 0, scale: 1 },
+        exit: { opacity: 0, y: 16, scale: 0.98 },
+      }
+
+  const handleDragEnd = (_e: unknown, info: PanInfo) => {
+    if (info.offset.y > 120 || info.velocity.y > 600) onClose()
+  }
+
   return (
-    <div
+    <m.div
       onClick={onClose}
-      className="hookit-backdrop fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
     >
-      <div
+      <m.div
         role="dialog"
         aria-modal="true"
         aria-label={hook.name}
         onClick={(e) => e.stopPropagation()}
-        className="hookit-modal relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/60 sm:rounded-2xl"
+        initial={sheet.initial}
+        animate={sheet.animate}
+        exit={sheet.exit}
+        transition={spring.smooth}
+        drag={isMobile ? 'y' : false}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.5 }}
+        onDragEnd={handleDragEnd}
+        className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/60 sm:rounded-2xl"
       >
+        {/* Poignée de glissement — mobile uniquement */}
+        <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-zinc-600 sm:hidden" />
+
         <button
           onClick={onClose}
           aria-label={T.close}
@@ -66,7 +111,8 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
           <p className="mb-5 text-zinc-300">{hook.description}</p>
 
           <div className="mb-6 flex flex-wrap items-center gap-3">
-            <button
+            <m.button
+              whileTap={{ scale: 0.96 }}
               onClick={() => toggle(hook.slug)}
               className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
                 selected
@@ -74,9 +120,22 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
                   : 'bg-white text-zinc-900 hover:bg-zinc-100'
               }`}
             >
-              {selected ? <Check className="size-4" /> : <Plus className="size-4" />}
+              <span className="relative inline-flex" style={{ width: '1em', height: '1em' }}>
+                <AnimatePresence mode="wait" initial={false}>
+                  <m.span
+                    key={selected ? 'check' : 'plus'}
+                    initial={{ opacity: 0, scale: 0.5, rotate: -90 }}
+                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                    exit={{ opacity: 0, scale: 0.5, rotate: 90 }}
+                    transition={spring.snappy}
+                    className="absolute inset-0 inline-flex items-center justify-center"
+                  >
+                    {selected ? <Check className="size-4" /> : <Plus className="size-4" />}
+                  </m.span>
+                </AnimatePresence>
+              </span>
               {selected ? T.addedToSelection : T.addToMyConfig}
-            </button>
+            </m.button>
             <Link
               href={`/${locale}/hook/${hook.slug}`}
               className="flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-white"
@@ -133,7 +192,7 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
                 onClick={copyFragment}
                 className="flex items-center gap-1.5 rounded-lg border border-zinc-600 bg-[var(--color-surface-2)] px-2.5 py-1 text-xs font-medium text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-[var(--color-surface-2)]/80"
               >
-                {copied ? <Check className="size-3.5 text-zinc-200" /> : <Copy className="size-3.5" />}
+                <CopySwap copied={copied} />
                 {copied ? T.copied : T.copy}
               </button>
             </div>
@@ -153,7 +212,7 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </m.div>
+    </m.div>
   )
 }

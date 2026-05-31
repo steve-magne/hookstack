@@ -1,10 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Search, ShieldCheck, X } from 'lucide-react'
+import { AnimatePresence, m, useAnimationControls } from 'motion/react'
+import { Search, X } from 'lucide-react'
 import { HookRow } from './HookRow'
 import { HookModal } from './HookModal'
 import { HookConfigurator } from './HookConfigurator'
+import { CopySwap } from './CopySwap'
+import { sectionReveal, spring, staggerContainer } from '@/lib/motion'
 import { allHooks, filterHooks, localizeHook } from '@/lib/hooks'
 import { useLocale, useT } from '@/lib/locale-context'
 import { useSelection } from '@/store/selection'
@@ -79,14 +82,52 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   const [preview, setPreview] = useState<Preview | null>(null)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const [cmdCopied, setCmdCopied] = useState(false)
+  const selectedSlugs = useSelection((s) => s.selected)
+  const selectedCount = selectedSlugs.length
+
   const mustHooks = useMemo(
     () => allHooks.filter((h) => h.is_must).map((h) => localizeHook(h, locale)),
     [locale]
   )
 
+  // La bannière sticky reflète la sélection en direct : cocher un hook modifie ce lien.
+  const installCmd = useMemo(
+    () =>
+      `claude --plugin-url https://claudehooks.vercel.app/api/plugin?hooks=${allHooks
+        .filter((h) => selectedSlugs.includes(h.slug))
+        .map((h) => h.slug)
+        .join(',')}`,
+    [selectedSlugs]
+  )
+
   useEffect(() => {
     initMust(mustHooks.map((h) => h.slug))
   }, [initMust, mustHooks])
+
+  // Pulse de la bannière quand la sélection change → « le lien a été modifié ».
+  // Garde-fou 800 ms : ne pas pulser sur l'init (initMust ajoute les must hooks au mount).
+  const ringControls = useAnimationControls()
+  const countControls = useAnimationControls()
+  const prevCount = useRef(selectedCount)
+  const pulseReady = useRef(false)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      pulseReady.current = true
+    }, 800)
+    return () => clearTimeout(t)
+  }, [])
+  useEffect(() => {
+    if (!pulseReady.current) {
+      prevCount.current = selectedCount
+      return
+    }
+    if (selectedCount !== prevCount.current) {
+      ringControls.start({ opacity: [0, 1, 0], transition: { duration: 0.7, ease: 'easeOut' } })
+      countControls.start({ scale: [1, 1.35, 1], transition: { duration: 0.35, ease: 'easeOut' } })
+      prevCount.current = selectedCount
+    }
+  }, [selectedCount, ringControls, countControls])
 
   const handleHover = useCallback((hook: Hook, y: number) => {
     if (hideTimer.current) clearTimeout(hideTimer.current)
@@ -123,130 +164,148 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   const hasActive = !!query
   const reset = () => setQuery('')
 
-  const scrollToConfig = () => {
-    document.getElementById('config')?.scrollIntoView({ behavior: 'smooth' })
-  }
-
   return (
     <div>
-      {/* Bandeau standard recommandé */}
-      <div className="mb-8 flex flex-col gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-950/60 to-zinc-900/60 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400">
-            <ShieldCheck className="size-4" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-white">{T.mustBannerTitle}</span>
-              <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-medium text-indigo-300 ring-1 ring-inset ring-indigo-500/30">
-                {mustHooks.length} {T.mustBannerSubtitle}
-              </span>
-            </div>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {mustHooks.map((h) => (
-                <span
-                  key={h.slug}
-                  className="rounded-full bg-white/5 px-2.5 py-0.5 text-xs text-zinc-300 ring-1 ring-inset ring-white/10"
-                >
-                  {h.name}
-                </span>
-              ))}
-            </div>
-          </div>
+      {/* Bannière d'installation — sticky, reflète la sélection en direct + pulse au changement */}
+      <div className="sticky top-14 z-30 mb-8 rounded-xl border border-zinc-700 bg-[#0d0d14] px-4 py-3 shadow-lg shadow-black/30">
+        <m.span
+          aria-hidden
+          initial={{ opacity: 0 }}
+          animate={ringControls}
+          className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-indigo-400/70"
+        />
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <p className="text-xs text-zinc-500">{T.pluginInstallHint}</p>
+          <m.span
+            animate={countControls}
+            className="inline-flex origin-center items-center rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-medium tabular-nums text-indigo-300 ring-1 ring-inset ring-indigo-500/25"
+          >
+            {selectedCount} / {allHooks.length} hook{allHooks.length > 1 ? 's' : ''}
+          </m.span>
         </div>
-        <button
-          onClick={scrollToConfig}
-          className="flex shrink-0 items-center gap-1.5 self-end rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500 sm:self-auto"
-        >
-          {T.mustInstallBtn}
-          <ChevronDown className="size-3.5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <code className="block truncate font-mono text-xs text-zinc-100 sm:text-sm">{installCmd}</code>
+          </div>
+          <button
+            aria-label={cmdCopied ? T.copied : T.copy}
+            onClick={async () => {
+              await navigator.clipboard.writeText(installCmd)
+              setCmdCopied(true)
+              setTimeout(() => setCmdCopied(false), 1500)
+            }}
+            className="shrink-0 flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors sm:py-1.5"
+          >
+            <CopySwap copied={cmdCopied} />
+            <span className="hidden sm:inline">{cmdCopied ? T.copied : T.copy}</span>
+          </button>
+        </div>
       </div>
 
       {/* Contrôles */}
-      <div className="mb-8 space-y-4">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={T.searchPlaceholder}
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-10 pr-4 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-white/40 focus:ring-1 focus:ring-white/10 focus:outline-none transition-colors"
-          />
-        </div>
+      <div className="mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={T.searchPlaceholder}
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-10 pr-9 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-white/40 focus:ring-1 focus:ring-white/10 focus:outline-none transition-colors"
+            />
+            {hasActive && (
+              <button
+                onClick={reset}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 transition-colors"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
 
-        <div className="flex flex-wrap items-center gap-3">
           {/* Bascule de regroupement */}
-          <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
+          <div className="inline-flex self-end shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 sm:self-auto">
             {(['event', 'category'] as GroupBy[]).map((g) => (
               <button
                 key={g}
                 onClick={() => setGroupBy(g)}
                 aria-pressed={groupBy === g}
-                className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                  groupBy === g
-                    ? 'bg-white text-zinc-900 shadow-sm'
-                    : 'text-zinc-400 hover:text-white'
+                className={`relative rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                  groupBy === g ? 'text-zinc-900' : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                {g === 'event' ? T.groupByEvent : T.groupByCategory}
+                {groupBy === g && (
+                  <m.span
+                    layoutId="groupToggle"
+                    transition={spring.smooth}
+                    className="absolute inset-0 rounded-lg bg-white shadow-sm"
+                  />
+                )}
+                <span className="relative z-10">
+                  {g === 'event' ? T.groupByEvent : T.groupByCategory}
+                </span>
               </button>
             ))}
           </div>
         </div>
-
-        <div className="flex items-center justify-between text-sm text-[var(--color-text-muted)]">
-          <span>
-            {results.length} hook{results.length > 1 ? 's' : ''}
-          </span>
-          {hasActive && (
-            <button onClick={reset} className="flex items-center gap-1 text-zinc-300 hover:text-white">
-              <X className="size-3.5" /> {T.reset}
-            </button>
-          )}
-        </div>
       </div>
 
-      {/* Liste groupée */}
+      {/* Liste groupée — cascade à l'entrée, FLIP au filtrage */}
       {results.length > 0 ? (
-        <div className="space-y-8">
-          {groups.map((grp) => (
-            <section key={grp.key}>
-              <div className="mb-1 flex items-center gap-3 px-3">
-                <h3
-                  onMouseEnter={grp.isEvent ? (e) => handleEventHover(grp.key as HookType, grp.count, e.currentTarget.getBoundingClientRect().top) : undefined}
-                  onMouseLeave={grp.isEvent ? handleLeave : undefined}
-                  className={`cursor-default text-sm font-semibold text-zinc-300 transition-colors ${
-                    grp.isEvent ? 'font-mono hover:text-white' : 'uppercase tracking-wide'
-                  }`}
-                >
-                  {grp.label}
-                </h3>
-                <span className="text-xs text-zinc-500">{grp.count}</span>
-                <div className="h-px flex-1 bg-[var(--color-border)]" />
-              </div>
-              <div className="divide-y divide-[var(--color-border)]/50">
-                {grp.hooks.map((h) => (
-                  <HookRow
-                    key={h.slug}
-                    hook={h}
-                    groupBy={groupBy}
-                    onOpen={() => setActive(h)}
-                    onHover={handleHover}
-                    onLeave={handleLeave}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        <m.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-8">
+          <AnimatePresence mode="popLayout">
+            {groups.map((grp) => (
+              <m.section
+                key={grp.key}
+                layout
+                variants={sectionReveal}
+                exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                transition={spring.smooth}
+              >
+                <div className="mb-1 flex items-center gap-3 px-3">
+                  <h3
+                    onMouseEnter={grp.isEvent ? (e) => handleEventHover(grp.key as HookType, grp.count, e.currentTarget.getBoundingClientRect().top) : undefined}
+                    onMouseLeave={grp.isEvent ? handleLeave : undefined}
+                    className={`cursor-default text-sm font-semibold text-zinc-300 transition-colors ${
+                      grp.isEvent ? 'font-mono hover:text-white' : 'uppercase tracking-wide'
+                    }`}
+                  >
+                    {grp.label}
+                  </h3>
+                  <span className="text-xs text-zinc-500">{grp.count}</span>
+                  <div className="h-px flex-1 bg-[var(--color-border)]" />
+                </div>
+                <div className="divide-y divide-[var(--color-border)]/50">
+                  <AnimatePresence mode="popLayout">
+                    {grp.hooks.map((h) => (
+                      <HookRow
+                        key={h.slug}
+                        hook={h}
+                        groupBy={groupBy}
+                        onOpen={() => setActive(h)}
+                        onHover={handleHover}
+                        onLeave={handleLeave}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </m.section>
+            ))}
+          </AnimatePresence>
+        </m.div>
       ) : (
-        <div className="rounded-xl border border-dashed border-[var(--color-border)] p-12 text-center text-zinc-500">
+        <m.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-dashed border-[var(--color-border)] p-12 text-center text-zinc-500"
+        >
           {T.noResults}
-        </div>
+        </m.div>
       )}
 
-      {active && <HookModal hook={active} onClose={() => setActive(null)} />}
+      <AnimatePresence>
+        {active && <HookModal key="hook-modal" hook={active} onClose={() => setActive(null)} />}
+      </AnimatePresence>
 
       {/* Carte de prévisualisation flottante — position: fixed, aucun impact sur le flux */}
       {preview && (
@@ -278,6 +337,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
             </>
           ) : (() => {
             const info = HOOK_TYPE_INFO[preview.eventType]
+            if (!info) return null
             return (
               <>
                 <p className="mb-1 font-mono text-sm font-semibold text-white">{preview.eventType}</p>

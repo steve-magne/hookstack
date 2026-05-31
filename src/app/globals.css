@@ -54,37 +54,8 @@ pre {
   background: #484848;
 }
 
-@keyframes hookit-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes hookit-pop-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.hookit-backdrop {
-  animation: hookit-fade-in 0.15s ease-out;
-}
-
-.hookit-modal {
-  animation: hookit-pop-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hookit-backdrop,
-  .hookit-modal {
-    animation: none;
-  }
-}
+/*
+ * Le motion du site est piloté par Motion (voir src/lib/motion.ts et
+ * src/components/MotionProvider.tsx). L'accessibilité prefers-reduced-motion
+ * est gérée globalement via MotionConfig reducedMotion="user".
+ */
