@@ -3,6 +3,13 @@ import type { Hook } from '@/types/hook'
 type HookEntry = { matcher?: string; hooks: unknown[] }
 type HooksMap = Record<string, HookEntry[]>
 
+function toBase64(str: string): string {
+  const bytes = new TextEncoder().encode(str)
+  let bin = ''
+  for (const b of bytes) bin += String.fromCharCode(b)
+  return btoa(bin)
+}
+
 export function mergeSettings(hooks: Hook[]): { hooks: HooksMap } {
   const merged: HooksMap = {}
 
@@ -37,6 +44,48 @@ export function collectScripts(hooks: Hook[]): { path: string; content: string }
       path: h.implementation.script_path as string,
       content: h.implementation.code_snippet as string,
     }))
+}
+
+export function toPluginFiles(hooks: Hook[]): Record<string, string> {
+  const merged: HooksMap = {}
+
+  for (const hook of hooks) {
+    const fragment = (hook.implementation.config as { hooks?: HooksMap }).hooks
+    if (!fragment) continue
+
+    const snippet = hook.implementation.code_snippet
+
+    for (const [event, entries] of Object.entries(fragment)) {
+      merged[event] ??= []
+      for (const entry of entries) {
+        const adaptedHooks = (entry.hooks as Array<{ type: string; command?: string }>).map(h => {
+          if (snippet && h.command?.includes('/.claude/hooks/')) {
+            return { ...h, command: `bash -c "$(echo '${toBase64(snippet)}' | base64 -d)"` }
+          }
+          return h
+        })
+        const existing = merged[event].find(e => (e.matcher ?? '') === (entry.matcher ?? ''))
+        if (existing) {
+          existing.hooks.push(...adaptedHooks)
+        } else {
+          merged[event].push({ ...entry, hooks: adaptedHooks })
+        }
+      }
+    }
+  }
+
+  return {
+    '.claude-plugin/plugin.json': JSON.stringify(
+      {
+        name: 'hookit-selection',
+        description: `Hookit — ${hooks.map(h => h.slug).join(', ')}`,
+        version: '1.0.0',
+      },
+      null,
+      2,
+    ),
+    'hooks/hooks.json': JSON.stringify({ hooks: merged }, null, 2),
+  }
 }
 
 export function generateInstallScript(hooks: Hook[]): string {

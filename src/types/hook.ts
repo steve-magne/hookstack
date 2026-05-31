@@ -58,6 +58,7 @@ export interface Hook {
   community_examples: CommunityExample[]
   tags: string[]
   votes: number
+  is_must?: boolean
   i18n?: Record<string, HookI18n>
 }
 

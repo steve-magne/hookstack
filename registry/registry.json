@@ -49,6 +49,7 @@
       "devsecops"
     ],
     "votes": 0,
+    "is_must": true,
     "i18n": {
       "en": {
         "name": "Secret detection before Bash execution",
@@ -111,6 +112,7 @@
       "guardrail"
     ],
     "votes": 0,
+    "is_must": true,
     "i18n": {
       "en": {
         "name": "Destructive command blocking",
@@ -173,6 +175,7 @@
       "secrets"
     ],
     "votes": 0,
+    "is_must": true,
     "i18n": {
       "en": {
         "name": "Sensitive file write protection",

@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
-import { Search, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronDown, Search, ShieldCheck, X } from 'lucide-react'
 import { HookRow } from './HookRow'
 import { HookModal } from './HookModal'
 import { HookConfigurator } from './HookConfigurator'
 import { allHooks, filterHooks, localizeHook } from '@/lib/hooks'
 import { useLocale, useT } from '@/lib/locale-context'
+import { useSelection } from '@/store/selection'
 import {
   HOOK_TYPE_INFO,
   HOOK_TYPES,
@@ -68,6 +69,7 @@ function buildGroups(hooks: Hook[], groupBy: GroupBy, categoryLabels: Record<str
 export function CatalogueExplorer({ initialCategory, showConfigurator = true }: Props) {
   const T = useT()
   const locale = useLocale()
+  const initMust = useSelection((s) => s.initMust)
   const [groupBy, setGroupBy] = useState<GroupBy>('event')
   const [query, setQuery] = useState('')
   const [active, setActive] = useState<Hook | null>(null)
@@ -76,6 +78,15 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
     | { kind: 'event'; eventType: HookType; count: number; y: number }
   const [preview, setPreview] = useState<Preview | null>(null)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const mustHooks = useMemo(
+    () => allHooks.filter((h) => h.is_must).map((h) => localizeHook(h, locale)),
+    [locale]
+  )
+
+  useEffect(() => {
+    initMust(mustHooks.map((h) => h.slug))
+  }, [initMust, mustHooks])
 
   const handleHover = useCallback((hook: Hook, y: number) => {
     if (hideTimer.current) clearTimeout(hideTimer.current)
@@ -112,8 +123,46 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   const hasActive = !!query
   const reset = () => setQuery('')
 
+  const scrollToConfig = () => {
+    document.getElementById('config')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   return (
     <div>
+      {/* Bandeau standard recommandé */}
+      <div className="mb-8 flex flex-col gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-950/60 to-zinc-900/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400">
+            <ShieldCheck className="size-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-white">{T.mustBannerTitle}</span>
+              <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-medium text-indigo-300 ring-1 ring-inset ring-indigo-500/30">
+                {mustHooks.length} {T.mustBannerSubtitle}
+              </span>
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {mustHooks.map((h) => (
+                <span
+                  key={h.slug}
+                  className="rounded-full bg-white/5 px-2.5 py-0.5 text-xs text-zinc-300 ring-1 ring-inset ring-white/10"
+                >
+                  {h.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={scrollToConfig}
+          className="flex shrink-0 items-center gap-1.5 self-end rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500 sm:self-auto"
+        >
+          {T.mustInstallBtn}
+          <ChevronDown className="size-3.5" />
+        </button>
+      </div>
+
       {/* Contrôles */}
       <div className="mb-8 space-y-4">
         <div className="relative">

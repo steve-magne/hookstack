@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { Header } from '@/components/Header'
 import { LocaleProvider } from '@/lib/locale-context'
 import { getT, type Locale } from '@/lib/i18n'
+
+const VALID_LOCALES: Locale[] = ['fr', 'en']
 
 export function generateStaticParams() {
   return [{ locale: 'fr' }, { locale: 'en' }]
@@ -49,6 +52,7 @@ export default async function LocaleLayout({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
+  if (!VALID_LOCALES.includes(locale as Locale)) notFound()
   const T = getT(locale as Locale)
 
   return (

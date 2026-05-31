@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from 'react'
 import type { Locale, Translations } from './i18n'
-import { translations } from './i18n'
+import { getT, translations } from './i18n'
 
 const LocaleContext = createContext<Locale>('fr')
 
@@ -22,5 +22,5 @@ export function useLocale(): Locale {
 
 export function useT(): Translations {
   const locale = useLocale()
-  return translations[locale]
+  return translations[locale] ?? translations.fr
 }

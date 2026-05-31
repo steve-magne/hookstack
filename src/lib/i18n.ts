@@ -52,6 +52,11 @@ export interface Translations {
   contributeIssueLink: string
   contributeNote: string
   categoryLabels: Record<string, string>
+  mustBannerTitle: string
+  mustBannerSubtitle: string
+  mustInstallBtn: string
+  mustPreselected: string
+  pluginInstallHint: string
 }
 
 const fr: Translations = {
@@ -121,6 +126,11 @@ const fr: Translations = {
     workflow: 'Workflow',
     documentation: 'Documentation',
   },
+  mustBannerTitle: 'Standard recommandé',
+  mustBannerSubtitle: 'hooks essentiels · déjà sélectionnés',
+  mustInstallBtn: 'Voir la configuration',
+  mustPreselected: 'Essentiel',
+  pluginInstallHint:'Installe dans Claude Code :',
 }
 
 const en: Translations = {
@@ -190,6 +200,11 @@ const en: Translations = {
     workflow: 'Workflow',
     documentation: 'Documentation',
   },
+  mustBannerTitle: 'Recommended standard',
+  mustBannerSubtitle: 'essential hooks · already selected',
+  mustInstallBtn: 'View configuration',
+  mustPreselected: 'Essential',
+  pluginInstallHint:'Install in Claude Code:',
 }
 
 export const translations: Record<Locale, Translations> = { fr, en }

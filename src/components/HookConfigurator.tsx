@@ -15,6 +15,7 @@ export function HookConfigurator() {
   const clear = useSelection((s) => s.clear)
   const [copied, setCopied] = useState(false)
   const [scriptCopied, setScriptCopied] = useState(false)
+  const [pluginCopied, setPluginCopied] = useState(false)
 
   const hooks = useMemo(
     () => allHooks.filter((h) => selected.includes(h.slug)).map((h) => localizeHook(h, locale)),
@@ -22,6 +23,7 @@ export function HookConfigurator() {
   )
   const json = useMemo(() => toSettingsJson(hooks), [hooks])
   const scripts = useMemo(() => collectScripts(hooks), [hooks])
+  const pluginCmd = `claude --plugin-url https://claudehooks.vercel.app/api/plugin?hooks=${hooks.map(h => h.slug).join(',')}`
 
   const copy = async () => {
     await navigator.clipboard.writeText(json)
@@ -45,6 +47,12 @@ export function HookConfigurator() {
     URL.revokeObjectURL(url)
   }
 
+  const copyPlugin = async () => {
+    await navigator.clipboard.writeText(pluginCmd)
+    setPluginCopied(true)
+    setTimeout(() => setPluginCopied(false), 1500)
+  }
+
   if (hooks.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-sm text-zinc-500">
@@ -64,12 +72,25 @@ export function HookConfigurator() {
 
   return (
     <div className="space-y-4">
+      {/* Plugin one-liner — commande principale */}
+      <div className="rounded-xl border border-zinc-700 bg-[#0d0d14] px-4 py-3">
+        <p className="mb-2 text-xs text-zinc-500">{T.pluginInstallHint}</p>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 truncate font-mono text-sm text-zinc-100">{pluginCmd}</code>
+          <button
+            onClick={copyPlugin}
+            className="shrink-0 flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
+          >
+            {pluginCopied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+            {pluginCopied ? T.copied : T.copy}
+          </button>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold">
+        <h3 className="text-sm font-medium text-zinc-400">
           {T.generatedConfig}
-          <span className="ml-2 text-sm font-normal text-zinc-500">
-            {hooks.length} hook{hooks.length > 1 ? 's' : ''}
-          </span>
+          <span className="ml-2 text-zinc-600">{hooks.length} hook{hooks.length > 1 ? 's' : ''}</span>
         </h3>
         <div className="flex gap-2">
           <button

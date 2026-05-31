@@ -59,9 +59,6 @@ export default async function HomePage({
       </section>
 
       <section id="catalogue" className="scroll-mt-20 pb-24">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-white">{T.catalogueTitle}</h2>
-        </div>
         <CatalogueExplorer />
       </section>
     </div>

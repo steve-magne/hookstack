@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowUpRight, Check } from 'lucide-react'
+import { ArrowUpRight, Check, ShieldCheck } from 'lucide-react'
 import type { Hook } from '@/types/hook'
 import { useSelection } from '@/store/selection'
 import { useT } from '@/lib/locale-context'
@@ -52,6 +52,9 @@ export function HookRow({ hook, groupBy, onOpen, onHover, onLeave }: Props) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <h4 className="truncate font-medium text-zinc-200 group-hover:text-white">{hook.name}</h4>
+          {hook.is_must && (
+            <ShieldCheck className="size-3 shrink-0 text-indigo-400" aria-label={T.mustPreselected} />
+          )}
           <ArrowUpRight className="size-3.5 shrink-0 text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100" />
         </div>
       </div>

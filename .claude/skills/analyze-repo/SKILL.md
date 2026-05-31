@@ -102,6 +102,14 @@ Le concept est **réimplémenté en Node.js idiomatique** : `readFileSync(0, 'ut
 
 **Contenu bilingue obligatoire** : le catalogue est multilingue. Le **français est canonique** (champs racine `name`, `description`, `use_cases`). Produire **toujours** un overlay `i18n.en` traduisant ces trois champs en anglais. Seuls ces champs en langage naturel sont traduits — jamais `slug`, `tags`, `trigger`, `code_snippet`, ni la config. Le tableau `i18n.en.use_cases` doit avoir le même nombre d'éléments que `use_cases`.
 
+**Champ `is_must` (optionnel)** : marquer `"is_must": true` si le hook est un incontournable — c'est-à-dire qu'il répond à **tous** ces critères :
+- catégorie `security` ou `validation` avec blocage `PreToolUse`
+- protège contre un risque réel (fuite de secrets, destruction de données, corruption de fichiers sensibles)
+- applicable universellement (indépendant du projet, du langage, de la stack)
+- coût d'activation nul (pas de dépendance externe, pas de configuration requise)
+
+Un hook `is_must: true` sera pré-sélectionné par défaut dans le catalogue pour tous les visiteurs. Ne pas abuser : 3-5 hooks maximum dans l'ensemble du registre.
+
 **Schema d'une entrée** (toutes les clés requises) :
 
 ```json
@@ -136,7 +144,8 @@ Le concept est **réimplémenté en Node.js idiomatique** : `readFileSync(0, 'ut
     { "repo": "$ARGUMENTS", "file_path": ".claude/settings.json", "added_by": "claude-code-analysis" }
   ],
   "tags": ["tag1", "tag2"],
-  "votes": 0
+  "votes": 0,
+  "is_must": true
 }
 ```
 
