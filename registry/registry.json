@@ -425,7 +425,10 @@
       "lint",
       "quality"
     ],
-    "votes": 0
+    "votes": 0,
+    "stack": [
+      "node"
+    ]
   },
   {
     "id": "post-edit-typecheck",
@@ -470,7 +473,10 @@
       "typecheck",
       "quality"
     ],
-    "votes": 0
+    "votes": 0,
+    "stack": [
+      "typescript"
+    ]
   },
   {
     "id": "stop-run-tests",
@@ -843,7 +849,10 @@
       "node",
       "validation"
     ],
-    "votes": 0
+    "votes": 0,
+    "stack": [
+      "node"
+    ]
   },
   {
     "id": "pre-edit-worktree-guard",
@@ -1055,7 +1064,10 @@
       "bootstrap",
       "async"
     ],
-    "votes": 0
+    "votes": 0,
+    "stack": [
+      "node"
+    ]
   },
   {
     "id": "stop-missing-test-detection",
@@ -1156,7 +1168,10 @@
       "pytest",
       "definition-of-done"
     ],
-    "votes": 0
+    "votes": 0,
+    "stack": [
+      "typescript"
+    ]
   },
   {
     "id": "stop-session-dedup-autodisable",
@@ -1769,7 +1784,11 @@
       "uv",
       "install"
     ],
-    "votes": 0
+    "votes": 0,
+    "stack": [
+      "node",
+      "python"
+    ]
   },
   {
     "id": "session-end-cleanup-temp",
@@ -2086,5 +2105,877 @@
       "history"
     ],
     "votes": 0
+  },
+  {
+    "id": "post-tool-batch-typecheck",
+    "slug": "post-tool-batch-typecheck",
+    "name": "Typecheck after parallel file edits",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PostToolBatch",
+    "trigger": "*",
+    "description": "Runs tsc --noEmit once after a full batch of parallel tool calls that include TypeScript file edits. Avoids redundant per-file tsc invocations and reports type errors back to Claude as context for the next turn.",
+    "use_cases": [
+      "Run a single TypeScript check after Claude edits multiple .ts/.tsx files in parallel",
+      "Surface type errors immediately after batch refactors or code generation",
+      "Reduce tsc invocation overhead versus per-file PostToolUse hooks"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PostToolBatch": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-batch-typecheck.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/post-tool-batch-typecheck.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst calls = input.tool_calls ?? [];\n\nconst hasTs = calls.some(c =>\n  ['Write', 'Edit'].includes(c.tool_name) &&\n  /\\.tsx?$/.test(c.tool_input?.file_path ?? '')\n);\nif (!hasTs) process.exit(0);\n\ntry {\n  execSync('npx --no-install tsc --noEmit --pretty false 2>&1', { stdio: 'pipe', timeout: 30000 });\n} catch (e) {\n  const out = (e.stdout ?? e.stderr ?? '').toString().slice(0, 2000);\n  process.stdout.write(JSON.stringify({\n    hookSpecificOutput: {\n      hookEventName: 'PostToolBatch',\n      additionalContext: `TypeScript errors after batch edit:\\n${out}`,\n    },\n  }));\n}\n"
+    },
+    "tags": [
+      "typescript",
+      "typecheck",
+      "batch",
+      "validation"
+    ],
+    "votes": 0,
+    "stack": [
+      "typescript"
+    ]
+  },
+  {
+    "id": "file-changed-reload-env",
+    "slug": "file-changed-reload-env",
+    "name": "Reload .env on file change",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "FileChanged",
+    "trigger": ".env|.env.local|.envrc",
+    "description": "Watches .env, .env.local and .envrc files and writes updated KEY=VALUE pairs to CLAUDE_ENV_FILE when any of them change on disk. Subsequent Bash commands automatically pick up the new values without restarting the session.",
+    "use_cases": [
+      "Reload environment variables after editing .env without restarting Claude Code",
+      "Sync .env.local overrides into Claude's Bash environment on the fly",
+      "Keep API keys and feature flags up to date during active development"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "FileChanged": [
+            {
+              "matcher": ".env|.env.local|.envrc",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/file-changed-reload-env.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/file-changed-reload-env.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync, appendFileSync, existsSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst envFile = process.env.CLAUDE_ENV_FILE;\nif (!envFile || input.event === 'unlink') process.exit(0);\n\ntry {\n  const content = readFileSync(input.file_path, 'utf8');\n  const lines = content.split('\\n').filter(l => /^[A-Z_a-z][A-Z_a-z0-9]*=/.test(l) && !l.startsWith('#'));\n  for (const line of lines) {\n    appendFileSync(envFile, `export ${line.trim()}\\n`);\n  }\n  process.stderr.write(`[file-changed-reload-env] reloaded ${lines.length} vars from ${input.file_path}\\n`);\n} catch (e) {\n  process.stderr.write(`[file-changed-reload-env] ${e.message}\\n`);\n}\n"
+    },
+    "tags": [
+      "env",
+      "environment",
+      "reload",
+      "dotenv",
+      "file-watch"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "file-changed-run-tests",
+    "slug": "file-changed-run-tests",
+    "name": "Auto-run tests when source files change",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "FileChanged",
+    "trigger": "*.ts|*.tsx|*.js|*.jsx",
+    "description": "Triggers the project test suite asynchronously whenever a watched source file changes on disk. Results are injected as context for Claude on the next turn, so Claude can react to test failures without being explicitly asked.",
+    "use_cases": [
+      "Continuously validate that external file changes don't break tests during a session",
+      "Automatically surface test regressions when hot-reloading tools modify source files",
+      "Keep Claude informed of test status after every file system change"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "FileChanged": [
+            {
+              "matcher": "*.ts|*.tsx|*.js|*.jsx",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/file-changed-run-tests.mjs",
+                  "async": true,
+                  "timeout": 120
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/file-changed-run-tests.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nif (input.event === 'unlink') process.exit(0);\n\ntry {\n  const out = execSync('npm test --if-present 2>&1', { timeout: 90000 }).toString();\n  process.stdout.write(JSON.stringify({\n    hookSpecificOutput: {\n      hookEventName: 'FileChanged',\n      additionalContext: `Tests passed after ${input.file_path} changed.\\n${out.slice(-500)}`,\n    },\n  }));\n} catch (e) {\n  const out = (e.stdout ?? e.stderr ?? e.message).toString().slice(0, 1000);\n  process.stdout.write(JSON.stringify({\n    hookSpecificOutput: {\n      hookEventName: 'FileChanged',\n      additionalContext: `Tests FAILED after ${input.file_path} changed:\\n${out}`,\n    },\n  }));\n}\n"
+    },
+    "tags": [
+      "tests",
+      "file-watch",
+      "ci",
+      "async",
+      "validation"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "worktree-remove-cleanup",
+    "slug": "worktree-remove-cleanup",
+    "name": "Clean up artifacts on worktree removal",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "WorktreeRemove",
+    "trigger": "*",
+    "description": "Runs cleanup tasks when a worktree is removed: stops any Docker Compose services declared in the worktree and removes node_modules to reclaim disk space. Prevents orphaned containers and disk bloat after isolation: worktree subagent sessions.",
+    "use_cases": [
+      "Stop Docker Compose services started inside an isolated worktree",
+      "Reclaim disk space by removing node_modules after worktree cleanup",
+      "Prevent orphaned containers when parallel subagents each run their own stack"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "WorktreeRemove": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-remove-cleanup.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/worktree-remove-cleanup.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync, existsSync, rmSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { join } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst p = input.worktree_path;\nif (!p) process.exit(0);\n\ntry {\n  if (existsSync(join(p, 'docker-compose.yml')) || existsSync(join(p, 'docker-compose.yaml'))) {\n    execSync(`docker compose -f ${p}/docker-compose.yml down --remove-orphans 2>&1`, { timeout: 30000 });\n  }\n} catch { /* ignore */ }\n\ntry {\n  const nm = join(p, 'node_modules');\n  if (existsSync(nm)) rmSync(nm, { recursive: true, force: true });\n} catch { /* ignore */ }\n"
+    },
+    "tags": [
+      "worktree",
+      "docker",
+      "cleanup",
+      "node_modules",
+      "disk-space"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "post-compact-save-summary",
+    "slug": "post-compact-save-summary",
+    "name": "Save compaction summary to log",
+    "category": "documentation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PostCompact",
+    "trigger": "*",
+    "description": "Appends the compaction summary generated by Claude Code to a markdown log file inside the project. Provides a persistent record of what was summarized across context window resets, useful for long-running sessions and post-session review.",
+    "use_cases": [
+      "Keep a human-readable history of every compaction event in the project",
+      "Review what Claude summarized at context boundaries for debugging or audit",
+      "Reconstruct the timeline of a long session from compaction summaries"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PostCompact": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-compact-save-summary.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/post-compact-save-summary.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join, dirname } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst summary = input.compact_summary ?? '';\nif (!summary.trim()) process.exit(0);\n\nconst logPath = join(process.env.CLAUDE_PROJECT_DIR ?? '.', '.claude', 'compaction-log.md');\ntry { mkdirSync(dirname(logPath), { recursive: true }); } catch { /* exists */ }\n\nconst date = new Date().toISOString();\nappendFileSync(logPath, `\\n## ${date} (${input.trigger ?? 'auto'})\\n${summary}\\n`);\n"
+    },
+    "tags": [
+      "compaction",
+      "logging",
+      "documentation",
+      "context"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "stop-failure-rate-limit-alert",
+    "slug": "stop-failure-rate-limit-alert",
+    "name": "Desktop notification on rate limit",
+    "category": "notification",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "StopFailure",
+    "trigger": "rate_limit",
+    "description": "Fires a desktop notification via a terminal escape sequence when Claude Code hits an API rate limit. Lets you step away and come back when the quota resets without polling the terminal.",
+    "use_cases": [
+      "Get a desktop ping when Claude Code is paused by a rate limit",
+      "Avoid missing rate-limit pauses during long autonomous sessions",
+      "Works in iTerm2, WezTerm, Windows Terminal and other OSC-9 compatible terminals"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "StopFailure": [
+            {
+              "matcher": "rate_limit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-failure-rate-limit-alert.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/stop-failure-rate-limit-alert.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// StopFailure (rate_limit): fire a desktop notification via OSC-9\nconst seq = '\\x1b]9;Claude Code — rate limit hit, paused\\x07';\nprocess.stdout.write(JSON.stringify({ terminalSequence: seq }));\n"
+    },
+    "tags": [
+      "rate-limit",
+      "notification",
+      "alert",
+      "desktop",
+      "stop-failure"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "stop-failure-log-api-errors",
+    "slug": "stop-failure-log-api-errors",
+    "name": "Log API errors to file",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "StopFailure",
+    "trigger": "*",
+    "description": "Appends every API error (rate limit, auth failure, billing, server error, etc.) to a persistent log file with timestamp, error type, details and session ID. Enables post-mortem analysis of failed sessions.",
+    "use_cases": [
+      "Track frequency and type of API errors across sessions",
+      "Diagnose billing or authentication issues in CI/CD pipelines",
+      "Correlate API failures with specific session IDs for debugging"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "StopFailure": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-failure-log-api-errors.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/stop-failure-log-api-errors.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join, dirname } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst logPath = join(process.env.CLAUDE_PROJECT_DIR ?? '.', '.claude', 'api-errors.log');\ntry { mkdirSync(dirname(logPath), { recursive: true }); } catch { /* exists */ }\n\nconst date = new Date().toISOString();\nconst line = `${date} | ${input.error} | ${input.error_details ?? ''} | session:${input.session_id}\\n`;\nappendFileSync(logPath, line);\n"
+    },
+    "tags": [
+      "api-errors",
+      "logging",
+      "stop-failure",
+      "debugging",
+      "audit"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "task-created-naming-convention",
+    "slug": "task-created-naming-convention",
+    "name": "Enforce task naming conventions",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "TaskCreated",
+    "trigger": "*",
+    "description": "Blocks task creation when the subject does not start with a ticket reference in the format [PREFIX-123]. Ensures every agent-created task is traceable to a project management ticket before it enters the queue.",
+    "use_cases": [
+      "Require ticket numbers on all tasks created by agent teams (e.g. [PROJ-42])",
+      "Enforce consistent task naming in multi-agent CI pipelines",
+      "Prevent orphaned tasks with no traceability to Linear, Jira or GitHub issues"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "TaskCreated": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/task-created-naming-convention.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/task-created-naming-convention.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst subject = input.task_subject ?? '';\n\nif (!/^\\[[A-Z]+-\\d+\\]/.test(subject)) {\n  process.stderr.write(\n    `Task subject must start with a ticket reference, e.g. \"[PROJ-123] ${subject}\". ` +\n    'Update the subject to include a valid ticket number.'\n  );\n  process.exit(2);\n}\n"
+    },
+    "tags": [
+      "tasks",
+      "naming",
+      "agent-teams",
+      "traceability",
+      "conventions"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "task-completed-test-gate",
+    "slug": "task-completed-test-gate",
+    "name": "Test suite gate before task completion",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "TaskCompleted",
+    "trigger": "*",
+    "description": "Blocks a task from being marked as completed if the test suite fails. The agent receives the test output as feedback and must fix the failures before it can close the task, enforcing a green-build policy for every unit of work.",
+    "use_cases": [
+      "Prevent agents from closing tasks with broken tests in multi-agent pipelines",
+      "Enforce a green-build policy without human review for every agent task",
+      "Surface test failures back to the agent as actionable feedback"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "TaskCompleted": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/task-completed-test-gate.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/task-completed-test-gate.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\ntry {\n  execSync('npm test --if-present 2>&1', { stdio: 'pipe', timeout: 120000 });\n} catch (e) {\n  const out = (e.stdout ?? e.stderr ?? e.message).toString().slice(0, 800);\n  process.stderr.write(\n    `Tests must pass before completing \"${input.task_subject}\".\\n${out}`\n  );\n  process.exit(2);\n}\n"
+    },
+    "tags": [
+      "tasks",
+      "tests",
+      "quality-gate",
+      "agent-teams",
+      "ci"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "user-prompt-expansion-skill-context",
+    "slug": "user-prompt-expansion-skill-context",
+    "name": "Inject context on skill invocation",
+    "category": "context",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "UserPromptExpansion",
+    "trigger": "*",
+    "description": "Injects skill-specific additional context whenever a slash command expands into a prompt. A configurable map lets you attach focused instructions (security checklist, style guide, domain rules) to specific skills without editing their definition.",
+    "use_cases": [
+      "Attach a security checklist automatically when /security-review is invoked",
+      "Inject the team coding style guide when /code-review runs",
+      "Pass domain-specific constraints to any skill without modifying its source"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "UserPromptExpansion": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt-expansion-skill-context.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/user-prompt-expansion-skill-context.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst skill = input.command_name ?? '';\n\n// Map skill names to additional context to inject\nconst contextMap = {\n  'code-review': 'Check for security vulnerabilities, adherence to SOLID principles, and the conventions in CLAUDE.md.',\n  'security-review': 'Follow OWASP Top 10. Flag hardcoded secrets, injection risks, and insecure dependencies.',\n};\n\nconst ctx = contextMap[skill];\nif (ctx) {\n  process.stdout.write(JSON.stringify({\n    hookSpecificOutput: {\n      hookEventName: 'UserPromptExpansion',\n      additionalContext: ctx,\n    },\n  }));\n}\n"
+    },
+    "tags": [
+      "skills",
+      "context",
+      "slash-commands",
+      "customization"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "permission-denied-auto-mode-log",
+    "slug": "permission-denied-auto-mode-log",
+    "name": "Log auto-mode permission denials",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PermissionDenied",
+    "trigger": "*",
+    "description": "Appends every auto-mode permission denial to a log file with timestamp, tool name, input and denial reason. Provides visibility into what the auto-mode classifier is blocking, helping you tune allow/deny rules over time.",
+    "use_cases": [
+      "Understand which tool calls auto-mode is silently blocking in autonomous sessions",
+      "Tune allow/deny rules by reviewing the denial log after a session",
+      "Audit autonomous agent actions for compliance in CI/CD environments"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PermissionDenied": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/permission-denied-auto-mode-log.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/permission-denied-auto-mode-log.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join, dirname } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst logPath = join(process.env.CLAUDE_PROJECT_DIR ?? '.', '.claude', 'permission-denied.log');\ntry { mkdirSync(dirname(logPath), { recursive: true }); } catch { /* exists */ }\n\nconst date = new Date().toISOString();\nconst line = `${date} | ${input.tool_name} | ${JSON.stringify(input.tool_input)} | ${input.reason}\\n`;\nappendFileSync(logPath, line);\n"
+    },
+    "tags": [
+      "auto-mode",
+      "permissions",
+      "logging",
+      "audit",
+      "security"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "setup-install-deps",
+    "slug": "setup-install-deps",
+    "name": "Install project dependencies on init",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "SessionStart",
+    "trigger": "startup",
+    "description": "Detects the project's package manager from lock files (pnpm, yarn, npm) and runs a frozen install on first session startup. Ensures Claude Code always starts with a complete node_modules without requiring a manual install step.",
+    "use_cases": [
+      "Auto-install dependencies when Claude Code opens a freshly cloned repository",
+      "Guarantee node_modules is present before any tool calls run in a new project",
+      "Unify the dev environment setup across team members via a shared hook"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "SessionStart": [
+            {
+              "matcher": "startup",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/setup-install-deps.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/setup-install-deps.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync, existsSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst cwd = input.cwd;\n\nconst has = (f) => existsSync(`${cwd}/${f}`);\nconst hasNodeModules = has('node_modules');\nif (hasNodeModules) process.exit(0); // already installed\n\nlet cmd = null;\nif (has('pnpm-lock.yaml')) cmd = 'pnpm install --frozen-lockfile';\nelse if (has('yarn.lock')) cmd = 'yarn install --frozen-lockfile';\nelse if (has('package-lock.json')) cmd = 'npm ci';\nelse if (has('package.json')) cmd = 'npm install';\n\nif (cmd) {\n  process.stderr.write(`[setup-install-deps] Running: ${cmd}\\n`);\n  try {\n    execSync(cmd, { cwd, stdio: 'inherit', timeout: 180000 });\n  } catch (e) {\n    process.stderr.write(`[setup-install-deps] Failed: ${e.message}\\n`);\n  }\n}\n"
+    },
+    "tags": [
+      "setup",
+      "npm",
+      "pnpm",
+      "yarn",
+      "dependencies",
+      "onboarding"
+    ],
+    "votes": 0,
+    "stack": [
+      "node"
+    ]
+  },
+  {
+    "id": "message-display-redact-secrets",
+    "slug": "message-display-redact-secrets",
+    "name": "Redact secrets from displayed output",
+    "category": "security",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "MessageDisplay",
+    "trigger": "*",
+    "description": "Intercepts assistant message text as it streams to the screen and replaces patterns matching API keys, GitHub tokens and Bearer credentials with [REDACTED] placeholders. The transcript and model context retain the original text; only the rendered display is sanitized.",
+    "use_cases": [
+      "Prevent API keys from being visible on screen during pair programming or screen shares",
+      "Sanitize assistant output that echoes back tool results containing credentials",
+      "Compliance screen recording: ensure no secrets appear in recorded sessions"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "MessageDisplay": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/message-display-redact-secrets.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/message-display-redact-secrets.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst delta = input.delta ?? '';\n\nconst redacted = delta\n  .replace(/sk-(?:ant-api03-|proj-)[A-Za-z0-9_-]{20,}/g, '[REDACTED-ANTHROPIC-KEY]')\n  .replace(/sk-[A-Za-z0-9]{20,}/g, '[REDACTED-API-KEY]')\n  .replace(/ghp_[A-Za-z0-9]{36}/g, '[REDACTED-GH-TOKEN]')\n  .replace(/ghs_[A-Za-z0-9]{36}/g, '[REDACTED-GH-TOKEN]')\n  .replace(/Bearer [A-Za-z0-9_\\-\\.]{20,}/g, 'Bearer [REDACTED]');\n\nif (redacted !== delta) {\n  process.stdout.write(JSON.stringify({\n    hookSpecificOutput: {\n      hookEventName: 'MessageDisplay',\n      displayContent: redacted,\n    },\n  }));\n}\n"
+    },
+    "tags": [
+      "security",
+      "redaction",
+      "secrets",
+      "display",
+      "compliance"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "instructions-loaded-audit-log",
+    "slug": "instructions-loaded-audit-log",
+    "name": "Audit log for CLAUDE.md file loads",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "InstructionsLoaded",
+    "trigger": "*",
+    "description": "Records every CLAUDE.md and .claude/rules/*.md file loaded into context to a timestamped audit log. Captures the file path, memory scope (User/Project/Local/Managed) and load reason, providing full traceability of which instructions governed each session.",
+    "use_cases": [
+      "Audit which CLAUDE.md files were active during a session for compliance reviews",
+      "Debug unexpected model behaviour by reviewing which instruction files were loaded",
+      "Track lazy-loaded nested CLAUDE.md files in monorepos for instruction coverage"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "InstructionsLoaded": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/instructions-loaded-audit-log.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/instructions-loaded-audit-log.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join, dirname } from 'path';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst logPath = join(process.env.CLAUDE_PROJECT_DIR ?? '.', '.claude', 'instructions-audit.log');\ntry { mkdirSync(dirname(logPath), { recursive: true }); } catch { /* exists */ }\n\nconst date = new Date().toISOString();\nconst line = `${date} | ${input.memory_type} | ${input.load_reason} | ${input.file_path}\\n`;\nappendFileSync(logPath, line);\n"
+    },
+    "tags": [
+      "audit",
+      "claude-md",
+      "instructions",
+      "compliance",
+      "traceability"
+    ],
+    "votes": 0
+  },
+  {
+    "id": "post-write-ruff-format",
+    "slug": "post-write-ruff-format",
+    "name": "Ruff format after write",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "description": "After every Python file write or edit, runs ruff format via uv to apply consistent style without any agent intervention.",
+    "use_cases": [
+      "PEP 8 compliance without thinking about it",
+      "Consistent formatting across a team",
+      "Reduced review noise on style changes"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/ruff-format.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/ruff-format.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n\nif (!filePath.endsWith('.py')) process.exit(0);\n\ntry {\n  execSync(`uv run ruff format \"${filePath}\"`, { timeout: 15_000, stdio: 'pipe' });\n} catch {\n  // uv/ruff not installed — skip silently\n}\n"
+    },
+    "community_examples": [],
+    "tags": [
+      "validation",
+      "ruff",
+      "format",
+      "python",
+      "quality"
+    ],
+    "votes": 0,
+    "stack": [
+      "python"
+    ]
+  },
+  {
+    "id": "post-write-ruff-check",
+    "slug": "post-write-ruff-check",
+    "name": "Ruff lint after write",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "description": "Runs ruff check --fix on the modified Python file so lint violations are reported to the agent immediately and auto-fixable rules are applied inline.",
+    "use_cases": [
+      "Catch unused imports and undefined names before they accumulate",
+      "Auto-fix trivial violations (isort, unnecessary pass, etc.)",
+      "Enforce project ruff rules without a CI round-trip"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/ruff-check.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/ruff-check.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n\nif (!filePath.endsWith('.py')) process.exit(0);\n\ntry {\n  execSync(`uv run ruff check --fix \"${filePath}\"`, {\n    encoding: 'utf8',\n    timeout: 15_000,\n    stdio: 'pipe',\n  });\n} catch (e) {\n  if (e.stdout) process.stderr.write(`[ruff-check] ${e.stdout}\\n`);\n}\n"
+    },
+    "community_examples": [],
+    "tags": [
+      "validation",
+      "ruff",
+      "lint",
+      "python",
+      "quality"
+    ],
+    "votes": 0,
+    "stack": [
+      "python"
+    ]
+  },
+  {
+    "id": "post-edit-pyright",
+    "slug": "post-edit-pyright",
+    "name": "Pyright type checking",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "description": "Runs pyright via uv on the modified .py file and reports type errors to the agent so they are fixed within the same loop.",
+    "use_cases": [
+      "Strict typing in Python projects with pyright",
+      "Catch type mismatches immediately after an edit",
+      "Pair with ruff for a complete Python quality pipeline"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pyright-check.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/pyright-check.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n\nif (!filePath.endsWith('.py')) process.exit(0);\n\ntry {\n  execSync(`uv run pyright \"${filePath}\"`, {\n    encoding: 'utf8',\n    timeout: 30_000,\n    stdio: 'pipe',\n  });\n} catch (e) {\n  if (e.stdout) process.stderr.write(`[pyright] ${e.stdout}\\n`);\n}\n"
+    },
+    "community_examples": [],
+    "tags": [
+      "validation",
+      "pyright",
+      "typecheck",
+      "python",
+      "quality"
+    ],
+    "votes": 0,
+    "stack": [
+      "python"
+    ]
+  },
+  {
+    "id": "pre-bash-enforce-uv",
+    "slug": "pre-bash-enforce-uv",
+    "name": "Enforce uv for Python dependencies",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PreToolUse",
+    "trigger": "Bash",
+    "description": "Blocks pip install, pip3 install and poetry add/install commands and redirects the agent to the uv equivalent. Prevents virtual environment fragmentation.",
+    "use_cases": [
+      "Keep dependency management consistent on a uv-based project",
+      "Avoid pip/uv conflicts in the same virtualenv",
+      "Enforce team tooling conventions without having to remind the agent"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "matcher": "Bash",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-uv.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/enforce-uv.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nif (input.tool_name !== 'Bash') process.exit(0);\n\nconst cmd = input.tool_input?.command ?? '';\n\nconst BLOCKED = [\n  { re: /(^|[;&|\\s`])pip\\s+install\\b/,    fix: 'uv add' },\n  { re: /(^|[;&|\\s`])pip3\\s+install\\b/,   fix: 'uv add' },\n  { re: /(^|[;&|\\s`])poetry\\s+add\\b/,     fix: 'uv add' },\n  { re: /(^|[;&|\\s`])poetry\\s+install\\b/, fix: 'uv sync' },\n];\n\nconst hit = BLOCKED.find(({ re }) => re.test(cmd));\nif (hit) {\n  process.stdout.write(JSON.stringify({\n    decision: 'block',\n    reason: `Use '${hit.fix}' instead — this project manages dependencies with uv.`,\n  }));\n}\n"
+    },
+    "community_examples": [],
+    "tags": [
+      "validation",
+      "uv",
+      "pip",
+      "poetry",
+      "python",
+      "package-manager"
+    ],
+    "votes": 0,
+    "stack": [
+      "python"
+    ]
+  },
+  {
+    "id": "stop-pytest",
+    "slug": "stop-pytest",
+    "name": "Run pytest at end of response",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "Stop",
+    "trigger": "*",
+    "description": "When the agent finishes, runs the full pytest suite via uv. If tests fail, Claude re-enters and receives the failure output as context to fix the regressions.",
+    "use_cases": [
+      "Regression safety net on every agent turn",
+      "TDD loop: write code until tests go green",
+      "Catch side-effects of refactors before control returns to the user"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pytest.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/pytest.mjs",
+      "code_snippet": "#!/usr/bin/env node\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\n\nconst cwd = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\n\nconst isPython = ['pyproject.toml', 'setup.py', 'pytest.ini', 'setup.cfg']\n  .some(f => existsSync(`${cwd}/${f}`));\nif (!isPython) process.exit(0);\n\ntry {\n  execSync('uv run pytest --tb=short -q', {\n    encoding: 'utf8',\n    timeout: 120_000,\n    cwd,\n    stdio: 'inherit',\n  });\n} catch (e) {\n  process.exit(e.status ?? 1);\n}\n"
+    },
+    "community_examples": [],
+    "tags": [
+      "validation",
+      "pytest",
+      "uv",
+      "python",
+      "tests",
+      "ci"
+    ],
+    "votes": 0,
+    "stack": [
+      "python"
+    ]
   }
 ]

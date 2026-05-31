@@ -65,6 +65,8 @@ export const T = {
     workflow: 'Workflow',
     documentation: 'Documentation',
   },
+  filterStack: 'Your stack',
+  stackFilterHint: 'Select your stack to hide unrelated hooks',
   mustBannerTitle: 'Recommended standard',
   mustBannerSubtitle: 'essential hooks · already selected',
   mustInstallBtn: 'View configuration',

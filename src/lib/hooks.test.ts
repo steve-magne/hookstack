@@ -37,7 +37,7 @@ describe('filterHooks', () => {
     makeHook({ slug: 'a', name: 'Prettier formatter', category: 'workflow', tags: ['format'] }),
     makeHook({ slug: 'b', name: 'Destructive block', category: 'security', tags: ['danger'] }),
   ]
-  const empty = { query: '', categories: [] as Hook['category'][], providers: [] as Hook['provider'][number][], events: [] as Hook['hook_type'][] }
+  const empty = { query: '', categories: [] as Hook['category'][], providers: [] as Hook['provider'][number][], events: [] as Hook['hook_type'][], stacks: [] as import('@/types/hook').Stack[] }
 
   it('returns everything with no active filter', () => {
     expect(filterHooks(hooks, empty)).toHaveLength(2)

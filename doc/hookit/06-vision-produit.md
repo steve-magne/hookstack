@@ -9,6 +9,8 @@ Un outil qui permet à un développeur de décrire son projet et de repartir ave
 **Écran 1 — Profil projet**
 Stack (Next.js, Python, Go…), type (SaaS, CLI, lib), préoccupations (sécu, qualité, no-breakage CI)
 
+> **État actuel** : le sélecteur de stack (chips `TypeScript | Python | Node.js` dans `CatalogueExplorer`) est une première implémentation de cet écran. Il filtre le catalogue en opt-out : les hooks universels restent visibles, les hooks tech-spécifiques (`stack: ["python"]`, etc.) n'apparaissent que si la stack est sélectionnée. C'est le squelette UX de l'Écran 1 — à enrichir avec le type de projet et les préoccupations.
+
 **Écran 2 — Hooks recommandés**
 Liste avec explication de *pourquoi* chaque hook est utile pour *ce* cas précis
 
@@ -31,5 +33,5 @@ Le catalogue reste le moteur en coulisses — pas la vitrine. Il alimente le mot
 ## Prochaines étapes
 
 1. Construire la collection de hooks de référence (voir `07-collection-hooks.md`)
-2. Construire l'écran 1 (formulaire de profil projet) en remplacement de la home actuelle
+2. ~~Construire l'écran 1~~ **Partiel** : le sélecteur de stack est en place — étendre avec le type de projet et les préoccupations
 3. Utiliser le catalogue sur le projet Hookit lui-même pour valider

@@ -1,5 +1,28 @@
 export type Provider = 'claude-code' | 'copilot-vscode'
 
+export type Stack = 'typescript' | 'python' | 'node'
+
+export const STACK_LABELS: Record<Stack, string> = {
+  typescript: 'TypeScript',
+  python:     'Python',
+  node:       'Node.js',
+}
+
+export const STACK_COLORS: Record<Stack, { chip: string; active: string }> = {
+  typescript: {
+    chip:   'border-blue-500/40 bg-blue-500/10 text-blue-300',
+    active: 'border-blue-500/60 bg-blue-500/20 text-blue-200 ring-1 ring-blue-500/30',
+  },
+  python: {
+    chip:   'border-yellow-500/40 bg-yellow-500/10 text-yellow-300',
+    active: 'border-yellow-500/60 bg-yellow-500/20 text-yellow-200 ring-1 ring-yellow-500/30',
+  },
+  node: {
+    chip:   'border-green-500/40 bg-green-500/10 text-green-300',
+    active: 'border-green-500/60 bg-green-500/20 text-green-200 ring-1 ring-green-500/30',
+  },
+}
+
 export type Category =
   | 'security'
   | 'context'
@@ -54,6 +77,7 @@ export interface Hook {
   tags: string[]
   votes: number
   is_must?: boolean
+  stack?: Stack[]
 }
 
 export interface ScannedRepo {

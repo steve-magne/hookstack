@@ -14,9 +14,12 @@ import { useSelection } from '@/store/selection'
 import {
   HOOK_TYPE_INFO,
   HOOK_TYPES,
+  STACK_COLORS,
+  STACK_LABELS,
   type Category,
   type Hook,
   type HookType,
+  type Stack,
 } from '@/types/hook'
 import { CategoryBadge, HookTypeBadge } from './Badge'
 
@@ -74,6 +77,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   const initMust = useSelection((s) => s.initMust)
   const [groupBy, setGroupBy] = useState<GroupBy>('event')
   const [query, setQuery] = useState('')
+  const [selectedStacks, setSelectedStacks] = useState<Stack[]>([])
   const [active, setActive] = useState<Hook | null>(null)
   type Preview =
     | { kind: 'hook'; hook: Hook; y: number }
@@ -141,6 +145,12 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
     hideTimer.current = setTimeout(() => setPreview(null), 90)
   }, [])
 
+  const toggleStack = useCallback((s: Stack) => {
+    setSelectedStacks((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+    )
+  }, [])
+
   const results = useMemo(
     () =>
       filterHooks(allHooks, {
@@ -148,8 +158,9 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
         categories: initialCategory ? [initialCategory] : [],
         providers: [],
         events: [],
+        stacks: selectedStacks,
       }),
-    [query, initialCategory]
+    [query, initialCategory, selectedStacks]
   )
 
   const groups = useMemo(() => buildGroups(results, groupBy, T.categoryLabels), [results, groupBy, T])
@@ -196,7 +207,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
       </div>
 
       {/* Controls */}
-      <div className="mb-8">
+      <div className="mb-8 space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
@@ -240,6 +251,36 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
             ))}
           </div>
         </div>
+
+        {/* Stack filter chips */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-zinc-500 shrink-0">{T.filterStack}:</span>
+          {(Object.keys(STACK_LABELS) as Stack[]).map((s) => {
+            const active = selectedStacks.includes(s)
+            return (
+              <button
+                key={s}
+                onClick={() => toggleStack(s)}
+                aria-pressed={active}
+                className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                  active
+                    ? STACK_COLORS[s].active
+                    : 'border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                {STACK_LABELS[s]}
+              </button>
+            )
+          })}
+          {selectedStacks.length > 0 && (
+            <button
+              onClick={() => setSelectedStacks([])}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              {T.reset}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Grouped list — cascade on enter, FLIP on filter */}
@@ -274,7 +315,6 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                         key={h.slug}
                         hook={h}
                         groupBy={groupBy}
-                        onOpen={() => setActive(h)}
                         onHover={handleHover}
                         onLeave={handleLeave}
                       />
