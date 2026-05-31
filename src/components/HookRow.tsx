@@ -1,7 +1,7 @@
 'use client'
 
 import { m } from 'motion/react'
-import { ArrowUpRight, ShieldCheck } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import type { Hook } from '@/types/hook'
 import { useSelection } from '@/store/selection'
 import { useT } from '@/lib/locale-context'
@@ -12,12 +12,11 @@ import { fadeUp, spring } from '@/lib/motion'
 interface Props {
   hook: Hook
   groupBy: 'event' | 'category'
-  onOpen: () => void
   onHover: (hook: Hook, y: number) => void
   onLeave: () => void
 }
 
-export function HookRow({ hook, groupBy, onOpen, onHover, onLeave }: Props) {
+export function HookRow({ hook, groupBy, onHover, onLeave }: Props) {
   const T = useT()
   const selected = useSelection((s) => s.selected.includes(hook.slug))
   const toggle = useSelection((s) => s.toggle)
@@ -28,7 +27,7 @@ export function HookRow({ hook, groupBy, onOpen, onHover, onLeave }: Props) {
       variants={fadeUp}
       exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
       transition={spring.smooth}
-      onClick={onOpen}
+      onClick={() => toggle(hook.slug)}
       role="button"
       tabIndex={0}
       onMouseEnter={(e) => onHover(hook, e.currentTarget.getBoundingClientRect().top)}
@@ -36,17 +35,13 @@ export function HookRow({ hook, groupBy, onOpen, onHover, onLeave }: Props) {
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          onOpen()
+          toggle(hook.slug)
         }
       }}
       className="group flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-3 py-3 transition-colors hover:border-[var(--color-border)] hover:bg-[var(--color-surface)] focus:outline-none focus-visible:border-white/40"
     >
-      <m.button
+      <m.span
         whileTap={{ scale: 0.85 }}
-        onClick={(e) => {
-          e.stopPropagation()
-          toggle(hook.slug)
-        }}
         aria-label={selected ? T.removeFromSelection : T.addToSelection}
         className="-m-1 shrink-0 p-1"
       >
@@ -57,7 +52,7 @@ export function HookRow({ hook, groupBy, onOpen, onHover, onLeave }: Props) {
         }`}>
           <AnimatedCheck checked={selected} />
         </span>
-      </m.button>
+      </m.span>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
@@ -65,7 +60,6 @@ export function HookRow({ hook, groupBy, onOpen, onHover, onLeave }: Props) {
           {hook.is_must && (
             <ShieldCheck className="size-3 shrink-0 text-indigo-400" aria-label={T.mustPreselected} />
           )}
-          <ArrowUpRight className="size-3.5 shrink-0 text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100" />
         </div>
         <div className="mt-1 sm:hidden">
           {groupBy === 'event' ? (

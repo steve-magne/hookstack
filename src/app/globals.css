@@ -10,11 +10,6 @@
   --color-text-muted: #909090;
 }
 
-html,
-body {
-  height: 100%;
-}
-
 body {
   margin: 0;
   background: var(--color-bg);
