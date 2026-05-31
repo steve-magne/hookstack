@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, m, useAnimationControls } from 'motion/react'
 import { Search, X } from 'lucide-react'
 import { HookRow } from './HookRow'
-import { HookDetailPanel } from './HookDetailPanel'
+import { HookModal } from './HookModal'
 import { HookConfigurator } from './HookConfigurator'
 import { CopySwap } from './CopySwap'
 import { sectionReveal, spring, staggerContainer } from '@/lib/motion'
@@ -19,14 +19,6 @@ import {
   type HookType,
 } from '@/types/hook'
 import { CategoryBadge, HookTypeBadge } from './Badge'
-
-function useIsTouch() {
-  const [isTouch, setIsTouch] = useState(false)
-  useEffect(() => {
-    setIsTouch(window.matchMedia('(hover: none) and (pointer: coarse)').matches)
-  }, [])
-  return isTouch
-}
 
 type GroupBy = 'event' | 'category'
 
@@ -80,20 +72,15 @@ function buildGroups(hooks: Hook[], groupBy: GroupBy, categoryLabels: Record<str
 export function CatalogueExplorer({ initialCategory, showConfigurator = true }: Props) {
   const T = useT()
   const locale = useLocale()
-  const isTouch = useIsTouch()
   const initMust = useSelection((s) => s.initMust)
   const [groupBy, setGroupBy] = useState<GroupBy>('event')
   const [query, setQuery] = useState('')
-
-  // Panneau de détail
-  const [panelHook, setPanelHook] = useState<Hook | null>(null)
-  const [isPanelModal, setIsPanelModal] = useState(false)
-  const panelHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Tooltip survol des en-têtes d'événements (petit card flottant, inchangé)
-  type EventPreview = { eventType: HookType; count: number; y: number }
-  const [eventPreview, setEventPreview] = useState<EventPreview | null>(null)
-  const eventHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [active, setActive] = useState<Hook | null>(null)
+  type Preview =
+    | { kind: 'hook'; hook: Hook; y: number }
+    | { kind: 'event'; eventType: HookType; count: number; y: number }
+  const [preview, setPreview] = useState<Preview | null>(null)
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [cmdCopied, setCmdCopied] = useState(false)
   const selectedSlugs = useSelection((s) => s.selected)
@@ -142,46 +129,18 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
     }
   }, [selectedCount, ringControls, countControls])
 
-  // Handlers panneau de détail — mode survol (desktop)
-  const handleHover = useCallback((hook: Hook) => {
-    if (panelHideTimer.current) clearTimeout(panelHideTimer.current)
-    setPanelHook(hook)
-    setIsPanelModal(false)
+  const handleHover = useCallback((hook: Hook, y: number) => {
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+    setPreview({ kind: 'hook', hook, y })
+  }, [])
+
+  const handleEventHover = useCallback((eventType: HookType, count: number, y: number) => {
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+    setPreview({ kind: 'event', eventType, count, y })
   }, [])
 
   const handleLeave = useCallback(() => {
-    panelHideTimer.current = setTimeout(() => setPanelHook(null), 200)
-  }, [])
-
-  const handlePanelEnter = useCallback(() => {
-    if (panelHideTimer.current) clearTimeout(panelHideTimer.current)
-  }, [])
-
-  const handlePanelLeave = useCallback(() => {
-    panelHideTimer.current = setTimeout(() => setPanelHook(null), 200)
-  }, [])
-
-  // Handler touch — ouvre le panneau en mode modal
-  const handleTap = useCallback((hook: Hook) => {
-    if (panelHideTimer.current) clearTimeout(panelHideTimer.current)
-    setPanelHook(hook)
-    setIsPanelModal(true)
-  }, [])
-
-  const handlePanelClose = useCallback(() => {
-    if (panelHideTimer.current) clearTimeout(panelHideTimer.current)
-    setPanelHook(null)
-    setIsPanelModal(false)
-  }, [])
-
-  // Handlers tooltip en-têtes d'événements
-  const handleEventHover = useCallback((eventType: HookType, count: number, y: number) => {
-    if (eventHideTimer.current) clearTimeout(eventHideTimer.current)
-    setEventPreview({ eventType, count, y })
-  }, [])
-
-  const handleEventLeave = useCallback(() => {
-    eventHideTimer.current = setTimeout(() => setEventPreview(null), 90)
+    hideTimer.current = setTimeout(() => setPreview(null), 90)
   }, [])
 
   const localizedHooks = useMemo(
@@ -306,7 +265,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                 <div className="mb-1 flex items-center gap-3 px-3">
                   <h3
                     onMouseEnter={grp.isEvent ? (e) => handleEventHover(grp.key as HookType, grp.count, e.currentTarget.getBoundingClientRect().top) : undefined}
-                    onMouseLeave={grp.isEvent ? handleEventLeave : undefined}
+                    onMouseLeave={grp.isEvent ? handleLeave : undefined}
                     className={`cursor-default text-sm font-semibold text-zinc-300 transition-colors ${
                       grp.isEvent ? 'font-mono hover:text-white' : 'uppercase tracking-wide'
                     }`}
@@ -323,9 +282,9 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                         key={h.slug}
                         hook={h}
                         groupBy={groupBy}
+                        onOpen={() => setActive(h)}
                         onHover={handleHover}
                         onLeave={handleLeave}
-                        onTap={isTouch ? handleTap : undefined}
                       />
                     ))}
                   </AnimatePresence>
@@ -344,61 +303,62 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
         </m.div>
       )}
 
-      {/* Tooltip survol des en-têtes d'événements — petit card flottant */}
-      {eventPreview && (() => {
-        const info = HOOK_TYPE_INFO[eventPreview.eventType]
-        if (!info) return null
-        return (
-          <div
-            style={{
-              position: 'fixed',
-              left: 24,
-              top: Math.max(80, Math.min(eventPreview.y - 12, (typeof window !== 'undefined' ? window.innerHeight : 700) - 140)),
-            }}
-            className="pointer-events-none z-50 hidden w-64 rounded-2xl border border-white/10 bg-zinc-900/95 p-4 shadow-2xl backdrop-blur-md lg:block"
-          >
-            <p className="mb-1 font-mono text-sm font-semibold text-white">{eventPreview.eventType}</p>
-            <p className="mb-3 text-[13px] leading-relaxed text-zinc-400">{info.label}</p>
-            <div className="flex items-center justify-between">
-              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${
-                info.blocking
-                  ? 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
-                  : 'bg-zinc-500/10 text-zinc-400 ring-zinc-500/20'
-              }`}>
-                {info.blocking ? '⚡ bloquant' : '· non bloquant'}
-              </span>
-              <span className="font-mono text-[11px] text-zinc-500">
-                {eventPreview.count} hook{eventPreview.count > 1 ? 's' : ''}
-              </span>
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* Panneau de détail — backdrop modal (touch) */}
       <AnimatePresence>
-        {panelHook && isPanelModal && (
-          <m.div
-            key="detail-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            onClick={handlePanelClose}
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
-          />
-        )}
-        {panelHook && (
-          <HookDetailPanel
-            key="detail-panel"
-            hook={panelHook}
-            onClose={handlePanelClose}
-            modal={isPanelModal}
-            onPanelEnter={handlePanelEnter}
-            onPanelLeave={handlePanelLeave}
-          />
-        )}
+        {active && <HookModal key="hook-modal" hook={active} onClose={() => setActive(null)} />}
       </AnimatePresence>
+
+      {/* Carte de prévisualisation flottante — position: fixed, aucun impact sur le flux */}
+      {preview && (
+        <div
+          style={{
+            position: 'fixed',
+            right: 24,
+            top: Math.max(80, Math.min(preview.y - 12, (typeof window !== 'undefined' ? window.innerHeight : 700) - 220)),
+          }}
+          className="pointer-events-none z-50 hidden w-72 rounded-2xl border border-white/10 bg-zinc-900/95 p-4 shadow-2xl backdrop-blur-md xl:block"
+        >
+          <div className="mb-3 flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-white/40" />
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+
+          {preview.kind === 'hook' ? (
+            <>
+              <p className="mb-3 text-[13px] leading-relaxed text-zinc-300">{preview.hook.description}</p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <CategoryBadge category={preview.hook.category} />
+                <HookTypeBadge type={preview.hook.hook_type} trigger={preview.hook.trigger} />
+              </div>
+              {preview.hook.trigger && preview.hook.trigger !== '*' && (
+                <div className="mt-2.5 font-mono text-[11px] text-zinc-500">
+                  matcher: <span className="text-zinc-400">{preview.hook.trigger}</span>
+                </div>
+              )}
+            </>
+          ) : (() => {
+            const info = HOOK_TYPE_INFO[preview.eventType]
+            if (!info) return null
+            return (
+              <>
+                <p className="mb-1 font-mono text-sm font-semibold text-white">{preview.eventType}</p>
+                <p className="mb-3 text-[13px] leading-relaxed text-zinc-400">{info.label}</p>
+                <div className="flex items-center justify-between">
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${
+                    info.blocking
+                      ? 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
+                      : 'bg-zinc-500/10 text-zinc-400 ring-zinc-500/20'
+                  }`}>
+                    {info.blocking ? '⚡ bloquant' : '· non bloquant'}
+                  </span>
+                  <span className="font-mono text-[11px] text-zinc-500">
+                    {preview.count} hook{preview.count > 1 ? 's' : ''}
+                  </span>
+                </div>
+              </>
+            )
+          })()}
+        </div>
+      )}
 
       {showConfigurator && (
         <section id="config" className="mt-12 scroll-mt-20">
