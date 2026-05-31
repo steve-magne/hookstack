@@ -304,8 +304,8 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
         <div
           style={{
             position: 'fixed',
-            right: 24,
-            top: Math.max(80, Math.min(preview.y - 12, (typeof window !== 'undefined' ? window.innerHeight : 700) - 220)),
+            left: 24,
+            top: Math.max(80, Math.min(preview.y - 12, (typeof window !== 'undefined' ? window.innerHeight : 700) - 320)),
           }}
           className="pointer-events-none z-50 hidden w-72 rounded-2xl border border-white/10 bg-zinc-900/95 p-4 shadow-2xl backdrop-blur-md xl:block"
         >
@@ -324,6 +324,19 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
               {preview.hook.trigger && preview.hook.trigger !== '*' && (
                 <div className="mt-2.5 font-mono text-[11px] text-zinc-500">
                   matcher: <span className="text-zinc-400">{preview.hook.trigger}</span>
+                </div>
+              )}
+              {preview.hook.use_cases && preview.hook.use_cases.length > 0 && (
+                <div className="mt-3 border-t border-white/8 pt-3">
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Use cases</p>
+                  <ul className="space-y-1">
+                    {preview.hook.use_cases.slice(0, 3).map((uc, i) => (
+                      <li key={i} className="flex items-start gap-1.5 text-[12px] leading-snug text-zinc-400">
+                        <span className="mt-[3px] shrink-0 text-zinc-600">–</span>
+                        {uc}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </>
