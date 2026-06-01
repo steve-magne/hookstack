@@ -9,7 +9,7 @@ export const T = {
   signInTitle: 'Sign in with GitHub',
   signInTitleDisabled: 'Configure Supabase to enable GitHub auth',
   signIn: 'Sign in',
-  heroTitle1: 'Implement your',
+  heroTitle1: 'Get your',
   heroHighlight: 'agentic hooks',
   heroTitle2: 'in 2 minutes',
   catalogueTitle: 'Hooks catalogue',
@@ -71,7 +71,7 @@ export const T = {
   mustBannerSubtitle: 'essential hooks · already selected',
   mustInstallBtn: 'View configuration',
   mustPreselected: 'Essential',
-  pluginInstallHint: 'Install in Claude Code:',
+  pluginInstallHint: 'Run once in your project root:',
 }
 
 export type Translations = typeof T

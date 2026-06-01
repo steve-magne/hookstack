@@ -97,7 +97,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   // Sticky banner reflects live selection: checking a hook updates this command.
   const installCmd = useMemo(
     () =>
-      `claude --plugin-url https://claudehooks.vercel.app/api/plugin?hooks=${allHooks
+      `npx hookit@latest install --hooks=${allHooks
         .filter((h) => selectedSlugs.includes(h.slug))
         .map((h) => h.slug)
         .join(',')}`,

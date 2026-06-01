@@ -1,3 +1,4 @@
+// Transforms a Hook[] selection into installable artifacts: merged settings.json, scripts, plugin zip, or standalone install script.
 import type { Hook } from '@/types/hook'
 
 type HookEntry = { matcher?: string; hooks: unknown[] }

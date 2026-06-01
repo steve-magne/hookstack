@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { allHooks } from '@/lib/hooks'
-import { toPluginFiles } from '@/lib/mergeConfig'
+import { toPluginFiles } from '@/lib/hookExports'
 import { buildZip } from '@/lib/zip'
 
 export async function GET(req: NextRequest) {

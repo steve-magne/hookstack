@@ -18,7 +18,7 @@ export function HookConfigurator() {
     () => allHooks.filter((h) => selected.includes(h.slug)),
     [selected]
   )
-  const pluginCmd = `claude --plugin-url https://claudehooks.vercel.app/api/plugin?hooks=${hooks.map(h => h.slug).join(',')}`
+  const pluginCmd = `npx hookit@latest install --hooks=${hooks.map(h => h.slug).join(',')}`
 
   const copyPluginBottom = async () => {
     await navigator.clipboard.writeText(pluginCmd)

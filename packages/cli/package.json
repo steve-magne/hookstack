@@ -1,0 +1,23 @@
+{
+  "name": "hookit",
+  "version": "0.1.0",
+  "description": "Install Claude Code hooks from the Hookit catalogue",
+  "type": "module",
+  "bin": {
+    "hookit": "./bin/cli.mjs"
+  },
+  "files": [
+    "bin/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "claude-code",
+    "hooks",
+    "ai",
+    "claude"
+  ],
+  "license": "MIT",
+  "homepage": "https://claudehooks.vercel.app"
+}
