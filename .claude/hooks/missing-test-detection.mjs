@@ -36,7 +36,7 @@ export function run({
     if (!/^src\/(lib|store|hooks)\/[^/]+\.ts$/.test(f)) continue;
     if (/\.(test|spec)\.ts$/.test(f)) continue; // un fichier de test n'exige pas son propre test
     const name = basename(f, '.ts');
-    const found = exec(`find src -name "${name}.test.ts" -o -name "${name}.spec.ts"`);
+    const found = exec(`find src tests -name "${name}.test.ts" -o -name "${name}.spec.ts" 2>/dev/null`);
     if (!found) missing.push(f);
   }
 

@@ -198,7 +198,8 @@
       "workflow",
       "guardrail"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "id": "user-prompt-inject-conventions",
@@ -292,7 +293,8 @@
       "session",
       "awareness"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "id": "user-prompt-inject-datetime",
@@ -335,7 +337,8 @@
       "datetime",
       "prompt"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "id": "post-write-autoformat",
@@ -380,7 +383,8 @@
       "format",
       "quality"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "id": "post-write-eslint",
@@ -428,7 +432,8 @@
     "votes": 0,
     "stack": [
       "node"
-    ]
+    ],
+    "is_must": true
   },
   {
     "id": "post-edit-typecheck",
@@ -476,7 +481,8 @@
     "votes": 0,
     "stack": [
       "typescript"
-    ]
+    ],
+    "is_must": true
   },
   {
     "id": "stop-run-tests",
@@ -520,7 +526,8 @@
       "ci",
       "quality"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "id": "notification-slack",
@@ -1117,7 +1124,8 @@
       "git-diff",
       "coverage"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "id": "stop-per-file-coverage",
@@ -1171,7 +1179,8 @@
     "votes": 0,
     "stack": [
       "typescript"
-    ]
+    ],
+    "is_must": true
   },
   {
     "id": "stop-session-dedup-autodisable",
@@ -1889,7 +1898,8 @@
       "session",
       "conventions"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "id": "config-change-audit-log",
@@ -2150,7 +2160,8 @@
     "votes": 0,
     "stack": [
       "typescript"
-    ]
+    ],
+    "is_must": true
   },
   {
     "id": "file-changed-reload-env",
@@ -2506,7 +2517,8 @@
       "agent-teams",
       "ci"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "id": "user-prompt-expansion-skill-context",
@@ -2828,7 +2840,8 @@
     "votes": 0,
     "stack": [
       "python"
-    ]
+    ],
+    "is_must": true
   },
   {
     "id": "post-edit-pyright",
@@ -2877,7 +2890,8 @@
     "votes": 0,
     "stack": [
       "python"
-    ]
+    ],
+    "is_must": true
   },
   {
     "id": "pre-bash-enforce-uv",
@@ -2976,6 +2990,7 @@
     "votes": 0,
     "stack": [
       "python"
-    ]
+    ],
+    "is_must": true
   }
 ]

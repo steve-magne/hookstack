@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 interface SelectionState {
   selected: string[]
   mustInitialized: boolean
+  seenMustSlugs: string[]
   toggle: (slug: string) => void
   add: (slug: string) => void
   remove: (slug: string) => void
@@ -17,6 +18,7 @@ export const useSelection = create<SelectionState>()(
     (set, get) => ({
       selected: [],
       mustInitialized: false,
+      seenMustSlugs: [],
       toggle: (slug) =>
         set((s) => ({
           selected: s.selected.includes(slug)
@@ -28,15 +30,18 @@ export const useSelection = create<SelectionState>()(
           selected: s.selected.includes(slug) ? s.selected : [...s.selected, slug],
         })),
       remove: (slug) => set((s) => ({ selected: s.selected.filter((x) => x !== slug) })),
-      clear: () => set({ selected: [], mustInitialized: false }),
+      clear: () => set({ selected: [], mustInitialized: false, seenMustSlugs: [] }),
       has: (slug) => get().selected.includes(slug),
       initMust: (slugs) =>
         set((s) => {
-          if (s.mustInitialized && s.selected.length > 0) return s
-          const added = slugs.filter((sl) => !s.selected.includes(sl))
+          // Slugs jamais vus = ajouts au registre depuis la dernière visite
+          const newSlugs = slugs.filter((sl) => !s.seenMustSlugs.includes(sl))
+          const toAdd = newSlugs.filter((sl) => !s.selected.includes(sl))
+          if (newSlugs.length === 0 && s.mustInitialized) return s
           return {
             mustInitialized: true,
-            selected: [...s.selected, ...added],
+            seenMustSlugs: slugs,
+            selected: [...s.selected, ...toAdd],
           }
         }),
     }),

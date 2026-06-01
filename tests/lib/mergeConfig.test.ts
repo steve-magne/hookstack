@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mergeSettings, toSettingsJson, collectScripts, generateInstallScript } from './mergeConfig'
+import { mergeSettings, toSettingsJson, collectScripts, generateInstallScript } from '@/lib/mergeConfig'
 import type { Hook } from '@/types/hook'
 
 function makeHook(overrides: Partial<Hook> & { config: Record<string, unknown> }): Hook {

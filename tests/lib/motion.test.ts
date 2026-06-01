@@ -7,7 +7,7 @@ import {
   fadeUp,
   staggerContainer,
   sectionReveal,
-} from './motion'
+} from '@/lib/motion'
 
 describe('motion tokens', () => {
   it('EASE_OUT est une courbe de Bézier cubique valide (4 nombres)', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { allHooks, getHookBySlug, filterHooks } from './hooks'
+import { allHooks, getHookBySlug, filterHooks } from '@/lib/hooks'
 import type { Hook } from '@/types/hook'
 
 function makeHook(overrides: Partial<Hook> = {}): Hook {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { T } from './i18n'
+import { T } from '@/lib/i18n'
 
 describe('T translations', () => {
   it('has a non-empty navCatalogue', () => {
