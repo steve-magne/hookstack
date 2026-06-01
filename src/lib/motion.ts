@@ -31,6 +31,35 @@ export const duration = {
   reveal: 0.4,
 } as const
 
+/**
+ * Tableau d'affichage (split-flap / Solari) — révélation d'entrée des listes.
+ * JS-piloté (rotation de glyphes), pas un spring : c'est une animation de
+ * *contenu*, pas de transform. L'a11y est gérée par `useReducedMotion()` côté
+ * composant (Motion ne peut pas neutraliser un changement de texte). Valeurs en ms.
+ */
+export const splitFlap = {
+  /** Cadence de rotation des glyphes — le « clac-clac » des volets. */
+  cell: 33,
+  /** Décalage de verrouillage entre caractères (gauche → droite). */
+  perChar: 18,
+  /** Durée de rotation d'un caractère avant verrouillage. */
+  spin: 440,
+  /** Décalage de départ entre lignes (haut → bas) — la cascade du tableau. */
+  rowStep: 38,
+} as const
+
+/**
+ * Variante « hero » du split-flap — nettement plus vive. Un titre ne doit pas
+ * faire attendre : la vague balaie le sens de la lecture (gauche → droite) et se
+ * fige vite (~0,7 s au total). `spin` court, `perChar` marqué pour que l'œil
+ * suive clairement la lecture lettre après lettre.
+ */
+export const splitFlapHero = {
+  cell: 26,
+  perChar: 15,
+  spin: 190,
+} as const
+
 /** Révélation de base : monte légèrement en s'éclaircissant. */
 export const fadeUp: Variants = {
   hidden: { opacity: 0, y: 12 },

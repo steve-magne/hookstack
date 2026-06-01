@@ -42,7 +42,8 @@ hookit/
 │   │   ├── ContributeForm.tsx       # Formulaire de soumission de dépôt
 │   │   ├── MotionProvider.tsx       # Racine motion : LazyMotion (domMax) + MotionConfig reducedMotion
 │   │   ├── CopySwap.tsx             # Icône Copy↔Check animée — partagée par tous les boutons « Copier »
-│   │   └── AnimatedCheck.tsx        # Coche SVG qui se dessine (pathLength) — geste de sélection
+│   │   ├── AnimatedCheck.tsx        # Coche SVG qui se dessine (pathLength) — geste de sélection
+│   │   └── SplitFlap.tsx            # Révélation « tableau Solari » (split-flap) des noms/en-têtes au chargement
 │   ├── lib/
 │   │   ├── hooks.ts                 # allHooks — charge registry.json, point d'accès aux données
 │   │   ├── motion.ts                # Tokens de motion partagés (springs, easings, variants) — langage unique

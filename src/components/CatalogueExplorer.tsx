@@ -7,7 +7,8 @@ import { HookRow } from './HookRow'
 import { HookModal } from './HookModal'
 import { HookConfigurator } from './HookConfigurator'
 import { CopySwap } from './CopySwap'
-import { duration, sectionReveal, spring, staggerContainer } from '@/lib/motion'
+import { SplitFlap } from './SplitFlap'
+import { duration, sectionReveal, spring, splitFlap, staggerContainer } from '@/lib/motion'
 import { allHooks, filterHooks } from '@/lib/hooks'
 import { useT } from '@/lib/locale-context'
 import { useSelection } from '@/store/selection'
@@ -165,6 +166,32 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
 
   const groups = useMemo(() => buildGroups(results, groupBy, T.categoryLabels), [results, groupBy, T])
 
+  // Split-flap intro : le tableau « se compose » au chargement *et se recompose*
+  // à chaque bascule de regroupement (By event type ↔ By category) — le « reinit ».
+  // Passé la fenêtre, les autres re-filtrages affichent le texte directement (FLIP seul).
+  const [intro, setIntro] = useState(true)
+  useEffect(() => {
+    setIntro(true)
+    const t = setTimeout(() => setIntro(false), 2600)
+    return () => clearTimeout(t)
+  }, [groupBy])
+
+  // Retards en cascade (haut → bas) : en-têtes et lignes partagent une horloge
+  // commune pour que tout le tableau se résolve d'un même geste.
+  const introDelays = useMemo(() => {
+    const map = new Map<string, number>()
+    let row = 0
+    for (const g of groups) {
+      map.set(`grp:${g.key}`, Math.round(row * splitFlap.rowStep))
+      row += 0.5
+      for (const h of g.hooks) {
+        map.set(h.slug, Math.round(row * splitFlap.rowStep))
+        row += 1
+      }
+    }
+    return map
+  }, [groups])
+
   const hasActive = !!query
   const reset = () => setQuery('')
 
@@ -312,7 +339,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                       grp.isEvent ? 'font-mono hover:text-white' : 'uppercase tracking-wide'
                     }`}
                   >
-                    {grp.label}
+                    <SplitFlap text={grp.label} play={intro} delay={introDelays.get(`grp:${grp.key}`) ?? 0} />
                   </h3>
                   <span className="text-xs text-zinc-500">{grp.count}</span>
                   <div className="h-px flex-1 bg-[var(--color-border)]" />
@@ -326,6 +353,8 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                         groupBy={groupBy}
                         onHover={handleHover}
                         onLeave={handleLeave}
+                        intro={intro}
+                        introDelay={introDelays.get(h.slug) ?? 0}
                       />
                     ))}
                   </AnimatePresence>
@@ -373,7 +402,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                     <Zap className="size-3.5" fill="currentColor" strokeWidth={0} />
                   </span>
                   <p className="text-[15px] font-semibold leading-snug text-white">
-                    {preview.hook.benefit ?? preview.hook.name}
+                    <SplitFlap text={preview.hook.benefit ?? preview.hook.name} block />
                   </p>
                 </div>
 
@@ -421,7 +450,9 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
               if (!info) return null
               return (
                 <div className="p-4">
-                  <p className="mb-1 font-mono text-sm font-semibold text-white">{preview.eventType}</p>
+                  <p className="mb-1 font-mono text-sm font-semibold text-white">
+                    <SplitFlap text={preview.eventType} />
+                  </p>
                   <p className="mb-3 text-[13px] leading-relaxed text-zinc-400">{info.label}</p>
                   <div className="flex items-center justify-between">
                     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${

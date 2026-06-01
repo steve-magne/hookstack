@@ -7,6 +7,7 @@ import { useSelection } from '@/store/selection'
 import { useT } from '@/lib/locale-context'
 import { CategoryBadge, HookTypeBadge } from './Badge'
 import { AnimatedCheck } from './AnimatedCheck'
+import { SplitFlap } from './SplitFlap'
 import { fadeUp, spring } from '@/lib/motion'
 
 interface Props {
@@ -14,9 +15,13 @@ interface Props {
   groupBy: 'event' | 'category'
   onHover: (hook: Hook, y: number) => void
   onLeave: () => void
+  /** Joue la révélation split-flap du nom (intro de chargement uniquement). */
+  intro?: boolean
+  /** Retard de départ du split-flap, en ms — cascade entre lignes. */
+  introDelay?: number
 }
 
-export function HookRow({ hook, groupBy, onHover, onLeave }: Props) {
+export function HookRow({ hook, groupBy, onHover, onLeave, intro = false, introDelay = 0 }: Props) {
   const T = useT()
   const selected = useSelection((s) => s.selected.includes(hook.slug))
   const toggle = useSelection((s) => s.toggle)
@@ -56,7 +61,9 @@ export function HookRow({ hook, groupBy, onHover, onLeave }: Props) {
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <h4 className="truncate font-medium text-zinc-200 group-hover:text-white">{hook.name}</h4>
+          <h4 className="truncate font-medium text-zinc-200 group-hover:text-white">
+            <SplitFlap text={hook.name} play={intro} delay={introDelay} />
+          </h4>
           {hook.is_must && (
             <ShieldCheck className="size-3 shrink-0 text-indigo-400" aria-label={T.mustPreselected} />
           )}

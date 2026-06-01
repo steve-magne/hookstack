@@ -1,6 +1,8 @@
 import { T } from '@/lib/i18n'
 import { CatalogueExplorer } from '@/components/CatalogueExplorer'
+import { SplitFlap } from '@/components/SplitFlap'
 import { allHooks } from '@/lib/hooks'
+import { splitFlapHero } from '@/lib/motion'
 import type { Metadata } from 'next'
 
 const BASE = 'https://claudehooks.vercel.app'
@@ -60,11 +62,20 @@ export default function HomePage() {
       <div className="mx-auto max-w-6xl px-4">
         <section className="pt-16 pb-10 text-center">
           <h1 className="mx-auto whitespace-nowrap text-4xl font-bold leading-tight text-white sm:text-5xl">
-            {T.heroTitle1}{' '}
-            <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
-              {T.heroHighlight}
-            </span>{' '}
-            {T.heroTitle2}
+            <SplitFlap text={T.heroTitle1} delay={0} eager {...splitFlapHero} />{' '}
+            <SplitFlap
+              text={T.heroHighlight}
+              delay={(T.heroTitle1.length + 1) * splitFlapHero.perChar}
+              eager
+              innerClassName="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent"
+              {...splitFlapHero}
+            />{' '}
+            <SplitFlap
+              text={T.heroTitle2}
+              delay={(T.heroTitle1.length + T.heroHighlight.length + 2) * splitFlapHero.perChar}
+              eager
+              {...splitFlapHero}
+            />
           </h1>
         </section>
 

@@ -7,6 +7,8 @@ import {
   fadeUp,
   staggerContainer,
   sectionReveal,
+  splitFlap,
+  splitFlapHero,
 } from '@/lib/motion'
 
 describe('motion tokens', () => {
@@ -49,5 +51,40 @@ describe('motion tokens', () => {
     expect(hidden.opacity).toBe(0)
     expect(show.opacity).toBe(1)
     expect(show.transition?.staggerChildren).toBeGreaterThan(0)
+  })
+})
+
+describe('splitFlap tokens', () => {
+  it('splitFlap — tous les champs sont des nombres positifs', () => {
+    for (const [key, val] of Object.entries(splitFlap)) {
+      expect(typeof val, key).toBe('number')
+      expect(val, key).toBeGreaterThan(0)
+    }
+  })
+
+  it('splitFlap — cell < perChar (un tick d\'intervalle plus court que le pas entre chars)', () => {
+    expect(splitFlap.cell).toBeLessThan(splitFlap.perChar + splitFlap.spin)
+  })
+
+  it('splitFlapHero — tous les champs sont des nombres positifs', () => {
+    for (const [key, val] of Object.entries(splitFlapHero)) {
+      expect(typeof val, key).toBe('number')
+      expect(val, key).toBeGreaterThan(0)
+    }
+  })
+
+  it('splitFlapHero est plus vif que splitFlap (spin et perChar plus courts)', () => {
+    expect(splitFlapHero.spin).toBeLessThan(splitFlap.spin)
+    expect(splitFlapHero.perChar).toBeLessThan(splitFlap.perChar)
+  })
+
+  it('splitFlap — un titre de 30 chars se résout en moins de 3 s', () => {
+    const totalMs = splitFlap.spin + 30 * splitFlap.perChar
+    expect(totalMs).toBeLessThan(3000)
+  })
+
+  it('splitFlapHero — un titre de 30 chars se résout en moins de 1 s', () => {
+    const totalMs = splitFlapHero.spin + 30 * splitFlapHero.perChar
+    expect(totalMs).toBeLessThan(1000)
   })
 })

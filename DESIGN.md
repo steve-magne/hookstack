@@ -77,6 +77,7 @@ Monté à la racine (`src/app/layout.tsx`). Deux responsabilités :
 | ⑥ | Compteur + chips | `Header`, `HookConfigurator` | Pill qui pulse au changement ; chips qui entrent/sortent en reflow |
 | ⑦ | Copy→Check | `CopySwap` | Swap d'icône unique et cohérent sur les 3 boutons « Copier » |
 | ⑧ | Bannière d'install sticky + pulse | `CatalogueExplorer` | Commande épinglée en haut, reflète la sélection en direct, et pulse (anneau indigo + badge de compte) à chaque coche/décoche : « le lien vient d'être modifié ». Garde-fou 800 ms contre le pulse d'init. |
+| ⑨ | Tableau d'affichage (split-flap) | `SplitFlap`, `page` (hero), `CatalogueExplorer`, `HookRow` | Chaque caractère fait défiler des glyphes puis se verrouille, en cascade haut→bas / gauche→droite — un panneau Solari de gare/aéroport. Surfaces : **(a)** le titre hero — variante **rapide** (`splitFlapHero`) en mode **`eager`** : tout le titre tourne dès la 1re frame (zéro attente) puis se verrouille gauche → droite (~0,7 s), 3 segments décalés, le segment central garde son dégradé via `innerClassName` ; **(b)** au 1er paint, en-têtes (mono) + noms du catalogue, fenêtre d'intro 2,6 s puis texte direct (FLIP seul) ; **(c) reinit** : la bascule de regroupement (By event type ↔ By category) **rejoue** l'intro du catalogue ; **(d)** à chaque survol sur la carte flottante (`mode block` multi-lignes), la ligne *benefit* + le nom d'événement se recomposent quand la carte glisse d'un hook à l'autre. |
 
 ## 5. Règles de contribution motion
 
@@ -90,6 +91,14 @@ Monté à la racine (`src/app/layout.tsx`). Deux responsabilités :
 5. **Pas de media query motion** : laisser `reducedMotion="user"` gérer l'a11y.
 6. **Doser** : si l'effet ne répond pas à « ça sert la compréhension ou le
    feedback ? », il ne va pas dans le site.
+
+> **Exception documentée — le split-flap (⑨).** C'est la seule animation de
+> *contenu* (le texte change), pas de transform. Motion ne peut donc pas la
+> neutraliser pour `prefers-reduced-motion` : `SplitFlap` gère l'a11y lui-même
+> via `useReducedMotion()` (rendu direct du texte) et un doublon `sr-only`. Ses
+> timings vivent quand même dans `motion.ts` (`splitFlap`) — le langage reste
+> unique. Zéro layout shift : une copie invisible du texte final réserve la
+> largeur, la couche animée est superposée en absolu.
 
 ## 6. Ce qu'on n'implémente PAS
 
