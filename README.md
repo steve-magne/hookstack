@@ -142,7 +142,7 @@ pnpm dev          # → http://localhost:3000
 
 No `.env` required — the catalogue, filters, selection, and config generation all work in **local seed mode** out of the box.
 
-To enable GitHub auth and submission persistence, copy `.env.example` and fill in your Supabase credentials.
+Optionally copy `.env.example` and set `NEXT_PUBLIC_REGISTRY_REPO` to point submissions at your fork's issue tracker.
 
 ```bash
 pnpm typecheck    # TypeScript check
@@ -161,7 +161,6 @@ pnpm build        # Production build
 | Styling | Tailwind CSS v4 |
 | Animations | [Motion](https://motion.dev) (ex-Framer Motion) — springs, split-flap, FLIP |
 | State | [Zustand](https://github.com/pmndrs/zustand) — persisted selection |
-| Backend (optional) | [Supabase](https://supabase.com) — GitHub auth + submissions |
 | CI enrichment | GitHub Actions + Claude Code (`ANTHROPIC_API_KEY`) |
 | Package manager | pnpm 9.x |
 

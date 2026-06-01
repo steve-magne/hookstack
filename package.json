@@ -12,7 +12,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0",
     "lucide-react": "^0.460.0",
     "motion": "^12.40.0",
     "next": "^15.1.0",

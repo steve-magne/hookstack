@@ -18,7 +18,6 @@
 | TypeScript | 5.x | Typage statique |
 | Tailwind CSS | v4 | Styles utilitaires |
 | Zustand | latest | État global client (sélection de hooks) |
-| Supabase | latest | Auth GitHub + persistance des soumissions (optionnel) |
 | pnpm | 9.x | Gestionnaire de paquets |
 
 ## Structure de projet
@@ -103,7 +102,7 @@ pnpm lint            # ESLint via next lint
 
 Hookit est un catalogue communautaire de hooks agentiques (Claude Code, GitHub Copilot). Next.js 15 (App Router) + TypeScript + Tailwind v4.
 
-**Source de données** : `registry/registry.json` est la seule source de vérité — lue directement par `src/lib/hooks.ts` (via `allHooks`). Supabase (via `src/lib/supabase.ts`) est optionnel — il n'active que l'auth GitHub et la persistance des soumissions. Sans `.env`, tout fonctionne en mode registre local.
+**Source de données** : `registry/registry.json` est la seule source de vérité — lue directement par `src/lib/hooks.ts` (via `allHooks`). Sans `.env`, tout fonctionne en mode registre local.
 
 **Registre** : `registry/registry.json` est la source canonique et unique du registre versionné — c'est aussi ce que le front-end importe. Les scripts `.claude/skills/analyze-repo/scripts/merge-hooks.js` et `.claude/skills/analyze-repo/scripts/extract-json.js` servent au pipeline CI (`.github/workflows/analyze-repo.yml`). L'Action se déclenche sur les issues labellisées `repo-submission` et ouvre une PR `auto-generated` via Claude Code + `ANTHROPIC_API_KEY`.
 
@@ -180,4 +179,4 @@ Ajouter une entrée dans `registry/registry.json` en respectant le type `Hook`. 
 
 ## Variables d'environnement
 
-Voir `.env.example` : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_REGISTRY_REPO` (format `org/repo`). Toutes optionnelles pour le développement local.
+Voir `.env.example` : `NEXT_PUBLIC_REGISTRY_REPO` (format `org/repo`) — repo GitHub où les issues de soumission sont créées. Optionnel pour le développement local.
