@@ -3244,5 +3244,48 @@
       "Strict repository governance"
     ],
     "votes": 0
+  },
+  {
+    "slug": "registry-changed-auto-sync",
+    "name": "Registry auto-sync",
+    "benefit": "hooks sync automatically whenever the catalogue changes",
+    "description": "Triggers sync-hooks.mjs automatically after any Write or Edit on registry.json, keeping .claude/settings.json and .claude/hooks/ up to date without manual intervention.",
+    "category": "dx",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "stack": null,
+    "tags": [
+      "automation",
+      "sync",
+      "registry",
+      "hooks"
+    ],
+    "use_cases": [
+      "Auto-sync settings.json after editing a hook in the catalogue",
+      "Create missing .mjs scripts immediately after adding a new hook entry"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/registry-auto-sync.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Lance sync-hooks.mjs automatiquement quand registry.json est modifié\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? '';\n\nif (!filePath.endsWith('registry/registry.json')) process.exit(0);\n\nconst projectDir = process.env.CLAUDE_PROJECT_DIR;\nif (!projectDir) process.exit(0);\n\ntry {\n  const out = execSync(\n    ,\n    { timeout: 30000, cwd: projectDir, encoding: 'utf8' }\n  );\n  const summary = out.trim().split('\n').slice(-4).join(' | ');\n  process.stderr.write();\n} catch (e) {\n  process.stderr.write();\n}\n",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/registry-auto-sync.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
   }
 ]
