@@ -2992,5 +2992,154 @@
       "python"
     ],
     "is_must": true
+  },
+  {
+    "id": "session-start-worktree-if-main",
+    "slug": "session-start-worktree-if-main",
+    "name": "Auto-create worktree when starting on main",
+    "category": "safety",
+    "provider": ["claude-code"],
+    "hook_type": "SessionStart",
+    "trigger": "*",
+    "description": "At session start, detects if the current branch is main/master and automatically creates a dated git worktree (work/session-YYYYMMDD). The agent is informed of the new path and instructed to work there instead of the main repo.",
+    "use_cases": [
+      "Branch discipline",
+      "Isolated sessions",
+      "Accidental main commits prevention",
+      "Multi-session workflows"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "SessionStart": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-worktree-if-main.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/session-start-worktree-if-main.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// SessionStart: crée un worktree isolé si la session démarre sur main/master\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\n\nfunction exec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nconst branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');\nif (!branch || !/^(main|master)$/.test(branch)) process.exit(0);\n\nconst currentRoot = exec('git rev-parse --show-toplevel');\nif (!currentRoot) process.exit(0);\n\nconst worktreeList = exec('git worktree list');\nconst mainRoot = worktreeList.split('\\n')[0]?.split(/\\s+/)[0] ?? '';\nif (mainRoot !== currentRoot) process.exit(0);\n\nconst date = new Date().toISOString().slice(0, 10).replace(/-/g, '');\nconst projectName = currentRoot.split('/').pop() ?? 'project';\nconst branchName = `work/session-${date}`;\nconst worktreePath = `${currentRoot}/../${projectName}-work-${date}`;\n\nconst todayLine = worktreeList.split('\\n').slice(1).find(l => l.includes(branchName));\nif (todayLine) {\n  const wtPath = todayLine.split(/\\s+/)[0];\n  process.stdout.write(`## Worktree session existant\\n- Chemin : \\`${wtPath}\\`\\n- Branche : \\`${branchName}\\`\\n`);\n  process.exit(0);\n}\n\ntry {\n  execSync(`git worktree add \"${worktreePath}\" -b \"${branchName}\"`, { encoding: 'utf8', timeout: 15_000, stdio: ['ignore','ignore','ignore'] });\n} catch {\n  process.stdout.write(`## ⚠️  Session démarrée sur \\`main\\`\\n- Créez un worktree ou une branche avant de modifier des fichiers.\\n`);\n  process.exit(0);\n}\n\nprocess.stdout.write(`## Worktree isolé créé\\n- Chemin : \\`${worktreePath}\\`\\n- Branche : \\`${branchName}\\`\\n- Travaillez dans ce worktree — évitez de modifier le dépôt principal.\\n`);\n"
+    },
+    "tags": ["git", "worktree", "safety", "session", "main-branch"],
+    "votes": 0
+  },
+  {
+    "id": "session-start-pull-if-main",
+    "slug": "session-start-pull-if-main",
+    "name": "Auto-pull on main at session start",
+    "category": "context",
+    "provider": ["claude-code"],
+    "hook_type": "SessionStart",
+    "trigger": "*",
+    "description": "At session start on main/master, silently fetches the remote and fast-forward pulls if the branch is behind. If the branch diverges, injects a warning instead of pulling. Ensures the agent always works from a fresh baseline.",
+    "use_cases": [
+      "Always-fresh baseline",
+      "Shared branch synchronization",
+      "CI/CD pre-work sync",
+      "Prevent stale-code edits"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "SessionStart": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-pull-if-main.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/session-start-pull-if-main.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// SessionStart: si on est sur main/master et qu'il y a des commits distants, lance git pull\nimport { execSync } from 'child_process';\n\nfunction exec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nconst branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');\nif (!branch || !/^(main|master)$/.test(branch)) process.exit(0);\n\nconst remote = exec('git remote');\nif (!remote) process.exit(0);\n\nexec('git fetch --quiet 2>/dev/null');\n\nconst localHash  = exec('git rev-parse HEAD');\nconst remoteHash = exec('git rev-parse @{u} 2>/dev/null');\nif (!remoteHash || localHash === remoteHash) process.exit(0);\n\nconst behind = exec('git rev-list HEAD..@{u} --count');\nconst ahead  = exec('git rev-list @{u}..HEAD --count');\nif (parseInt(behind, 10) === 0) process.exit(0);\n\nif (parseInt(ahead, 10) > 0) {\n  process.stdout.write(`## ⚠️  Branche \\`${branch}\\` diverge du remote\\n- ${behind} commit(s) en retard, ${ahead} en avance.\\n- Résolvez avec \\`git pull --rebase\\`.\\n`);\n  process.exit(0);\n}\n\ntry {\n  execSync('git pull --ff-only --quiet', { encoding: 'utf8', timeout: 30_000 });\n} catch {\n  process.stdout.write(`## ⚠️  \\`git pull\\` a échoué sur \\`${branch}\\` — synchronisez manuellement.\\n`);\n  process.exit(0);\n}\n\nprocess.stdout.write(`## Dépôt synchronisé\\n- ${behind} commit(s) récupéré(s) sur \\`${branch}\\`.\\n`);\n"
+    },
+    "tags": ["git", "pull", "sync", "session", "main-branch"],
+    "votes": 0
+  },
+  {
+    "id": "session-start-stash-warning",
+    "slug": "session-start-stash-warning",
+    "name": "Stale stash warning at session start",
+    "category": "context",
+    "provider": ["claude-code"],
+    "hook_type": "SessionStart",
+    "trigger": "*",
+    "description": "At session start, scans the git stash list and injects a warning if any stash is older than 3 days. Prevents the common workflow trap of forgetting work-in-progress left in a stash.",
+    "use_cases": [
+      "Forgotten WIP recovery",
+      "Stash hygiene",
+      "Context resumption",
+      "Long-running projects"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "SessionStart": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-stash-warning.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/session-start-stash-warning.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// SessionStart: avertit si des stashs Git non récupérés traînent depuis plusieurs jours\nimport { execSync } from 'child_process';\n\nfunction exec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 5_000 }).trim(); } catch { return ''; }\n}\n\nconst stashList = exec('git stash list --format=\"%gd|%ci|%gs\"');\nif (!stashList) process.exit(0);\n\nconst now = Date.now();\nconst DAYS = 3;\nconst threshold = DAYS * 24 * 60 * 60 * 1000;\n\nconst stale = stashList.split('\\n')\n  .map(line => {\n    const [ref, date, ...msgParts] = line.split('|');\n    const age = now - new Date(date).getTime();\n    return { ref, date: date?.trim(), msg: msgParts.join('|').trim(), age };\n  })\n  .filter(s => s.age > threshold);\n\nif (stale.length === 0) process.exit(0);\n\nconst lines = [`## ⚠️  Stashs Git oubliés (${stale.length})`, `- ${stale.length} stash(s) de plus de ${DAYS} jours :` ];\nfor (const s of stale.slice(0, 5)) {\n  const days = Math.floor(s.age / (24 * 60 * 60 * 1000));\n  lines.push(`  - \\`${s.ref}\\` (${days}j) — ${s.msg}`);\n}\nlines.push('- Utilisez `git stash pop` ou `git stash drop` pour les gérer.');\nprocess.stdout.write(lines.join('\\n') + '\\n');\n"
+    },
+    "tags": ["git", "stash", "context", "session", "hygiene"],
+    "votes": 0
+  },
+  {
+    "id": "pre-write-main-guard",
+    "slug": "pre-write-main-guard",
+    "name": "Block file writes on main branch",
+    "category": "safety",
+    "provider": ["claude-code"],
+    "hook_type": "PreToolUse",
+    "trigger": "Write|Edit",
+    "description": "Blocks any Write or Edit tool call when the current branch is main/master and the working directory is the principal repo (not a worktree). Forces the agent to create a branch or worktree before making file changes.",
+    "use_cases": [
+      "Accidental main commits prevention",
+      "Branch discipline enforcement",
+      "Pair with worktree auto-create hook",
+      "Strict repository governance"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-write-main-guard.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/pre-write-main-guard.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// PreToolUse Write|Edit: bloque la première écriture sur main si aucun worktree n'est actif\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nfunction exec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 5_000 }).trim(); } catch { return ''; }\n}\n\nconst branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');\nif (!branch || !/^(main|master)$/.test(branch)) process.exit(0);\n\nconst worktreeList = exec('git worktree list');\nconst currentRoot  = exec('git rev-parse --show-toplevel');\nconst mainRoot     = worktreeList.split('\\n')[0]?.split(/\\s+/)[0] ?? '';\nif (mainRoot !== currentRoot) process.exit(0);\n\nconst input    = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? '(fichier inconnu)';\n\nprocess.stdout.write(JSON.stringify({\n  decision: 'block',\n  reason: `Écriture sur \\`${branch}\\` bloquée : vous êtes sur la branche principale.\\nCréez un worktree (\\`git worktree add ../mon-fix -b feat/mon-fix\\`) ou changez de branche avant de modifier \\`${filePath}\\`.`,\n}));\n"
+    },
+    "tags": ["git", "safety", "main-branch", "write-guard", "branch-discipline"],
+    "votes": 0
   }
 ]
