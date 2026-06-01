@@ -1,36 +1,176 @@
 <div align="center">
 
-<h1>🪝 Hookit</h1>
+# Hookit
 
-<p><strong>Community catalogue of agentic hooks for Claude Code & GitHub Copilot.</strong><br/>
-Discover, select, and generate a drop-in <code>settings.json</code> in seconds.</p>
+**Your AI agent runs fast. Hooks keep it honest.**
 
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38BDF8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Motion](https://img.shields.io/badge/Motion-12-FF4154?logo=framer&logoColor=white)](https://motion.dev)
-[![Zustand](https://img.shields.io/badge/Zustand-4-FF6B35)](https://github.com/pmndrs/zustand)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+66+ community-vetted lifecycle hooks for Claude Code & GitHub Copilot.  
+Browse the catalogue, select what you need, copy a drop-in `settings.json`.
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![Hooks](https://img.shields.io/badge/hooks-66%2B-6366f1?style=flat-square)](https://claudehooks.vercel.app)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+
+### **[→ claudehooks.vercel.app](https://claudehooks.vercel.app)**
 
 </div>
 
 ---
 
-## What is Hookit?
+## What is an agentic hook?
 
-**Agentic hooks** are shell scripts that Claude Code and GitHub Copilot run automatically around every tool call — before writing a file, after running a command, on session start. They enforce security rules, auto-format code, run type checks, and pipe notifications to Slack — all without a single manual step.
+An **agentic hook** is a **lifecycle event callback** — a Node.js script the Claude Code runtime calls automatically at specific moments in the agent loop.
 
-Hookit is the community registry that makes hooks **discoverable**. Browse by category or event, select the ones you need, and copy a ready-to-paste `settings.json`.
+Before the agent writes a file, after it runs a shell command, the instant a session starts — hooks fire at each of these events. A `PreToolUse` hook receives the full tool input and can **block** the action before it runs. A `PostToolUse` hook can **observe and react**. A `Stop` hook can ping your phone when the long task finishes.
 
-## Features
+```
+  User prompt
+      │
+      ▼
+ ┌────────────────────────────────────────────────────────────────┐
+ │                   Claude Code agent loop                       │
+ │                                                                │
+ │  SessionStart        PreToolUse       PostToolUse              │
+ │  ──────────          ──────────       ───────────              │
+ │  set context     intercept & block    observe & react          │
+ │  load state      (secrets, rm -rf…)   (format, notify…)       │
+ │                                                                │
+ │                         [ tool executes ]                      │
+ │                                                                │
+ │  Stop / StopFailure     Notification      WorktreeCreate…      │
+ │  ──────────────────     ────────────      ───────────────      │
+ │  phone alert            relay message     init env & ports     │
+ └────────────────────────────────────────────────────────────────┘
+```
 
-- **Browse** — filter by category (`security`, `validation`, `workflow`…), provider, or keyword search
-- **Select** — add hooks to your basket with one click; selection is persisted in localStorage
-- **Generate** — export a valid `settings.json` fragment (or full config) ready to drop into `.claude/`
-- **Contribute** — submit a GitHub repo URL; a GitHub Action clones it, runs Claude Code analysis, and opens a PR on the registry
-- **Works offline** — fully functional with the local seed; Supabase is optional (GitHub auth + submission persistence)
+26 distinct event types — from `PreToolUse` (blocking) to `SubagentStart`, `PreCompact`, `WorktreeCreate`, and more.
 
-## Tech stack
+> Hooks are **not plugins**. They are ordinary shell scripts wired into the agent lifecycle via `settings.json`. No SDK, no agent modification — just events.
+
+---
+
+## The catalogue
+
+Head to **[claudehooks.vercel.app](https://claudehooks.vercel.app)** — a searchable, filterable registry of hooks built by the community:
+
+- **Discover** — filter by category (`security`, `workflow`, `context`, `validation`…), provider, or keyword
+- **Select** — add to your basket with one click; selection is persisted in `localStorage`
+- **Export** — get a valid `settings.json` fragment, ready to drop into `.claude/`
+- **Contribute** — submit a GitHub URL; a GitHub Action analyses the repo and opens a PR on the registry
+
+---
+
+## Hook highlights
+
+The ones everyone installs first:
+
+| Hook | Event | Benefit |
+|---|---|---|
+| **Secret detection** | `PreToolUse / Bash` | Catches a leaked API key before the command runs |
+| **Destructive command guard** | `PreToolUse / Bash` | Blocks `rm -rf /`, `DROP TABLE`, direct disk writes |
+| **Sensitive file protection** | `PreToolUse / Write` | `.env` and key files stay untouched by the agent |
+| **git push to main guard** | `PreToolUse / Bash` | No accidental push straight to `main` |
+| **Git context on startup** | `SessionStart` | Every session opens knowing your branch, status, and recent commits |
+| **Slack / phone on Stop** | `Stop` | Your phone pings the moment the long task finishes |
+| **Auto-format on save** | `PostToolUse / Write` | ESLint + Prettier run silently after every file write |
+| **Worktree env init** | `WorktreeCreate` | New worktrees boot with their own `.env` and port offsets |
+
+---
+
+## Install a hook in 30 seconds
+
+1. Open **[claudehooks.vercel.app](https://claudehooks.vercel.app)**
+2. Select the hooks you want
+3. Copy the generated export and paste it into `.claude/settings.json`
+
+```jsonc
+// .claude/settings.json  — generated by Hookit
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node .claude/hooks/detect-secrets.mjs" },
+          { "type": "command", "command": "node .claude/hooks/block-destructive.mjs" }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [{ "type": "command", "command": "node .claude/hooks/load-git-context.mjs" }]
+      }
+    ]
+  }
+}
+```
+
+Drop the generated scripts into `.claude/hooks/` — done. No dependencies, no build step, just Node.js.
+
+---
+
+## Contribute a hook
+
+### Via the web (recommended)
+
+Go to **[claudehooks.vercel.app/contribute](https://claudehooks.vercel.app/contribute)** and paste a GitHub URL.  
+A GitHub Action clones the repo, runs Claude Code analysis, and opens a PR on the registry automatically.
+
+### Via a pull request
+
+Add an entry to [`registry/registry.json`](registry/registry.json):
+
+```jsonc
+{
+  "slug": "my-hook",
+  "name": "My Hook",
+  "benefit": "One line — the result, not the feature",
+  "description": "What it does and when it fires",
+  "category": "security",   // security | context | validation | notification | workflow | documentation | safety | dx
+  "provider": ["claude-code"],
+  "hook_type": "PreToolUse",
+  "trigger": "Bash",        // tool matcher — "Bash", "Write|Edit", "*", …
+  "implementation": {
+    "type": "settings_json",
+    "code_snippet": "#!/usr/bin/env node\n// your hook script here",
+    "config": {
+      "hooks": {
+        "PreToolUse": [
+          { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/my-hook.mjs" }] }
+        ]
+      }
+    }
+  }
+}
+```
+
+> `stack` is optional — only set it if the hook is genuinely ecosystem-specific (calls `tsc`, `ruff`, filters on `.py` / `.tsx`). A hook without `stack` is shown to everyone.
+
+---
+
+## Run locally
+
+```bash
+git clone https://github.com/steve-magne/hookit.git
+cd hookit
+pnpm install
+pnpm dev          # → http://localhost:3000
+```
+
+No `.env` required — the catalogue, filters, selection, and config generation all work in **local seed mode** out of the box.
+
+To enable GitHub auth and submission persistence, copy `.env.example` and fill in your Supabase credentials.
+
+```bash
+pnpm typecheck    # TypeScript check
+pnpm lint         # ESLint
+pnpm test         # Vitest unit tests
+pnpm build        # Production build
+```
+
+<details>
+<summary><strong>Tech stack</strong></summary>
 
 | Layer | Technology |
 |---|---|
@@ -43,97 +183,10 @@ Hookit is the community registry that makes hooks **discoverable**. Browse by ca
 | CI enrichment | GitHub Actions + Claude Code (`ANTHROPIC_API_KEY`) |
 | Package manager | pnpm 9.x |
 
-## Getting started
-
-```bash
-git clone https://github.com/steve-magne/hookit.git
-cd hookit
-pnpm install
-pnpm dev          # → http://localhost:3000
-```
-
-> No `.env` needed. The POC runs fully in **local seed mode** — catalogue, filters, selection, and config generation work out of the box.
-
-To enable GitHub auth and submission persistence, copy `.env.example` and fill in your Supabase credentials:
-
-```bash
-cp .env.example .env
-```
-
-## Project structure
-
-```
-hookit/
-├── src/
-│   ├── app/                  # Next.js App Router pages (Server Components)
-│   ├── components/           # React components (all 'use client')
-│   │   ├── CatalogueExplorer # Search, group toggle, hook list, modal
-│   │   ├── HookRow           # Hook list item — hover = preview, click = modal
-│   │   ├── HookModal         # Full hook detail (use cases, config, script)
-│   │   ├── HookConfigurator  # Selection basket + settings.json generator
-│   │   └── SplitFlap         # Split-flap (Solari board) reveal animation
-│   ├── lib/
-│   │   ├── hooks.ts          # allHooks — reads registry.json
-│   │   ├── motion.ts         # Shared motion tokens (springs, variants)
-│   │   └── mergeConfig.ts    # Merges selected hooks → valid settings.json
-│   ├── store/selection.ts    # Zustand — persisted hook slugs
-│   └── types/hook.ts         # Hook type definition
-├── registry/
-│   └── registry.json         # Single source of truth for the catalogue
-├── .claude/
-│   ├── settings.json         # Active Claude Code hooks for this project
-│   └── hooks/                # Node.js hook scripts (.mjs)
-└── .github/
-    └── workflows/analyze-repo.yml  # CI: repo submission → PR on registry
-```
-
-## Adding a hook to the registry
-
-Add an entry to `registry/registry.json` following the `Hook` type. Key fields:
-
-```jsonc
-{
-  "slug": "my-hook",
-  "name": "My Hook",
-  "benefit": "One line — why a dev would install this",
-  "description": "What it does",
-  "category": "security",        // security | context | validation | notification | workflow | documentation
-  "provider": ["claude-code"],
-  "hook_type": "PreToolUse",
-  "trigger": "Bash",
-  "implementation": {
-    "type": "settings_json",
-    "config": {
-      "hooks": {
-        "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "node .claude/hooks/my-hook.mjs" }] }]
-      }
-    }
-  }
-}
-```
-
-> `stack` is optional — only set it if the hook is genuinely ecosystem-specific (e.g. calls `tsc`, `ruff`, or filters on `.py`/`.tsx`). A hook without `stack` is shown to everyone.
-
-## Automated enrichment (CI)
-
-On the repository hosting the registry, set the `ANTHROPIC_API_KEY` secret. The Action triggers on issues labelled `repo-submission`, clones the target repo, runs Claude Code analysis, and opens a PR labelled `auto-generated`.
-
-## Scripts
-
-```bash
-pnpm dev          # Dev server (port 3000)
-pnpm build        # Production build
-pnpm typecheck    # TypeScript check (no emit)
-pnpm lint         # ESLint via next lint
-pnpm test         # Vitest unit tests
-```
-
-## Contributing
-
-PRs welcome — bug fixes, new hooks in `registry/registry.json`, and UI improvements. Open an issue first for large changes.
+</details>
 
 ---
 
 <div align="center">
-  <sub>Built by <a href="https://github.com/steve-magne">@steve-magne</a> · MIT License</sub>
+  <sub>Built by <a href="https://github.com/steve-magne">@steve-magne</a> · MIT License · PRs welcome</sub>
 </div>
