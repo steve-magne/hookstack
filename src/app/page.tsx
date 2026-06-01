@@ -59,7 +59,7 @@ export default function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
       <div className="mx-auto max-w-6xl px-4">
         <section className="pt-16 pb-10 text-center">
-          <h1 className="mx-auto mt-5 max-w-3xl text-4xl font-bold leading-tight text-white sm:text-5xl">
+          <h1 className="mx-auto whitespace-nowrap text-4xl font-bold leading-tight text-white sm:text-5xl">
             {T.heroTitle1}{' '}
             <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
               {T.heroHighlight}
