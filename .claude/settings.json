@@ -7,7 +7,6 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
@@ -19,69 +18,119 @@
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-package-managers.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/guard-push-main.mjs"
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/guard-push-main.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-package-managers.mjs"
           }
-        ]
+        ],
+        "matcher": "Bash"
       },
       {
-        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/protect-paths.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-write-main-guard.mjs"
           }
-        ]
-      }
-    ],
-    "WorktreeCreate": [
+        ],
+        "matcher": "Write|Edit"
+      },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/setup-worktree-env.mjs",
-            "timeout": 30,
-            "statusMessage": "Copie des fichiers .env dans le worktree...",
-            "async": true
-          },
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/update-deps.mjs",
-            "timeout": 300,
-            "statusMessage": "Installation des dépendances Node dans le worktree...",
-            "async": true
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/webfetch-allowlist.mjs"
           }
-        ]
-      }
-    ],
-    "Stop": [
+        ],
+        "matcher": "WebFetch"
+      },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/missing-test-detection.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-guard.mjs"
+          }
+        ],
+        "matcher": "Edit|Write"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/inject-conventions.mjs"
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/per-file-coverage.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/inject-datetime.mjs"
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-tests.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt-log.mjs"
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-dedup-autodisable.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt-name-agent.mjs"
           }
         ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/load-git-context.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/load-instructions.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/setup-check-deps.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-worktree-if-main.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-pull-if-main.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-stash-warning.mjs"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/reinject-after-compact.mjs"
+          }
+        ],
+        "matcher": "compact"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/setup-install-deps.mjs"
+          }
+        ],
+        "matcher": "startup"
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
@@ -95,53 +144,77 @@
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/typecheck.mjs"
           }
+        ],
+        "matcher": "Write|Edit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/tool-usage.mjs"
+          }
         ]
       },
       {
-        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/bash-command-log.mjs"
           }
-        ]
+        ],
+        "matcher": "Bash"
       }
     ],
-    "PermissionRequest": [
+    "Stop": [
       {
-        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/permission-auto-allow.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-tests.mjs"
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/auto-allow-exit-plan.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-changelog.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/quality-check.mjs",
+            "timeout": 600,
+            "statusMessage": "Vérification qualité en cours..."
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/missing-test-detection.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/per-file-coverage.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-dedup-autodisable.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/i18n-validation.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-tts.mjs"
           }
         ]
       }
     ],
-    "UserPromptSubmit": [
+    "Notification": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/inject-datetime.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/notify-slack.mjs"
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/load-git-context.mjs"
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/setup-check-deps.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/notification-tts.mjs"
           }
         ]
       }
@@ -156,6 +229,236 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-end-cleanup.mjs"
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/setup-worktree-env.mjs",
+            "timeout": 60,
+            "async": true,
+            "statusMessage": "Copie des .env et allocation des ports du worktree..."
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/update-deps.mjs",
+            "timeout": 300,
+            "async": true,
+            "statusMessage": "Mise à jour des dépendances du worktree..."
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/subagent-start-tts.mjs"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/subagent-stop-tts.mjs"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-compact-backup.mjs"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/permission-auto-allow.mjs"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/auto-allow-exit-plan.mjs"
+          }
+        ],
+        "matcher": "ExitPlanMode"
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-failure-log.mjs"
+          }
+        ]
+      }
+    ],
+    "ConfigChange": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/config-audit-log.mjs"
+          }
+        ]
+      }
+    ],
+    "CwdChanged": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/reload-direnv.mjs"
+          }
+        ]
+      }
+    ],
+    "PostToolBatch": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-batch-typecheck.mjs"
+          }
+        ]
+      }
+    ],
+    "FileChanged": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/file-changed-reload-env.mjs"
+          }
+        ],
+        "matcher": ".env|.env.local|.envrc"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/file-changed-run-tests.mjs",
+            "timeout": 120,
+            "async": true
+          }
+        ],
+        "matcher": "*.ts|*.tsx|*.js|*.jsx"
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-remove-cleanup.mjs"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-compact-save-summary.mjs"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-failure-rate-limit-alert.mjs"
+          }
+        ],
+        "matcher": "rate_limit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-failure-log-api-errors.mjs"
+          }
+        ]
+      }
+    ],
+    "TaskCreated": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/task-created-naming-convention.mjs"
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/task-completed-test-gate.mjs"
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt-expansion-skill-context.mjs"
+          }
+        ]
+      }
+    ],
+    "PermissionDenied": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/permission-denied-auto-mode-log.mjs"
+          }
+        ]
+      }
+    ],
+    "MessageDisplay": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/message-display-redact-secrets.mjs"
+          }
+        ]
+      }
+    ],
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/instructions-loaded-audit-log.mjs"
           }
         ]
       }

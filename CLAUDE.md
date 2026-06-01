@@ -116,6 +116,25 @@ Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/re
 - **Une entrée = une sortie** : tout élément conditionnel animé vit sous `<AnimatePresence>` avec un `exit`.
 - **Doser** : une animation doit servir la compréhension ou le feedback, sinon elle ne va pas dans le site.
 
+## Sync catalogue → projet
+
+**Principe** : `registry/registry.json` est la seule source de vérité pour les hooks. Les scripts `.claude/hooks/*.mjs` et `.claude/settings.json` sont des **artefacts générés** — ne jamais les modifier directement.
+
+**Flux de travail** :
+1. Modifier ou ajouter un hook dans `registry/registry.json` (champs `code_snippet`, `implementation.config`, `stack`…)
+2. Relancer la sync : `node .claude/sync-hooks.mjs`
+3. Vérifier avec `--dry-run` avant si besoin
+
+**Ce que fait le sync** ([`.claude/sync-hooks.mjs`](.claude/sync-hooks.mjs)) :
+- Filtre les hooks dont `stack` est exclusivement `python` ou `java`
+- Crée les scripts `.mjs` manquants dans `.claude/hooks/` depuis `code_snippet` (ne réécrit jamais un script existant)
+- Reconstruit `.claude/settings.json` depuis les `implementation.config` du catalogue
+- Préserve la section `permissions` de l'ancien `settings.json`
+
+**Règle absolue** : toute modification d'un hook (comportement, config, script) se fait dans `registry/registry.json`, puis `node .claude/sync-hooks.mjs`. Ne jamais patcher un `.mjs` directement — il sera écrasé au prochain sync.
+
+---
+
 ## Ajouter un hook au registre
 
 Ajouter une entrée dans `registry/registry.json` en respectant le type `Hook`. Les champs `name`, `benefit`, `description`, `use_cases` sont directement en anglais dans les champs racine — pas d'overlay `i18n`. Toujours fournir un `benefit` (voir section Architecture : ligne courte, orientée résultat). Le champ `implementation.config` doit être un fragment `{ hooks: { [EventName]: [...] } }` directement fusionnable dans `settings.json`.
@@ -140,16 +159,7 @@ Ajouter une entrée dans `registry/registry.json` en respectant le type `Hook`. 
 
 **Hooks Python** : les scripts restent en `.mjs` même pour les projets Python — Node.js est le seul runtime garanti (Claude Code en dépend). Un hook Python c'est un `.mjs` qui appelle des outils Python via `execSync`. Toujours préférer `uv run <tool>` à l'appel direct (`ruff`, `pytest`, `pyright`) : `uv run` résout le venv du projet automatiquement sans `source .venv/bin/activate`. Filtrer sur `.endsWith('.py')` avant tout appel lourd. Absences silencieuses (try/catch vide) pour les PostToolUse — l'outil peut simplement ne pas être installé.
 
-**Hooks actifs** (`.claude/settings.json`) :
-
-| Événement | Matcher | Script | Rôle |
-|---|---|---|---|
-| PreToolUse | `Bash` | `detect-secrets.mjs` | Bloque les commandes avec credentials |
-| PreToolUse | `Bash` | `block-destructive.mjs` | Bloque rm -rf /, force-push main, DROP TABLE |
-| PreToolUse | `Write\|Edit` | `protect-paths.mjs` | Bloque les écritures sur .env, clés privées |
-| PostToolUse | `Write\|Edit` | `autoformat.mjs` | prettier --write si disponible |
-| PostToolUse | `Write\|Edit` | `eslint-check.mjs` | eslint si disponible, avertissement stderr |
-| PostToolUse | `Write\|Edit` | `typecheck.mjs` | tsc --noEmit sur .ts/.tsx, avertissement stderr |
+**Hooks actifs** : voir `.claude/settings.json` (généré par sync). 60 hooks du catalogue sont actifs sur ce projet. Pour consulter la liste complète : `node .claude/sync-hooks.mjs --dry-run`.
 
 ## Variables d'environnement
 
