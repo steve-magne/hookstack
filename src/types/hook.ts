@@ -66,6 +66,8 @@ export interface Hook {
   id: string
   slug: string
   name: string
+  /** One-line, outcome-framed payoff shown in the catalogue — the "why install this". */
+  benefit?: string
   category: Category
   provider: Provider[]
   hook_type: HookType

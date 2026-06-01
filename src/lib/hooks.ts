@@ -35,7 +35,7 @@ export function filterHooks(hooks: Hook[], filters: HookFilters): Hook[] {
       if (!h.stack.some((s) => filters.stacks.includes(s))) return false
     }
     if (q) {
-      const haystack = [h.name, h.description, h.hook_type, h.trigger, ...h.tags, ...h.use_cases]
+      const haystack = [h.name, h.benefit ?? '', h.description, h.hook_type, h.trigger, ...h.tags, ...h.use_cases]
         .join(' ')
         .toLowerCase()
       if (!haystack.includes(q)) return false

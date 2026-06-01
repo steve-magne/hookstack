@@ -95,6 +95,8 @@ Hookit est un catalogue communautaire de hooks agentiques (Claude Code, GitHub C
 
 **Type `Hook`** (`src/types/hook.ts`) : chaque hook a un `slug`, une `category`, un ou plusieurs `provider[]`, un `hook_type` (événement Claude Code), un `trigger` (matcher d'outil, ex. `"Bash"`, `"Write|Edit"`, `"*"`), une `implementation` de type `settings_json` avec un fragment `config` prêt à fusionner, et un champ optionnel `stack?: Stack[]` (`'typescript' | 'python' | 'node'`). Un hook **sans** `stack` est universel et toujours affiché ; un hook **avec** `stack` n'est affiché que si sa stack est dans la sélection de l'utilisateur.
 
+**Champ `benefit`** : une ligne courte (≤ ~60 car.), orientée *résultat* (« pourquoi je l'installe »), pas *fonctionnalité* (qui, elle, est dans `description`). Voix dev, percutante. C'est le **héros** de la carte de survol (`CatalogueExplorer`) et de la modale (`HookModal`) — le levier d'incitation à l'installation. Tous les hooks du registre en ont un ; il est aussi indexé par la recherche.
+
 **Langue** : tout est en anglais. Pas d'i18n, pas de routing `/[locale]`. Le registre est canoniquement en anglais — `name`, `description`, `use_cases` directement dans les champs racine, sans overlay `i18n`. Les textes UI sont dans `src/lib/i18n.ts` (constante `T` exportée, anglais uniquement). `useT()` (`src/lib/locale-context.tsx`) retourne simplement `T` — utilisable dans les composants client.
 
 **Routes** : `/` (Home = hero + catalogue), `/hook/[slug]` (détail), `/contribute` (soumission de dépôt).
@@ -115,7 +117,7 @@ Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/re
 
 ## Ajouter un hook au registre
 
-Ajouter une entrée dans `registry/registry.json` en respectant le type `Hook`. Les champs `name`, `description`, `use_cases` sont directement en anglais dans les champs racine — pas d'overlay `i18n`. Le champ `implementation.config` doit être un fragment `{ hooks: { [EventName]: [...] } }` directement fusionnable dans `settings.json`.
+Ajouter une entrée dans `registry/registry.json` en respectant le type `Hook`. Les champs `name`, `benefit`, `description`, `use_cases` sont directement en anglais dans les champs racine — pas d'overlay `i18n`. Toujours fournir un `benefit` (voir section Architecture : ligne courte, orientée résultat). Le champ `implementation.config` doit être un fragment `{ hooks: { [EventName]: [...] } }` directement fusionnable dans `settings.json`.
 
 **Champ `stack`** : ne l'ajouter que si le hook est réellement spécifique à un écosystème technique. Vérifier le `code_snippet` — si le script filtre par extension (`.py`, `.tsx?`) ou appelle un outil non universel (`tsc`, `ruff`, `eslint`), annoter le `stack`. Ne jamais déduire le `stack` depuis les `tags` seuls : les tags ajoutés par l'agent d'analyse peuvent être inexacts. Lire le code.
 

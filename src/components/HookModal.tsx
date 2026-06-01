@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, m, type PanInfo } from 'motion/react'
-import { ArrowUpRight, Check, Plus, X } from 'lucide-react'
+import { ArrowUpRight, Check, Plus, X, Zap } from 'lucide-react'
 import type { Hook } from '@/types/hook'
 import { PROVIDER_LABELS } from '@/types/hook'
 import { useSelection } from '@/store/selection'
@@ -105,6 +105,14 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
           </div>
 
           <h2 className="mb-2 text-2xl font-bold text-white">{hook.name}</h2>
+          {hook.benefit && (
+            <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-indigo-500/20 bg-indigo-500/[0.07] px-3.5 py-2.5">
+              <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-300 ring-1 ring-inset ring-indigo-500/25">
+                <Zap className="size-3.5" fill="currentColor" strokeWidth={0} />
+              </span>
+              <p className="text-[15px] font-semibold leading-snug text-white">{hook.benefit}</p>
+            </div>
+          )}
           <p className="mb-5 text-zinc-300">{hook.description}</p>
 
           <div className="mb-6 flex flex-wrap items-center gap-3">

@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, m, useAnimationControls } from 'motion/react'
-import { Search, X } from 'lucide-react'
+import { ArrowDownLeft, Search, ShieldCheck, X, Zap } from 'lucide-react'
 import { HookRow } from './HookRow'
 import { HookModal } from './HookModal'
 import { HookConfigurator } from './HookConfigurator'
 import { CopySwap } from './CopySwap'
-import { sectionReveal, spring, staggerContainer } from '@/lib/motion'
+import { duration, sectionReveal, spring, staggerContainer } from '@/lib/motion'
 import { allHooks, filterHooks } from '@/lib/hooks'
 import { useT } from '@/lib/locale-context'
 import { useSelection } from '@/store/selection'
@@ -167,6 +167,15 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
 
   const hasActive = !!query
   const reset = () => setQuery('')
+
+  // Vertical anchor for the floating card — clamped to stay on screen.
+  // Used for both `initial` (appear in place) and `animate` (glide between rows).
+  const previewY = preview
+    ? Math.max(
+        80,
+        Math.min(preview.y - 12, (typeof window !== 'undefined' ? window.innerHeight : 800) - 400)
+      )
+    : 0
 
   return (
     <div>
@@ -339,71 +348,99 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
         {active && <HookModal key="hook-modal" hook={active} onClose={() => setActive(null)} />}
       </AnimatePresence>
 
-      {/* Floating preview card — position: fixed, no layout impact */}
-      {preview && (
-        <div
-          style={{
-            position: 'fixed',
-            left: 24,
-            top: Math.max(80, Math.min(preview.y - 12, (typeof window !== 'undefined' ? window.innerHeight : 700) - 320)),
-          }}
-          className="pointer-events-none z-50 hidden w-72 rounded-2xl border border-white/10 bg-zinc-900/95 p-4 shadow-2xl backdrop-blur-md xl:block"
-        >
-          <div className="mb-3 flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-white/40" />
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
-
-          {preview.kind === 'hook' ? (
-            <>
-              <p className="mb-3 text-[13px] leading-relaxed text-zinc-300">{preview.hook.description}</p>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <CategoryBadge category={preview.hook.category} />
-                <HookTypeBadge type={preview.hook.hook_type} trigger={preview.hook.trigger} />
-              </div>
-              {preview.hook.trigger && preview.hook.trigger !== '*' && (
-                <div className="mt-2.5 font-mono text-[11px] text-zinc-500">
-                  matcher: <span className="text-zinc-400">{preview.hook.trigger}</span>
-                </div>
-              )}
-              {preview.hook.use_cases && preview.hook.use_cases.length > 0 && (
-                <div className="mt-3 border-t border-white/8 pt-3">
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Use cases</p>
-                  <ul className="space-y-1">
-                    {preview.hook.use_cases.slice(0, 3).map((uc, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-[12px] leading-snug text-zinc-400">
-                        <span className="mt-[3px] shrink-0 text-zinc-600">–</span>
-                        {uc}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </>
-          ) : (() => {
-            const info = HOOK_TYPE_INFO[preview.eventType]
-            if (!info) return null
-            return (
+      {/* Floating preview card — fixed, glides between rows (spring.gentle).
+          Anchored vertically to the hovered row; benefit is the hero. */}
+      <AnimatePresence>
+        {preview && (
+          <m.div
+            key="preview-card"
+            initial={{ opacity: 0, x: -10, y: previewY }}
+            animate={{ opacity: 1, x: 0, y: previewY }}
+            exit={{ opacity: 0, x: -10, transition: { duration: duration.micro } }}
+            transition={{
+              y: spring.gentle,
+              x: spring.gentle,
+              opacity: { duration: duration.base },
+            }}
+            style={{ position: 'fixed', left: 24, top: 0 }}
+            className="pointer-events-none z-50 hidden w-80 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 shadow-2xl shadow-black/50 backdrop-blur-md xl:block"
+          >
+            {preview.kind === 'hook' ? (
               <>
-                <p className="mb-1 font-mono text-sm font-semibold text-white">{preview.eventType}</p>
-                <p className="mb-3 text-[13px] leading-relaxed text-zinc-400">{info.label}</p>
-                <div className="flex items-center justify-between">
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${
-                    info.blocking
-                      ? 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
-                      : 'bg-zinc-500/10 text-zinc-400 ring-zinc-500/20'
-                  }`}>
-                    {info.blocking ? '⚡ blocking' : '· non-blocking'}
+                {/* Hero: the payoff. Why this hook earns its place. */}
+                <div className="flex items-start gap-2.5 border-b border-white/8 bg-indigo-500/[0.07] p-4">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-300 ring-1 ring-inset ring-indigo-500/25">
+                    <Zap className="size-3.5" fill="currentColor" strokeWidth={0} />
                   </span>
-                  <span className="font-mono text-[11px] text-zinc-500">
-                    {preview.count} hook{preview.count > 1 ? 's' : ''}
-                  </span>
+                  <p className="text-[15px] font-semibold leading-snug text-white">
+                    {preview.hook.benefit ?? preview.hook.name}
+                  </p>
+                </div>
+
+                <div className="p-4">
+                  <p className="text-[13px] leading-relaxed text-zinc-400">{preview.hook.description}</p>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    <CategoryBadge category={preview.hook.category} />
+                    <HookTypeBadge type={preview.hook.hook_type} trigger={preview.hook.trigger} />
+                  </div>
+                  {preview.hook.trigger && preview.hook.trigger !== '*' && (
+                    <div className="mt-2.5 font-mono text-[11px] text-zinc-500">
+                      matcher: <span className="text-zinc-400">{preview.hook.trigger}</span>
+                    </div>
+                  )}
+                  {preview.hook.use_cases && preview.hook.use_cases.length > 0 && (
+                    <div className="mt-3.5 border-t border-white/8 pt-3">
+                      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                        Use cases
+                      </p>
+                      <ul className="space-y-1">
+                        {preview.hook.use_cases.slice(0, 3).map((uc, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-[12px] leading-snug text-zinc-400">
+                            <span className="mt-[3px] shrink-0 text-zinc-600">–</span>
+                            {uc}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Nudge toward the action — the card sells, the row commits. */}
+                <div className="flex items-center gap-1.5 border-t border-white/8 px-4 py-2.5 text-[11px] font-medium text-indigo-300/90">
+                  {preview.hook.is_must ? (
+                    <ShieldCheck className="size-3.5" />
+                  ) : (
+                    <ArrowDownLeft className="size-3.5" />
+                  )}
+                  {preview.hook.is_must ? T.previewMustHint : T.previewClickToAdd}
                 </div>
               </>
-            )
-          })()}
-        </div>
-      )}
+            ) : (() => {
+              const info = HOOK_TYPE_INFO[preview.eventType]
+              if (!info) return null
+              return (
+                <div className="p-4">
+                  <p className="mb-1 font-mono text-sm font-semibold text-white">{preview.eventType}</p>
+                  <p className="mb-3 text-[13px] leading-relaxed text-zinc-400">{info.label}</p>
+                  <div className="flex items-center justify-between">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${
+                      info.blocking
+                        ? 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
+                        : 'bg-zinc-500/10 text-zinc-400 ring-zinc-500/20'
+                    }`}>
+                      {info.blocking ? '⚡ blocking' : '· non-blocking'}
+                    </span>
+                    <span className="font-mono text-[11px] text-zinc-500">
+                      {preview.count} hook{preview.count > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+              )
+            })()}
+          </m.div>
+        )}
+      </AnimatePresence>
 
       {showConfigurator && (
         <section id="config" className="mt-12 scroll-mt-20">

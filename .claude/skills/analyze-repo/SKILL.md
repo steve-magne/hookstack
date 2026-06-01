@@ -110,6 +110,8 @@ Le concept est **réimplémenté en Node.js idiomatique** : `readFileSync(0, 'ut
 
 Un hook `is_must: true` sera pré-sélectionné par défaut dans le catalogue pour tous les visiteurs. Ne pas abuser : 3-5 hooks maximum dans l'ensemble du registre.
 
+**Champ `benefit` (requis)** : une phrase courte (≤ ~60 caractères), orientée *résultat* et non *fonctionnalité — le « pourquoi je l'installe », pas le « ce qu'il fait ». Voix dev, percutante, droit au but. Ex. : `"No accidental push straight to main"`, `"Type errors caught the moment a file is saved"`. C'est le texte mis en avant dans le catalogue au survol. À distinguer de `description` (qui, elle, explique le mécanisme).
+
 **Schema d'une entrée** (toutes les clés requises) :
 
 ```json
@@ -117,6 +119,7 @@ Un hook `is_must: true` sera pré-sélectionné par défaut dans le catalogue po
   "id": "kebab-case-unique",
   "slug": "kebab-case-unique",
   "name": "Nom court en français",
+  "benefit": "Outcome-framed one-liner, ≤ ~60 chars",
   "category": "security|context|validation|notification|workflow|documentation",
   "provider": ["claude-code"],
   "hook_type": "PreToolUse|PostToolUse|UserPromptSubmit|Notification|Stop|SubagentStop|PreCompact|SessionStart|SessionEnd",

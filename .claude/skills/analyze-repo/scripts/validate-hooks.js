@@ -43,6 +43,7 @@ for (const hook of hooks) {
   // — Vérifications structurelles —
   if (!hook.id || !hook.slug) errors.push('id ou slug manquant')
   if (!hook.name || hook.name.length < 3) errors.push('name absent ou trop court')
+  if (!hook.benefit || hook.benefit.length < 8) errors.push('benefit absent ou trop court')
   if (!VALID_CATEGORIES.includes(hook.category)) errors.push(`category invalide: "${hook.category}"`)
   if (!hook.provider?.length) errors.push('provider absent')
   if (!VALID_HOOK_TYPES.includes(hook.hook_type)) errors.push(`hook_type invalide: "${hook.hook_type}"`)

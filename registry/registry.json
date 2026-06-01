@@ -1,5 +1,6 @@
 [
   {
+    "benefit": "Catch a leaked API key before it ever runs",
     "category": "security",
     "community_examples": [
       {
@@ -52,6 +53,7 @@
     "votes": 0
   },
   {
+    "benefit": "Stops a disk-wiping shell command before it runs",
     "category": "security",
     "community_examples": [
       {
@@ -104,6 +106,7 @@
     "votes": 0
   },
   {
+    "benefit": "Your .env and keys stay untouched by the agent",
     "category": "security",
     "community_examples": [
       {
@@ -156,6 +159,7 @@
     "votes": 0
   },
   {
+    "benefit": "No accidental push straight to main",
     "category": "security",
     "community_examples": [],
     "description": "Detects direct git push commands to main/master and blocks them to force going through a branch and a pull request.",
@@ -202,6 +206,7 @@
     "votes": 0
   },
   {
+    "benefit": "The agent follows your conventions, unprompted",
     "category": "context",
     "community_examples": [],
     "description": "On every user prompt, automatically injects the project conventions (stack, style rules, constraints) by reading a conventions file, so the agent stays aligned without manual reminders.",
@@ -246,6 +251,7 @@
     "votes": 0
   },
   {
+    "benefit": "Starts every session knowing your repo state",
     "category": "context",
     "community_examples": [
       {
@@ -297,6 +303,7 @@
     "votes": 0
   },
   {
+    "benefit": "No more answers stuck on last year's date",
     "category": "context",
     "community_examples": [],
     "description": "Adds the current date and time to the context of every prompt, preventing the agent from reasoning with an incorrect cutoff date.",
@@ -341,6 +348,7 @@
     "votes": 0
   },
   {
+    "benefit": "Every file lands already Prettier-clean",
     "category": "validation",
     "community_examples": [],
     "description": "After every file write or edit, runs Prettier on the modified file to ensure consistent formatting without agent intervention.",
@@ -387,6 +395,7 @@
     "votes": 0
   },
   {
+    "benefit": "Lint errors fixed in the same loop, not in CI",
     "category": "validation",
     "community_examples": [],
     "description": "Runs ESLint on the file just written and returns the errors to the agent so it fixes them immediately within the same loop.",
@@ -436,6 +445,7 @@
     "votes": 0
   },
   {
+    "benefit": "Type errors caught the moment a file is saved",
     "category": "validation",
     "community_examples": [],
     "description": "Runs the TypeScript compiler in no-emit mode after a .ts/.tsx file is modified and reports typing errors back to the agent.",
@@ -485,6 +495,7 @@
     "votes": 0
   },
   {
+    "benefit": "Won't hand back until the test suite is green",
     "category": "validation",
     "community_examples": [],
     "description": "When the agent finishes its response, runs the test suite. If tests fail, sends the agent back to work to fix them before handing back control.",
@@ -530,6 +541,7 @@
     "votes": 0
   },
   {
+    "benefit": "Pings your Slack when the agent needs you",
     "category": "notification",
     "community_examples": [],
     "description": "Relays agent notifications (permission request, awaiting input) to a Slack channel via webhook, useful for long or unattended sessions.",
@@ -574,6 +586,7 @@
     "votes": 0
   },
   {
+    "benefit": "Every session leaves an audit trail",
     "category": "notification",
     "community_examples": [
       {
@@ -624,6 +637,7 @@
     "votes": 0
   },
   {
+    "benefit": "The agent only reaches domains you approved",
     "category": "workflow",
     "community_examples": [],
     "description": "Controls the agent's network access by only allowing WebFetch to a list of approved domains. Any other URL is blocked.",
@@ -669,6 +683,7 @@
     "votes": 0
   },
   {
+    "benefit": "See exactly how hard each session works",
     "category": "notification",
     "community_examples": [],
     "description": "Increments a counter per tool type after each use and logs the activity, providing a view of the agent's usage intensity per session.",
@@ -713,6 +728,7 @@
     "votes": 0
   },
   {
+    "benefit": "An automatic changelog of what the agent shipped",
     "category": "documentation",
     "community_examples": [],
     "description": "At session end, captures the diff of modified files and appends it to a timestamped change log, creating an automatic changelog of what the agent produced.",
@@ -757,6 +773,7 @@
     "votes": 0
   },
   {
+    "benefit": "Project instructions loaded before the first word",
     "category": "context",
     "community_examples": [
       {
@@ -807,6 +824,7 @@
     "votes": 0
   },
   {
+    "benefit": "Forces uv and pnpm, kills pip/npm drift",
     "category": "validation",
     "community_examples": [
       {
@@ -862,6 +880,7 @@
     "votes": 0
   },
   {
+    "benefit": "Edits never leak back into your main repo",
     "category": "workflow",
     "community_examples": [
       {
@@ -912,6 +931,7 @@
     "votes": 0
   },
   {
+    "benefit": "Lint, types, tests and coverage — all gated on stop",
     "category": "validation",
     "community_examples": [
       {
@@ -969,6 +989,7 @@
     "votes": 0
   },
   {
+    "benefit": "New worktrees boot with their own env and ports",
     "category": "workflow",
     "community_examples": [
       {
@@ -1023,6 +1044,7 @@
     "votes": 0
   },
   {
+    "benefit": "Every worktree starts with fresh dependencies",
     "category": "workflow",
     "community_examples": [
       {
@@ -1079,6 +1101,7 @@
     "votes": 0
   },
   {
+    "benefit": "No source file ships without a test",
     "category": "validation",
     "community_examples": [
       {
@@ -1130,6 +1153,7 @@
     "votes": 0
   },
   {
+    "benefit": "Catches the file that quietly dropped coverage",
     "category": "validation",
     "community_examples": [
       {
@@ -1185,6 +1209,7 @@
     "votes": 0
   },
   {
+    "benefit": "A flaky Stop hook can't trap your session",
     "category": "workflow",
     "community_examples": [
       {
@@ -1238,6 +1263,7 @@
     "votes": 0
   },
   {
+    "benefit": "Ship no untranslated string, no orphan key",
     "category": "validation",
     "community_examples": [
       {
@@ -1288,6 +1314,7 @@
     "votes": 0
   },
   {
+    "benefit": "Hear it out loud when the agent needs you",
     "category": "notification",
     "community_examples": [
       {
@@ -1339,6 +1366,7 @@
     "votes": 0
   },
   {
+    "benefit": "Get told out loud the moment work is done",
     "category": "notification",
     "community_examples": [
       {
@@ -1390,6 +1418,7 @@
     "votes": 0
   },
   {
+    "benefit": "Hear each subagent spin up",
     "category": "notification",
     "community_examples": [
       {
@@ -1441,6 +1470,7 @@
     "votes": 0
   },
   {
+    "benefit": "Hear each subagent finish, no audio clash",
     "category": "notification",
     "community_examples": [
       {
@@ -1493,6 +1523,7 @@
     "votes": 0
   },
   {
+    "benefit": "Every prompt saved, replayable later",
     "category": "context",
     "community_examples": [
       {
@@ -1543,6 +1574,7 @@
     "votes": 0
   },
   {
+    "benefit": "Each session gets a name, not a hash",
     "category": "context",
     "community_examples": [
       {
@@ -1593,6 +1625,7 @@
     "votes": 0
   },
   {
+    "benefit": "Your full transcript survives every compaction",
     "category": "workflow",
     "community_examples": [
       {
@@ -1644,6 +1677,7 @@
     "votes": 0
   },
   {
+    "benefit": "Stop clicking approve on harmless reads",
     "category": "security",
     "community_examples": [
       {
@@ -1695,6 +1729,7 @@
     "votes": 0
   },
   {
+    "benefit": "Every tool failure logged for the post-mortem",
     "category": "context",
     "community_examples": [
       {
@@ -1746,6 +1781,7 @@
     "votes": 0
   },
   {
+    "benefit": "Open a session, environment's already ready",
     "category": "workflow",
     "community_examples": [
       {
@@ -1802,6 +1838,7 @@
     "votes": 0
   },
   {
+    "benefit": "Sessions end with a clean logs directory",
     "category": "workflow",
     "community_examples": [
       {
@@ -1852,6 +1889,7 @@
     "votes": 0
   },
   {
+    "benefit": "Conventions survive a context compaction",
     "category": "context",
     "community_examples": [
       {
@@ -1904,6 +1942,7 @@
     "votes": 0
   },
   {
+    "benefit": "Every settings.json change is on the record",
     "category": "workflow",
     "community_examples": [
       {
@@ -1955,6 +1994,7 @@
     "votes": 0
   },
   {
+    "benefit": "Bash always runs in the right env per folder",
     "category": "workflow",
     "community_examples": [
       {
@@ -2017,6 +2057,7 @@
     "votes": 0
   },
   {
+    "benefit": "Plans proceed without the extra approval click",
     "category": "workflow",
     "community_examples": [
       {
@@ -2068,6 +2109,7 @@
     "votes": 0
   },
   {
+    "benefit": "A full history of every command Claude ran",
     "category": "workflow",
     "community_examples": [
       {
@@ -2119,6 +2161,7 @@
     "votes": 0
   },
   {
+    "benefit": "One tsc pass after a batch, not one per file",
     "category": "validation",
     "description": "Runs tsc --noEmit once after a full batch of parallel tool calls that include TypeScript file edits. Avoids redundant per-file tsc invocations and reports type errors back to Claude as context for the next turn.",
     "hook_type": "PostToolBatch",
@@ -2166,6 +2209,7 @@
     "votes": 0
   },
   {
+    "benefit": "Edit .env and Bash picks it up instantly",
     "category": "workflow",
     "description": "Watches .env, .env.local and .envrc files and writes updated KEY=VALUE pairs to CLAUDE_ENV_FILE when any of them change on disk. Subsequent Bash commands automatically pick up the new values without restarting the session.",
     "hook_type": "FileChanged",
@@ -2211,6 +2255,7 @@
     "votes": 0
   },
   {
+    "benefit": "Tests rerun the moment a source file changes",
     "category": "validation",
     "description": "Triggers the project test suite asynchronously whenever a watched source file changes on disk. Results are injected as context for Claude on the next turn, so Claude can react to test failures without being explicitly asked.",
     "hook_type": "FileChanged",
@@ -2258,6 +2303,7 @@
     "votes": 0
   },
   {
+    "benefit": "Removing a worktree reclaims its disk and containers",
     "category": "workflow",
     "description": "Runs cleanup tasks when a worktree is removed: stops any Docker Compose services declared in the worktree and removes node_modules to reclaim disk space. Prevents orphaned containers and disk bloat after isolation: worktree subagent sessions.",
     "hook_type": "WorktreeRemove",
@@ -2302,6 +2348,7 @@
     "votes": 0
   },
   {
+    "benefit": "Keep a readable trail of every compaction",
     "category": "documentation",
     "description": "Appends the compaction summary generated by Claude Code to a markdown log file inside the project. Provides a persistent record of what was summarized across context window resets, useful for long-running sessions and post-session review.",
     "hook_type": "PostCompact",
@@ -2345,6 +2392,7 @@
     "votes": 0
   },
   {
+    "benefit": "Get pinged when a rate limit pauses Claude",
     "category": "notification",
     "description": "Fires a desktop notification via a terminal escape sequence when Claude Code hits an API rate limit. Lets you step away and come back when the quota resets without polling the terminal.",
     "hook_type": "StopFailure",
@@ -2390,6 +2438,7 @@
     "votes": 0
   },
   {
+    "benefit": "Every API error logged for the post-mortem",
     "category": "workflow",
     "description": "Appends every API error (rate limit, auth failure, billing, server error, etc.) to a persistent log file with timestamp, error type, details and session ID. Enables post-mortem analysis of failed sessions.",
     "hook_type": "StopFailure",
@@ -2434,6 +2483,7 @@
     "votes": 0
   },
   {
+    "benefit": "Every task ties back to a [TICKET-123]",
     "category": "workflow",
     "description": "Blocks task creation when the subject does not start with a ticket reference in the format [PREFIX-123]. Ensures every agent-created task is traceable to a project management ticket before it enters the queue.",
     "hook_type": "TaskCreated",
@@ -2478,6 +2528,7 @@
     "votes": 0
   },
   {
+    "benefit": "No task closes on a red build",
     "category": "validation",
     "description": "Blocks a task from being marked as completed if the test suite fails. The agent receives the test output as feedback and must fix the failures before it can close the task, enforcing a green-build policy for every unit of work.",
     "hook_type": "TaskCompleted",
@@ -2523,6 +2574,7 @@
     "votes": 0
   },
   {
+    "benefit": "Auto-attach a checklist to any slash command",
     "category": "context",
     "description": "Injects skill-specific additional context whenever a slash command expands into a prompt. A configurable map lets you attach focused instructions (security checklist, style guide, domain rules) to specific skills without editing their definition.",
     "hook_type": "UserPromptExpansion",
@@ -2566,6 +2618,7 @@
     "votes": 0
   },
   {
+    "benefit": "See what auto-mode silently blocked",
     "category": "workflow",
     "description": "Appends every auto-mode permission denial to a log file with timestamp, tool name, input and denial reason. Provides visibility into what the auto-mode classifier is blocking, helping you tune allow/deny rules over time.",
     "hook_type": "PermissionDenied",
@@ -2610,6 +2663,7 @@
     "votes": 0
   },
   {
+    "benefit": "Fresh clone opens with node_modules ready",
     "category": "workflow",
     "description": "Detects the project's package manager from lock files (pnpm, yarn, npm) and runs a frozen install on first session startup. Ensures Claude Code always starts with a complete node_modules without requiring a manual install step.",
     "hook_type": "SessionStart",
@@ -2659,6 +2713,7 @@
     "votes": 0
   },
   {
+    "benefit": "Secrets never show on screen during a share",
     "category": "security",
     "description": "Intercepts assistant message text as it streams to the screen and replaces patterns matching API keys, GitHub tokens and Bearer credentials with [REDACTED] placeholders. The transcript and model context retain the original text; only the rendered display is sanitized.",
     "hook_type": "MessageDisplay",
@@ -2703,6 +2758,7 @@
     "votes": 0
   },
   {
+    "benefit": "Know exactly which CLAUDE.md governed a session",
     "category": "workflow",
     "description": "Records every CLAUDE.md and .claude/rules/*.md file loaded into context to a timestamped audit log. Captures the file path, memory scope (User/Project/Local/Managed) and load reason, providing full traceability of which instructions governed each session.",
     "hook_type": "InstructionsLoaded",
@@ -2747,6 +2803,7 @@
     "votes": 0
   },
   {
+    "benefit": "Python lands PEP 8-clean on every save",
     "category": "validation",
     "community_examples": [],
     "description": "After every Python file write or edit, runs ruff format via uv to apply consistent style without any agent intervention.",
@@ -2796,6 +2853,7 @@
     "votes": 0
   },
   {
+    "benefit": "Unused imports caught before they pile up",
     "category": "validation",
     "community_examples": [],
     "description": "Runs ruff check --fix on the modified Python file so lint violations are reported to the agent immediately and auto-fixable rules are applied inline.",
@@ -2846,6 +2904,7 @@
     "votes": 0
   },
   {
+    "benefit": "Python type errors caught right after an edit",
     "category": "validation",
     "community_examples": [],
     "description": "Runs pyright via uv on the modified .py file and reports type errors to the agent so they are fixed within the same loop.",
@@ -2896,6 +2955,7 @@
     "votes": 0
   },
   {
+    "benefit": "Forces uv, ends pip/poetry drift",
     "category": "validation",
     "community_examples": [],
     "description": "Blocks pip install, pip3 install and poetry add/install commands and redirects the agent to the uv equivalent. Prevents virtual environment fragmentation.",
@@ -2946,6 +3006,7 @@
     "votes": 0
   },
   {
+    "benefit": "Won't hand back until pytest is green",
     "category": "validation",
     "community_examples": [],
     "description": "When the agent finishes, runs the full pytest suite via uv. If tests fail, Claude re-enters and receives the failure output as context to fix the regressions.",
@@ -2996,6 +3057,7 @@
     "votes": 0
   },
   {
+    "benefit": "Start on main and you're moved to a worktree",
     "category": "safety",
     "description": "At session start, detects if the current branch is main/master and automatically creates a dated git worktree (work/session-YYYYMMDD). The agent is informed of the new path and instructed to work there instead of the main repo.",
     "hook_type": "SessionStart",
@@ -3042,6 +3104,7 @@
     "votes": 0
   },
   {
+    "benefit": "Always start from a fresh, up-to-date main",
     "category": "context",
     "description": "At session start on main/master, silently fetches the remote and fast-forward pulls if the branch is behind. If the branch diverges, injects a warning instead of pulling. Ensures the agent always works from a fresh baseline.",
     "hook_type": "SessionStart",
@@ -3088,6 +3151,7 @@
     "votes": 0
   },
   {
+    "benefit": "Warns you about that WIP stash you forgot",
     "category": "context",
     "description": "At session start, scans the git stash list and injects a warning if any stash is older than 3 days. Prevents the common workflow trap of forgetting work-in-progress left in a stash.",
     "hook_type": "SessionStart",
@@ -3134,6 +3198,7 @@
     "votes": 0
   },
   {
+    "benefit": "Blocks edits on main until you branch",
     "category": "safety",
     "description": "Blocks any Write or Edit tool call when the current branch is main/master and the working directory is the principal repo (not a worktree). Forces the agent to create a branch or worktree before making file changes.",
     "hook_type": "PreToolUse",
