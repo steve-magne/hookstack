@@ -1,36 +1,50 @@
-# Projet Hookit
+# Projet Hookstack
 
 ## Vue d'ensemble
 
-**Hookit** est une plateforme web communautaire permettant aux développeurs de **découvrir, sélectionner et implémenter des hooks agentiques** dans leurs projets — principalement pour Claude Code (GitHub Copilot à venir). Le registre est vivant : il s'enrichit automatiquement en analysant des dépôts GitHub réels soumis par la communauté, et scanne les projets open source populaires pour identifier les patterns émergents.
+**Hookstack** est le registre communautaire de référence pour les hooks agentiques Claude Code. Les développeurs y découvrent, sélectionnent et installent des hooks en moins d'une minute — sans lire de documentation.
 
-## Theme visuel
+**Tagline** : *Get your claude hooks in 1 minute*
 
-- <https://flowos-skill-store.vercel.app/skills/humanizer>
+## Positionnement marché
+
+Claude Code a inventé les hooks agentiques et est aujourd'hui la référence du marché. Hookstack est **THE hook registry for Claude Code** — le premier catalogue communautaire structuré autour de cet écosystème. Cette association directe avec Claude Code est un avantage SEO structurel : les développeurs qui cherchent "claude code hooks" ont déjà l'intention d'acheter.
+
+**Nom** : Hookstack a été choisi pour :
+- Mémorabilité immédiate (1 mot, ancrage mental "techstack")
+- Indépendance de marque — survit si l'écosystème s'étend (Copilot, Cursor…)
+- SEO long-traîne : "hook stack", "claude hook stack", "agent hook stack"
+- Phrase naturelle entre devs : *"What's your hook stack?"*
+
+**URL de production** : `https://hookstack.vercel.app`
+**Package npm** : `npx hookstack@latest`
+
+## Thème visuel
+
+- https://flowos-skill-store.vercel.app/skills/humanizer
 - Claude Code CLI
 - terminal, monochrome
-  
+
 ## Workflow utilisateur
 
 ### Workflow A — Développeur cherche des hooks
 
-1. Arriver sur la plateforme et voir tout de suite les uses cases qu il peut implanter dans ses hooks de projet, il peut les cocher
-2. Groupé par 'Event Type' , et peut les grouper par catégorie (sécurité, contexte, etc.)
-3. Propose une liste de hooks de hook avec leurs titre, il y a une zone a cocher sur la gauche permettant de sélectionner ceux qu'il veut mettre en place dans son projet (Claude Code CLI Style)
-4. Le prompt est copié dans son clipboard manager, on le composeille de le coller dans claude code
+1. Arriver sur la plateforme et voir tout de suite les use cases qu'il peut implanter dans son projet, il peut les cocher
+2. Groupé par 'Event Type', et peut les grouper par catégorie (sécurité, contexte, etc.)
+3. Propose une liste de hooks avec leur titre, zone à cocher sur la gauche (Claude Code CLI style)
+4. Génère la commande `npx hookstack@latest install --hooks=<slugs>` à coller dans son terminal
 
 ### Workflow B — Développeur contribue au registre
 
-1. Cliquer "Contribuer mon projet"
+1. Cliquer "Contribute a repository"
 2. Saisir l'URL de son repo GitHub public
-3. La plateforme crée une GitHub Issue sur le repo du registre
-   avec l'URL du repo à analyser
+3. La plateforme crée une GitHub Issue sur le repo du registre avec l'URL à analyser
 4. Une GitHub Action déclenche Claude Code Agent :
    a. Clone le repo soumis
-   b. Analyse les fichiers de config (.claude/, .github/, settings.json, etc.)
+   b. Analyse les fichiers de config (.claude/, .github/, settings.json…)
    c. Identifie les hooks en place
    d. Compare avec le registre existant
-   e. Pour chaque pattern non recensé et apportant une plue value potentielle l'ajoute à la base de connaissance, et l'ajoute dans le hook du projet lui meme si cela apporte une plue value pour le projet.
-   f. Ouvre un PR sur le registre avec les nouveaux hooks
-5. Un mainteneur (ou bot) approuve le PR
-6. Le contributeur voit son repo listé comme "repo hooké" dans la section "Contributions de la communauté"
+   e. Pour chaque pattern non recensé apportant une valeur ajoutée, l'ajoute au registre
+   f. Ouvre une PR sur le registre avec les nouveaux hooks
+5. Un mainteneur (ou bot) approuve la PR
+6. Le contributeur voit son repo listé comme "hooked repo" dans la section communauté

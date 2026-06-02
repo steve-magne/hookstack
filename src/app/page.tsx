@@ -5,7 +5,7 @@ import { allHooks } from '@/lib/hooks'
 import { splitFlapHero } from '@/lib/motion'
 import type { Metadata } from 'next'
 
-const BASE = 'https://claudehooks.vercel.app'
+const BASE = 'https://hookstack.vercel.app'
 
 export const metadata: Metadata = {
   title: T.metaTitle,

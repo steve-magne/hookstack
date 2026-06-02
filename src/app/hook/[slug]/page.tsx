@@ -7,7 +7,7 @@ import { PROVIDER_LABELS } from '@/types/hook'
 import { HookSelectButton } from '@/components/HookSelectButton'
 import type { Metadata } from 'next'
 
-const BASE = 'https://claudehooks.vercel.app'
+const BASE = 'https://hookstack.vercel.app'
 
 export async function generateStaticParams() {
   return allHooks.map((hook) => ({ slug: hook.slug }))
