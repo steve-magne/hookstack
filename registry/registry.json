@@ -3298,13 +3298,13 @@
     "slug": "registry-changed-auto-sync",
     "name": "Registry auto-sync",
     "benefit": "hooks sync automatically whenever the catalogue changes",
-    "description": "Triggers sync-hooks.mjs automatically after any Write or Edit on registry.json, keeping .claude/settings.json and .claude/hooks/ up to date without manual intervention.",
+    "description": "Triggers sync-hooks.mjs automatically after any .mjs hook file or registry.json change, keeping code_snippet, .claude/settings.json and .claude/hooks/ up to date without manual intervention.",
     "category": "dx",
     "provider": [
       "claude-code"
     ],
-    "hook_type": "PostToolUse",
-    "trigger": "Write|Edit",
+    "hook_type": "FileChanged",
+    "trigger": "*.mjs|registry.json",
     "stack": null,
     "tags": [
       "automation",
@@ -3319,12 +3319,12 @@
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/registry-auto-sync.mjs",
-      "code_snippet": "#!/usr/bin/env node\n// Resynchronise registry.json depuis les scripts dogfoodés après édition d'un\n// hook .claude/hooks/*.mjs (ou du registre lui-même). (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst SELF = 'registry-auto-sync.mjs';\n\nfunction defaultExec(projectDir) {\n  return execSync('node .claude/sync-hooks.mjs', {\n    timeout: 30_000,\n    cwd: projectDir,\n    encoding: 'utf8',\n  });\n}\n\n// Vrai si l'édition doit déclencher une resync (un hook .mjs ou le registre).\nfunction shouldSync(filePath) {\n  if (!filePath) return false;\n  if (filePath.endsWith(`/${SELF}`)) return false; // évite de se resync soi-même\n  if (filePath.endsWith('registry/registry.json')) return true;\n  return /\\.claude\\/hooks\\/[^/]+\\.mjs$/.test(filePath);\n}\n\nexport function run(input, { exec = defaultExec, projectDir = process.env.CLAUDE_PROJECT_DIR } = {}) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!shouldSync(filePath) || !projectDir) return null;\n\n  try {\n    const out = exec(projectDir);\n    const summary = out.trim().split('\\n').slice(-3).join(' | ');\n    return { message: `[registry-auto-sync] ${summary}` };\n  } catch (e) {\n    return { message: `[registry-auto-sync] échec sync : ${e.message}` };\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message + '\\n');\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Resynchronise registry.json depuis les scripts dogfoodés après édition d'un\n// hook .claude/hooks/*.mjs (ou du registre lui-même). (FileChanged *.mjs|registry.json)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst SELF = 'registry-auto-sync.mjs';\n\nfunction defaultExec(projectDir) {\n  return execSync('node .claude/sync-hooks.mjs', {\n    timeout: 30_000,\n    cwd: projectDir,\n    encoding: 'utf8',\n  });\n}\n\n// Vrai si l'édition doit déclencher une resync (un hook .mjs ou le registre).\nfunction shouldSync(filePath) {\n  if (!filePath) return false;\n  if (filePath.endsWith(`/${SELF}`)) return false; // évite de se resync soi-même\n  if (filePath.endsWith('registry/registry.json')) return true;\n  return /\\.claude\\/hooks\\/[^/]+\\.mjs$/.test(filePath);\n}\n\nexport function run(input, { exec = defaultExec, projectDir = process.env.CLAUDE_PROJECT_DIR } = {}) {\n  // FileChanged: input.file_path  |  PostToolUse (legacy): input.tool_input?.file_path\n  const filePath = input.file_path ?? input.tool_input?.file_path ?? '';\n  if (!shouldSync(filePath) || !projectDir) return null;\n\n  try {\n    const out = exec(projectDir);\n    const summary = out.trim().split('\\n').slice(-3).join(' | ');\n    return { message: `[registry-auto-sync] ${summary}` };\n  } catch (e) {\n    return { message: `[registry-auto-sync] échec sync : ${e.message}` };\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message + '\\n');\n}\n",
       "config": {
         "hooks": {
-          "PostToolUse": [
+          "FileChanged": [
             {
-              "matcher": "Write|Edit",
+              "matcher": "*.mjs|registry.json",
               "hooks": [
                 {
                   "type": "command",

@@ -143,10 +143,6 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/typecheck.mjs"
-          },
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/registry-auto-sync.mjs"
           }
         ],
         "matcher": "Write|Edit"
@@ -370,6 +366,15 @@
           }
         ],
         "matcher": "*.ts|*.tsx|*.js|*.jsx"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/registry-auto-sync.mjs"
+          }
+        ],
+        "matcher": "*.mjs|registry.json"
       }
     ],
     "WorktreeRemove": [
