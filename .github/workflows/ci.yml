@@ -10,6 +10,10 @@ on:
     branches: [main]
   pull_request:
 
+# Lecture seule : ce workflow ne fait que checkout + install + test.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
