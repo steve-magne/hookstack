@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
-import { run } from '../../.claude/hooks/per-file-lint.mjs';
+import { run, isEslintUnavailable } from '../../.claude/hooks/per-file-lint.mjs';
 
 const COUNTER = '/tmp/.test-lint-counter';
 const DISABLE = '/tmp/.test-lint-disable';
@@ -78,5 +78,29 @@ describe('per-file-lint', () => {
     const r = run(makeOpts({ exec: diffExec('src/gone.ts'), exists: (p) => p === COUNTER, lint }));
     expect(r.exitCode).toBe(0);
     expect(lint).not.toHaveBeenCalled();
+  });
+});
+
+describe('isEslintUnavailable', () => {
+  it('détecte une config plate manquante (ESLint ≥ 9)', () => {
+    expect(isEslintUnavailable("ESLint couldn't find an eslint.config.(js|mjs|cjs) file.")).toBe(true);
+  });
+
+  it('détecte le crash générique "Oops"', () => {
+    expect(isEslintUnavailable('Oops! Something went wrong! :(')).toBe(true);
+  });
+
+  it('détecte un binaire/module introuvable', () => {
+    expect(isEslintUnavailable('Cannot find module eslint')).toBe(true);
+    expect(isEslintUnavailable('npm error could not determine executable to run')).toBe(true);
+  });
+
+  it('traite une sortie vide comme indisponible (skip prudent)', () => {
+    expect(isEslintUnavailable('')).toBe(true);
+    expect(isEslintUnavailable(undefined)).toBe(true);
+  });
+
+  it("ne masque PAS une vraie violation de lint", () => {
+    expect(isEslintUnavailable("/src/a.ts\n  1:1  error  'x' is assigned but never used  no-unused-vars")).toBe(false);
   });
 });

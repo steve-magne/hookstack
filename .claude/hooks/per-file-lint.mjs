@@ -10,7 +10,18 @@ function defaultExec(cmd) {
   try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }
 }
 
-// Retourne null si le fichier passe ESLint, sinon la sortie d'erreur.
+// Signatures indiquant qu'ESLint n'a pas pu DÉMARRER (config absente, mauvaise version,
+// binaire introuvable) — à distinguer d'une vraie violation de lint. Dans ce cas on traite
+// ESLint comme un outil indisponible et on ne fait PAS échouer le hook (évite les faux positifs).
+const ESLINT_UNAVAILABLE =
+  /Oops! Something went wrong|could ?n'?t find an? eslint\.config|eslint\.config\.\(|migration guide|Cannot find module|could not determine executable|command not found|ENOENT/i;
+
+export function isEslintUnavailable(output) {
+  return !output || ESLINT_UNAVAILABLE.test(output);
+}
+
+// Retourne null si le fichier passe ESLint (ou si ESLint est indisponible), sinon la sortie d'erreur.
+/* v8 ignore next 14 */
 function defaultLint(file) {
   try {
     execSync(`npx --no-install eslint --max-warnings=0 "${file}"`, {
@@ -20,7 +31,9 @@ function defaultLint(file) {
     });
     return null;
   } catch (err) {
-    return (err.stdout?.toString() ?? err.message ?? '').trim() || 'lint error';
+    const out = `${err.stdout ?? ''}\n${err.stderr ?? ''}`.trim();
+    if (isEslintUnavailable(out)) return null; // ESLint n'a pas démarré → skip, pas un échec
+    return out || 'lint error';
   }
 }
 

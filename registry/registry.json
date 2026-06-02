@@ -900,7 +900,7 @@
             {
               "hooks": [
                 {
-                  "command": "node bash .claude/hooks/worktree-guard.mjs",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-guard.mjs",
                   "type": "command"
                 }
               ],
@@ -998,21 +998,20 @@
         "repo": "https://github.com/steve-magne/moving-live"
       }
     ],
-    "description": "Copies .env files and allocates dedicated ports when a worktree is created. Runs asynchronously with a statusMessage visible in the Claude Code UI.",
-    "hook_type": "WorktreeCreate",
+    "description": "On session start inside a freshly created worktree, copies the main repo's .env files into the worktree so it is ready to run.",
+    "hook_type": "SessionStart",
     "id": "worktree-create-setup-env",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Copie les fichiers .env du dépôt principal vers le worktree (WorktreeCreate)\nimport { execSync } from 'child_process';\nimport { existsSync, copyFileSync, readFileSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nexport function run({\n  exec = defaultExec,\n  exists = existsSync,\n  copy = copyFileSync,\n} = {}) {\n  const worktreeList = exec('git worktree list');\n  const mainDir = worktreeList.split('\\n')[0]?.split(/\\s+/)[0] ?? '';\n  const worktreeDir = exec('git rev-parse --show-toplevel');\n\n  if (mainDir && worktreeDir && mainDir !== worktreeDir) {\n    for (const envFile of ['.env', '.env.local', '.env.development.local']) {\n      const src = join(mainDir, envFile);\n      const dst = join(worktreeDir, envFile);\n      if (exists(src) && !exists(dst)) {\n        copy(src, dst);\n        process.stderr.write(`Copié : ${envFile} → ${worktreeDir}\\n`);\n      }\n    }\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  readFileSync(0, 'utf8');\n  run();\n  process.stdout.write('{}\\n');\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// SessionStart : si la session démarre dans un worktree (distinct du dépôt principal),\n// copie les fichiers .env du dépôt principal vers le worktree.\n// NB : ce hook NE s'enregistre PAS sur WorktreeCreate — ce dernier remplace la création\n// du worktree et exige un chemin absolu sur stdout. Le post-setup va sur SessionStart.\nimport { execSync } from 'child_process';\nimport { existsSync, copyFileSync, readFileSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nexport function run({\n  exec = defaultExec,\n  exists = existsSync,\n  copy = copyFileSync,\n} = {}) {\n  const worktreeList = exec('git worktree list');\n  const mainDir = worktreeList.split('\\n')[0]?.split(/\\s+/)[0] ?? '';\n  const worktreeDir = exec('git rev-parse --show-toplevel');\n\n  if (mainDir && worktreeDir && mainDir !== worktreeDir) {\n    for (const envFile of ['.env', '.env.local', '.env.development.local']) {\n      const src = join(mainDir, envFile);\n      const dst = join(worktreeDir, envFile);\n      if (exists(src) && !exists(dst)) {\n        copy(src, dst);\n        process.stderr.write(`Copié : ${envFile} → ${worktreeDir}\\n`);\n      }\n    }\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  readFileSync(0, 'utf8');\n  run();\n  // SessionStart : pas de stdout obligatoire (stdout vide = aucun contexte ajouté).\n}\n",
       "config": {
         "hooks": {
-          "WorktreeCreate": [
+          "SessionStart": [
             {
+              "matcher": "startup",
               "hooks": [
                 {
-                  "async": true,
-                  "command": "node bash setup-worktree-env.mjs",
-                  "statusMessage": "Copie des .env et allocation des ports du worktree...",
-                  "timeout": 60,
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/setup-worktree-env.mjs",
+                  "statusMessage": "Copie des .env du worktree au démarrage de session...",
                   "type": "command"
                 }
               ]
@@ -1034,7 +1033,7 @@
       "env",
       "ports",
       "multi-agent",
-      "async"
+      "session-start"
     ],
     "trigger": "*",
     "use_cases": [
@@ -1053,21 +1052,20 @@
         "repo": "https://github.com/steve-magne/moving-live"
       }
     ],
-    "description": "Runs the project dependency update when a worktree is created. Runs asynchronously with a 300 s timeout for long installs.",
-    "hook_type": "WorktreeCreate",
+    "description": "On session start inside a worktree that has no node_modules yet, spawns the dependency install as a detached background process so the session never blocks.",
+    "hook_type": "SessionStart",
     "id": "worktree-create-update-deps",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Installe les dépendances Node dans le worktree nouvellement créé (WorktreeCreate)\nimport { execSync } from 'child_process';\nimport { existsSync, readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\n/* v8 ignore next 3 */\nfunction defaultExec(cmd, opts = {}) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 300_000, ...opts }).trim(); } catch { return ''; }\n}\n\nexport function run({\n  exec = defaultExec,\n  exists = existsSync,\n} = {}) {\n  const worktreeDir = exec('git rev-parse --show-toplevel');\n  if (worktreeDir && exists(`${worktreeDir}/package.json`)) {\n    const hasPnpm = exec('which pnpm');\n    if (hasPnpm) {\n      exec('pnpm install --frozen-lockfile --ignore-scripts', { cwd: worktreeDir });\n    } else {\n      exec('npm ci --ignore-scripts', { cwd: worktreeDir });\n    }\n  }\n\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  readFileSync(0, 'utf8');\n  run();\n  process.stdout.write('{}\\n');\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// SessionStart : si la session démarre dans un worktree fraîchement créé (node_modules\n// absent), lance l'install des dépendances en process DÉTACHÉ pour ne pas bloquer le\n// démarrage de session, puis rend la main immédiatement.\n// NB : ce hook NE s'enregistre PAS sur WorktreeCreate — ce dernier remplace la création\n// du worktree, exige un chemin absolu sur stdout et ne supporte pas l'exécution async.\nimport { execSync, spawn } from 'child_process';\nimport { existsSync, readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\n/* v8 ignore next 3 */\nfunction defaultExec(cmd, opts = {}) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000, ...opts }).trim(); } catch { return ''; }\n}\n\n/* v8 ignore next 8 */\nfunction defaultDetach(cmd, args, cwd) {\n  const child = spawn(cmd, args, {\n    cwd,\n    detached: true,\n    stdio: 'ignore',\n  });\n  child.unref();\n}\n\nexport function run({\n  exec = defaultExec,\n  exists = existsSync,\n  detach = defaultDetach,\n} = {}) {\n  const worktreeDir = exec('git rev-parse --show-toplevel');\n  if (!worktreeDir) return;\n\n  // Uniquement dans un worktree distinct du dépôt principal.\n  const mainDir = exec('git worktree list').split('\\n')[0]?.split(/\\s+/)[0] ?? '';\n  if (!mainDir || mainDir === worktreeDir) return;\n\n  // Rien à faire sans package.json, ou si les deps sont déjà installées.\n  if (!exists(`${worktreeDir}/package.json`)) return;\n  if (exists(`${worktreeDir}/node_modules`)) return;\n\n  const hasPnpm = exec('which pnpm');\n  if (hasPnpm) {\n    detach('pnpm', ['install', '--frozen-lockfile', '--ignore-scripts'], worktreeDir);\n  } else {\n    detach('npm', ['ci', '--ignore-scripts'], worktreeDir);\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  readFileSync(0, 'utf8');\n  run();\n  // SessionStart : pas de stdout obligatoire (install lancé en détaché).\n}\n",
       "config": {
         "hooks": {
-          "WorktreeCreate": [
+          "SessionStart": [
             {
+              "matcher": "startup",
               "hooks": [
                 {
-                  "async": true,
-                  "command": "node bash update-deps.mjs",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/update-deps.mjs",
                   "statusMessage": "Mise à jour des dépendances du worktree...",
-                  "timeout": 300,
                   "type": "command"
                 }
               ]
@@ -1091,7 +1089,7 @@
       "worktree",
       "dependencies",
       "bootstrap",
-      "async"
+      "session-start"
     ],
     "trigger": "*",
     "use_cases": [
@@ -1240,7 +1238,7 @@
           ]
         }
       },
-      "code_snippet": "#!/usr/bin/env node\n// Lint ESLint chaque fichier .js/.ts modifié depuis la merge base (Stop)\nimport { readFileSync, existsSync, writeFileSync, unlinkSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst pid = process.ppid ?? 'unknown';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\n// Retourne null si le fichier passe ESLint, sinon la sortie d'erreur.\nfunction defaultLint(file) {\n  try {\n    execSync(`npx --no-install eslint --max-warnings=0 \"${file}\"`, {\n      encoding: 'utf8',\n      stdio: 'pipe',\n      timeout: 15_000,\n    });\n    return null;\n  } catch (err) {\n    return (err.stdout?.toString() ?? err.message ?? '').trim() || 'lint error';\n  }\n}\n\nexport function run({\n  exec = defaultExec,\n  lint = defaultLint,\n  exists = existsSync,\n  readFile = readFileSync,\n  writeFile = writeFileSync,\n  unlink = unlinkSync,\n  counterFile = `/tmp/.claude-per-lint-count-${pid}`,\n  disableFile = `/tmp/.claude-per-lint-disabled-${pid}`,\n} = {}) {\n  if (exists(disableFile)) {\n    process.stderr.write(`[per-file-lint] SUSPENDU (≥3 échecs). rm '${disableFile}' pour réactiver.\\n`);\n    return { exitCode: 0 };\n  }\n\n  const base = exec('git merge-base origin/main HEAD');\n  const head = exec('git rev-parse HEAD');\n  const raw = base && base !== head\n    ? exec(`git diff --name-only ${base} HEAD`)\n    : exec('git diff --name-only HEAD');\n\n  const failed = [];\n  let checked = 0;\n  for (const f of raw.split('\\n').filter(Boolean)) {\n    if (!/\\.[cm]?[jt]sx?$/.test(f)) continue;\n    if (!exists(f)) continue; // fichier supprimé → rien à linter\n    checked++;\n    const out = lint(f);\n    if (out) failed.push({ f, out });\n  }\n\n  if (!failed.length) {\n    try { unlink(counterFile); } catch {}\n    return { exitCode: 0, message: checked ? `✓ ESLint: no issues (${checked} file${checked > 1 ? 's' : ''})\\n` : '✓ ESLint: nothing to check\\n' };\n  }\n\n  let count = 0;\n  try { count = parseInt(readFile(counterFile, 'utf8').trim(), 10) || 0; } catch {}\n  count++;\n  writeFile(counterFile, String(count));\n\n  let msg = `[FAIL] ESLint signale des problèmes sur les fichiers modifiés :\\n${failed.map(({ f }) => `  - ${f}`).join('\\n')}\\n→ Corriger les erreurs de lint (ou \\`eslint --fix\\`).\\n`;\n  if (count >= 3) {\n    writeFile(disableFile, '');\n    msg += `[AUTO-DISABLE] hook suspendu après ${count} échecs. rm '${disableFile}' pour réactiver.\\n`;\n  }\n\n  return { exitCode: 2, message: msg };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result.message) process.stderr.write(result.message);\n  process.exit(result.exitCode);\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Lint ESLint chaque fichier .js/.ts modifié depuis la merge base (Stop)\nimport { readFileSync, existsSync, writeFileSync, unlinkSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst pid = process.ppid ?? 'unknown';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\n// Signatures indiquant qu'ESLint n'a pas pu DÉMARRER (config absente, mauvaise version,\n// binaire introuvable) — à distinguer d'une vraie violation de lint. Dans ce cas on traite\n// ESLint comme un outil indisponible et on ne fait PAS échouer le hook (évite les faux positifs).\nconst ESLINT_UNAVAILABLE =\n  /Oops! Something went wrong|could ?n'?t find an? eslint\\.config|eslint\\.config\\.\\(|migration guide|Cannot find module|could not determine executable|command not found|ENOENT/i;\n\nexport function isEslintUnavailable(output) {\n  return !output || ESLINT_UNAVAILABLE.test(output);\n}\n\n// Retourne null si le fichier passe ESLint (ou si ESLint est indisponible), sinon la sortie d'erreur.\n/* v8 ignore next 14 */\nfunction defaultLint(file) {\n  try {\n    execSync(`npx --no-install eslint --max-warnings=0 \"${file}\"`, {\n      encoding: 'utf8',\n      stdio: 'pipe',\n      timeout: 15_000,\n    });\n    return null;\n  } catch (err) {\n    const out = `${err.stdout ?? ''}\\n${err.stderr ?? ''}`.trim();\n    if (isEslintUnavailable(out)) return null; // ESLint n'a pas démarré → skip, pas un échec\n    return out || 'lint error';\n  }\n}\n\nexport function run({\n  exec = defaultExec,\n  lint = defaultLint,\n  exists = existsSync,\n  readFile = readFileSync,\n  writeFile = writeFileSync,\n  unlink = unlinkSync,\n  counterFile = `/tmp/.claude-per-lint-count-${pid}`,\n  disableFile = `/tmp/.claude-per-lint-disabled-${pid}`,\n} = {}) {\n  if (exists(disableFile)) {\n    process.stderr.write(`[per-file-lint] SUSPENDU (≥3 échecs). rm '${disableFile}' pour réactiver.\\n`);\n    return { exitCode: 0 };\n  }\n\n  const base = exec('git merge-base origin/main HEAD');\n  const head = exec('git rev-parse HEAD');\n  const raw = base && base !== head\n    ? exec(`git diff --name-only ${base} HEAD`)\n    : exec('git diff --name-only HEAD');\n\n  const failed = [];\n  let checked = 0;\n  for (const f of raw.split('\\n').filter(Boolean)) {\n    if (!/\\.[cm]?[jt]sx?$/.test(f)) continue;\n    if (!exists(f)) continue; // fichier supprimé → rien à linter\n    checked++;\n    const out = lint(f);\n    if (out) failed.push({ f, out });\n  }\n\n  if (!failed.length) {\n    try { unlink(counterFile); } catch {}\n    return { exitCode: 0, message: checked ? `✓ ESLint: no issues (${checked} file${checked > 1 ? 's' : ''})\\n` : '✓ ESLint: nothing to check\\n' };\n  }\n\n  let count = 0;\n  try { count = parseInt(readFile(counterFile, 'utf8').trim(), 10) || 0; } catch {}\n  count++;\n  writeFile(counterFile, String(count));\n\n  let msg = `[FAIL] ESLint signale des problèmes sur les fichiers modifiés :\\n${failed.map(({ f }) => `  - ${f}`).join('\\n')}\\n→ Corriger les erreurs de lint (ou \\`eslint --fix\\`).\\n`;\n  if (count >= 3) {\n    writeFile(disableFile, '');\n    msg += `[AUTO-DISABLE] hook suspendu après ${count} échecs. rm '${disableFile}' pour réactiver.\\n`;\n  }\n\n  return { exitCode: 2, message: msg };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result.message) process.stderr.write(result.message);\n  process.exit(result.exitCode);\n}\n",
       "script_path": ".claude/hooks/per-file-lint.mjs"
     },
     "community_examples": [],

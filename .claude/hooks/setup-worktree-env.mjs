@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-// Copie les fichiers .env du dépôt principal vers le worktree (WorktreeCreate)
+// SessionStart : si la session démarre dans un worktree (distinct du dépôt principal),
+// copie les fichiers .env du dépôt principal vers le worktree.
+// NB : ce hook NE s'enregistre PAS sur WorktreeCreate — ce dernier remplace la création
+// du worktree et exige un chemin absolu sur stdout. Le post-setup va sur SessionStart.
 import { execSync } from 'child_process';
 import { existsSync, copyFileSync, readFileSync } from 'fs';
 import { join } from 'path';
@@ -34,5 +37,5 @@ export function run({
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   readFileSync(0, 'utf8');
   run();
-  process.stdout.write('{}\n');
+  // SessionStart : pas de stdout obligatoire (stdout vide = aucun contexte ajouté).
 }
