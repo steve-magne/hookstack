@@ -1,30 +1,23 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { AnimatePresence, m } from 'motion/react'
 import { useSelection } from '@/store/selection'
 import { allHooks } from '@/lib/hooks'
 import { useT } from '@/lib/locale-context'
-import { CopySwap } from './CopySwap'
+import { InstallCommand } from './InstallCommand'
 import { spring } from '@/lib/motion'
 
 export function HookConfigurator() {
   const T = useT()
   const selected = useSelection((s) => s.selected)
   const remove = useSelection((s) => s.remove)
-  const [pluginCopiedBottom, setPluginCopiedBottom] = useState(false)
 
   const hooks = useMemo(
     () => allHooks.filter((h) => selected.includes(h.slug)),
     [selected]
   )
   const pluginCmd = `npx hookstack-cli@latest install --hooks=${hooks.map(h => h.slug).join(',')}`
-
-  const copyPluginBottom = async () => {
-    await navigator.clipboard.writeText(pluginCmd)
-    setPluginCopiedBottom(true)
-    setTimeout(() => setPluginCopiedBottom(false), 1500)
-  }
 
   if (hooks.length === 0) {
     return (
@@ -46,22 +39,6 @@ export function HookConfigurator() {
       </m.div>
     )
   }
-
-  const PluginTile = ({ onCopy, isCopied }: { onCopy: () => void; isCopied: boolean }) => (
-    <div className="rounded-xl border border-zinc-700 bg-[#0d0d14] px-4 py-3">
-      <p className="mb-2 text-xs text-zinc-500">{T.pluginInstallHint}</p>
-      <div className="flex items-center gap-2">
-        <code className="flex-1 truncate font-mono text-sm text-zinc-100">{pluginCmd}</code>
-        <button
-          onClick={onCopy}
-          className="shrink-0 flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
-        >
-          <CopySwap copied={isCopied} />
-          {isCopied ? T.copied : T.copy}
-        </button>
-      </div>
-    </div>
-  )
 
   return (
     <div className="space-y-4">
@@ -86,7 +63,7 @@ export function HookConfigurator() {
         </AnimatePresence>
       </div>
 
-      <PluginTile onCopy={copyPluginBottom} isCopied={pluginCopiedBottom} />
+      <InstallCommand command={pluginCmd} />
     </div>
   )
 }
