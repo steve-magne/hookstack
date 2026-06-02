@@ -28,7 +28,6 @@ export function run({
       }
     }
   }
-  process.stdout.write(JSON.stringify({}) + '\n');
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
