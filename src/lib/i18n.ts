@@ -11,7 +11,6 @@ export const T = {
   heroTitle2: 'in 1 minute',
   heroTitleA: 'Ship fast.',
   heroTitleB: 'Break nothing.',
-  heroEyebrow: 'open-source hooks for Claude Code',
   heroSubtitle:
     'Battle-tested hooks that give Claude Code reflexes — block secrets, enforce tests, inject context. Pick yours, copy one command, done.',
   installTerminalLabel: 'project root',
@@ -19,7 +18,6 @@ export const T = {
   installCaption: 'Writes the hooks into .claude/hooks and patches settings.json — nothing else.',
   catalogueTitle: 'Hooks catalogue',
   noResults: 'No hook matches these filters.',
-  searchPlaceholder: 'Search for a hook, use case, tag…',
   filterCategory: 'Category',
   filterProvider: 'Provider',
   filterEvent: 'Event',

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, m, useAnimationControls } from 'motion/react'
-import { ArrowDownLeft, Check, Layers, Search, ShieldCheck, X, Zap } from 'lucide-react'
+import { ArrowDownLeft, Check, Layers, ShieldCheck, Zap } from 'lucide-react'
 import { HookRow } from './HookRow'
 import { HookModal } from './HookModal'
 import { HookConfigurator } from './HookConfigurator'
@@ -89,7 +89,6 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   const T = useT()
   const initMust = useSelection((s) => s.initMust)
   const [groupBy, setGroupBy] = useState<GroupBy>('event')
-  const [query, setQuery] = useState('')
   const [selectedStacks, setSelectedStacks] = useState<Stack[]>([])
   const [active, setActive] = useState<Hook | null>(null)
   type Preview =
@@ -166,13 +165,13 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   const results = useMemo(
     () =>
       filterHooks(allHooks, {
-        query,
+        query: '',
         categories: initialCategory ? [initialCategory] : [],
         providers: [],
         events: [],
         stacks: selectedStacks,
       }),
-    [query, initialCategory, selectedStacks]
+    [initialCategory, selectedStacks]
   )
 
   const groups = useMemo(() => buildGroups(results, groupBy, T.categoryLabels), [results, groupBy, T])
@@ -202,9 +201,6 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
     }
     return map
   }, [groups])
-
-  const hasActive = !!query
-  const reset = () => setQuery('')
 
   // Vertical anchor for the floating card — clamped to stay on screen.
   // Used for both `initial` (appear in place) and `animate` (glide between rows).
@@ -240,55 +236,11 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
             />
           </div>
         </div>
-        <p className="mt-2 px-1 text-[11px] text-zinc-600">{T.installCaption}</p>
+        <p className="mt-2 px-1 text-[11px] text-zinc-400">{T.installCaption}</p>
       </div>
 
-      {/* Controls */}
-      <div className="mb-8 space-y-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={T.searchPlaceholder}
-              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-10 pr-9 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-white/40 focus:ring-1 focus:ring-white/10 focus:outline-none transition-colors"
-            />
-            {hasActive && (
-              <button
-                onClick={reset}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 transition-colors"
-              >
-                <X className="size-4" />
-              </button>
-            )}
-          </div>
-
-          <div className="inline-flex self-end shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 sm:self-auto">
-            {(['event', 'category'] as GroupBy[]).map((g) => (
-              <button
-                key={g}
-                onClick={() => setGroupBy(g)}
-                aria-pressed={groupBy === g}
-                className={`relative rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                  groupBy === g ? 'text-zinc-900' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                {groupBy === g && (
-                  <m.span
-                    layoutId="groupToggle"
-                    transition={spring.smooth}
-                    className="absolute inset-0 rounded-lg bg-white shadow-sm"
-                  />
-                )}
-                <span className="relative z-10">
-                  {g === 'event' ? T.groupByEvent : T.groupByCategory}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
+      {/* Controls — stack chooser + grouping toggle, on one line */}
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Stack filter — tailor the catalogue to the user's ecosystem */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-300">
@@ -323,13 +275,38 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
           {selectedStacks.length > 0 ? (
             <button
               onClick={() => setSelectedStacks([])}
-              className="text-[11px] font-medium text-zinc-500 transition-colors hover:text-zinc-300"
+              className="text-[11px] font-medium text-zinc-400 transition-colors hover:text-zinc-200"
             >
               {T.stackFilterReset}
             </button>
           ) : (
-            <span className="text-[11px] text-zinc-600">{T.stackFilterHint}</span>
+            <span className="text-[11px] text-zinc-400">{T.stackFilterHint}</span>
           )}
+        </div>
+
+        {/* Grouping toggle */}
+        <div className="inline-flex self-end shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 sm:self-auto">
+          {(['event', 'category'] as GroupBy[]).map((g) => (
+            <button
+              key={g}
+              onClick={() => setGroupBy(g)}
+              aria-pressed={groupBy === g}
+              className={`relative rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                groupBy === g ? 'text-zinc-900' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              {groupBy === g && (
+                <m.span
+                  layoutId="groupToggle"
+                  transition={spring.smooth}
+                  className="absolute inset-0 rounded-lg bg-white shadow-sm"
+                />
+              )}
+              <span className="relative z-10">
+                {g === 'event' ? T.groupByEvent : T.groupByCategory}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
