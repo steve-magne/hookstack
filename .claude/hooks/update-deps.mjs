@@ -25,8 +25,9 @@ export function run({
 
 }
 
-/* v8 ignore next 4 */
+/* v8 ignore next 5 */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   readFileSync(0, 'utf8'); // consume stdin (WorktreeCreate payload)
   run();
+  process.stdout.write('{}'); // WorktreeCreate exige une sortie JSON, sinon « hook failed: no output »
 }
