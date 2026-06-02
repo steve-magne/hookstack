@@ -98,7 +98,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   // Sticky banner reflects live selection: checking a hook updates this command.
   const installCmd = useMemo(
     () =>
-      `npx hookit@latest install --hooks=${allHooks
+      `npx hookstack-cli@latest install --hooks=${allHooks
         .filter((h) => selectedSlugs.includes(h.slug))
         .map((h) => h.slug)
         .join(',')}`,

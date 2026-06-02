@@ -1,6 +1,6 @@
 <div align="center">
 
-# Hookit
+# Hookstack
 
 **Your AI agent runs fast. Hooks keep it honest.**
 
@@ -56,7 +56,7 @@ Head to **[claudehooks.vercel.app](https://claudehooks.vercel.app)** — a searc
 
 - **Discover** — filter by category (`security`, `workflow`, `context`, `validation`…), provider, or keyword
 - **Select** — add to your basket with one click; selection is persisted in `localStorage`
-- **Export** — get a `npx hookit@latest install` command ready to run in your project root
+- **Export** — get a `npx hookstack-cli@latest install` command ready to run in your project root
 - **Contribute** — submit a GitHub URL; a GitHub Action analyses the repo and opens a PR on the registry
 
 ---
@@ -85,7 +85,7 @@ The ones everyone installs first:
 3. Run the generated command in your project root
 
 ```bash
-npx hookit@latest install --hooks=pre-bash-secret-detection,pre-bash-block-destructive,load-git-context
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-block-destructive,load-git-context
 ```
 
 That's it. The CLI writes `.claude/hooks/*.mjs` and patches `.claude/settings.json` — no manual copy-paste, no JSON editing.
@@ -134,8 +134,8 @@ Add an entry to [`registry/registry.json`](registry/registry.json):
 ## Run locally
 
 ```bash
-git clone https://github.com/steve-magne/hookit.git
-cd hookit
+git clone https://github.com/steve-magne/hookstack.git
+cd hookstack
 pnpm install
 pnpm dev          # → http://localhost:3000
 ```

@@ -23,7 +23,7 @@
 ## Structure de projet
 
 ```
-hookit/
+hookstack/
 ├── src/
 │   ├── app/                         # Pages Next.js App Router (Server Components)
 │   │   ├── page.tsx                 # Route / — Home (hero + catalogue)
@@ -64,7 +64,7 @@ hookit/
 │   └── workflows/analyze-repo.yml   # Action déclenchée sur issue labelisée repo-submission
 ├── supabase/
 │   └── schema.sql                   # Schéma BDD Supabase (table soumissions)
-├── doc/hookit/                      # Documentation produit (personas, valeur, hook 101…)
+├── doc/hookstack/                      # Documentation produit (personas, valeur, hook 101…)
 ├── public/                          # Assets statiques (logo, favicon…)
 ├── next.config.ts                   # Config Next.js
 ├── postcss.config.mjs               # Config PostCSS / Tailwind v4
@@ -92,21 +92,21 @@ pnpm lint            # ESLint via next lint
 2. Sélectionne des hooks (panier persisté en `localStorage`)
 3. Copie la commande générée par `HookConfigurator` :
    ```bash
-   npx hookit@latest install --hooks=<slug1>,<slug2>,...
+   npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...
    ```
 4. La lance à la racine de son projet → le CLI écrit les `.mjs` dans `.claude/hooks/` et patche `.claude/settings.json`
 
-**Le deliverable est la commande `npx hookit@latest`**, pas un copier-coller de JSON. `HookConfigurator.tsx` (l. 21) construit `pluginCmd` avec les slugs sélectionnés. Ne jamais décrire le flow comme "coller un settings.json" dans la doc ou le README.
+**Le deliverable est la commande `npx hookstack-cli@latest`**, pas un copier-coller de JSON. `HookConfigurator.tsx` (l. 21) construit `pluginCmd` avec les slugs sélectionnés. Ne jamais décrire le flow comme "coller un settings.json" dans la doc ou le README.
 
 ## Architecture
 
-Hookit est un catalogue communautaire de hooks agentiques (Claude Code, GitHub Copilot). Next.js 15 (App Router) + TypeScript + Tailwind v4.
+Hookstack est un catalogue communautaire de hooks agentiques (Claude Code, GitHub Copilot). Next.js 15 (App Router) + TypeScript + Tailwind v4.
 
 **Source de données** : `registry/registry.json` est la seule source de vérité — lue directement par `src/lib/hooks.ts` (via `allHooks`). Sans `.env`, tout fonctionne en mode registre local.
 
 **Registre** : `registry/registry.json` est la source canonique et unique du registre versionné — c'est aussi ce que le front-end importe. Les scripts `.claude/skills/analyze-repo/scripts/merge-hooks.js` et `.claude/skills/analyze-repo/scripts/extract-json.js` servent au pipeline CI (`.github/workflows/analyze-repo.yml`). L'Action se déclenche sur les issues labellisées `repo-submission` et ouvre une PR `auto-generated` via Claude Code + `ANTHROPIC_API_KEY`.
 
-**État global** : Zustand persisté dans `src/store/selection.ts` (clé `hookit-selection`) — stocke les slugs des hooks sélectionnés.
+**État global** : Zustand persisté dans `src/store/selection.ts` (clé `hookstack-selection`) — stocke les slugs des hooks sélectionnés.
 
 **Génération de config** : `src/lib/mergeConfig.ts` fusionne les fragments `implementation.config.hooks` de plusieurs hooks en un `settings.json` valide, en regroupant par événement puis par matcher. `collectScripts` extrait les scripts associés.
 
