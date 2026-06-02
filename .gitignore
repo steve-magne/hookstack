@@ -32,8 +32,4 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
-.claude/data/bash-log.jsonl
-.claude/data/bash-history.jsonl
-.claude/data/sessions/bd5b583d-03e4-4f9a-a9d3-db5bd0b97a75.json
-.claude/data/tool-failures.jsonl
-.claude/data/sessions/c9dc90c9-6fe7-417e-84bb-ca2cbe199de9.json
+.claude/data/
