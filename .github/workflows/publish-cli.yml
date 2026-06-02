@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -36,9 +37,7 @@ jobs:
 
       - name: Publish
         working-directory: packages/cli
-        run: pnpm publish --access public --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: \${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --access public --no-git-checks --provenance
 
       - name: Commit version bump
         run: |
