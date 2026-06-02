@@ -30,9 +30,8 @@ export function run({
   }
 }
 
-/* v8 ignore next 5 */
+/* v8 ignore next 4 */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   readFileSync(0, 'utf8'); // consume stdin (WorktreeCreate payload)
   run();
-  process.stdout.write('{}');
 }
