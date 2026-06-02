@@ -2,8 +2,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { run } from '../../.claude/hooks/setup-worktree-env.mjs';
 
-const MAIN = '/repos/hookit';
-const WORKTREE = '/repos/hookit-wt';
+const MAIN = '/repos/hookstack';
+const WORKTREE = '/repos/hookstack-wt';
 
 function makeExec(main = MAIN, wt = WORKTREE) {
   return (cmd) => {

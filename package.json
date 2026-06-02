@@ -1,5 +1,5 @@
 {
-  "name": "hookit",
+  "name": "hookstack",
   "private": true,
   "version": "0.1.0",
   "description": "Catalogue communautaire de hooks agentiques pour Claude Code & GitHub Copilot",

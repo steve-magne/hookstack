@@ -3,10 +3,10 @@
 // Filtre les hooks selon les bonnes pratiques agentiques avant insertion dans le registre.
 //
 // Sorties :
-//   /tmp/hookit-hooks-validated.json   — hooks passant la validation (prêts pour le merge)
-//   /tmp/hookit-hooks-rejected.json    — hooks rejetés avec raisons
-//   /tmp/hookit-hooks-recommended.json — sous-ensemble valide, bénéfique pour le projet courant
-//   /tmp/hookit-validation-count.txt   — nombre de hooks valides
+//   /tmp/hookstack-hooks-validated.json   — hooks passant la validation (prêts pour le merge)
+//   /tmp/hookstack-hooks-rejected.json    — hooks rejetés avec raisons
+//   /tmp/hookstack-hooks-recommended.json — sous-ensemble valide, bénéfique pour le projet courant
+//   /tmp/hookstack-validation-count.txt   — nombre de hooks valides
 import { readFileSync, writeFileSync } from 'node:fs'
 
 const VALID_CATEGORIES = ['security', 'context', 'validation', 'notification', 'workflow', 'documentation']
@@ -108,10 +108,10 @@ for (const hook of hooks) {
   if (isSafeForProject) recommended.push(hook)
 }
 
-writeFileSync('/tmp/hookit-hooks-validated.json', JSON.stringify(validated, null, 2) + '\n')
-writeFileSync('/tmp/hookit-hooks-rejected.json', JSON.stringify(rejected, null, 2) + '\n')
-writeFileSync('/tmp/hookit-hooks-recommended.json', JSON.stringify(recommended, null, 2) + '\n')
-writeFileSync('/tmp/hookit-validation-count.txt', String(validated.length))
+writeFileSync('/tmp/hookstack-hooks-validated.json', JSON.stringify(validated, null, 2) + '\n')
+writeFileSync('/tmp/hookstack-hooks-rejected.json', JSON.stringify(rejected, null, 2) + '\n')
+writeFileSync('/tmp/hookstack-hooks-recommended.json', JSON.stringify(recommended, null, 2) + '\n')
+writeFileSync('/tmp/hookstack-validation-count.txt', String(validated.length))
 
 const total = hooks.length
 console.log(`Validation : ${validated.length}/${total} valide(s), ${rejected.length} rejeté(s), ${recommended.length} recommandé(s) pour le projet`)

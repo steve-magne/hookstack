@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { run } from '../../.claude/hooks/update-deps.mjs';
 
-const DIR = '/repos/hookit';
+const DIR = '/repos/hookstack';
 
 describe('update-deps', () => {
   it('ne fait rien si git rev-parse échoue', () => {

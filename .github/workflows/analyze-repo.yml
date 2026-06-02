@@ -66,8 +66,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BRANCH="auto/new-hooks-$(date +%Y%m%d%H%M)"
-          git config user.name "hookit-bot"
-          git config user.email "bot@hookit.dev"
+          git config user.name "hookstack-bot"
+          git config user.email "bot@hookstack.dev"
           git checkout -b "$BRANCH"
           git add registry/registry.json
           git commit -m "auto: add ${{ steps.merge.outputs.added }} hook(s) from ${{ steps.extract.outputs.repo_url }}"

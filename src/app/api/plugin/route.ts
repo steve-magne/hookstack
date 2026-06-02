@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(zip.buffer as ArrayBuffer, {
     headers: {
       'Content-Type': 'application/zip',
-      'Content-Disposition': 'attachment; filename="hookit-plugin.zip"',
+      'Content-Disposition': 'attachment; filename="hookstack-plugin.zip"',
       'Cache-Control': 'public, max-age=300',
     },
   })

@@ -6,7 +6,7 @@ export interface SubmissionResult {
 }
 
 export function buildSubmissionIssueUrl(repoUrl: string): SubmissionResult {
-  const repo = REGISTRY_REPO ?? 'your-org/hookit-registry'
+  const repo = REGISTRY_REPO ?? 'your-org/hookstack-registry'
   const title = encodeURIComponent(`repo-submission: ${repoUrl}`)
   const body = encodeURIComponent(
     [

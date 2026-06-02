@@ -67,7 +67,7 @@ function focusOnHookContent(text) {
 
 try {
   const res = await fetch(url, {
-    headers: { 'User-Agent': 'HookitAnalyzer/1.0 (catalog enrichment)' },
+    headers: { 'User-Agent': 'HookstackAnalyzer/1.0 (catalog enrichment)' },
     signal: AbortSignal.timeout(20000),
     redirect: 'follow',
   })

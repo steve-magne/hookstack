@@ -1,9 +1,9 @@
 ---
 name: analyze-repo
-description: Analyse une source externe pour en extraire des hooks agentiques et alimenter le catalogue Hookit. Déclencher quand l'utilisateur fournit une URL GitHub à analyser, une URL d'article de blog, une URL de documentation (ex. docs Claude Code, guides hooks), mentionne "ajouter un repo", "scanner un dépôt", "enrichir le registre", "analyser cette doc", ou veut ajouter des hooks au catalogue. Utiliser même si l'utilisateur se contente de coller une URL sans explication supplémentaire.
+description: Analyse une source externe pour en extraire des hooks agentiques et alimenter le catalogue Hookstack. Déclencher quand l'utilisateur fournit une URL GitHub à analyser, une URL d'article de blog, une URL de documentation (ex. docs Claude Code, guides hooks), mentionne "ajouter un repo", "scanner un dépôt", "enrichir le registre", "analyser cette doc", ou veut ajouter des hooks au catalogue. Utiliser même si l'utilisateur se contente de coller une URL sans explication supplémentaire.
 ---
 
-Pipeline d'analyse pour `$ARGUMENTS`. Exécuter depuis la racine du projet hookit.
+Pipeline d'analyse pour `$ARGUMENTS`. Exécuter depuis la racine du projet hookstack.
 
 ## Phase 0 — Détection du type de source
 
@@ -30,7 +30,7 @@ echo "$DATA"
 ```
 
 - Si `DATA` contient la clé `"error"` → afficher l'erreur et s'arrêter.
-- Si `has_hooks` est `false` → écrire `[]` dans `/tmp/hookit-hooks-new.json` et passer directement à la Phase 3.5.
+- Si `has_hooks` est `false` → écrire `[]` dans `/tmp/hookstack-hooks-new.json` et passer directement à la Phase 3.5.
 
 ---
 
@@ -152,27 +152,27 @@ Un hook `is_must: true` sera pré-sélectionné par défaut dans le catalogue po
 }
 ```
 
-Écrire le tableau JSON résultant dans `/tmp/hookit-hooks-new.json`.
+Écrire le tableau JSON résultant dans `/tmp/hookstack-hooks-new.json`.
 
 ---
 
 ## Phase 3.5 — Validation qualité (script, 0 token LLM)
 
 ```bash
-node .claude/skills/analyze-repo/scripts/validate-hooks.js /tmp/hookit-hooks-new.json
-HOOKS_VALID=$(cat /tmp/hookit-validation-count.txt)
+node .claude/skills/analyze-repo/scripts/validate-hooks.js /tmp/hookstack-hooks-new.json
+HOOKS_VALID=$(cat /tmp/hookstack-validation-count.txt)
 ```
 
 Ce script filtre les anti-patterns agentiques (champs manquants, `PreToolUse/*` avec appels réseau,
 commandes destructives sans garde-fou) et produit :
-- `/tmp/hookit-hooks-validated.json` — hooks retenus pour le registre
-- `/tmp/hookit-hooks-recommended.json` — sous-ensemble bénéfique pour le projet courant
+- `/tmp/hookstack-hooks-validated.json` — hooks retenus pour le registre
+- `/tmp/hookstack-hooks-recommended.json` — sous-ensemble bénéfique pour le projet courant
 
 ## Phase 4+5 — Merge et enregistrement (scripts, 0 token LLM)
 
 ```bash
-node .claude/skills/analyze-repo/scripts/merge-hooks.js /tmp/hookit-hooks-validated.json registry/registry.json "$ARGUMENTS"
-HOOKS_FOUND=$(jq 'length' /tmp/hookit-hooks-new.json)
+node .claude/skills/analyze-repo/scripts/merge-hooks.js /tmp/hookstack-hooks-validated.json registry/registry.json "$ARGUMENTS"
+HOOKS_FOUND=$(jq 'length' /tmp/hookstack-hooks-new.json)
 HOOKS_ADDED=$(cat /tmp/added-count.txt)
 node .claude/skills/analyze-repo/scripts/update-scanned-repos.js registry/scanned-repos.json "$ARGUMENTS" "$HOOKS_FOUND" "$HOOKS_ADDED" success
 ```
@@ -180,7 +180,7 @@ node .claude/skills/analyze-repo/scripts/update-scanned-repos.js registry/scanne
 ## Phase 6 — Application au projet courant (script, 0 token LLM)
 
 ```bash
-node .claude/skills/analyze-repo/scripts/apply-best-practices.js registry/registry.json .claude/settings.json /tmp/hookit-hooks-recommended.json
+node .claude/skills/analyze-repo/scripts/apply-best-practices.js registry/registry.json .claude/settings.json /tmp/hookstack-hooks-recommended.json
 APPLIED=$(cat /tmp/applied-count.txt 2>/dev/null || echo 0)
 APPLIED_FROM_SCAN=$(cat /tmp/applied-from-scan-count.txt 2>/dev/null || echo 0)
 ```

@@ -5,7 +5,7 @@ import { run } from '../../.claude/hooks/per-file-coverage.mjs';
 const COUNTER = '/tmp/.test-cov-counter';
 const DISABLE = '/tmp/.test-cov-disable';
 const COV_JSON = '/tmp/test-coverage.json';
-const CWD = '/repos/hookit';
+const CWD = '/repos/hookstack';
 
 function makeCoverage(files = {}) {
   return JSON.stringify(files);
