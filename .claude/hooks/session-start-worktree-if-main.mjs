@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// SessionStart: crée un worktree isolé si la session démarre sur main/master
+// SessionStart: crée un worktree isolé si la session démarre sur main/master.
+// Nettoie automatiquement les worktrees dont la branche a été mergée dans main.
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -16,9 +17,15 @@ function defaultAddWorktree(path, branchName) {
   });
 }
 
+function defaultRemoveWorktree(mainRoot, wtPath, branchName) {
+  try { execSync(`git -C "${mainRoot}" worktree remove --force "${wtPath}"`, { timeout: 10_000 }); } catch { /* ignore */ }
+  try { execSync(`git -C "${mainRoot}" branch -D "${branchName}"`, { timeout: 5_000 }); } catch { /* ignore */ }
+}
+
 export function run({
   exec = defaultExec,
   addWorktree = defaultAddWorktree,
+  removeWorktree = defaultRemoveWorktree,
   exists = existsSync,
   now = () => new Date(),
 } = {}) {
@@ -33,13 +40,36 @@ export function run({
   const mainRoot = worktreeList.split('\n')[0]?.split(/\s+/)[0] ?? '';
   if (mainRoot !== currentRoot) return null;
 
+  // Récupérer les derniers commits pour détecter les merges récents
+  exec('git fetch --quiet origin main');
+
+  // Nettoyer les worktrees dont la branche est fusionnée dans origin/main
+  const mergedBranches = new Set(
+    exec('git branch --merged origin/main')
+      .split('\n')
+      .map((b) => b.trim().replace(/^\*\s*/, ''))
+      .filter(Boolean),
+  );
+
+  const secondaryLines = exec('git worktree list').split('\n').slice(1);
+  for (const line of secondaryLines) {
+    if (!line.trim()) continue;
+    const parts = line.split(/\s+/);
+    const wtPath = parts[0];
+    const wtBranch = (parts[2] ?? '').replace(/^\[|\]$/g, '');
+    if (wtBranch && mergedBranches.has(wtBranch)) {
+      removeWorktree(mainRoot, wtPath, wtBranch);
+    }
+  }
+
   const date = now().toISOString().slice(0, 10).replace(/-/g, '');
   const projectName = currentRoot.split('/').pop() ?? 'project';
   const branchName = `work/session-${date}`;
   const worktreePath = `${currentRoot}/../${projectName}-work-${date}`;
 
-  // Réutiliser un worktree de session déjà créé aujourd'hui
-  const todayLine = worktreeList.split('\n').slice(1).find((l) => l.includes(branchName));
+  // Vérifier si un worktree pour aujourd'hui existe encore (non mergé)
+  const freshList = exec('git worktree list');
+  const todayLine = freshList.split('\n').slice(1).find((l) => l.includes(branchName));
   if (todayLine) {
     const wtPath = todayLine.split(/\s+/)[0];
     return [
@@ -51,7 +81,7 @@ export function run({
     ].join('\n') + '\n';
   }
 
-  // Créer le worktree
+  // Créer un worktree frais depuis main
   try {
     addWorktree(worktreePath, branchName);
   } catch {
