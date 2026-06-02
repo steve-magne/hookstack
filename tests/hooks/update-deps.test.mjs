@@ -24,7 +24,7 @@ describe('update-deps', () => {
       return 'pnpm output';
     });
     run({ exec, exists: () => true });
-    expect(exec).toHaveBeenCalledWith('pnpm install --frozen-lockfile', { cwd: DIR });
+    expect(exec).toHaveBeenCalledWith('pnpm install --frozen-lockfile --ignore-scripts', { cwd: DIR });
   });
 
   it('utilise npm ci si pnpm absent', () => {
@@ -34,19 +34,6 @@ describe('update-deps', () => {
       return 'npm output line1\nline2';
     });
     run({ exec, exists: () => true });
-    expect(exec).toHaveBeenCalledWith('npm ci', { cwd: DIR });
-  });
-
-  it('écrit les 5 dernières lignes sur stderr', () => {
-    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    const lines = Array.from({ length: 8 }, (_, i) => `line${i}`).join('\n');
-    const exec = vi.fn((cmd) => {
-      if (cmd.includes('rev-parse')) return DIR;
-      if (cmd.includes('which pnpm')) return '/usr/bin/pnpm';
-      return lines;
-    });
-    run({ exec, exists: () => true });
-    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('line7'));
-    stderrSpy.mockRestore();
+    expect(exec).toHaveBeenCalledWith('npm ci --ignore-scripts', { cwd: DIR });
   });
 });

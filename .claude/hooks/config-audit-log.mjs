@@ -3,17 +3,34 @@
 import { readFileSync, appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { fileURLToPath } from 'url';
 
-const input = JSON.parse(readFileSync(0, 'utf8'));
+export function run(
+  input,
+  {
+    append = appendFileSync,
+    mkdir = mkdirSync,
+    home = homedir(),
+    projectDir = process.env.CLAUDE_PROJECT_DIR,
+    now = () => new Date().toISOString(),
+  } = {},
+) {
+  const logDir = join(home, '.claude');
+  mkdir(logDir, { recursive: true });
 
-const logDir = join(homedir(), '.claude');
-mkdirSync(logDir, { recursive: true });
+  const entry = {
+    ts: now(),
+    project: projectDir?.split('/').pop() ?? 'unknown',
+    change: input.change ?? input,
+  };
 
-const entry = {
-  ts: new Date().toISOString(),
-  project: process.env.CLAUDE_PROJECT_DIR?.split('/').pop() ?? 'unknown',
-  change: input.change ?? input,
-};
+  append(join(logDir, 'config-changes.jsonl'), JSON.stringify(entry) + '\n');
+  return { entry, message: '[config-audit] Changement journalise.\n' };
+}
 
-appendFileSync(join(logDir, 'config-changes.jsonl'), JSON.stringify(entry) + '\n');
-process.stderr.write(`[config-audit] Changement journalise.\n`);
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'));
+  const result = run(input);
+  process.stderr.write(result.message);
+}

@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 // Bloc les commandes Bash destructives irréversibles (PreToolUse)
 import { readFileSync } from 'fs';
-
-const input = JSON.parse(readFileSync(0, 'utf8'));
-const command = input.tool_input?.command ?? '';
+import { fileURLToPath } from 'url';
 
 const BLOCKED = [
   [/rm\s+-rf?\s+\/(?:\s|$)/, 'rm -rf / interdit'],
@@ -13,10 +11,17 @@ const BLOCKED = [
   [/chmod\s+-R\s+777\s+\//i, 'chmod 777 récursif sur / interdit'],
 ];
 
-const blocked = BLOCKED.find(([pattern]) => pattern.test(command));
-if (blocked) {
-  process.stdout.write(JSON.stringify({
-    decision: 'block',
-    reason: `Commande destructive bloquée : ${blocked[1]}`,
-  }));
+export function run(input) {
+  const command = input.tool_input?.command ?? '';
+  const blocked = BLOCKED.find(([pattern]) => pattern.test(command));
+  return blocked
+    ? { decision: 'block', reason: `Commande destructive bloquée : ${blocked[1]}` }
+    : null;
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'));
+  const result = run(input);
+  if (result) process.stdout.write(JSON.stringify(result));
 }

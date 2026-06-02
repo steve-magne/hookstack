@@ -1,4 +1,13 @@
 #!/usr/bin/env node
-// StopFailure (rate_limit): fire a desktop notification via OSC-9
-const seq = '\x1b]9;Claude Code — rate limit hit, paused\x07';
-process.stdout.write(JSON.stringify({ terminalSequence: seq }));
+// StopFailure (rate_limit) : déclenche une notification bureau via OSC-9
+import { fileURLToPath } from 'url';
+
+export function run() {
+  const seq = '\x1b]9;Claude Code — rate limit hit, paused\x07';
+  return { terminalSequence: seq };
+}
+
+/* v8 ignore next 3 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  process.stdout.write(JSON.stringify(run()));
+}

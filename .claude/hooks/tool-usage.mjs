@@ -2,19 +2,35 @@
 // Journalise les commandes Bash avec leur durée (PostToolUse Bash)
 import { readFileSync, appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
 
-const input = JSON.parse(readFileSync(0, 'utf8'));
-const command = input.tool_input?.command ?? '';
-if (!command) process.exit(0);
+export function run(
+  input,
+  {
+    append = appendFileSync,
+    mkdir = mkdirSync,
+    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+    now = () => new Date().toISOString(),
+  } = {},
+) {
+  const command = input.tool_input?.command ?? '';
+  if (!command) return null;
 
-const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
-const logDir = join(projectDir, '.claude', 'data');
-mkdirSync(logDir, { recursive: true });
+  const logDir = join(projectDir, '.claude', 'data');
+  mkdir(logDir, { recursive: true });
 
-const entry = {
-  ts: new Date().toISOString(),
-  cmd: command.slice(0, 500),
-  exit: input.tool_response?.exit_code ?? null,
-};
+  const entry = {
+    ts: now(),
+    cmd: command.slice(0, 500),
+    exit: input.tool_response?.exit_code ?? null,
+  };
 
-appendFileSync(join(logDir, 'bash-history.jsonl'), JSON.stringify(entry) + '\n');
+  append(join(logDir, 'bash-history.jsonl'), JSON.stringify(entry) + '\n');
+  return entry;
+}
+
+/* v8 ignore next 4 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'));
+  run(input);
+}

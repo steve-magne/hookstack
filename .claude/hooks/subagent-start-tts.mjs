@@ -1,15 +1,22 @@
 #!/usr/bin/env node
 // Annonce le démarrage d'un sous-agent par TTS (SubagentStart)
 import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
 
-const text = 'Sous-agent démarré';
+function defaultExec(cmd) {
+  execSync(cmd, { timeout: 10_000, stdio: 'ignore', shell: true });
+}
 
-try {
-  if (process.platform === 'darwin') {
-    execSync(`say "${text}"`, { timeout: 10_000, stdio: 'ignore' });
-  } else {
-    execSync(`espeak "${text}" 2>/dev/null || spd-say "${text}"`, {
-      timeout: 10_000, stdio: 'ignore', shell: true,
-    });
-  }
-} catch {}
+export function run({ exec = defaultExec, platform = process.platform } = {}) {
+  const text = 'Sous-agent démarré';
+  try {
+    if (platform === 'darwin') exec(`say "${text}"`);
+    else exec(`espeak "${text}" 2>/dev/null || spd-say "${text}"`);
+  } catch {}
+  return text;
+}
+
+/* v8 ignore next 3 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  run();
+}

@@ -2,23 +2,41 @@
 // Attribue un nom à l'agent pour la session courante (UserPromptSubmit)
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
 
-const input = JSON.parse(readFileSync(0, 'utf8'));
-const sessionId = input.session_id ?? 'unknown';
+const NAMES = ['Phoenix', 'Sage', 'Nova', 'Echo', 'Atlas', 'Cipher', 'Nexus', 'Oracle', 'Aurora', 'Vortex'];
 
-const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
-const dir = join(projectDir, '.claude', 'data', 'sessions');
-mkdirSync(dir, { recursive: true });
+export function run(
+  input,
+  {
+    exists = existsSync,
+    readFile = readFileSync,
+    writeFile = writeFileSync,
+    mkdir = mkdirSync,
+    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+    pickName = () => NAMES[Math.floor(Math.random() * NAMES.length)],
+  } = {},
+) {
+  const sessionId = input.session_id ?? 'unknown';
+  const dir = join(projectDir, '.claude', 'data', 'sessions');
+  mkdir(dir, { recursive: true });
 
-const file = join(dir, `${sessionId}.json`);
-let data = { session_id: sessionId };
-if (existsSync(file)) {
-  try { data = JSON.parse(readFileSync(file, 'utf8')); } catch {}
+  const file = join(dir, `${sessionId}.json`);
+  let data = { session_id: sessionId };
+  if (exists(file)) {
+    try { data = JSON.parse(readFile(file, 'utf8')); } catch {}
+  }
+
+  if (data.agent_name) return null;
+
+  data.agent_name = pickName();
+  writeFile(file, JSON.stringify(data, null, 2));
+  return `Tu t'appelles **${data.agent_name}** pour cette session.\n`;
 }
 
-if (!data.agent_name) {
-  const NAMES = ['Phoenix', 'Sage', 'Nova', 'Echo', 'Atlas', 'Cipher', 'Nexus', 'Oracle', 'Aurora', 'Vortex'];
-  data.agent_name = NAMES[Math.floor(Math.random() * NAMES.length)];
-  writeFileSync(file, JSON.stringify(data, null, 2));
-  process.stdout.write(`Tu t'appelles **${data.agent_name}** pour cette session.\n`);
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'));
+  const result = run(input);
+  if (result) process.stdout.write(result);
 }

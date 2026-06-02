@@ -1,11 +1,28 @@
 #!/usr/bin/env node
+// Journalise les erreurs d'API à l'arrêt en échec (StopFailure)
 import { readFileSync, appendFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const input = JSON.parse(readFileSync(0, 'utf8'));
-const logPath = join(process.env.CLAUDE_PROJECT_DIR ?? '.', '.claude', 'api-errors.log');
-try { mkdirSync(dirname(logPath), { recursive: true }); } catch { /* exists */ }
+export function run(
+  input,
+  {
+    append = appendFileSync,
+    mkdir = mkdirSync,
+    projectDir = process.env.CLAUDE_PROJECT_DIR ?? '.',
+    now = () => new Date().toISOString(),
+  } = {},
+) {
+  const logPath = join(projectDir, '.claude', 'api-errors.log');
+  try { mkdir(dirname(logPath), { recursive: true }); } catch { /* exists */ }
 
-const date = new Date().toISOString();
-const line = `${date} | ${input.error} | ${input.error_details ?? ''} | session:${input.session_id}\n`;
-appendFileSync(logPath, line);
+  const line = `${now()} | ${input.error} | ${input.error_details ?? ''} | session:${input.session_id}\n`;
+  append(logPath, line);
+  return line;
+}
+
+/* v8 ignore next 4 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'));
+  run(input);
+}

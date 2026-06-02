@@ -9,7 +9,8 @@ function makeOpts(overrides = {}) {
   return {
     counterFile: COUNTER,
     disableFile: DISABLE,
-    exists: () => false,
+    // Par défaut : les fichiers source existent, le fichier de désactivation non.
+    exists: (p) => p !== DISABLE,
     readFile: () => '0',
     writeFile: vi.fn(),
     unlink: vi.fn(),

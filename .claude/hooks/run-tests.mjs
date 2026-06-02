@@ -1,43 +1,55 @@
 #!/usr/bin/env node
 // Exécute la suite de tests à la fin d'une session (Stop)
-import { execSync, spawnSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
 
-const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
-
-function detect() {
+// Détecte le runner de tests adapté au projet.
+export function detect({ exists = existsSync, readFile = readFileSync, projectDir } = {}) {
   const pkg = join(projectDir, 'package.json');
-  if (existsSync(pkg)) {
+  if (exists(pkg)) {
     try {
-      const scripts = JSON.parse(readFileSync(pkg, 'utf8')).scripts ?? {};
+      const scripts = JSON.parse(readFile(pkg, 'utf8')).scripts ?? {};
       if (scripts.test) return ['pnpm', ['test', '--run']];
     } catch {}
   }
-  if (existsSync(join(projectDir, 'pytest.ini')) || existsSync(join(projectDir, 'pyproject.toml')))
+  if (exists(join(projectDir, 'pytest.ini')) || exists(join(projectDir, 'pyproject.toml')))
     return ['python', ['-m', 'pytest', '--tb=short', '-q']];
-  if (existsSync(join(projectDir, 'go.mod')))
-    return ['go', ['test', './...']];
+  if (exists(join(projectDir, 'go.mod'))) return ['go', ['test', './...']];
   return null;
 }
 
-const runner = detect();
-if (!runner) process.exit(0);
+export function run({
+  exists = existsSync,
+  readFile = readFileSync,
+  spawn = spawnSync,
+  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+} = {}) {
+  const runner = detect({ exists, readFile, projectDir });
+  if (!runner) return null;
 
-const [cmd, args] = runner;
-process.stderr.write(`[run-tests] Exécution : ${cmd} ${args.join(' ')}\n`);
+  const [cmd, args] = runner;
+  const result = spawn(cmd, args, {
+    cwd: projectDir,
+    encoding: 'utf8',
+    timeout: 120_000,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 
-const result = spawnSync(cmd, args, {
-  cwd: projectDir,
-  encoding: 'utf8',
-  timeout: 120_000,
-  stdio: ['ignore', 'pipe', 'pipe'],
-});
+  const out = (result.stdout ?? '') + (result.stderr ?? '');
+  let message = `[run-tests] Exécution : ${cmd} ${args.join(' ')}\n`;
+  if (result.status !== 0) {
+    message += `[run-tests] ÉCHEC (exit ${result.status})\n${out.slice(-2000)}\n`;
+  } else {
+    const last = out.split('\n').filter(Boolean).slice(-5).join('\n');
+    message += `[run-tests] ✓ Tests passés\n${last}\n`;
+  }
+  return { runner, status: result.status, message };
+}
 
-const out = (result.stdout ?? '') + (result.stderr ?? '');
-if (result.status !== 0) {
-  process.stderr.write(`[run-tests] ÉCHEC (exit ${result.status})\n${out.slice(-2000)}\n`);
-} else {
-  const last = out.split('\n').filter(Boolean).slice(-5).join('\n');
-  process.stderr.write(`[run-tests] ✓ Tests passés\n${last}\n`);
+/* v8 ignore next 4 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const result = run();
+  if (result) process.stderr.write(result.message);
 }
