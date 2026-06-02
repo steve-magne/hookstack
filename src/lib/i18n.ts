@@ -7,8 +7,8 @@ export const T = {
   hooksSelectedOne: 'hook selected',
   hooksSelectedMany: 'hooks selected',
   heroTitle1: 'Get your',
-  heroHighlight: 'claude hooks',
-  heroTitle2: 'in 2 minutes',
+  heroHighlight: 'HookStack',
+  heroTitle2: 'in 1 minute',
   catalogueTitle: 'Hooks catalogue',
   noResults: 'No hook matches these filters.',
   searchPlaceholder: 'Search for a hook, use case, tag…',
@@ -39,7 +39,7 @@ export const T = {
   addToMyConfig: 'Add to my config',
   contributeTitle: 'Contribute a repository',
   contributeSubtitle:
-    'Share a public GitHub repository that uses claude hooks. A Claude Code agent analyzes it, detects unlisted patterns and opens a PR to enrich the registry.',
+    'Share a public GitHub repository that uses HookStack. A Claude Code agent analyzes it, detects unlisted patterns and opens a PR to enrich the registry.',
   contributeSteps: [
     'Enter your public GitHub repository URL.',
     'A submission issue is prepared on the registry repository.',

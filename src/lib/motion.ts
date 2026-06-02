@@ -1,5 +1,5 @@
 /**
- * motion.ts — Le langage de motion unique de Claude Hooks.
+ * motion.ts — Le langage de motion unique de HookStack.
  *
  * Toute la grammaire d'animation du site vit ici. Rien d'animé ailleurs
  * n'invente sa propre physique : on importe ces tokens. C'est ce qui donne

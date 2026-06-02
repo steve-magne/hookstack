@@ -1,4 +1,4 @@
-# DESIGN.md — Claude Hooks
+# DESIGN.md — HookStack
 
 Spec de direction artistique du site. Ce document définit **l'esprit** visuel et
 le **langage de motion**. Toute évolution UI/animation doit s'y conformer — ou le

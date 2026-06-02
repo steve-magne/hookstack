@@ -1,7 +1,7 @@
-import { T } from '@/lib/i18n'
 import { CatalogueExplorer } from '@/components/CatalogueExplorer'
 import { SplitFlap } from '@/components/SplitFlap'
 import { allHooks } from '@/lib/hooks'
+import { T } from '@/lib/i18n'
 import { splitFlapHero } from '@/lib/motion'
 import type { Metadata } from 'next'
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     title: T.metaTitle,
     description: T.metaDescription,
     url: BASE,
-    siteName: 'Claude Hooks',
+    siteName: 'HookStack',
     locale: 'en_US',
     type: 'website',
   },
@@ -30,7 +30,7 @@ export default function HomePage() {
   const websiteJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Claude Hooks',
+    name: 'HookStack',
     url: BASE,
     description: T.metaDescription,
     potentialAction: {
