@@ -17,12 +17,11 @@ export function run({
   if (!worktreeDir || !exists(`${worktreeDir}/package.json`)) return;
 
   const hasPnpm = exec('which pnpm');
-  const out = hasPnpm
-    ? exec('pnpm install --frozen-lockfile', { cwd: worktreeDir })
-    : exec('npm ci', { cwd: worktreeDir });
-
-  const tail = out.split('\n').slice(-5).join('\n');
-  if (tail) process.stderr.write(tail + '\n');
+  if (hasPnpm) {
+    exec('pnpm install --frozen-lockfile --ignore-scripts', { cwd: worktreeDir });
+  } else {
+    exec('npm ci --ignore-scripts', { cwd: worktreeDir });
+  }
 }
 
 /* v8 ignore next 3 */
