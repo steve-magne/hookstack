@@ -22,7 +22,7 @@ export function run({
       exec('npm ci --ignore-scripts', { cwd: worktreeDir });
     }
   }
-  process.stdout.write(JSON.stringify({}) + '\n');
+
 }
 
 /* v8 ignore next 3 */
