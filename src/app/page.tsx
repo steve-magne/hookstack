@@ -67,11 +67,6 @@ export default function HomePage() {
             className="pointer-events-none absolute left-1/2 top-4 -z-10 h-64 w-[44rem] max-w-full -translate-x-1/2 rounded-full bg-indigo-600/15 blur-[120px]"
           />
 
-          <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)]/60 px-3.5 py-1.5 text-xs font-medium text-zinc-400 backdrop-blur">
-            <span className="size-1.5 rounded-full bg-indigo-400" />
-            {allHooks.length}+ {T.heroEyebrow}
-          </p>
-
           <h1 className="mx-auto max-w-3xl text-balance text-5xl font-bold leading-[1.04] tracking-tight text-white sm:text-6xl">
             <SplitFlap text={T.heroTitleA} eager {...splitFlapHero} />{' '}
             <br className="hidden sm:block" />
