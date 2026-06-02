@@ -8,11 +8,11 @@
 Browse the catalogue, select what you need, run one command.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![Hooks](https://img.shields.io/badge/hooks-66%2B-6366f1?style=flat-square)](https://claudehooks.vercel.app)
+[![Hooks](https://img.shields.io/badge/hooks-66%2B-6366f1?style=flat-square)](https://hookstack.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 
-### **[→ claudehooks.vercel.app](https://claudehooks.vercel.app)**
+### **[→ hookstack.vercel.app](https://hookstack.vercel.app)**
 
 </div>
 
@@ -52,7 +52,7 @@ Before the agent writes a file, after it runs a shell command, the instant a ses
 
 ## The catalogue
 
-Head to **[claudehooks.vercel.app](https://claudehooks.vercel.app)** — a searchable, filterable registry of hooks built by the community:
+Head to **[hookstack.vercel.app](https://hookstack.vercel.app)** — a searchable, filterable registry of hooks built by the community:
 
 - **Discover** — filter by category (`security`, `workflow`, `context`, `validation`…), provider, or keyword
 - **Select** — add to your basket with one click; selection is persisted in `localStorage`
@@ -80,7 +80,7 @@ The ones everyone installs first:
 
 ## Install in 1 minute
 
-1. Open **[claudehooks.vercel.app](https://claudehooks.vercel.app)**
+1. Open **[hookstack.vercel.app](https://hookstack.vercel.app)**
 2. Select the hooks you want
 3. Run the generated command in your project root
 
@@ -96,7 +96,7 @@ That's it. The CLI writes `.claude/hooks/*.mjs` and patches `.claude/settings.js
 
 ### Via the web (recommended)
 
-Go to **[claudehooks.vercel.app/contribute](https://claudehooks.vercel.app/contribute)** and paste a GitHub URL.  
+Go to **[hookstack.vercel.app/contribute](https://hookstack.vercel.app/contribute)** and paste a GitHub URL.  
 A GitHub Action clones the repo, runs Claude Code analysis, and opens a PR on the registry automatically.
 
 ### Via a pull request

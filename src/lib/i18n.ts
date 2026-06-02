@@ -1,13 +1,13 @@
 export const T = {
   metaTitle: 'Agentic hooks catalogue for Claude Code',
   metaDescription: 'Browse 42+ production-ready agentic hooks for Claude Code & GitHub Copilot. Security, workflow automation, context injection — install in 2 minutes.',
-  footerText: 'Claude Hooks — Community catalogue of agentic hooks',
+  footerText: 'Hookstack — Community catalogue of agentic hooks',
   navCatalogue: 'Catalogue',
   navContribute: 'Contribute',
   hooksSelectedOne: 'hook selected',
   hooksSelectedMany: 'hooks selected',
   heroTitle1: 'Get your',
-  heroHighlight: 'agentic hooks',
+  heroHighlight: 'claude hooks',
   heroTitle2: 'in 2 minutes',
   catalogueTitle: 'Hooks catalogue',
   noResults: 'No hook matches these filters.',
@@ -39,7 +39,7 @@ export const T = {
   addToMyConfig: 'Add to my config',
   contributeTitle: 'Contribute a repository',
   contributeSubtitle:
-    'Share a public GitHub repository that uses agentic hooks. A Claude Code agent analyzes it, detects unlisted patterns and opens a PR to enrich the registry.',
+    'Share a public GitHub repository that uses claude hooks. A Claude Code agent analyzes it, detects unlisted patterns and opens a PR to enrich the registry.',
   contributeSteps: [
     'Enter your public GitHub repository URL.',
     'A submission issue is prepared on the registry repository.',

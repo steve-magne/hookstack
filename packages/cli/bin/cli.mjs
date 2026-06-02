@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 import { join } from 'path'
 
-const API_BASE = 'https://claudehooks.vercel.app'
+const API_BASE = 'https://hookstack.vercel.app'
 const VERSION = '0.1.0'
 
 function parseArgs(argv) {
@@ -139,7 +139,7 @@ async function main() {
     --version, -v     Show version
     --help, -h        Show this help
 
-  Browse hooks at https://claudehooks.vercel.app
+  Browse hooks at https://hookstack.vercel.app
 `)
     return
   }
@@ -147,7 +147,7 @@ async function main() {
   if (command === 'install' || command === null) {
     if (hooks.length === 0) {
       console.error('✗ No hooks specified. Use --hooks=<slug1>,<slug2>')
-      console.error('  Browse hooks at https://claudehooks.vercel.app')
+      console.error('  Browse hooks at https://hookstack.vercel.app')
       process.exit(1)
     }
     await install(hooks, process.cwd())

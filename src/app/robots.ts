@@ -9,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: 'PerplexityBot', allow: '/' },
       { userAgent: 'Googlebot', allow: '/' },
     ],
-    sitemap: 'https://claudehooks.vercel.app/sitemap.xml',
-    host: 'https://claudehooks.vercel.app',
+    sitemap: 'https://hookstack.vercel.app/sitemap.xml',
+    host: 'https://hookstack.vercel.app',
   }
 }
