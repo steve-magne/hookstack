@@ -83,17 +83,20 @@ pnpm lint            # ESLint via next lint
 
 ## Mission produit
 
-**Promesse** : "Get your claude hooks in 1 minute" — tagline officiel du site (`T.heroTitle1/heroHighlight/heroTitle2` dans `src/lib/i18n.ts`).
+**Promesse** : "Get your HookStack in 1 minute" — tagline officiel du site (`T.heroTitle1/heroHighlight/heroTitle2` dans `src/lib/i18n.ts`).
 
 **URL de production** : `https://hookstack.vercel.app`
 
 **Flow utilisateur** :
+
 1. Browse le catalogue (filtres par catégorie, event, keyword)
 2. Sélectionne des hooks (panier persisté en `localStorage`)
 3. Copie la commande générée par `HookConfigurator` :
+
    ```bash
    npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...
    ```
+
 4. La lance à la racine de son projet → le CLI écrit les `.mjs` dans `.claude/hooks/` et patche `.claude/settings.json`
 
 **Le deliverable est la commande `npx hookstack-cli@latest`**, pas un copier-coller de JSON. `HookConfigurator.tsx` (l. 21) construit `pluginCmd` avec les slugs sélectionnés. Ne jamais décrire le flow comme "coller un settings.json" dans la doc ou le README.
@@ -125,6 +128,7 @@ Hookstack est un catalogue communautaire de hooks agentiques (Claude Code, GitHu
 Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/react`). La direction artistique complète et l'inventaire des effets sont dans **`DESIGN.md`** — à lire avant toute évolution UI. Esprit : public dev front-end, le wow vient de la *retenue maîtrisée*, pas du volume d'effets.
 
 **Règles non négociables** :
+
 - **Langage unique** : tous les springs / easings / variants viennent de `src/lib/motion.ts`. Ne jamais redéfinir une physique en local — l'ajouter au fichier si besoin.
 - **`m.*` uniquement, jamais `motion.*`** : `<MotionProvider>` (`src/app/layout.tsx`) utilise `LazyMotion features={domMax} strict` — `motion.*` lève une erreur runtime.
 - **A11y automatique** : `MotionConfig reducedMotion="user"` gère `prefers-reduced-motion` globalement. **Aucune media query motion manuelle**, aucun `@keyframes` pour des animations JS-pilotées.
@@ -137,6 +141,7 @@ Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/re
 **Principe** : `registry/registry.json` est la seule source de vérité pour les hooks. Les scripts `.claude/hooks/*.mjs` et `.claude/settings.json` sont des **artefacts générés** — ne jamais les modifier directement.
 
 **Flux de travail** :
+
 1. Modifier ou ajouter un hook dans `registry/registry.json` (champs `code_snippet`, `implementation.config`, `stack`…)
 2. Si le script `.mjs` **existe déjà** (mise à jour) : le supprimer pour forcer la recréation
    ```bash
@@ -146,6 +151,7 @@ Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/re
 4. Vérifier avec `--dry-run` avant si besoin
 
 **Ce que fait le sync** ([`.claude/sync-hooks.mjs`](.claude/sync-hooks.mjs)) :
+
 - Filtre les hooks dont `stack` est exclusivement `python` ou `java`
 - Crée les scripts `.mjs` manquants dans `.claude/hooks/` depuis `code_snippet` (ne réécrit jamais un script existant)
 - Reconstruit `.claude/settings.json` depuis les `implementation.config` du catalogue
@@ -170,6 +176,7 @@ Ajouter une entrée dans `registry/registry.json` en respectant le type `Hook`. 
 **I/O** : lire le contexte JSON depuis stdin avec `readFileSync(0, 'utf8')`, écrire les décisions de blocage sur stdout en JSON `{ decision: 'block', reason: '...' }`, les avertissements sur stderr.
 
 **Règles d'écriture** :
+
 - Un fichier = une responsabilité (pas de hooks fourre-tout)
 - Toujours `process.exit(0)` implicite si pas de blocage — ne jamais laisser le process pendouiller
 - Les PostToolUse sont **non bloquants** : les erreurs d'outils absents (`--no-install`) sont silencieuses

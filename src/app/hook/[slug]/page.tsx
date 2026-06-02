@@ -1,11 +1,11 @@
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { CategoryBadge, HookTypeBadge } from '@/components/Badge'
+import { HookSelectButton } from '@/components/HookSelectButton'
 import { allHooks, getHookBySlug } from '@/lib/hooks'
 import { T } from '@/lib/i18n'
-import { CategoryBadge, HookTypeBadge } from '@/components/Badge'
 import { PROVIDER_LABELS } from '@/types/hook'
-import { HookSelectButton } from '@/components/HookSelectButton'
+import { ArrowLeft } from 'lucide-react'
 import type { Metadata } from 'next'
+import Link from 'next/link'
 
 const BASE = 'https://hookstack.vercel.app'
 
@@ -30,7 +30,7 @@ export async function generateMetadata({
       title: hook.name,
       description: hook.description,
       url: `${BASE}/hook/${slug}`,
-      siteName: 'Claude Hooks',
+      siteName: 'HookStack',
       type: 'article',
     },
     twitter: {
@@ -73,7 +73,7 @@ export default async function HookDetailPage({
     url: `${BASE}/hook/${hook.slug}`,
     isPartOf: {
       '@type': 'WebSite',
-      name: 'Claude Hooks',
+      name: 'HookStack',
       url: BASE,
     },
   }
