@@ -18,16 +18,17 @@ export function run({
   const mainDir = worktreeList.split('\n')[0]?.split(/\s+/)[0] ?? '';
   const worktreeDir = exec('git rev-parse --show-toplevel');
 
-  if (!mainDir || !worktreeDir || mainDir === worktreeDir) return;
-
-  for (const envFile of ['.env', '.env.local', '.env.development.local']) {
-    const src = join(mainDir, envFile);
-    const dst = join(worktreeDir, envFile);
-    if (exists(src) && !exists(dst)) {
-      copy(src, dst);
-      process.stderr.write(`Copié : ${envFile} → ${worktreeDir}\n`);
+  if (mainDir && worktreeDir && mainDir !== worktreeDir) {
+    for (const envFile of ['.env', '.env.local', '.env.development.local']) {
+      const src = join(mainDir, envFile);
+      const dst = join(worktreeDir, envFile);
+      if (exists(src) && !exists(dst)) {
+        copy(src, dst);
+        process.stderr.write(`Copié : ${envFile} → ${worktreeDir}\n`);
+      }
     }
   }
+  process.stdout.write(JSON.stringify({}) + '\n');
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
