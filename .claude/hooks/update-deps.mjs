@@ -14,14 +14,15 @@ export function run({
   exists = existsSync,
 } = {}) {
   const worktreeDir = exec('git rev-parse --show-toplevel');
-  if (!worktreeDir || !exists(`${worktreeDir}/package.json`)) return;
-
-  const hasPnpm = exec('which pnpm');
-  if (hasPnpm) {
-    exec('pnpm install --frozen-lockfile --ignore-scripts', { cwd: worktreeDir });
-  } else {
-    exec('npm ci --ignore-scripts', { cwd: worktreeDir });
+  if (worktreeDir && exists(`${worktreeDir}/package.json`)) {
+    const hasPnpm = exec('which pnpm');
+    if (hasPnpm) {
+      exec('pnpm install --frozen-lockfile --ignore-scripts', { cwd: worktreeDir });
+    } else {
+      exec('npm ci --ignore-scripts', { cwd: worktreeDir });
+    }
   }
+  process.stdout.write(JSON.stringify({}) + '\n');
 }
 
 /* v8 ignore next 3 */
