@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Installe les dépendances Node dans le worktree nouvellement créé (WorktreeCreate)
 import { execSync } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 
 /* v8 ignore next 3 */
@@ -25,7 +25,9 @@ export function run({
 
 }
 
-/* v8 ignore next 3 */
+/* v8 ignore next 5 */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  readFileSync(0, 'utf8'); // consume stdin (WorktreeCreate payload)
   run();
+  process.stdout.write('{}');
 }
