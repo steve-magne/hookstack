@@ -83,7 +83,7 @@ pnpm lint            # ESLint via next lint
 
 ## Mission produit
 
-**Promesse** : "Get your agentic hooks in 2 minutes" — tagline officiel du site (`T.heroTitle1/heroHighlight/heroTitle2` dans `src/lib/i18n.ts`).
+**Promesse** : "Get your claude hooks in 1 minute" — tagline officiel du site (`T.heroTitle1/heroHighlight/heroTitle2` dans `src/lib/i18n.ts`).
 
 **URL de production** : `https://hookstack.vercel.app`
 
