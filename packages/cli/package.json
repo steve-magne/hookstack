@@ -1,10 +1,10 @@
 {
-  "name": "hookstack",
+  "name": "hookstack-cli",
   "version": "0.1.0",
-  "description": "Install Claude Code hooks from the Hookstack catalogue",
+  "description": "CLI installer for the Hookstack catalogue of Claude Code hooks",
   "type": "module",
   "bin": {
-    "hookstack": "./bin/cli.mjs"
+    "hookstack-cli": "./bin/cli.mjs"
   },
   "files": [
     "bin/"

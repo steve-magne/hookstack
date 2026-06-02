@@ -129,10 +129,10 @@ async function main() {
 
   if (help || (!command && hooks.length === 0)) {
     console.log(`
-  hookit — Claude Code hook installer
+  hookstack — Claude Code hook installer
 
   Usage:
-    npx hookstack install --hooks=<slug1>,<slug2>,...
+    npx hookstack-cli-cli install --hooks=<slug1>,<slug2>,...
 
   Options:
     --hooks <slugs>   Comma-separated list of hook slugs
