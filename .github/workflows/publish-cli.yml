@@ -17,14 +17,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Bump patch version
         id: bump
@@ -41,7 +41,7 @@ jobs:
 
       - name: Publish
         working-directory: packages/cli
-        run: pnpm publish --access public --no-git-checks --provenance
+        run: npm publish --access public --provenance
 
       - name: Commit version bump
         run: |
