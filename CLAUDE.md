@@ -138,8 +138,12 @@ Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/re
 
 **Flux de travail** :
 1. Modifier ou ajouter un hook dans `registry/registry.json` (champs `code_snippet`, `implementation.config`, `stack`…)
-2. Relancer la sync : `node .claude/sync-hooks.mjs`
-3. Vérifier avec `--dry-run` avant si besoin
+2. Si le script `.mjs` **existe déjà** (mise à jour) : le supprimer pour forcer la recréation
+   ```bash
+   rm .claude/hooks/<script>.mjs
+   ```
+3. Relancer la sync : `node .claude/sync-hooks.mjs`
+4. Vérifier avec `--dry-run` avant si besoin
 
 **Ce que fait le sync** ([`.claude/sync-hooks.mjs`](.claude/sync-hooks.mjs)) :
 - Filtre les hooks dont `stack` est exclusivement `python` ou `java`
@@ -147,7 +151,7 @@ Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/re
 - Reconstruit `.claude/settings.json` depuis les `implementation.config` du catalogue
 - Préserve la section `permissions` de l'ancien `settings.json`
 
-**Règle absolue** : toute modification d'un hook (comportement, config, script) se fait dans `registry/registry.json`, puis `node .claude/sync-hooks.mjs`. Ne jamais patcher un `.mjs` directement — il sera écrasé au prochain sync.
+**Règle absolue** : toute modification d'un hook (comportement, config, script) se fait dans `registry/registry.json`. Ne jamais patcher un `.mjs` directement (le sync ne réécrit pas les fichiers existants — supprimer le `.mjs` puis relancer le sync pour propager la mise à jour).
 
 ---
 
