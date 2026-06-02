@@ -114,19 +114,29 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/reinject-after-compact.mjs"
-          }
-        ],
-        "matcher": "compact"
-      },
-      {
-        "hooks": [
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/setup-worktree-env.mjs",
+            "statusMessage": "Copie des .env du worktree au démarrage de session..."
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/update-deps.mjs",
+            "statusMessage": "Mise à jour des dépendances du worktree..."
+          },
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/setup-install-deps.mjs"
           }
         ],
         "matcher": "startup"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/reinject-after-compact.mjs"
+          }
+        ],
+        "matcher": "compact"
       }
     ],
     "PostToolUse": [
@@ -233,26 +243,6 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-end-cleanup.mjs"
-          }
-        ]
-      }
-    ],
-    "WorktreeCreate": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/setup-worktree-env.mjs",
-            "timeout": 60,
-            "async": true,
-            "statusMessage": "Copie des .env et allocation des ports du worktree..."
-          },
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/update-deps.mjs",
-            "timeout": 300,
-            "async": true,
-            "statusMessage": "Mise à jour des dépendances du worktree..."
           }
         ]
       }
