@@ -2,19 +2,34 @@
 // Journalise les échecs d'outils pour le débogage (PostToolUseFailure)
 import { readFileSync, appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
 
-const input = JSON.parse(readFileSync(0, 'utf8'));
+export function run(
+  input,
+  {
+    append = appendFileSync,
+    mkdir = mkdirSync,
+    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+    now = () => new Date().toISOString(),
+  } = {},
+) {
+  const logDir = join(projectDir, '.claude', 'data');
+  mkdir(logDir, { recursive: true });
 
-const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
-const logDir = join(projectDir, '.claude', 'data');
-mkdirSync(logDir, { recursive: true });
+  const entry = {
+    ts: now(),
+    tool: input.tool_name ?? 'unknown',
+    input: input.tool_input ?? {},
+    error: input.error ?? input.tool_response ?? null,
+  };
 
-const entry = {
-  ts: new Date().toISOString(),
-  tool: input.tool_name ?? 'unknown',
-  input: input.tool_input ?? {},
-  error: input.error ?? input.tool_response ?? null,
-};
+  append(join(logDir, 'tool-failures.jsonl'), JSON.stringify(entry) + '\n');
+  return { entry, message: `[post-tool-failure] Échec journalisé : ${entry.tool}\n` };
+}
 
-appendFileSync(join(logDir, 'tool-failures.jsonl'), JSON.stringify(entry) + '\n');
-process.stderr.write(`[post-tool-failure] Échec journalisé : ${entry.tool}\n`);
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'));
+  const result = run(input);
+  process.stderr.write(result.message);
+}

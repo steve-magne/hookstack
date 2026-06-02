@@ -1,20 +1,23 @@
 #!/usr/bin/env node
 /**
- * sync-hooks.mjs — synchronise le catalogue (registry.json) vers ce projet
+ * sync-hooks.mjs — synchronise les scripts dogfoodés et le catalogue (registry.json)
+ *
+ * SOURCE DE VÉRITÉ DU CODE : les fichiers .claude/hooks/*.mjs
+ * registry.json en DÉRIVE le champ implementation.code_snippet.
  *
  * Usage:
- *   node .claude/sync-hooks.mjs            # sync réelle
+ *   node .claude/sync-hooks.mjs            # sync réelle : disque -> code_snippet + settings.json
  *   node .claude/sync-hooks.mjs --dry-run  # aperçu sans écriture
+ *   node .claude/sync-hooks.mjs --check    # CI : exit 1 si dérive registre/disque (n'écrit rien)
  *
  * Règles :
- *   - Exclut les hooks dont la stack est exclusivement python/java
- *   - Crée les scripts .mjs manquants dans .claude/hooks/ depuis code_snippet
- *   - NE réécrit PAS les scripts existants (pour ne pas écraser les ajustements)
- *   - Reconstruit .claude/settings.json depuis les configs du catalogue
+ *   - Si le fichier .mjs existe : son contenu EST la vérité -> recopié dans code_snippet
+ *   - Si le fichier .mjs est absent : on PRÉSERVE code_snippet (hook catalogue-only,
+ *     ex. python exclus) et on peut le seeder depuis le snippet (bootstrap)
+ *   - Reconstruit .claude/settings.json depuis les implementation.config du catalogue
  *   - Préserve la section "permissions" de l'ancien settings.json
  *
- * Source de vérité : registry/registry.json
- * Pour modifier un hook, éditer le registre puis relancer ce script.
+ * Pour modifier un hook : éditer le .mjs (le dogfooder, le tester), puis relancer ce script.
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
@@ -24,17 +27,17 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const DRY_RUN = process.argv.includes('--dry-run');
+const CHECK = process.argv.includes('--check');
 
 const REGISTRY_PATH = resolve(ROOT, 'registry/registry.json');
 const SETTINGS_PATH = resolve(ROOT, '.claude/settings.json');
-const HOOKS_DIR = resolve(ROOT, '.claude/hooks');
 
 // Stacks à exclure : si tous les éléments sont dans cette liste, le hook est exclu
 const EXCLUDED_STACKS = new Set(['python', 'java']);
 
 function isExcluded(stack) {
   if (!stack || stack.length === 0) return false;
-  return stack.every(s => EXCLUDED_STACKS.has(s));
+  return stack.every((s) => EXCLUDED_STACKS.has(s));
 }
 
 function loadJSON(path) {
@@ -44,52 +47,76 @@ function loadJSON(path) {
 const registry = loadJSON(REGISTRY_PATH);
 const existingSettings = loadJSON(SETTINGS_PATH);
 
-// Filtrer les hooks éligibles
-const eligible = registry.filter(h => !isExcluded(h.stack));
-const excluded = registry.filter(h => isExcluded(h.stack));
+// Filtrer les hooks éligibles à l'activation locale (settings.json)
+const eligible = registry.filter((h) => !isExcluded(h.stack));
+const excluded = registry.filter((h) => isExcluded(h.stack));
 
 console.log(`\nRegistre : ${registry.length} hooks total`);
 console.log(`  Éligibles : ${eligible.length}`);
 console.log(`  Exclus (python/java only) : ${excluded.length}`);
-excluded.forEach(h => console.log(`    - ${h.slug} [${h.stack}]`));
+excluded.forEach((h) => console.log(`    - ${h.slug} [${h.stack}]`));
 
-// ── Étape 1 : créer les scripts manquants ──────────────────────────────────
+// ── Étape 1 : DISQUE -> code_snippet (le fichier .mjs est la vérité) ─────────
+//
+// Pour chaque hook avec un script_path :
+//   - fichier présent  -> on recopie son contenu dans code_snippet (disque gagne)
+//   - fichier absent + code_snippet présent -> bootstrap : on seede le fichier
+//   - fichier absent + pas de snippet -> on signale
 
-console.log('\n── Scripts ──');
-let created = 0;
-let skipped = 0;
-let noSnippet = 0;
+console.log('\n── Scripts (disque -> registre) ──');
+let updated = 0; // code_snippet mis à jour depuis le disque
+let drift = 0; // divergences détectées (mode --check)
+let seeded = 0; // fichiers .mjs créés depuis le snippet (bootstrap)
+let unchanged = 0; // déjà synchrones
+let noSnippet = 0; // ni fichier ni snippet
 
-for (const hook of eligible) {
+for (const hook of registry) {
   const rel = hook.implementation?.script_path;
   if (!rel) continue;
 
   const scriptPath = resolve(ROOT, rel);
+
   if (existsSync(scriptPath)) {
-    skipped++;
-    continue;
-  }
-
-  const code = hook.implementation?.code_snippet;
-  if (!code) {
-    console.warn(`  ⚠ Pas de code_snippet : ${hook.slug}`);
+    // Le fichier est la source de vérité.
+    const disk = readFileSync(scriptPath, 'utf8');
+    const current = hook.implementation.code_snippet ?? '';
+    if (disk === current) {
+      unchanged++;
+      continue;
+    }
+    drift++;
+    if (CHECK) {
+      console.log(`  ✗ dérive : ${hook.slug} (${rel})`);
+    } else {
+      hook.implementation.code_snippet = disk;
+      console.log(`  ${DRY_RUN ? '[dry] ' : ''}↻ code_snippet mis à jour depuis disque : ${hook.slug}`);
+      updated++;
+    }
+  } else if (hook.implementation?.code_snippet) {
+    // Pas de fichier : hook catalogue-only (ex. python exclu) -> on préserve le snippet.
+    // Bootstrap : seeder le fichier depuis le snippet (sauf stack exclue).
+    if (isExcluded(hook.stack)) continue;
+    if (!DRY_RUN && !CHECK) {
+      writeFileSync(scriptPath, hook.implementation.code_snippet, 'utf8');
+      seeded++;
+    }
+    console.log(`  ${DRY_RUN || CHECK ? '[dry] ' : ''}✓ seedé depuis snippet : ${rel}`);
+  } else {
+    console.warn(`  ⚠ ni fichier ni code_snippet : ${hook.slug}`);
     noSnippet++;
-    continue;
   }
-
-  if (!DRY_RUN) {
-    writeFileSync(scriptPath, code, 'utf8');
-  }
-  console.log(`  ${DRY_RUN ? '[dry] ' : ''}✓ créé : ${rel}`);
-  created++;
 }
 
-console.log(`  ${created} créé(s), ${skipped} déjà présent(s)${noSnippet ? `, ${noSnippet} sans snippet` : ''}`);
+console.log(
+  `  ${unchanged} synchrone(s), ${updated} mis à jour, ${seeded} seedé(s)` +
+    (drift ? `, ${drift} dérive(s)` : '') +
+    (noSnippet ? `, ${noSnippet} sans source` : ''),
+);
 
-// ── Étape 2 : reconstruire settings.json ──────────────────────────────────
+// ── Étape 2 : reconstruire settings.json depuis implementation.config ────────
+// (inchangé — cette moitié fonctionne déjà)
 
 // Structure intermédiaire : hooksMap[event][matcher] = [ hookEntry, ... ]
-// L'ordre des hooks dans chaque groupe suit l'ordre du registre.
 const hooksMap = {};
 
 for (const hook of eligible) {
@@ -138,14 +165,30 @@ const newSettings = {
 
 console.log('\n── settings.json ──');
 const events = Object.keys(newHooks);
-events.forEach(evt => {
+events.forEach((evt) => {
   const total = newHooks[evt].reduce((acc, g) => acc + g.hooks.length, 0);
   console.log(`  ${evt} : ${total} hook(s)`);
 });
 
+// ── Mode --check : pas d'écriture, exit selon dérive ─────────────────────────
+if (CHECK) {
+  if (drift > 0) {
+    console.error(`\n✗ ${drift} dérive(s) entre registry.json et les .mjs sur disque.`);
+    console.error("  Lancer 'node .claude/sync-hooks.mjs' pour resynchroniser.");
+    process.exit(1);
+  }
+  console.log('\n✓ registry.json synchrone avec les scripts disque.');
+  process.exit(0);
+}
+
+// ── Écritures ────────────────────────────────────────────────────────────────
 if (!DRY_RUN) {
+  if (updated > 0) {
+    writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2) + '\n', 'utf8');
+    console.log(`\n✓ registry.json mis à jour (${updated} code_snippet)`);
+  }
   writeFileSync(SETTINGS_PATH, JSON.stringify(newSettings, null, 2) + '\n', 'utf8');
-  console.log('\n✓ .claude/settings.json mis à jour');
+  console.log('✓ .claude/settings.json mis à jour');
 } else {
   console.log('\n[dry-run] aucune écriture effectuée');
 }

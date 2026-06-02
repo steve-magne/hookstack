@@ -138,32 +138,35 @@ Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/re
 
 ## Sync catalogue → projet
 
-**Principe** : `registry/registry.json` est la seule source de vérité pour les hooks. Les scripts `.claude/hooks/*.mjs` et `.claude/settings.json` sont des **artefacts générés** — ne jamais les modifier directement.
+**Principe (inversé)** : les scripts **`.claude/hooks/*.mjs` sont la source de vérité du code des hooks**. Ce sont des fichiers réels, dogfoodés sur ce projet et couverts par des tests unitaires (`tests/hooks/`). `registry/registry.json` reste la source du **catalogue** (métadonnées : `name`, `benefit`, `description`, `implementation.config`, `stack`…) mais son champ `code_snippet` est **dérivé automatiquement** du `.mjs` sur disque. `.claude/settings.json` reste un artefact reconstruit.
+
+> Pourquoi : le CLAUDE livre `code_snippet` aux utilisateurs ([`packages/cli`](packages/cli), [`src/lib/hookExports.ts`](src/lib/hookExports.ts)). En faisant du `.mjs` la vérité, on livre exactement le code qu'on exécute et teste — fini les snippets périmés.
 
 **Flux de travail** :
 
-1. Modifier ou ajouter un hook dans `registry/registry.json` (champs `code_snippet`, `implementation.config`, `stack`…)
-2. Si le script `.mjs` **existe déjà** (mise à jour) : le supprimer pour forcer la recréation
-   ```bash
-   rm .claude/hooks/<script>.mjs
-   ```
-3. Relancer la sync : `node .claude/sync-hooks.mjs`
-4. Vérifier avec `--dry-run` avant si besoin
+1. Modifier le hook **directement dans son `.mjs`** sous `.claude/hooks/` (le dogfooder)
+2. Ajouter / mettre à jour son test dans `tests/hooks/<slug>.test.mjs`, lancer `pnpm test`
+3. Propager vers le catalogue : `node .claude/sync-hooks.mjs` (recopie le `.mjs` dans `code_snippet`)
+4. Le hook **`registry-changed-auto-sync`** lance déjà cette sync après chaque édition d'un `.mjs` ou du registre
 
 **Ce que fait le sync** ([`.claude/sync-hooks.mjs`](.claude/sync-hooks.mjs)) :
 
-- Filtre les hooks dont `stack` est exclusivement `python` ou `java`
-- Crée les scripts `.mjs` manquants dans `.claude/hooks/` depuis `code_snippet` (ne réécrit jamais un script existant)
-- Reconstruit `.claude/settings.json` depuis les `implementation.config` du catalogue
+- Pour chaque hook dont le `.mjs` existe → recopie son contenu dans `code_snippet` (le disque gagne)
+- Hook sans fichier sur disque (ex. python/java exclus) → **préserve** le `code_snippet` ; peut le seeder en `.mjs` (bootstrap)
+- Reconstruit `.claude/settings.json` depuis les `implementation.config` du catalogue (filtre les stacks `python`/`java` only)
 - Préserve la section `permissions` de l'ancien `settings.json`
+- `--dry-run` : aperçu sans écriture · `--check` : exit ≠ 0 si dérive registre/disque (garde-fou CI)
 
-**Règle absolue** : toute modification d'un hook (comportement, config, script) se fait dans `registry/registry.json`. Ne jamais patcher un `.mjs` directement (le sync ne réécrit pas les fichiers existants — supprimer le `.mjs` puis relancer le sync pour propager la mise à jour).
+**Règle absolue** : ne jamais éditer `code_snippet` à la main dans `registry.json` — il sera écrasé par le sync. Toute évolution du code passe par le `.mjs` + son test, puis sync.
 
 ---
 
-## Ajouter un hook au registre
+## Ajouter un hook
 
-Ajouter une entrée dans `registry/registry.json` en respectant le type `Hook`. Les champs `name`, `benefit`, `description`, `use_cases` sont directement en anglais dans les champs racine — pas d'overlay `i18n`. Toujours fournir un `benefit` (voir section Architecture : ligne courte, orientée résultat). Le champ `implementation.config` doit être un fragment `{ hooks: { [EventName]: [...] } }` directement fusionnable dans `settings.json`.
+1. Écrire le script `.claude/hooks/<slug>.mjs` au pattern testable (voir « Conventions hooks »)
+2. Écrire son test `tests/hooks/<slug>.test.mjs`, vérifier `pnpm test`
+3. Ajouter l'entrée métadonnées dans `registry/registry.json` (type `Hook`) : `name`, `benefit`, `description`, `use_cases` (anglais, champs racine, pas d'overlay `i18n`), `implementation.config` (fragment `{ hooks: { [EventName]: [...] } }` fusionnable) et `implementation.script_path` pointant vers le `.mjs`. Laisser `code_snippet` vide ou approximatif : il sera rempli par le sync.
+4. Lancer `node .claude/sync-hooks.mjs` — il recopie le `.mjs` dans `code_snippet`. Toujours fournir un `benefit` (ligne courte, orientée résultat).
 
 **Champ `stack`** : ne l'ajouter que si le hook est réellement spécifique à un écosystème technique. Vérifier le `code_snippet` — si le script filtre par extension (`.py`, `.tsx?`) ou appelle un outil non universel (`tsc`, `ruff`, `eslint`), annoter le `stack`. Ne jamais déduire le `stack` depuis les `tags` seuls : les tags ajoutés par l'agent d'analyse peuvent être inexacts. Lire le code.
 
@@ -173,12 +176,25 @@ Ajouter une entrée dans `registry/registry.json` en respectant le type `Hook`. 
 
 **Langage** : Node.js (`.mjs`) — OS-agnostique, disponible partout où `node` est dans le PATH. Pas de dépendances externes ; utiliser uniquement les builtins Node (`fs`, `child_process`, `path`).
 
-**I/O** : lire le contexte JSON depuis stdin avec `readFileSync(0, 'utf8')`, écrire les décisions de blocage sur stdout en JSON `{ decision: 'block', reason: '...' }`, les avertissements sur stderr.
+**Pattern obligatoire — `run()` + garde + injection de dépendances** : tout hook expose une fonction pure `export function run(input, deps = {…})` qui contient la logique et **retourne** son résultat (`{ decision, reason }` | `{ exitCode, message }` | une chaîne de contexte | `null`), sans toucher à stdin/stdout/`process.exit`. Les effets de bord (`execSync`, `fs`, `fetch`, `process.platform`, horloge) passent par des dépendances injectées avec des valeurs par défaut réelles — c'est ce qui rend le hook testable. Une garde d'entrée fait le marshalling réel :
+
+```js
+export function run(input, { exec = defaultExec } = {}) { /* logique pure */ }
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'));
+  const result = run(input);
+  if (result) process.stdout.write(JSON.stringify(result)); // ou stderr / exit selon le contrat
+}
+```
+
+**Test obligatoire** : un `tests/hooks/<slug>.test.mjs` par hook, qui importe `run` et injecte des fakes (`vi.fn()`). Modèles : [enforce-package-managers.mjs](.claude/hooks/enforce-package-managers.mjs) (décision), [per-file-coverage.mjs](.claude/hooks/per-file-coverage.mjs) (effet de bord + DI).
 
 **Règles d'écriture** :
 
 - Un fichier = une responsabilité (pas de hooks fourre-tout)
-- Toujours `process.exit(0)` implicite si pas de blocage — ne jamais laisser le process pendouiller
+- Logique dans `run()` ; la garde d'entrée ne fait que lire stdin, appeler `run`, marshaller (et `/* v8 ignore */`)
 - Les PostToolUse sont **non bloquants** : les erreurs d'outils absents (`--no-install`) sont silencieuses
 - Les PreToolUse bloquants doivent avoir une `reason` actionnable, pas juste "interdit"
 - Timeout explicite sur tous les `execSync` (évite les hooks bloquants indéfiniment)
@@ -186,7 +202,9 @@ Ajouter une entrée dans `registry/registry.json` en respectant le type `Hook`. 
 
 **Hooks Python** : les scripts restent en `.mjs` même pour les projets Python — Node.js est le seul runtime garanti (Claude Code en dépend). Un hook Python c'est un `.mjs` qui appelle des outils Python via `execSync`. Toujours préférer `uv run <tool>` à l'appel direct (`ruff`, `pytest`, `pyright`) : `uv run` résout le venv du projet automatiquement sans `source .venv/bin/activate`. Filtrer sur `.endsWith('.py')` avant tout appel lourd. Absences silencieuses (try/catch vide) pour les PostToolUse — l'outil peut simplement ne pas être installé.
 
-**Hooks actifs** : voir `.claude/settings.json` (généré par sync). 60 hooks du catalogue sont actifs sur ce projet. Pour consulter la liste complète : `node .claude/sync-hooks.mjs --dry-run`.
+**Hooks actifs** : voir `.claude/settings.json` (généré par sync). 62 hooks du catalogue sont actifs sur ce projet, chacun avec un test dans `tests/hooks/`. Pour consulter la liste complète : `node .claude/sync-hooks.mjs --dry-run`.
+
+**Garde-fous CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) : sur chaque PR, `pnpm typecheck` + `pnpm test` + `node .claude/sync-hooks.mjs --check` (échoue si le registre a dérivé des `.mjs`). Côté session, deux hooks Stop calqués sur le même patron auto-désactivable surveillent les fichiers modifiés : `stop-per-file-coverage` (couverture ≥80 %) et `stop-per-file-lint` (ESLint).
 
 ## Variables d'environnement
 

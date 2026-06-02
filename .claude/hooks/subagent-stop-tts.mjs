@@ -2,23 +2,29 @@
 // Annonce la fin d'un sous-agent par TTS (SubagentStop)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
 
-let summary = '';
-try {
-  const input = JSON.parse(readFileSync(0, 'utf8'));
-  summary = input.summary ?? '';
-} catch {}
+function defaultExec(cmd) {
+  execSync(cmd, { timeout: 10_000, stdio: 'ignore', shell: true });
+}
 
-const text = summary
-  ? `Sous-agent terminé : ${summary.slice(0, 100).replace(/[`*_#]/g, '')}`
-  : 'Sous-agent terminé';
+export function run(input, { exec = defaultExec, platform = process.platform } = {}) {
+  const summary = input?.summary ?? '';
+  const text = summary
+    ? `Sous-agent terminé : ${summary.slice(0, 100).replace(/[`*_#]/g, '')}`
+    : 'Sous-agent terminé';
+  const safe = text.replace(/"/g, '\\"');
 
-try {
-  if (process.platform === 'darwin') {
-    execSync(`say "${text.replace(/"/g, '\\"')}"`, { timeout: 10_000, stdio: 'ignore' });
-  } else {
-    execSync(`espeak "${text.replace(/"/g, '\\"')}" 2>/dev/null`, {
-      timeout: 10_000, stdio: 'ignore', shell: true,
-    });
-  }
-} catch {}
+  try {
+    if (platform === 'darwin') exec(`say "${safe}"`);
+    else exec(`espeak "${safe}" 2>/dev/null`);
+  } catch {}
+  return text;
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  let input = {};
+  try { input = JSON.parse(readFileSync(0, 'utf8')); } catch {}
+  run(input);
+}

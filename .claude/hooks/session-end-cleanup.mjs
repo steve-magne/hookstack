@@ -1,23 +1,42 @@
 #!/usr/bin/env node
 // Nettoie les fichiers temporaires Claude datant de plus de 24h (SessionEnd)
-import { readdirSync, statSync, unlinkSync, existsSync } from 'fs';
+import { readdirSync, statSync, unlinkSync } from 'fs';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
 
-const TMP = '/tmp';
 const MAX_AGE_MS = 24 * 60 * 60 * 1_000;
 const PREFIX = 'claude-';
 
-let cleaned = 0;
-try {
-  for (const f of readdirSync(TMP)) {
-    if (!f.startsWith(PREFIX)) continue;
-    const fp = join(TMP, f);
-    try {
-      const age = Date.now() - statSync(fp).mtimeMs;
-      if (age > MAX_AGE_MS) { unlinkSync(fp); cleaned++; }
-    } catch {}
-  }
-} catch {}
+export function run({
+  readdir = readdirSync,
+  stat = statSync,
+  unlink = unlinkSync,
+  tmp = '/tmp',
+  maxAge = MAX_AGE_MS,
+  now = () => Date.now(),
+} = {}) {
+  let cleaned = 0;
+  try {
+    for (const f of readdir(tmp)) {
+      if (!f.startsWith(PREFIX)) continue;
+      const fp = join(tmp, f);
+      try {
+        const age = now() - stat(fp).mtimeMs;
+        if (age > maxAge) {
+          unlink(fp);
+          cleaned++;
+        }
+      } catch {}
+    }
+  } catch {}
 
-if (cleaned > 0)
-  process.stderr.write(`[session-end-cleanup] ${cleaned} fichier(s) temporaire(s) supprimé(s).\n`);
+  return cleaned > 0
+    ? { cleaned, message: `[session-end-cleanup] ${cleaned} fichier(s) temporaire(s) supprimé(s).\n` }
+    : { cleaned: 0 };
+}
+
+/* v8 ignore next 4 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const result = run();
+  if (result?.message) process.stderr.write(result.message);
+}

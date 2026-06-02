@@ -1,0 +1,36 @@
+name: CI
+
+# Garde-fou qualité sur chaque PR / push :
+#   - typecheck + tests unitaires (dont les 62 hooks)
+#   - sync-hooks --check : échoue si registry.json a dérivé des .mjs sur disque
+#     (les .mjs sont la source de vérité du code ; code_snippet en dérive)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Registry sync drift guard
+        run: node .claude/sync-hooks.mjs --check

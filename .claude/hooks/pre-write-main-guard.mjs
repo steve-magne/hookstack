@@ -2,26 +2,35 @@
 // PreToolUse Write|Edit: bloque la première écriture sur main si aucun worktree n'est actif
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
 
-function exec(cmd) {
+function defaultExec(cmd) {
   try { return execSync(cmd, { encoding: 'utf8', timeout: 5_000 }).trim(); } catch { return ''; }
 }
 
-const branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');
-if (!branch || !/^(main|master)$/.test(branch)) process.exit(0);
+export function run(input, { exec = defaultExec } = {}) {
+  const branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');
+  if (!branch || !/^(main|master)$/.test(branch)) return null;
 
-const worktreeList = exec('git worktree list');
-const currentRoot  = exec('git rev-parse --show-toplevel');
-const mainRoot     = worktreeList.split('\n')[0]?.split(/\s+/)[0] ?? '';
-if (mainRoot !== currentRoot) process.exit(0);
+  const worktreeList = exec('git worktree list');
+  const currentRoot = exec('git rev-parse --show-toplevel');
+  const mainRoot = worktreeList.split('\n')[0]?.split(/\s+/)[0] ?? '';
+  if (mainRoot !== currentRoot) return null;
 
-const input    = JSON.parse(readFileSync(0, 'utf8'));
-const filePath = input.tool_input?.file_path ?? '(fichier inconnu)';
+  const filePath = input.tool_input?.file_path ?? '(fichier inconnu)';
 
-// Autoriser les écritures vers des fichiers dans un worktree (hors du repo principal)
-if (filePath !== '(fichier inconnu)' && !filePath.startsWith(mainRoot + '/')) process.exit(0);
+  // Autoriser les écritures vers des fichiers dans un worktree (hors du repo principal)
+  if (filePath !== '(fichier inconnu)' && !filePath.startsWith(mainRoot + '/')) return null;
 
-process.stdout.write(JSON.stringify({
-  decision: 'block',
-  reason: `Écriture sur \`${branch}\` bloquée : vous êtes sur la branche principale.\nCréez un worktree (\`git worktree add ../mon-fix -b feat/mon-fix\`) ou changez de branche avant de modifier \`${filePath}\`.`,
-}));
+  return {
+    decision: 'block',
+    reason: `Écriture sur \`${branch}\` bloquée : vous êtes sur la branche principale.\nCréez un worktree (\`git worktree add ../mon-fix -b feat/mon-fix\`) ou changez de branche avant de modifier \`${filePath}\`.`,
+  };
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'));
+  const result = run(input);
+  if (result) process.stdout.write(JSON.stringify(result));
+}

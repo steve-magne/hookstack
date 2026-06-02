@@ -196,6 +196,10 @@
           },
           {
             "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/per-file-lint.mjs"
+          },
+          {
+            "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-dedup-autodisable.mjs"
           },
           {
