@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { allHooks } from '@/lib/hooks'
 import type { Category } from '@/types/hook'
 
-const BASE = 'https://claudehooks.vercel.app'
+const BASE = 'https://hookstack.vercel.app'
 
 const CATEGORY_LABELS: Record<Category, string> = {
   security: 'Security',

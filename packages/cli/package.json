@@ -1,10 +1,10 @@
 {
-  "name": "hookit",
+  "name": "hookstack",
   "version": "0.1.0",
-  "description": "Install Claude Code hooks from the Hookit catalogue",
+  "description": "Install Claude Code hooks from the Hookstack catalogue",
   "type": "module",
   "bin": {
-    "hookit": "./bin/cli.mjs"
+    "hookstack": "./bin/cli.mjs"
   },
   "files": [
     "bin/"
@@ -19,5 +19,5 @@
     "claude"
   ],
   "license": "MIT",
-  "homepage": "https://claudehooks.vercel.app"
+  "homepage": "https://hookstack.vercel.app"
 }

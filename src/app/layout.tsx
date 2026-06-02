@@ -5,15 +5,15 @@ import { Header } from '@/components/Header'
 import { T } from '@/lib/i18n'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://claudehooks.vercel.app'),
+  metadataBase: new URL('https://hookstack.vercel.app'),
   title: {
-    template: '%s | Claude Hooks',
-    default: 'Claude Hooks',
+    template: '%s | Hookstack',
+    default: 'Hookstack',
   },
   description: T.metaDescription,
   robots: { index: true, follow: true },
   openGraph: {
-    siteName: 'Claude Hooks',
+    siteName: 'Hookstack',
     locale: 'en_US',
     type: 'website',
   },
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {T.footerText}
           </footer>
           <a
-            href="https://github.com/steve-magne/hookit"
+            href="https://github.com/steve-magne/hookstack"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="View source on GitHub"

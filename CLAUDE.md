@@ -85,18 +85,18 @@ pnpm lint            # ESLint via next lint
 
 **Promesse** : "Get your agentic hooks in 2 minutes" — tagline officiel du site (`T.heroTitle1/heroHighlight/heroTitle2` dans `src/lib/i18n.ts`).
 
-**URL de production** : `https://claudehooks.vercel.app`
+**URL de production** : `https://hookstack.vercel.app`
 
 **Flow utilisateur** :
 1. Browse le catalogue (filtres par catégorie, event, keyword)
 2. Sélectionne des hooks (panier persisté en `localStorage`)
 3. Copie la commande générée par `HookConfigurator` :
    ```bash
-   npx hookit@latest install --hooks=<slug1>,<slug2>,...
+   npx hookstack@latest install --hooks=<slug1>,<slug2>,...
    ```
 4. La lance à la racine de son projet → le CLI écrit les `.mjs` dans `.claude/hooks/` et patche `.claude/settings.json`
 
-**Le deliverable est la commande `npx hookit@latest`**, pas un copier-coller de JSON. `HookConfigurator.tsx` (l. 21) construit `pluginCmd` avec les slugs sélectionnés. Ne jamais décrire le flow comme "coller un settings.json" dans la doc ou le README.
+**Le deliverable est la commande `npx hookstack@latest`**, pas un copier-coller de JSON. `HookConfigurator.tsx` (l. 21) construit `pluginCmd` avec les slugs sélectionnés. Ne jamais décrire le flow comme "coller un settings.json" dans la doc ou le README.
 
 ## Architecture
 
