@@ -46,16 +46,18 @@ export function run({
     : exec('git diff --name-only HEAD');
 
   const failed = [];
+  let checked = 0;
   for (const f of raw.split('\n').filter(Boolean)) {
     if (!/\.[cm]?[jt]sx?$/.test(f)) continue;
     if (!exists(f)) continue; // fichier supprimé → rien à linter
+    checked++;
     const out = lint(f);
     if (out) failed.push({ f, out });
   }
 
   if (!failed.length) {
     try { unlink(counterFile); } catch {}
-    return { exitCode: 0 };
+    return { exitCode: 0, message: checked ? `✓ ESLint: no issues (${checked} file${checked > 1 ? 's' : ''})\n` : '✓ ESLint: nothing to check\n' };
   }
 
   let count = 0;
@@ -75,6 +77,6 @@ export function run({
 /* v8 ignore next 5 */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const result = run();
-  if (result.message) process.stdout.write(result.message);
+  if (result.message) process.stderr.write(result.message);
   process.exit(result.exitCode);
 }

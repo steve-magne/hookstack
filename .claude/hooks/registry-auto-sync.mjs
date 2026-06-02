@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Resynchronise registry.json depuis les scripts dogfoodés après édition d'un
-// hook .claude/hooks/*.mjs (ou du registre lui-même). (PostToolUse Write|Edit)
+// hook .claude/hooks/*.mjs (ou du registre lui-même). (FileChanged *.mjs|registry.json)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -24,7 +24,8 @@ function shouldSync(filePath) {
 }
 
 export function run(input, { exec = defaultExec, projectDir = process.env.CLAUDE_PROJECT_DIR } = {}) {
-  const filePath = input.tool_input?.file_path ?? '';
+  // FileChanged: input.file_path  |  PostToolUse (legacy): input.tool_input?.file_path
+  const filePath = input.file_path ?? input.tool_input?.file_path ?? '';
   if (!shouldSync(filePath) || !projectDir) return null;
 
   try {
