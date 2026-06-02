@@ -79,7 +79,7 @@ export function toPluginFiles(hooks: Hook[]): Record<string, string> {
     '.claude-plugin/plugin.json': JSON.stringify(
       {
         name: 'hookstack-selection',
-        description: `Hookit — ${hooks.map(h => h.slug).join(', ')}`,
+        description: `Hookstack — ${hooks.map(h => h.slug).join(', ')}`,
         version: '1.0.0',
       },
       null,
