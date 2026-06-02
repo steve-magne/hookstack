@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Copie les fichiers .env du dépôt principal vers le worktree (WorktreeCreate)
 import { execSync } from 'child_process';
-import { existsSync, copyFileSync } from 'fs';
+import { existsSync, copyFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -30,6 +30,9 @@ export function run({
   }
 }
 
+/* v8 ignore next 5 */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  readFileSync(0, 'utf8'); // consume stdin (WorktreeCreate payload)
   run();
+  process.stdout.write('{}');
 }
