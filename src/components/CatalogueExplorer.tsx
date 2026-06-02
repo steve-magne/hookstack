@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, m, useAnimationControls } from 'motion/react'
-import { ArrowDownLeft, Search, ShieldCheck, X, Zap } from 'lucide-react'
+import { ArrowDownLeft, Check, Layers, Search, ShieldCheck, X, Zap } from 'lucide-react'
 import { HookRow } from './HookRow'
 import { HookModal } from './HookModal'
 import { HookConfigurator } from './HookConfigurator'
-import { CopySwap } from './CopySwap'
+import { InstallCommand } from './InstallCommand'
 import { SplitFlap } from './SplitFlap'
 import { duration, sectionReveal, spring, splitFlap, staggerContainer } from '@/lib/motion'
 import { allHooks, filterHooks } from '@/lib/hooks'
@@ -34,6 +34,18 @@ const CATEGORY_ORDER: Category[] = [
   'workflow',
   'documentation',
 ]
+
+// Monogrammes de stack pour les puces du filtre — repère visuel instantané.
+const STACK_MONOGRAM: Record<Stack, string> = {
+  typescript: 'TS',
+  python: 'Py',
+  node: 'JS',
+}
+const STACK_MONO_COLOR: Record<Stack, string> = {
+  typescript: 'bg-blue-500/25 text-blue-100',
+  python: 'bg-yellow-500/25 text-yellow-100',
+  node: 'bg-green-500/25 text-green-100',
+}
 interface Props {
   initialCategory?: Category | null
   showConfigurator?: boolean
@@ -86,7 +98,6 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   const [preview, setPreview] = useState<Preview | null>(null)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const [cmdCopied, setCmdCopied] = useState(false)
   const selectedSlugs = useSelection((s) => s.selected)
   const selectedCount = selectedSlugs.length
 
@@ -206,40 +217,30 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
 
   return (
     <div>
-      {/* Sticky install banner — reflects live selection + pulses on change */}
-      <div className="sticky top-14 z-30 mb-8 rounded-xl border border-zinc-700 bg-[#0d0d14] px-4 py-3 shadow-lg shadow-black/30">
-        <m.span
-          aria-hidden
-          initial={{ opacity: 0 }}
-          animate={ringControls}
-          className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-indigo-400/70"
-        />
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <p className="text-xs text-zinc-500">{T.pluginInstallHint}</p>
-          <m.span
-            animate={countControls}
-            className="inline-flex origin-center items-center rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-medium tabular-nums text-indigo-300 ring-1 ring-inset ring-indigo-500/25"
-          >
-            {selectedCount} / {allHooks.length} hook{allHooks.length > 1 ? 's' : ''}
-          </m.span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="min-w-0 flex-1 overflow-hidden">
-            <code className="block truncate font-mono text-xs text-zinc-100 sm:text-sm">{installCmd}</code>
+      {/* Install terminal — only the command pins; the caption scrolls away. */}
+      <div className="mb-8">
+        <div className="sticky top-3 z-30">
+          <div className="relative">
+            <m.span
+              aria-hidden
+              initial={{ opacity: 0 }}
+              animate={ringControls}
+              className="pointer-events-none absolute inset-0 z-10 rounded-xl ring-2 ring-indigo-400/70"
+            />
+            <InstallCommand
+              command={installCmd}
+              meta={
+                <m.span
+                  animate={countControls}
+                  className="inline-flex origin-center items-center rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-medium tabular-nums text-indigo-300 ring-1 ring-inset ring-indigo-500/25"
+                >
+                  {selectedCount} / {allHooks.length} selected
+                </m.span>
+              }
+            />
           </div>
-          <button
-            aria-label={cmdCopied ? T.copied : T.copy}
-            onClick={async () => {
-              await navigator.clipboard.writeText(installCmd)
-              setCmdCopied(true)
-              setTimeout(() => setCmdCopied(false), 1500)
-            }}
-            className="shrink-0 flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors sm:py-1.5"
-          >
-            <CopySwap copied={cmdCopied} />
-            <span className="hidden sm:inline">{cmdCopied ? T.copied : T.copy}</span>
-          </button>
         </div>
+        <p className="mt-2 px-1 text-[11px] text-zinc-600">{T.installCaption}</p>
       </div>
 
       {/* Controls */}
@@ -288,33 +289,46 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
           </div>
         </div>
 
-        {/* Stack filter chips */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-zinc-500 shrink-0">{T.filterStack}:</span>
-          {(Object.keys(STACK_LABELS) as Stack[]).map((s) => {
-            const active = selectedStacks.includes(s)
-            return (
-              <button
-                key={s}
-                onClick={() => toggleStack(s)}
-                aria-pressed={active}
-                className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                  active
-                    ? STACK_COLORS[s].active
-                    : 'border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300'
-                }`}
-              >
-                {STACK_LABELS[s]}
-              </button>
-            )
-          })}
-          {selectedStacks.length > 0 && (
+        {/* Stack filter — tailor the catalogue to the user's ecosystem */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-300">
+            <Layers className="size-3.5 text-zinc-500" />
+            {T.stackFilterTitle}
+          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {(Object.keys(STACK_LABELS) as Stack[]).map((s) => {
+              const active = selectedStacks.includes(s)
+              return (
+                <button
+                  key={s}
+                  onClick={() => toggleStack(s)}
+                  aria-pressed={active}
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+                    active
+                      ? STACK_COLORS[s].active
+                      : 'border-zinc-700/70 bg-zinc-800/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                  }`}
+                >
+                  <span
+                    className={`grid size-4 place-items-center rounded-[4px] font-mono text-[9px] font-bold leading-none ${STACK_MONO_COLOR[s]}`}
+                  >
+                    {STACK_MONOGRAM[s]}
+                  </span>
+                  {STACK_LABELS[s]}
+                  {active && <Check className="size-3" />}
+                </button>
+              )
+            })}
+          </div>
+          {selectedStacks.length > 0 ? (
             <button
               onClick={() => setSelectedStacks([])}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="text-[11px] font-medium text-zinc-500 transition-colors hover:text-zinc-300"
             >
-              {T.reset}
+              {T.stackFilterReset}
             </button>
+          ) : (
+            <span className="text-[11px] text-zinc-600">{T.stackFilterHint}</span>
           )}
         </div>
       </div>
@@ -331,7 +345,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                 exit={{ opacity: 0, transition: { duration: 0.15 } }}
                 transition={spring.smooth}
               >
-                <div className="sticky top-[140px] z-20 -mt-2 mb-1 flex items-center gap-3 bg-[#0a0a0a] px-3 pt-2 pb-1">
+                <div className="sticky top-[92px] z-20 -mt-2 mb-1 flex items-center gap-3 bg-[#0a0a0a] px-3 pt-2 pb-1">
                   <h3
                     onMouseEnter={grp.isEvent ? (e) => handleEventHover(grp.key as HookType, grp.count, e.currentTarget.getBoundingClientRect().top) : undefined}
                     onMouseLeave={grp.isEvent ? handleLeave : undefined}

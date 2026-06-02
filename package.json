@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "description": "Catalogue communautaire de hooks agentiques pour Claude Code & GitHub Copilot",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "NODE_OPTIONS=--no-deprecation next dev",
     "build": "next build",

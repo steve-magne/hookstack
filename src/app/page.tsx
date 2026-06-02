@@ -60,23 +60,33 @@ export default function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
       <div className="mx-auto max-w-6xl px-4">
-        <section className="pt-16 pb-10 text-center">
-          <h1 className="mx-auto whitespace-nowrap text-4xl font-bold leading-tight text-white sm:text-5xl">
-            <SplitFlap text={T.heroTitle1} delay={0} eager {...splitFlapHero} />{' '}
+        <section className="relative pt-20 pb-12 text-center sm:pt-28">
+          {/* Halo d'accent localisé — statique, derrière le titre. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-4 -z-10 h-64 w-[44rem] max-w-full -translate-x-1/2 rounded-full bg-indigo-600/15 blur-[120px]"
+          />
+
+          <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)]/60 px-3.5 py-1.5 text-xs font-medium text-zinc-400 backdrop-blur">
+            <span className="size-1.5 rounded-full bg-indigo-400" />
+            {allHooks.length}+ {T.heroEyebrow}
+          </p>
+
+          <h1 className="mx-auto max-w-3xl text-balance text-5xl font-bold leading-[1.04] tracking-tight text-white sm:text-6xl">
+            <SplitFlap text={T.heroTitleA} eager {...splitFlapHero} />{' '}
+            <br className="hidden sm:block" />
             <SplitFlap
-              text={T.heroHighlight}
-              delay={(T.heroTitle1.length + 1) * splitFlapHero.perChar}
+              text={T.heroTitleB}
+              delay={(T.heroTitleA.length + 1) * splitFlapHero.perChar}
               eager
               innerClassName="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent"
               {...splitFlapHero}
-            />{' '}
-            <SplitFlap
-              text={T.heroTitle2}
-              delay={(T.heroTitle1.length + T.heroHighlight.length + 2) * splitFlapHero.perChar}
-              eager
-              {...splitFlapHero}
             />
           </h1>
+
+          <p className="mx-auto mt-6 max-w-xl text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg">
+            {T.heroSubtitle}
+          </p>
         </section>
 
         <section id="catalogue" className="scroll-mt-20 pb-24">
