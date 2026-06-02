@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'
 import { allHooks } from '@/lib/hooks'
 import type { Category } from '@/types/hook'
+import { NextResponse } from 'next/server'
 
 const BASE = 'https://claudehooks.vercel.app'
 
@@ -31,11 +31,11 @@ export async function GET() {
 
   const content = `# Claude Hooks
 
-> Community catalogue of agentic hooks for Claude Code & GitHub Copilot. Browse ${allHooks.length}+ hooks and generate your settings.json in 2 minutes.
+> Community catalogue of claude hooks for Claude Code & GitHub Copilot. Browse ${allHooks.length}+ hooks and generate your settings.json in 2 minutes.
 
 ## What is Claude Hooks?
 
-Claude Hooks (${BASE}) is an open-source catalogue of agentic hooks for Claude Code and GitHub Copilot. Each hook is a Node.js script (.mjs) that runs at a lifecycle event to enforce security, add quality checks, inject context, or automate workflows.
+Claude Hooks (${BASE}) is an open-source catalogue of claude hooks for Claude Code and GitHub Copilot. Each hook is a Node.js script (.mjs) that runs at a lifecycle event to enforce security, add quality checks, inject context, or automate workflows.
 
 ## What is a Claude Code hook?
 
