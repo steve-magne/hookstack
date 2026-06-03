@@ -40,7 +40,9 @@ jobs:
 
       - name: Publish
         working-directory: packages/cli
-        run: npm publish --access public --provenance
+        run: |
+          npm config delete //registry.npmjs.org/:_authToken
+          npm publish --access public --provenance
 
       - name: Commit version bump
         run: |
