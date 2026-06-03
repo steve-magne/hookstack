@@ -248,7 +248,8 @@
       "Agent onboarding",
       "Team standards"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Starts every session knowing your repo state",
@@ -634,7 +635,8 @@
       "DevSecOps audit",
       "Usage reporting"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "The agent only reaches domains you approved",
@@ -770,7 +772,8 @@
       "Change traceability",
       "Post-hoc review"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Project instructions loaded before the first word",
@@ -821,7 +824,8 @@
       "Persistent project context",
       "Automatic team instructions"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Forces uv and pnpm, kills pip/npm drift",
@@ -877,7 +881,8 @@
       "Standardize package management tooling across a Python+Node monorepo",
       "Avoid virtual environment conflicts between pip and uv"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Edits never leak back into your main repo",
@@ -928,7 +933,8 @@
       "Prevent accidental changes to the main repo in worktree mode",
       "Parallel multi-agent workflows with per-worktree isolation"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Lint, types, tests and coverage — all gated on stop",
@@ -986,7 +992,8 @@
       "Block sessions that leave lint errors or insufficient coverage",
       "Parallelize build + tests to minimize wait time"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "New worktrees boot with their own env and ports",
@@ -1307,7 +1314,8 @@
       "Automatically suspend quality checks when errors are known and being fixed",
       "Protect any potentially unstable Stop hook without changing its core logic"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Ship no untranslated string, no orphan key",
@@ -1618,7 +1626,8 @@
       "Audit prompts submitted per session",
       "Replay or analyze a past session"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Each session gets a name, not a hash",
@@ -1669,7 +1678,8 @@
       "Identify sessions in logs by a memorable name",
       "Personalize subagent TTS announcements"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Your full transcript survives every compaction",
@@ -1721,7 +1731,8 @@
       "Keep a full history before compaction",
       "Audit long sessions"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Stop clicking approve on harmless reads",
@@ -1773,7 +1784,8 @@
       "Reduce interruptions for non-destructive operations",
       "Automated security policy based on command safety"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Every tool failure logged for the post-mortem",
@@ -1825,7 +1837,8 @@
       "Debug tools that fail during autonomous sessions",
       "Detect recurring failure patterns"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Open a session, environment's already ready",
@@ -1882,7 +1895,8 @@
       "Environment always ready as soon as a session opens",
       "Automatic onboarding on a new project"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Sessions end with a clean logs directory",
@@ -1933,7 +1947,8 @@
       "Keep a clean logs directory without manual intervention",
       "Free disk space at the end of a long session"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Conventions survive a context compaction",
@@ -2038,7 +2053,8 @@
       "Compliance audit on settings.json changes",
       "Detect unauthorized configuration changes"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Bash always runs in the right env per folder",
@@ -2101,7 +2117,8 @@
       "Automatic .envrc management with direnv",
       "Sync CLAUDE_ENV_FILE with the current directory's environment"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Plans proceed without the extra approval click",
@@ -2153,7 +2170,8 @@
       "CI/CD automation with plan mode enabled",
       "Reduce interruptions during intensive interactive sessions"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "A full history of every command Claude ran",
@@ -2205,7 +2223,8 @@
       "Debug Claude Code sessions after the fact",
       "Action history for compliance or documentation"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "One tsc pass after a batch, not one per file",
@@ -2299,7 +2318,8 @@
       "Sync .env.local overrides into Claude's Bash environment on the fly",
       "Keep API keys and feature flags up to date during active development"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Tests rerun the moment a source file changes",
@@ -2392,7 +2412,8 @@
       "Reclaim disk space by removing node_modules after worktree cleanup",
       "Prevent orphaned containers when parallel subagents each run their own stack"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Keep a readable trail of every compaction",
@@ -2436,7 +2457,8 @@
       "Review what Claude summarized at context boundaries for debugging or audit",
       "Reconstruct the timeline of a long session from compaction summaries"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Get pinged when a rate limit pauses Claude",
@@ -2482,7 +2504,8 @@
       "Avoid missing rate-limit pauses during long autonomous sessions",
       "Works in iTerm2, WezTerm, Windows Terminal and other OSC-9 compatible terminals"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Every API error logged for the post-mortem",
@@ -2527,7 +2550,8 @@
       "Diagnose billing or authentication issues in CI/CD pipelines",
       "Correlate API failures with specific session IDs for debugging"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Every task ties back to a [TICKET-123]",
@@ -2757,7 +2781,8 @@
       "Guarantee node_modules is present before any tool calls run in a new project",
       "Unify the dev environment setup across team members via a shared hook"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Secrets never show on screen during a share",
@@ -2802,7 +2827,8 @@
       "Sanitize assistant output that echoes back tool results containing credentials",
       "Compliance screen recording: ensure no secrets appear in recorded sessions"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Know exactly which CLAUDE.md governed a session",
@@ -2847,7 +2873,8 @@
       "Debug unexpected model behaviour by reviewing which instruction files were loaded",
       "Track lazy-loaded nested CLAUDE.md files in monorepos for instruction coverage"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Python lands PEP 8-clean on every save",
@@ -2897,7 +2924,8 @@
       "Consistent formatting across a team",
       "Reduced review noise on style changes"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Unused imports caught before they pile up",
@@ -3050,7 +3078,8 @@
       "Avoid pip/uv conflicts in the same virtualenv",
       "Enforce team tooling conventions without having to remind the agent"
     ],
-    "votes": 0
+    "votes": 0,
+    "is_must": true
   },
   {
     "benefit": "Won't hand back until pytest is green",
@@ -3376,6 +3405,7 @@
           ]
         }
       }
-    }
+    },
+    "is_must": true
   }
 ]
