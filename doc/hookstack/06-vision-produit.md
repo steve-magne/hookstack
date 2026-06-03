@@ -1,37 +1,73 @@
-# Vision produit — Hook Doctor
+# Vision produit — Hookstack
 
 ## Ce qu'on construit
 
-Un outil qui permet à un développeur de décrire son projet et de repartir avec un `settings.json` complet, prêt à coller dans son projet Claude Code.
+Un catalogue communautaire de hooks agentiques, couplé à un CLI qui installe les hooks sélectionnés en une commande. L'objectif : qu'un développeur parte de zéro et ait ses hooks actifs dans Claude Code en moins d'une minute.
 
-## Le produit en 3 écrans
+**Tagline** : *"Get your HookStack in 1 minute"*
 
-**Écran 1 — Profil projet**
-Stack (Next.js, Python, Go…), type (SaaS, CLI, lib), préoccupations (sécu, qualité, no-breakage CI)
+## La promesse en 3 écrans
 
-> **État actuel** : le sélecteur de stack (chips `TypeScript | Python | Node.js` dans `CatalogueExplorer`) est une première implémentation de cet écran. Il filtre le catalogue en opt-out : les hooks universels restent visibles, les hooks tech-spécifiques (`stack: ["python"]`, etc.) n'apparaissent que si la stack est sélectionnée. C'est le squelette UX de l'Écran 1 — à enrichir avec le type de projet et les préoccupations.
+**Écran 1 — Browse & sélectionne**
+Le catalogue filtrable (par event type, par catégorie, par keyword, par stack). L'utilisateur coche les hooks qui lui correspondent.
 
-**Écran 2 — Hooks recommandés**
-Liste avec explication de *pourquoi* chaque hook est utile pour *ce* cas précis
+> **État actuel** : implémenté. `CatalogueExplorer` gère filtres, regroupement, et sélection persistée en `localStorage`. Le sélecteur de stack (chips TypeScript/Python/Node.js) filtre les hooks tech-spécifiques.
 
-**Écran 3 — Export**
-`settings.json` complet + scripts `.mjs` à copier dans `.claude/hooks/`
+**Écran 2 — Configure**
+`HookConfigurator` affiche en temps réel la commande `npx hookstack-cli@latest install --hooks=...` générée depuis la sélection. Un clic copie.
 
-## Pourquoi ce modèle
+> **État actuel** : implémenté. Bannière sticky avec effet pulse à chaque sélection/désélection.
 
-| Objectif | Comment ce produit y répond |
-|---|---|
-| Usage perso | Utilisé à chaque nouveau projet — premier beta-testeur |
-| Collègues | Envoie un lien, ils repartent avec leur config en 2 min |
-| Pub perso | "J'ai fait le site qui configure les hooks Claude Code" — très visible dans la communauté dev |
-| Monétisation future | Tier gratuit = config basique / Tier pro = hooks custom, équipe, mises à jour |
+**Écran 3 — Install**
+L'utilisateur colle la commande dans son terminal. Le CLI installe les `.mjs` et patche `settings.json`. Terminé.
 
-## Ce que le catalogue actuel devient
+> **État actuel** : implémenté. CLI publié sous `hookstack-cli` sur npm, code dans `packages/cli/`.
 
-Le catalogue reste le moteur en coulisses — pas la vitrine. Il alimente le moteur de recommandation.
+## Roadmap — ce qu'on n'a pas encore
 
-## Prochaines étapes
+### Priorité 1 — Enrichissement du profil projet
 
-1. Construire la collection de hooks de référence (voir `07-collection-hooks.md`)
-2. ~~Construire l'écran 1~~ **Partiel** : le sélecteur de stack est en place — étendre avec le type de projet et les préoccupations
-3. Utiliser le catalogue sur le projet Hookstack lui-même pour valider
+Le sélecteur de stack actuel est minimal (TypeScript/Python/Node.js). La prochaine étape est un "profil projet" plus riche :
+- Type de projet : SaaS web / CLI / lib / mobile
+- Préoccupations principales : sécurité / qualité / vitesse / no-breakage CI
+- Taille d'équipe : solo / petite équipe / enterprise
+
+Ce profil permettrait des **recommandations personnalisées** (écran 2 du produit cible) : "Pour un SaaS Next.js avec focus sécurité, on te recommande ces 5 hooks."
+
+### Priorité 2 — Hooks "must-have" marqués
+
+Introduire un flag `is_must` dans le registre pour les hooks considérés comme fondamentaux quelle que soit la stack. Le site les met en avant visuellement (accent indigo). Aide les nouveaux utilisateurs à démarrer sans se perdre dans 68 hooks.
+
+### Priorité 3 — Page détail enrichie (`/hook/[slug]`)
+
+Actuellement : cas d'usage, config, script. Ajouter :
+- Exemples de repos réels qui utilisent ce hook (extrait de `community_examples`)
+- Statistiques : combien d'installations via le CLI
+- Liens vers les PRs qui ont ajouté ce hook au registre
+
+### Priorité 4 — Monétisation future
+
+Le modèle gratuit fonctionne pour l'audience communautaire. Tier Pro envisagé :
+- Hooks custom privés (équipe)
+- Mises à jour automatiques des hooks installés
+- Analytics sur les hooks de son équipe
+- Support prioritaire
+
+## Ce que le catalogue devient
+
+Le catalogue ne disparaît pas — il reste le moteur. Mais la *vitrine* évolue progressivement vers un **wizard de configuration** guidé par le profil du projet. Le catalogue brut reste accessible pour les utilisateurs avancés qui savent ce qu'ils cherchent.
+
+## Pourquoi le projet existe (vision founder)
+
+- **Usage perso** : utilisé sur chaque nouveau projet — le fondateur est son propre premier beta-testeur (dogfood complet avec 62 hooks actifs)
+- **Partage rapide** : envoyer un lien à un collègue → il repart avec sa config en 2 min
+- **Visibilité communautaire** : "J'ai fait le site qui configure les hooks Claude Code" — très visible dans la communauté dev IA
+- **Effet réseau** : chaque repo contribué enrichit le catalogue → le site s'améliore automatiquement
+
+## Concurrence / alternatives
+
+- `awesome-copilot` (GitHub) : collection manuelle, pas de génération de config, pas de CLI
+- Docs officielles Claude Code : référence, pas un catalogue ni un outil d'installation
+- Le blog post perso : ponctuel, pas maintenable
+
+Hookstack occupe un angle unique : **catalogue + CLI + enrichissement communautaire automatisé**.

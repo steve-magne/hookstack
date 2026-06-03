@@ -81,6 +81,16 @@ pnpm typecheck       # Vérification TypeScript sans émission
 pnpm lint            # ESLint via next lint
 ```
 
+## Mémoire produit & vision
+
+Le dossier **`doc/hookstack/`** est la référence centrale pour la vision produit, les personas, l'UX, la stratégie marketing et les décisions architecturales. **Lire avant toute tâche qui touche à l'UX, au registre, au CLI ou au messaging.**
+
+→ [`doc/hookstack/README.md`](doc/hookstack/README.md) pour l'index complet.
+
+**Règle d'alimentation** : si tu découvres en session une information sur la vision, une décision produit, une contrainte métier ou un pattern marketing utile dans >80% des sessions futures → l'ajouter dans le fichier pertinent de `doc/hookstack/`. Seulement ce qui reste vrai sur la durée (pas de notes éphémères).
+
+---
+
 ## Mission produit
 
 **Promesse** : "Get your HookStack in 1 minute" — tagline officiel du site (`T.heroTitle1/heroHighlight/heroTitle2` dans `src/lib/i18n.ts`).
