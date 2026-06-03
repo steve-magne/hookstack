@@ -213,31 +213,29 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
 
   return (
     <div data-component="CatalogueExplorer">
-      {/* CatalogueExplorer-install-banner — commande sticky, caption défile */}
-      <div data-component="CatalogueExplorer-install-banner" className="mb-8">
-        <div className="sticky top-3 z-30">
-          <div className="relative">
-            <m.span
-              aria-hidden
-              initial={{ opacity: 0 }}
-              animate={ringControls}
-              className="pointer-events-none absolute inset-0 z-10 rounded-xl ring-2 ring-indigo-400/70"
-            />
-            <InstallCommand
-              command={installCmd}
-              meta={
-                <m.span
-                  animate={countControls}
-                  className="inline-flex origin-center items-center rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-medium tabular-nums text-indigo-300 ring-1 ring-inset ring-indigo-500/25"
-                >
-                  {selectedCount} / {allHooks.length} selected
-                </m.span>
-              }
-            />
-          </div>
+      {/* CatalogueExplorer-install-banner — commande sticky sur toute la hauteur du catalogue */}
+      <div data-component="CatalogueExplorer-install-banner" className="sticky top-3 z-30 mb-2 bg-[#0a0a0a] [box-shadow:0_-12px_0_0_#0a0a0a]">
+        <div className="relative">
+          <m.span
+            aria-hidden
+            initial={{ opacity: 0 }}
+            animate={ringControls}
+            className="pointer-events-none absolute inset-0 z-10 rounded-xl ring-2 ring-indigo-400/70"
+          />
+          <InstallCommand
+            command={installCmd}
+            meta={
+              <m.span
+                animate={countControls}
+                className="inline-flex origin-center items-center rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-medium tabular-nums text-indigo-300 ring-1 ring-inset ring-indigo-500/25"
+              >
+                {selectedCount} / {allHooks.length} selected
+              </m.span>
+            }
+          />
         </div>
-        <p className="mt-2 px-1 text-[11px] text-zinc-400">{T.installCaption}</p>
       </div>
+      <p className="mb-8 mt-2 px-1 text-[11px] text-zinc-400">{T.installCaption}</p>
 
       {/* CatalogueExplorer-controls — stack chooser + grouping toggle */}
       <div data-component="CatalogueExplorer-controls" className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
