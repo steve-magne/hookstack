@@ -17,7 +17,20 @@ export function HookConfigurator() {
     () => allHooks.filter((h) => selected.includes(h.slug)),
     [selected]
   )
-  const pluginCmd = `npx hookstack-cli@latest install --hooks=${hooks.map(h => h.slug).join(',')}`
+
+  const defaultSlugs = useMemo(
+    () => new Set(allHooks.filter((h) => h.is_must).map((h) => h.slug)),
+    []
+  )
+
+  const isDefault = useMemo(() => {
+    if (selected.length !== defaultSlugs.size) return false
+    return selected.every((s) => defaultSlugs.has(s))
+  }, [selected, defaultSlugs])
+
+  const pluginCmd = isDefault
+    ? 'npx hookstack-cli@latest install'
+    : `npx hookstack-cli@latest install --hooks=${hooks.map((h) => h.slug).join(',')}`
 
   if (hooks.length === 0) {
     return (
