@@ -8,6 +8,7 @@ import type { Hook } from '@/types/hook'
 import { PROVIDER_LABELS } from '@/types/hook'
 import { useSelection } from '@/store/selection'
 import { useT } from '@/lib/locale-context'
+import { Button } from './Button'
 import { CategoryBadge, HookTypeBadge } from './Badge'
 import { CopySwap } from './CopySwap'
 import { spring } from '@/lib/motion'
@@ -205,13 +206,10 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
               <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
                 {T.settingsFragment}
               </h3>
-              <button
-                onClick={copyFragment}
-                className="flex items-center gap-1.5 rounded-lg border border-zinc-600 bg-[var(--color-surface-2)] px-2.5 py-1 text-xs font-medium text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-[var(--color-surface-2)]/80"
-              >
+              <Button variant="surface" size="sm" onClick={copyFragment}>
                 <CopySwap copied={copied} />
                 {copied ? T.copied : T.copy}
-              </button>
+              </Button>
             </div>
             <pre className="max-h-72 overflow-auto rounded-xl border border-[var(--color-border)] bg-[#0d0d14] p-4 text-xs text-zinc-200">
               <code>{settingsFragment}</code>

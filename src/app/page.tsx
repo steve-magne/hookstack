@@ -1,4 +1,5 @@
 import { CatalogueExplorer } from '@/components/CatalogueExplorer'
+import { StickyInstallBanner } from '@/components/StickyInstallBanner'
 import { SplitFlap } from '@/components/SplitFlap'
 import { allHooks } from '@/lib/hooks'
 import { T } from '@/lib/i18n'
@@ -84,16 +85,24 @@ export default function HomePage() {
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-base leading-snug text-zinc-300 sm:text-lg">
             {T.heroSubtitleMain}
           </p>
-          <p className="mt-2 text-sm text-zinc-500">
-            {T.heroSubtitleSub}
+
+          <p className="mx-auto mt-8 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+            {T.howItWorksTitle}
           </p>
         </section>
 
-        {/* HowItWorksSection */}
-        <section data-component="HowItWorksSection" className="pb-14">
-          <p className="mb-8 text-center text-xs font-semibold uppercase tracking-widest text-zinc-500">
-            {T.howItWorksTitle}
-          </p>
+        {/* StickyInstallBanner — dynamic, reflects live selection */}
+        <StickyInstallBanner />
+
+        {/* FineTuneSection */}
+        <section data-component="FineTuneSection" className="pb-14 pt-6">
+          {/* Separator "or fine-tune it hook by hook" */}
+          <div className="mb-10 flex items-center gap-4">
+            <div className="h-px flex-1 bg-zinc-800" />
+            <span className="text-sm text-zinc-500">{T.heroSubtitleSub}</span>
+            <div className="h-px flex-1 bg-zinc-800" />
+          </div>
+
           <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 sm:grid-cols-3">
             {T.howItWorksSteps.map(({ step, title, desc }) => (
               <div key={step} className="flex flex-col gap-3 bg-zinc-950 px-6 py-5">

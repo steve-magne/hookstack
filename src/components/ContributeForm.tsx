@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ExternalLink, GitPullRequest } from 'lucide-react'
+import { Button } from './Button'
 import { buildSubmissionIssueUrl, isValidGitHubRepoUrl } from '@/lib/github'
 import { useT } from '@/lib/locale-context'
 
@@ -38,13 +39,10 @@ export function ContributeForm() {
           {error && <p className="mt-1.5 text-sm text-zinc-400">{error}</p>}
         </div>
 
-        <button
-          type="submit"
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 hover:bg-zinc-100 transition-colors"
-        >
+        <Button type="submit">
           <GitPullRequest className="size-4" />
           {T.contributeSubmitBtn}
-        </button>
+        </Button>
       </form>
 
       {issueUrl && (

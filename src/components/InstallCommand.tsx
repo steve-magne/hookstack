@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
+import { Button } from './Button'
 import { CopySwap } from './CopySwap'
 import { useT } from '@/lib/locale-context'
 
@@ -14,14 +15,21 @@ import { useT } from '@/lib/locale-context'
  *
  * `meta` : slot optionnel à droite du chrome (ex. compteur de sélection pulsé).
  */
-export function InstallCommand({ command, meta }: { command: string; meta?: ReactNode }) {
+export function InstallCommand({ command, meta, mobileCopyPrompt }: { command: string; meta?: ReactNode; mobileCopyPrompt?: string }) {
   const T = useT()
   const [copied, setCopied] = useState(false)
+  const [mobileCopied, setMobileCopied] = useState(false)
 
   const copy = async () => {
     await navigator.clipboard.writeText(command)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
+  }
+
+  const copyMobile = async () => {
+    await navigator.clipboard.writeText(mobileCopyPrompt ?? command)
+    setMobileCopied(true)
+    setTimeout(() => setMobileCopied(false), 1500)
   }
 
   const hasHooksOption = command.includes('--hooks=')
@@ -65,15 +73,35 @@ export function InstallCommand({ command, meta }: { command: string; meta?: Reac
           )}
         </code>
 
-        <button
-          onClick={copy}
-          aria-label={copied ? T.copied : T.copy}
-          className="group shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-white px-3.5 py-2 text-xs font-semibold text-zinc-900 transition-colors hover:bg-zinc-100 active:bg-zinc-200"
-        >
-          <CopySwap copied={copied} />
-          <span className="hidden sm:inline">{copied ? T.copied : T.copy}</span>
-        </button>
+        {mobileCopyPrompt ? (
+          /* Desktop only — masqué sur mobile, le CTA mobile est en dessous */
+          <div className="hidden sm:contents">
+            <Button size="md" onClick={copy} aria-label={copied ? T.copied : T.copy} className="shrink-0">
+              <CopySwap copied={copied} />
+              <span>{copied ? T.copied : T.copy}</span>
+            </Button>
+          </div>
+        ) : (
+          <Button size="md" onClick={copy} aria-label={copied ? T.copied : T.copy} className="shrink-0">
+            <CopySwap copied={copied} />
+            <span className="hidden sm:inline">{copied ? T.copied : T.copy}</span>
+          </Button>
+        )}
       </div>
+
+      {/* Mobile CTA — full-width button below the command, only when mobileCopyPrompt is set */}
+      {mobileCopyPrompt && (
+        <div className="border-t border-white/5 px-3 pb-3 pt-2 sm:hidden">
+          <Button
+            onClick={copyMobile}
+            aria-label={mobileCopied ? T.copied : T.mobileCopyBtn}
+            className="w-full"
+          >
+            <CopySwap copied={mobileCopied} />
+            {mobileCopied ? T.copied : T.mobileCopyBtn}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

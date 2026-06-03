@@ -36,6 +36,7 @@ export const T = {
   installTerminalLabel: 'project root',
   installPlaceholder: 'pick your hooks below',
   installCaption: 'Writes the hooks into .claude/hooks and patches settings.json — nothing else.',
+  mobileCopyBtn: 'Copy and Paste to Claude Code App',
   catalogueTitle: 'Hooks catalogue',
   noResults: 'No hook matches these filters.',
   filterCategory: 'Category',
