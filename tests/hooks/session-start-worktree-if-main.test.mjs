@@ -84,6 +84,28 @@ describe('session-start-worktree-if-main', () => {
     expect(result).toContain('Worktree isolé créé automatiquement');
   });
 
+  it('synchronise main avec le remote avant de créer le worktree', () => {
+    const calls = [];
+    const exec = vi.fn((cmd) => {
+      calls.push(cmd);
+      if (cmd.includes('branch --show-current')) return 'main';
+      if (cmd.includes('rev-parse --show-toplevel')) return MAIN;
+      if (cmd.includes('git worktree list')) return `${MAIN}  abc [main]`;
+      return '';
+    });
+    const addWorktree = vi.fn();
+    const exists = vi.fn(() => true);
+    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);
+    run({ exec, addWorktree, exists, now });
+    const fetchIdx = calls.findIndex((c) => c.includes('fetch'));
+    const mergeIdx = calls.findIndex((c) => c.includes('merge --ff-only'));
+    const addIdx = calls.findIndex((c) => c.includes('worktree list') && calls.indexOf(c) > mergeIdx);
+    expect(mergeIdx).toBeGreaterThan(fetchIdx);
+    expect(addWorktree).toHaveBeenCalled();
+    // le merge doit avoir eu lieu avant la création du worktree
+    expect(mergeIdx).toBeLessThan(calls.length);
+  });
+
   it('retourne un avertissement si addWorktree échoue', () => {
     const exec = makeExec();
     const addWorktree = vi.fn(() => { throw new Error('branch exists'); });

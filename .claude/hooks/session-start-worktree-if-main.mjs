@@ -40,8 +40,9 @@ export function run({
   const mainRoot = worktreeList.split('\n')[0]?.split(/\s+/)[0] ?? '';
   if (mainRoot !== currentRoot) return null;
 
-  // Récupérer les derniers commits pour détecter les merges récents
+  // Synchroniser main avec le remote avant de créer le worktree
   exec('git fetch --quiet origin main');
+  exec('git merge --ff-only origin/main');
 
   // Nettoyer les worktrees dont la branche est fusionnée dans origin/main
   const mergedBranches = new Set(
