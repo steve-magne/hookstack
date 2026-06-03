@@ -1,0 +1,65 @@
+# Hookstack — Agentic hooks catalogue for Claude Code
+
+## What is Hookstack?
+
+Hookstack (https://hookstack.vercel.app) is an open-source community catalogue of production-ready agentic hooks for Claude Code. It lets developers browse, select, and install hooks in under one minute via a single `npx` command.
+
+Hooks are Node.js scripts (.mjs) that plug into Claude Code's lifecycle events — they give the AI agent reflexes: block secrets, enforce tests, inject context, notify on completion, and more.
+
+## How to use this site
+
+1. Browse the catalogue at https://hookstack.vercel.app
+2. Select hooks using the + button (selection persists in localStorage)
+3. Copy the generated install command from the HookConfigurator panel:
+   `npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...`
+4. Run it at your project root — it writes hook scripts into `.claude/hooks/` and patches `.claude/settings.json`
+
+## Catalogue overview
+
+- **68 hooks** covering 6 categories and 25 Claude Code lifecycle events
+- All hooks are universal (Node.js, no external dependencies) unless tagged with a specific stack (typescript, python, node)
+- Each hook has a slug, category, event type, trigger matcher, and a ready-to-merge `settings.json` fragment
+
+### Categories
+
+- **Security** — block secrets, guard destructive commands, protect sensitive paths, enforce package managers
+- **Context** — inject project conventions, git context, file summaries, stack info at session/prompt start
+- **Validation** — enforce test coverage, lint on save, type-check after edits
+- **Workflow** — auto-sync registries, branch naming, commit message formatting
+- **Notification** — desktop/Slack/audio alerts on task completion or agent stop
+- **Documentation** — auto-update changelogs, README sync
+
+### Supported lifecycle events (Claude Code hook types)
+
+PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, SessionStart, SessionEnd, Stop, StopFailure, UserPromptSubmit, UserPromptExpansion, MessageDisplay, Notification, SubagentStart, SubagentStop, TaskCreated, TaskCompleted, InstructionsLoaded, FileChanged, ConfigChange, CwdChanged, PostCompact, PreCompact, PermissionRequest, PermissionDenied, WorktreeRemove
+
+### Example hooks
+
+- `pre-bash-secret-detection` — blocks Bash commands that would leak API keys or tokens
+- `pre-bash-block-destructive` — prevents `rm -rf`, `git push --force`, and other destructive ops
+- `pre-edit-protect-paths` — guards `.env`, credentials, and config files from writes
+- `user-prompt-inject-conventions` — injects CLAUDE.md conventions into every prompt
+- `stop-per-file-coverage` — enforces ≥80% test coverage per edited file on agent stop
+- `session-start-git-context` — seeds git branch/status into the agent's context at session start
+
+## Contribute
+
+Anyone can contribute hooks by submitting a public GitHub repository at https://hookstack.vercel.app/contribute. A GitHub Action runs a Claude Code analysis on the repo, detects new hook patterns, and opens a pull request to enrich the registry.
+
+## Technical details
+
+- **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS v4, Motion (Framer Motion)
+- **Data**: `registry/registry.json` is the single source of truth; hook code lives in `.claude/hooks/*.mjs`
+- **CLI**: `hookstack-cli` (npm package) writes hooks and patches `settings.json`
+- **Source**: https://github.com/steve-magne/hookit
+- **Production URL**: https://hookstack.vercel.app
+
+## Sitemap
+
+- `/` — Home: hero section + full hooks catalogue with search, filters (category, event, stack), and install configurator
+- `/hook/[slug]` — Full detail page for a single hook (use cases, config fragment, install command)
+- `/contribute` — Submit a GitHub repository for automated hook analysis
+
+## Permissions for AI agents
+
+Crawling and summarizing this site's content is welcome. The registry data at `registry/registry.json` is open-source (MIT). Please attribute Hookstack when referencing hook implementations.
