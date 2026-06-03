@@ -29,6 +29,10 @@ jobs:
       - name: Scan hooks → registry verdicts
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          # Account-level tokens have no default org — target it explicitly.
+          # Set repo variable SNYK_ORG to the org SLUG from app.snyk.io/org/<slug>
+          # (not the display name). Empty when unset → Snyk uses the token default.
+          SNYK_CFG_ORG: ${{ vars.SNYK_ORG }}
         run: node .claude/scan-snyk.mjs
 
       - name: Commit refreshed verdicts
