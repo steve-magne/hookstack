@@ -105,15 +105,19 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
     []
   )
 
+  const isDefault = useMemo(() => {
+    if (selectedSlugs.length !== mustSlugs.length) return false
+    return selectedSlugs.every((s) => mustSlugs.includes(s))
+  }, [selectedSlugs, mustSlugs])
+
   // Sticky banner reflects live selection: checking a hook updates this command.
-  const installCmd = useMemo(
-    () =>
-      `npx hookstack-cli@latest install --hooks=${allHooks
-        .filter((h) => selectedSlugs.includes(h.slug))
-        .map((h) => h.slug)
-        .join(',')}`,
-    [selectedSlugs]
-  )
+  const installCmd = useMemo(() => {
+    if (isDefault) return 'npx hookstack-cli@latest install'
+    return `npx hookstack-cli@latest install --hooks=${allHooks
+      .filter((h) => selectedSlugs.includes(h.slug))
+      .map((h) => h.slug)
+      .join(',')}`
+  }, [selectedSlugs, isDefault])
 
   useEffect(() => {
     initMust(mustSlugs)

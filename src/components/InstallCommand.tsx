@@ -24,7 +24,7 @@ export function InstallCommand({ command, meta }: { command: string; meta?: Reac
     setTimeout(() => setCopied(false), 1500)
   }
 
-  // Format figé : `npx hookstack-cli@latest install --hooks=<csv>`.
+  const hasHooksOption = command.includes('--hooks=')
   const [, hooksPart = ''] = command.split('--hooks=')
   const slugs = hooksPart ? hooksPart.split(',').filter(Boolean) : []
 
@@ -48,16 +48,20 @@ export function InstallCommand({ command, meta }: { command: string; meta?: Reac
           <span className="text-violet-300">npx</span>{' '}
           <span className="text-zinc-200">hookstack-cli@latest</span>{' '}
           <span className="text-zinc-200">install</span>{' '}
-          <span className="text-zinc-500">--hooks=</span>
-          {slugs.length > 0 ? (
-            slugs.map((s, i) => (
-              <span key={`${s}-${i}`}>
-                <span className="text-indigo-300">{s}</span>
-                {i < slugs.length - 1 && <span className="text-zinc-600">,</span>}
-              </span>
-            ))
-          ) : (
-            <span className="text-zinc-600">{T.installPlaceholder}</span>
+          {hasHooksOption && (
+            <>
+              <span className="text-zinc-500">--hooks=</span>
+              {slugs.length > 0 ? (
+                slugs.map((s, i) => (
+                  <span key={`${s}-${i}`}>
+                    <span className="text-indigo-300">{s}</span>
+                    {i < slugs.length - 1 && <span className="text-zinc-600">,</span>}
+                  </span>
+                ))
+              ) : (
+                <span className="text-zinc-600">{T.installPlaceholder}</span>
+              )}
+            </>
           )}
         </code>
 
