@@ -3334,5 +3334,48 @@
         }
       }
     }
+  },
+  {
+    "slug": "block-push-closed-pr",
+    "name": "Block push on closed PR",
+    "benefit": "prevents accidentally pushing to a merged or closed PR branch",
+    "description": "Intercepts git push commands and checks via gh CLI if the current branch has a closed or merged PR. Blocks the push with a message pointing to create a new branch from main.",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PreToolUse",
+    "trigger": "Bash",
+    "stack": null,
+    "tags": [
+      "git",
+      "github",
+      "safety",
+      "pr"
+    ],
+    "use_cases": [
+      "Prevent pushing fixes on a branch whose PR was already merged or closed",
+      "Guide the agent to always branch from an up-to-date main"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/block-push-closed-pr.mjs",
+      "code_snippet": "import { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst defaultExec = (cmd) => execSync(cmd, { encoding: 'utf8', timeout: 5000 });\n\nexport function run(input, { exec = defaultExec } = {}) {\n  const command = input?.tool_input?.command ?? '';\n  if (!/\\bgit\\s+push\\b/.test(command)) return null;\n\n  let branch;\n  try {\n    branch = exec('git rev-parse --abbrev-ref HEAD').trim();\n  } catch {\n    return null;\n  }\n\n  if (!branch || branch === 'HEAD' || branch === 'main' || branch === 'master') return null;\n\n  let state;\n  try {\n    state = exec(`gh pr view \"${branch}\" --json state --jq '.state'`).trim();\n  } catch {\n    return null;\n  }\n\n  if (state === 'CLOSED' || state === 'MERGED') {\n    const label = state === 'MERGED' ? 'mergée' : 'fermée';\n    return {\n      decision: 'block',\n      reason: `La PR de la branche '${branch}' est ${label}. Créez une nouvelle branche depuis main : git checkout -b fix/... origin/main`,\n    };\n  }\n\n  return null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "matcher": "Bash",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/block-push-closed-pr.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
   }
 ]

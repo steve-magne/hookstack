@@ -38,11 +38,20 @@ jobs:
             console.log('new=' + pkg.version);
           " >> \$GITHUB_OUTPUT
 
+      - name: Get OIDC token for npm Trusted Publisher
+        id: npm-token
+        run: |
+          token=$(curl -s "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=npm" \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            | jq -r '.value')
+          echo "::add-mask::$token"
+          echo "token=$token" >> $GITHUB_OUTPUT
+
       - name: Publish
         working-directory: packages/cli
-        run: |
-          npm config delete //registry.npmjs.org/:_authToken
-          npm publish --access public --provenance
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ steps.npm-token.outputs.token }}
 
       - name: Commit version bump
         run: |
