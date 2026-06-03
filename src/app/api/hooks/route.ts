@@ -13,11 +13,16 @@ export async function GET(req: NextRequest) {
     .map(h => ({
       slug: h.slug,
       name: h.name,
+      category: h.category,
+      hook_type: h.hook_type,
+      trigger: h.trigger,
       config: (h.implementation.config as { hooks?: unknown }).hooks
         ? { hooks: (h.implementation.config as { hooks: unknown }).hooks }
         : null,
       script_path: h.implementation.script_path ?? null,
       code_snippet: h.implementation.code_snippet ?? null,
+      security: h.implementation.security ?? null,
+      community_examples: (h.community_examples ?? []).map(c => ({ repo: c.repo })),
     }))
 
   return NextResponse.json(

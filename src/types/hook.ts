@@ -55,11 +55,26 @@ export interface CommunityExample {
   added_by: string
 }
 
+/** Severity counts from a Snyk Code (SAST) scan of the hook's source. */
+export interface SnykScan {
+  high: number
+  medium: number
+  low: number
+  /** ISO timestamp of the scan that produced these counts. */
+  scannedAt: string
+}
+
+export interface HookSecurity {
+  snyk?: SnykScan
+}
+
 export interface HookImplementation {
   type: 'settings_json'
   config: Record<string, unknown>
   code_snippet?: string
   script_path?: string
+  /** Third-party security verdicts, populated by CI (see .claude/scan-snyk.mjs). */
+  security?: HookSecurity
 }
 
 export interface Hook {

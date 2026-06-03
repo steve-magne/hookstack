@@ -1,0 +1,44 @@
+name: Snyk security scan
+
+# Refreshes per-hook Snyk Code verdicts in registry.json. Runs OUR side so
+# `npx hookstack-cli` stays token-free for end users. Manual + weekly only —
+# kept off PR/push events so it never races publish-cli and never fails on
+# forks that lack SNYK_TOKEN.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Scan hooks → registry verdicts
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: node .claude/scan-snyk.mjs
+
+      - name: Commit refreshed verdicts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet registry/registry.json; then
+            echo "No verdict changes."
+          else
+            git add registry/registry.json
+            git commit -m "chore(security): refresh Snyk verdicts [skip ci]"
+            git push
+          fi
