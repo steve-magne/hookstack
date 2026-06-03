@@ -5,6 +5,8 @@ interface SelectionState {
   selected: string[]
   mustInitialized: boolean
   seenMustSlugs: string[]
+  // Non-persisté — repart à false à chaque nouvelle session
+  sessionTouched: boolean
   toggle: (slug: string) => void
   add: (slug: string) => void
   remove: (slug: string) => void
@@ -19,18 +21,25 @@ export const useSelection = create<SelectionState>()(
       selected: [],
       mustInitialized: false,
       seenMustSlugs: [],
+      sessionTouched: false,
       toggle: (slug) =>
         set((s) => ({
+          sessionTouched: true,
           selected: s.selected.includes(slug)
             ? s.selected.filter((x) => x !== slug)
             : [...s.selected, slug],
         })),
       add: (slug) =>
         set((s) => ({
+          sessionTouched: true,
           selected: s.selected.includes(slug) ? s.selected : [...s.selected, slug],
         })),
-      remove: (slug) => set((s) => ({ selected: s.selected.filter((x) => x !== slug) })),
-      clear: () => set({ selected: [], mustInitialized: false, seenMustSlugs: [] }),
+      remove: (slug) =>
+        set((s) => ({
+          sessionTouched: true,
+          selected: s.selected.filter((x) => x !== slug),
+        })),
+      clear: () => set({ selected: [], mustInitialized: false, seenMustSlugs: [], sessionTouched: false }),
       has: (slug) => get().selected.includes(slug),
       initMust: (slugs) =>
         set((s) => {
@@ -42,6 +51,7 @@ export const useSelection = create<SelectionState>()(
             mustInitialized: true,
             seenMustSlugs: slugs,
             selected: [...s.selected, ...toAdd],
+            // sessionTouched inchangé — initMust n'est pas une action utilisateur
           }
         }),
     }),
@@ -50,6 +60,12 @@ export const useSelection = create<SelectionState>()(
       storage: createJSONStorage(() =>
         typeof window !== 'undefined' ? localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} }
       ),
+      // sessionTouched exclu de la persistance → repart toujours à false au chargement
+      partialize: (state) => ({
+        selected: state.selected,
+        mustInitialized: state.mustInitialized,
+        seenMustSlugs: state.seenMustSlugs,
+      }),
     }
   )
 )

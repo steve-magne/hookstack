@@ -10,7 +10,7 @@ export function Header() {
           </span>
         </Link>
         <a
-          href="https://github.com/steve-magne/hookit"
+          href="https://github.com/steve-magne/hookstack"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-zinc-400 transition-colors hover:text-white"

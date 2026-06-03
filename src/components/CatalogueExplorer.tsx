@@ -1,12 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, m, useAnimationControls } from 'motion/react'
+import { AnimatePresence, m } from 'motion/react'
 import { ArrowDownLeft, Check, Layers, ShieldCheck, Zap } from 'lucide-react'
 import { HookRow } from './HookRow'
 import { HookModal } from './HookModal'
 import { HookConfigurator } from './HookConfigurator'
-import { InstallCommand } from './InstallCommand'
 import { SplitFlap } from './SplitFlap'
 import { duration, sectionReveal, spring, splitFlap, staggerContainer } from '@/lib/motion'
 import { allHooks, filterHooks } from '@/lib/hooks'
@@ -87,7 +86,6 @@ function buildGroups(hooks: Hook[], groupBy: GroupBy, categoryLabels: Record<str
 
 export function CatalogueExplorer({ initialCategory, showConfigurator = true }: Props) {
   const T = useT()
-  const initMust = useSelection((s) => s.initMust)
   const [groupBy, setGroupBy] = useState<GroupBy>('event')
   const [selectedStacks, setSelectedStacks] = useState<Stack[]>([])
   const [active, setActive] = useState<Hook | null>(null)
@@ -98,53 +96,6 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const selectedSlugs = useSelection((s) => s.selected)
-  const selectedCount = selectedSlugs.length
-
-  const mustSlugs = useMemo(
-    () => allHooks.filter((h) => h.is_must).map((h) => h.slug),
-    []
-  )
-
-  const isDefault = useMemo(() => {
-    if (selectedSlugs.length !== mustSlugs.length) return false
-    return selectedSlugs.every((s) => mustSlugs.includes(s))
-  }, [selectedSlugs, mustSlugs])
-
-  // Sticky banner reflects live selection: checking a hook updates this command.
-  const installCmd = useMemo(() => {
-    if (isDefault) return 'npx hookstack-cli@latest install'
-    return `npx hookstack-cli@latest install --hooks=${allHooks
-      .filter((h) => selectedSlugs.includes(h.slug))
-      .map((h) => h.slug)
-      .join(',')}`
-  }, [selectedSlugs, isDefault])
-
-  useEffect(() => {
-    initMust(mustSlugs)
-  }, [initMust, mustSlugs])
-
-  // Pulse the banner when selection changes — guard 800ms to skip init.
-  const ringControls = useAnimationControls()
-  const countControls = useAnimationControls()
-  const prevCount = useRef(selectedCount)
-  const pulseReady = useRef(false)
-  useEffect(() => {
-    const t = setTimeout(() => {
-      pulseReady.current = true
-    }, 800)
-    return () => clearTimeout(t)
-  }, [])
-  useEffect(() => {
-    if (!pulseReady.current) {
-      prevCount.current = selectedCount
-      return
-    }
-    if (selectedCount !== prevCount.current) {
-      ringControls.start({ opacity: [0, 1, 0], transition: { duration: 0.7, ease: 'easeOut' } })
-      countControls.start({ scale: [1, 1.35, 1], transition: { duration: 0.35, ease: 'easeOut' } })
-      prevCount.current = selectedCount
-    }
-  }, [selectedCount, ringControls, countControls])
 
   const handleHover = useCallback((hook: Hook, y: number) => {
     if (hideTimer.current) clearTimeout(hideTimer.current)
@@ -217,30 +168,6 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
 
   return (
     <div data-component="CatalogueExplorer">
-      {/* CatalogueExplorer-install-banner — commande sticky sur toute la hauteur du catalogue */}
-      <div data-component="CatalogueExplorer-install-banner" className="sticky top-3 z-30 mb-2 bg-[#0a0a0a] [box-shadow:0_-12px_0_0_#0a0a0a]">
-        <div className="relative">
-          <m.span
-            aria-hidden
-            initial={{ opacity: 0 }}
-            animate={ringControls}
-            className="pointer-events-none absolute inset-0 z-10 rounded-xl ring-2 ring-indigo-400/70"
-          />
-          <InstallCommand
-            command={installCmd}
-            meta={
-              <m.span
-                animate={countControls}
-                className="inline-flex origin-center items-center rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-medium tabular-nums text-indigo-300 ring-1 ring-inset ring-indigo-500/25"
-              >
-                {selectedCount} / {allHooks.length} selected
-              </m.span>
-            }
-          />
-        </div>
-      </div>
-      <p className="mb-8 mt-2 px-1 text-[11px] text-zinc-400">{T.installCaption}</p>
-
       {/* CatalogueExplorer-controls — stack chooser + grouping toggle */}
       <div data-component="CatalogueExplorer-controls" className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* CatalogueExplorer-stack-filter */}
