@@ -23,18 +23,24 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning className="min-h-screen flex flex-col" style={{ position: 'relative', zIndex: 1 }}>
+      {/* RootLayout */}
+      <body suppressHydrationWarning data-component="RootLayout" className="min-h-screen flex flex-col" style={{ position: 'relative', zIndex: 1 }}>
         <MotionProvider>
+          {/* Header */}
           <Header />
-          <main className="flex-1">{children}</main>
-          <footer className="border-t border-[var(--color-border)] py-6 text-center text-sm text-zinc-500">
+          {/* PageContent */}
+          <main data-component="PageContent" className="flex-1">{children}</main>
+          {/* Footer */}
+          <footer data-component="Footer" className="border-t border-[var(--color-border)] py-6 text-center text-sm text-zinc-500">
             <span>{T.footerText}</span>
             <span className="mx-2 text-zinc-700">·</span>
             <Link href="/contribute" className="text-zinc-400 transition-colors hover:text-white">
               {T.navContribute}
             </Link>
           </footer>
+          {/* GitHubFab */}
           <a
+            data-component="GitHubFab"
             href="https://github.com/steve-magne/hookstack"
             target="_blank"
             rel="noopener noreferrer"

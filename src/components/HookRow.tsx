@@ -28,6 +28,7 @@ export function HookRow({ hook, groupBy, onHover, onLeave, intro = false, introD
 
   return (
     <m.div
+      data-component="HookRow"
       layout
       variants={fadeUp}
       exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
@@ -45,7 +46,9 @@ export function HookRow({ hook, groupBy, onHover, onLeave, intro = false, introD
       }}
       className="group flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-3 py-3 transition-colors hover:border-[var(--color-border)] hover:bg-[var(--color-surface)] focus:outline-none focus-visible:border-white/40"
     >
+      {/* HookRow-checkbox */}
       <m.span
+        data-component="HookRow-checkbox"
         whileTap={{ scale: 0.85 }}
         aria-label={selected ? T.removeFromSelection : T.addToSelection}
         className="-m-1 shrink-0 p-1"
@@ -59,7 +62,8 @@ export function HookRow({ hook, groupBy, onHover, onLeave, intro = false, introD
         </span>
       </m.span>
 
-      <div className="min-w-0 flex-1">
+      {/* HookRow-name */}
+      <div data-component="HookRow-name" className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <h4 className="truncate font-medium text-zinc-200 group-hover:text-white">
             <SplitFlap text={hook.name} play={intro} delay={introDelay} />
@@ -77,7 +81,8 @@ export function HookRow({ hook, groupBy, onHover, onLeave, intro = false, introD
         </div>
       </div>
 
-      <div className="hidden shrink-0 sm:block">
+      {/* HookRow-badge (desktop) */}
+      <div data-component="HookRow-badge" className="hidden shrink-0 sm:block">
         {groupBy === 'event' ? (
           <CategoryBadge category={hook.category} />
         ) : (

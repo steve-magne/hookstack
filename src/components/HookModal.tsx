@@ -65,6 +65,7 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
 
   return (
     <m.div
+      data-component="HookModal-overlay"
       onClick={onClose}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -72,7 +73,9 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
       transition={{ duration: 0.2 }}
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
     >
+      {/* HookModal-dialog */}
       <m.div
+        data-component="HookModal-dialog"
         role="dialog"
         aria-modal="true"
         aria-label={hook.name}
@@ -87,10 +90,12 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
         onDragEnd={handleDragEnd}
         className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/60 sm:rounded-2xl"
       >
-        {/* Drag handle — mobile only */}
+        {/* HookModal-drag-handle — mobile only */}
         <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-zinc-600 sm:hidden" />
 
+        {/* HookModal-close */}
         <button
+          data-component="HookModal-close"
           onClick={onClose}
           aria-label={T.close}
           className="absolute right-4 top-4 z-10 flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-[var(--color-surface-2)] hover:text-white"
@@ -98,15 +103,18 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
           <X className="size-4" />
         </button>
 
-        <div className="overflow-y-auto p-6">
+        {/* HookModal-body */}
+        <div data-component="HookModal-body" className="overflow-y-auto p-6">
+          {/* HookModal-badges */}
           <div className="mb-4 flex flex-wrap items-center gap-2 pr-8">
             <CategoryBadge category={hook.category} />
             <HookTypeBadge type={hook.hook_type} trigger={hook.trigger} />
           </div>
 
           <h2 className="mb-2 text-2xl font-bold text-white">{hook.name}</h2>
+          {/* HookModal-benefit */}
           {hook.benefit && (
-            <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-indigo-500/20 bg-indigo-500/[0.07] px-3.5 py-2.5">
+            <div data-component="HookModal-benefit" className="mb-3 flex items-start gap-2.5 rounded-xl border border-indigo-500/20 bg-indigo-500/[0.07] px-3.5 py-2.5">
               <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-300 ring-1 ring-inset ring-indigo-500/25">
                 <Zap className="size-3.5" fill="currentColor" strokeWidth={0} />
               </span>
@@ -115,6 +123,7 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
           )}
           <p className="mb-5 text-zinc-300">{hook.description}</p>
 
+          {/* HookModal-actions */}
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <m.button
               whileTap={{ scale: 0.96 }}
@@ -150,8 +159,10 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
             </Link>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div>
+          {/* HookModal-details-grid */}
+          <div data-component="HookModal-details-grid" className="grid gap-6 sm:grid-cols-2">
+            {/* HookModal-use-cases */}
+            <div data-component="HookModal-use-cases">
               <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">
                 {T.useCases}
               </h3>
@@ -188,7 +199,8 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
             </div>
           </div>
 
-          <div className="mt-6">
+          {/* HookModal-settings-fragment */}
+          <div data-component="HookModal-settings-fragment" className="mt-6">
             <div className="mb-2 flex items-center justify-between">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
                 {T.settingsFragment}
@@ -206,8 +218,9 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
             </pre>
           </div>
 
+          {/* HookModal-code-snippet */}
           {hook.implementation.code_snippet && (
-            <div className="mt-6">
+            <div data-component="HookModal-code-snippet" className="mt-6">
               <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">
                 Script · {hook.implementation.script_path}
               </h3>

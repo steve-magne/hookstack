@@ -59,8 +59,10 @@ export default function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
-      <div className="mx-auto max-w-6xl px-4">
-        <section className="relative pt-20 pb-12 text-center sm:pt-28">
+      {/* HomePage */}
+      <div data-component="HomePage" className="mx-auto max-w-6xl px-4">
+        {/* HeroSection */}
+        <section data-component="HeroSection" className="relative pt-20 pb-12 text-center sm:pt-28">
           {/* Halo d'accent localisé — statique, derrière le titre. */}
           <div
             aria-hidden
@@ -84,7 +86,8 @@ export default function HomePage() {
           </p>
         </section>
 
-        <section id="catalogue" className="scroll-mt-20 pb-24">
+        {/* CatalogueSection */}
+        <section data-component="CatalogueSection" id="catalogue" className="scroll-mt-20 pb-24">
           <CatalogueExplorer />
         </section>
       </div>
