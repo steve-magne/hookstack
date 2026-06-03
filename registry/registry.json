@@ -30,7 +30,15 @@
         }
       },
       "script_path": ".claude/hooks/detect-secrets.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Secret detection before Bash execution",
@@ -83,7 +91,15 @@
         }
       },
       "script_path": ".claude/hooks/block-destructive.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Destructive command blocking",
@@ -136,7 +152,15 @@
         }
       },
       "script_path": ".claude/hooks/protect-paths.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Sensitive file write protection",
@@ -183,7 +207,15 @@
         }
       },
       "script_path": ".claude/hooks/guard-push-main.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "git push to main guardrail",
@@ -229,7 +261,15 @@
         }
       },
       "script_path": ".claude/hooks/inject-conventions.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Project conventions injection",
     "provider": [
@@ -281,7 +321,15 @@
         }
       },
       "script_path": ".claude/hooks/load-git-context.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Load Git context at startup",
@@ -327,7 +375,15 @@
         }
       },
       "script_path": ".claude/hooks/inject-datetime.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Current date and time injection",
@@ -373,7 +429,15 @@
         }
       },
       "script_path": ".claude/hooks/autoformat.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Automatic formatting after write",
@@ -420,7 +484,15 @@
         }
       },
       "script_path": ".claude/hooks/eslint-check.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "ESLint lint after write",
@@ -470,7 +542,15 @@
         }
       },
       "script_path": ".claude/hooks/typecheck.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "TypeScript type checking",
@@ -519,7 +599,15 @@
         }
       },
       "script_path": ".claude/hooks/run-tests.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Run tests at end of response",
@@ -565,7 +653,15 @@
         }
       },
       "script_path": ".claude/hooks/notify-slack.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Slack notification on agent event",
     "provider": [
@@ -616,7 +712,15 @@
         }
       },
       "script_path": ".claude/hooks/audit-log.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "End-of-session audit log",
     "provider": [
@@ -663,7 +767,15 @@
         }
       },
       "script_path": ".claude/hooks/webfetch-allowlist.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Domain allowlist for WebFetch",
     "provider": [
@@ -708,7 +820,15 @@
         }
       },
       "script_path": ".claude/hooks/tool-usage.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Tool usage tracking",
     "provider": [
@@ -753,7 +873,15 @@
         }
       },
       "script_path": ".claude/hooks/session-changelog.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Session summary generation",
     "provider": [
@@ -805,7 +933,15 @@
         }
       },
       "script_path": ".claude/hooks/load-instructions.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Load project instructions at startup",
     "provider": [
@@ -858,7 +994,15 @@
         }
       },
       "script_path": ".claude/hooks/enforce-package-managers.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Enforce package managers",
     "provider": [
@@ -915,7 +1059,15 @@
         }
       },
       "script_path": ".claude/hooks/worktree-guard.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Worktree guardrail (Edit/Write)",
     "provider": [
@@ -971,7 +1123,15 @@
         }
       },
       "script_path": ".claude/hooks/quality-check.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Automatic quality check (Stop)",
     "provider": [
@@ -1027,7 +1187,15 @@
         }
       },
       "script_path": ".claude/hooks/setup-worktree-env.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Worktree env initialization",
     "provider": [
@@ -1081,7 +1249,15 @@
         }
       },
       "script_path": ".claude/hooks/update-deps.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Worktree dependency update",
     "provider": [
@@ -1135,7 +1311,15 @@
         }
       },
       "script_path": ".claude/hooks/missing-test-detection.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Missing test detection (Stop)",
@@ -1187,7 +1371,15 @@
         }
       },
       "script_path": ".claude/hooks/per-file-coverage.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Per-modified-file coverage (Stop)",
@@ -1246,7 +1438,15 @@
         }
       },
       "code_snippet": "#!/usr/bin/env node\n// Lint ESLint chaque fichier .js/.ts modifié depuis la merge base (Stop)\nimport { readFileSync, existsSync, writeFileSync, unlinkSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst pid = process.ppid ?? 'unknown';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\n// Signatures indiquant qu'ESLint n'a pas pu DÉMARRER (config absente, mauvaise version,\n// binaire introuvable) — à distinguer d'une vraie violation de lint. Dans ce cas on traite\n// ESLint comme un outil indisponible et on ne fait PAS échouer le hook (évite les faux positifs).\nconst ESLINT_UNAVAILABLE =\n  /Oops! Something went wrong|could ?n'?t find an? eslint\\.config|eslint\\.config\\.\\(|migration guide|Cannot find module|could not determine executable|command not found|ENOENT/i;\n\nexport function isEslintUnavailable(output) {\n  return !output || ESLINT_UNAVAILABLE.test(output);\n}\n\n// Retourne null si le fichier passe ESLint (ou si ESLint est indisponible), sinon la sortie d'erreur.\n/* v8 ignore next 14 */\nfunction defaultLint(file) {\n  try {\n    execSync(`npx --no-install eslint --max-warnings=0 \"${file}\"`, {\n      encoding: 'utf8',\n      stdio: 'pipe',\n      timeout: 15_000,\n    });\n    return null;\n  } catch (err) {\n    const out = `${err.stdout ?? ''}\\n${err.stderr ?? ''}`.trim();\n    if (isEslintUnavailable(out)) return null; // ESLint n'a pas démarré → skip, pas un échec\n    return out || 'lint error';\n  }\n}\n\nexport function run({\n  exec = defaultExec,\n  lint = defaultLint,\n  exists = existsSync,\n  readFile = readFileSync,\n  writeFile = writeFileSync,\n  unlink = unlinkSync,\n  counterFile = `/tmp/.claude-per-lint-count-${pid}`,\n  disableFile = `/tmp/.claude-per-lint-disabled-${pid}`,\n} = {}) {\n  if (exists(disableFile)) {\n    process.stderr.write(`[per-file-lint] SUSPENDU (≥3 échecs). rm '${disableFile}' pour réactiver.\\n`);\n    return { exitCode: 0 };\n  }\n\n  const base = exec('git merge-base origin/main HEAD');\n  const head = exec('git rev-parse HEAD');\n  const raw = base && base !== head\n    ? exec(`git diff --name-only ${base} HEAD`)\n    : exec('git diff --name-only HEAD');\n\n  const failed = [];\n  let checked = 0;\n  for (const f of raw.split('\\n').filter(Boolean)) {\n    if (!/\\.[cm]?[jt]sx?$/.test(f)) continue;\n    if (!exists(f)) continue; // fichier supprimé → rien à linter\n    checked++;\n    const out = lint(f);\n    if (out) failed.push({ f, out });\n  }\n\n  if (!failed.length) {\n    try { unlink(counterFile); } catch {}\n    return { exitCode: 0, message: checked ? `✓ ESLint: no issues (${checked} file${checked > 1 ? 's' : ''})\\n` : '✓ ESLint: nothing to check\\n' };\n  }\n\n  let count = 0;\n  try { count = parseInt(readFile(counterFile, 'utf8').trim(), 10) || 0; } catch {}\n  count++;\n  writeFile(counterFile, String(count));\n\n  let msg = `[FAIL] ESLint signale des problèmes sur les fichiers modifiés :\\n${failed.map(({ f }) => `  - ${f}`).join('\\n')}\\n→ Corriger les erreurs de lint (ou \\`eslint --fix\\`).\\n`;\n  if (count >= 3) {\n    writeFile(disableFile, '');\n    msg += `[AUTO-DISABLE] hook suspendu après ${count} échecs. rm '${disableFile}' pour réactiver.\\n`;\n  }\n\n  return { exitCode: 2, message: msg };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result.message) process.stderr.write(result.message);\n  process.exit(result.exitCode);\n}\n",
-      "script_path": ".claude/hooks/per-file-lint.mjs"
+      "script_path": ".claude/hooks/per-file-lint.mjs",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "community_examples": [],
     "tags": [
@@ -1293,7 +1493,15 @@
         }
       },
       "script_path": ".claude/hooks/session-dedup-autodisable.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Auto-disable Stop hook after N failures",
     "provider": [
@@ -1347,7 +1555,15 @@
         }
       },
       "script_path": ".claude/hooks/i18n-validation.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Full i18n validation (Stop)",
     "provider": [
@@ -1399,7 +1615,15 @@
         }
       },
       "script_path": ".claude/hooks/notification-tts.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "TTS voice notification",
     "provider": [
@@ -1451,7 +1675,15 @@
         }
       },
       "script_path": ".claude/hooks/stop-tts.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Voice task-completion announcement",
     "provider": [
@@ -1503,7 +1735,15 @@
         }
       },
       "script_path": ".claude/hooks/subagent-start-tts.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Subagent start voice announcement",
     "provider": [
@@ -1555,7 +1795,15 @@
         }
       },
       "script_path": ".claude/hooks/subagent-stop-tts.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Subagent end voice summary",
     "provider": [
@@ -1607,7 +1855,15 @@
         }
       },
       "script_path": ".claude/hooks/user-prompt-log.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Per-session prompt log",
     "provider": [
@@ -1659,7 +1915,15 @@
         }
       },
       "script_path": ".claude/hooks/user-prompt-name-agent.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Automatic session naming",
     "provider": [
@@ -1712,7 +1976,15 @@
         }
       },
       "script_path": ".claude/hooks/pre-compact-backup.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Transcript backup before compaction",
     "provider": [
@@ -1765,7 +2037,15 @@
         }
       },
       "script_path": ".claude/hooks/permission-auto-allow.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Auto-approve read-only permissions",
     "provider": [
@@ -1818,7 +2098,15 @@
         }
       },
       "script_path": ".claude/hooks/post-tool-failure-log.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Structured tool failure log",
     "provider": [
@@ -1871,7 +2159,15 @@
         }
       },
       "script_path": ".claude/hooks/setup-check-deps.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Dependency check and install at startup",
     "provider": [
@@ -1929,7 +2225,15 @@
         }
       },
       "script_path": ".claude/hooks/session-end-cleanup.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Temporary file cleanup at session end",
     "provider": [
@@ -1981,7 +2285,15 @@
         }
       },
       "script_path": ".claude/hooks/reinject-after-compact.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Re-inject context after compaction",
@@ -2034,7 +2346,15 @@
         }
       },
       "script_path": ".claude/hooks/config-audit-log.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Configuration change audit log",
     "provider": [
@@ -2098,7 +2418,15 @@
         }
       },
       "script_path": ".claude/hooks/reload-direnv.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Reload direnv on directory change",
     "provider": [
@@ -2151,7 +2479,15 @@
         }
       },
       "script_path": ".claude/hooks/auto-allow-exit-plan.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Automatic ExitPlanMode approval",
     "provider": [
@@ -2204,7 +2540,15 @@
         }
       },
       "script_path": ".claude/hooks/bash-command-log.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Bash command log",
     "provider": [
@@ -2249,7 +2593,15 @@
         }
       },
       "script_path": ".claude/hooks/post-tool-batch-typecheck.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Typecheck after parallel file edits",
@@ -2298,7 +2650,15 @@
         }
       },
       "script_path": ".claude/hooks/file-changed-reload-env.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Reload .env on file change",
     "provider": [
@@ -2347,7 +2707,15 @@
         }
       },
       "script_path": ".claude/hooks/file-changed-run-tests.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Auto-run tests when source files change",
     "provider": [
@@ -2392,7 +2760,15 @@
         }
       },
       "script_path": ".claude/hooks/worktree-remove-cleanup.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Clean up artifacts on worktree removal",
     "provider": [
@@ -2438,7 +2814,15 @@
         }
       },
       "script_path": ".claude/hooks/post-compact-save-summary.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Save compaction summary to log",
     "provider": [
@@ -2484,7 +2868,15 @@
         }
       },
       "script_path": ".claude/hooks/stop-failure-rate-limit-alert.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Desktop notification on rate limit",
     "provider": [
@@ -2530,7 +2922,15 @@
         }
       },
       "script_path": ".claude/hooks/stop-failure-log-api-errors.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Log API errors to file",
     "provider": [
@@ -2576,7 +2976,15 @@
         }
       },
       "script_path": ".claude/hooks/task-created-naming-convention.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Enforce task naming conventions",
     "provider": [
@@ -2621,7 +3029,15 @@
         }
       },
       "script_path": ".claude/hooks/task-completed-test-gate.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Test suite gate before task completion",
@@ -2667,7 +3083,15 @@
         }
       },
       "script_path": ".claude/hooks/user-prompt-expansion-skill-context.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Inject context on skill invocation",
     "provider": [
@@ -2711,7 +3135,15 @@
         }
       },
       "script_path": ".claude/hooks/permission-denied-auto-mode-log.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Log auto-mode permission denials",
     "provider": [
@@ -2757,7 +3189,15 @@
         }
       },
       "script_path": ".claude/hooks/setup-install-deps.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Install project dependencies on init",
     "provider": [
@@ -2807,7 +3247,15 @@
         }
       },
       "script_path": ".claude/hooks/message-display-redact-secrets.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Redact secrets from displayed output",
     "provider": [
@@ -2853,7 +3301,15 @@
         }
       },
       "script_path": ".claude/hooks/instructions-loaded-audit-log.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Audit log for CLAUDE.md file loads",
     "provider": [
@@ -2901,7 +3357,15 @@
         }
       },
       "script_path": ".claude/hooks/ruff-format.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Ruff format after write",
     "provider": [
@@ -2952,7 +3416,15 @@
         }
       },
       "script_path": ".claude/hooks/ruff-check.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Ruff lint after write",
@@ -3003,7 +3475,15 @@
         }
       },
       "script_path": ".claude/hooks/pyright-check.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Pyright type checking",
@@ -3054,7 +3534,15 @@
         }
       },
       "script_path": ".claude/hooks/enforce-uv.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "name": "Enforce uv for Python dependencies",
     "provider": [
@@ -3105,7 +3593,15 @@
         }
       },
       "script_path": ".claude/hooks/pytest.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Run pytest at end of response",
@@ -3155,7 +3651,15 @@
         }
       },
       "script_path": ".claude/hooks/session-start-worktree-if-main.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Auto-create worktree when starting on main",
@@ -3202,7 +3706,15 @@
         }
       },
       "script_path": ".claude/hooks/session-start-pull-if-main.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Auto-pull on main at session start",
@@ -3249,7 +3761,15 @@
         }
       },
       "script_path": ".claude/hooks/session-start-stash-warning.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Stale stash warning at session start",
@@ -3297,7 +3817,15 @@
         }
       },
       "script_path": ".claude/hooks/pre-write-main-guard.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Block file writes on main branch",
@@ -3361,6 +3889,14 @@
             }
           ]
         }
+      },
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        }
       }
     }
   },
@@ -3403,6 +3939,14 @@
               ]
             }
           ]
+        }
+      },
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
         }
       }
     },
