@@ -84,15 +84,19 @@ export default async function HookDetailPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="mx-auto max-w-3xl px-4 py-8">
+      {/* HookDetailPage */}
+      <div data-component="HookDetailPage" className="mx-auto max-w-3xl px-4 py-8">
+        {/* HookDetailPage-back */}
         <Link
+          data-component="HookDetailPage-back"
           href="/"
           className="mb-6 inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white"
         >
           <ArrowLeft className="size-4" /> {T.backToCatalogue}
         </Link>
 
-        <div className="mb-4 flex items-center gap-2">
+        {/* HookDetailPage-badges */}
+        <div data-component="HookDetailPage-badges" className="mb-4 flex items-center gap-2">
           <CategoryBadge category={hook.category} />
           <HookTypeBadge type={hook.hook_type} trigger={hook.trigger} />
         </div>
@@ -100,10 +104,13 @@ export default async function HookDetailPage({
         <h1 className="mb-3 text-3xl font-bold text-white">{hook.name}</h1>
         <p className="mb-6 text-lg text-zinc-300">{hook.description}</p>
 
+        {/* HookSelectButton */}
         <HookSelectButton slug={hook.slug} />
 
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div>
+        {/* HookDetailPage-details-grid */}
+        <div data-component="HookDetailPage-details-grid" className="grid gap-6 sm:grid-cols-2">
+          {/* HookDetailPage-use-cases */}
+          <div data-component="HookDetailPage-use-cases">
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
               {T.useCases}
             </h2>
@@ -140,7 +147,8 @@ export default async function HookDetailPage({
           </div>
         </div>
 
-        <div className="mt-8">
+        {/* HookDetailPage-settings-fragment */}
+        <div data-component="HookDetailPage-settings-fragment" className="mt-8">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
             {T.settingsFragment}
           </h2>
@@ -149,8 +157,9 @@ export default async function HookDetailPage({
           </pre>
         </div>
 
+        {/* HookDetailPage-code-snippet */}
         {hook.implementation.code_snippet && (
-          <div className="mt-6">
+          <div data-component="HookDetailPage-code-snippet" className="mt-6">
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
               Script · {hook.implementation.script_path}
             </h2>

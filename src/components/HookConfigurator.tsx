@@ -22,6 +22,7 @@ export function HookConfigurator() {
   if (hooks.length === 0) {
     return (
       <m.div
+        data-component="HookConfigurator-empty"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-sm text-zinc-500"
@@ -41,8 +42,9 @@ export function HookConfigurator() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
+    <div data-component="HookConfigurator" className="space-y-4">
+      {/* HookConfigurator-tags — pills des hooks sélectionnés */}
+      <div data-component="HookConfigurator-tags" className="flex flex-wrap gap-2">
         <AnimatePresence mode="popLayout">
           {hooks.map((h) => (
             <m.button
