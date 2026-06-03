@@ -1,6 +1,7 @@
 export const T = {
-  metaTitle: 'Agentic hooks catalogue for Claude Code',
-  metaDescription: 'Browse 42+ production-ready agentic hooks for Claude Code & GitHub Copilot. Security, workflow automation, context injection — install in 2 minutes.',
+  metaTitle: 'HookStack — Claude Code hooks catalogue. Install in 1 minute.',
+  metaDescription:
+    'Browse 68 production-ready hooks for Claude Code & GitHub Copilot. Block secrets, enforce tests, inject context — select yours and install with one npx command.',
   footerText: 'Hookstack — Community catalogue of agentic hooks',
   navCatalogue: 'Catalogue',
   navContribute: 'Contribute',
@@ -11,8 +12,27 @@ export const T = {
   heroTitle2: 'in 1 minute',
   heroTitleA: 'Ship fast.',
   heroTitleB: 'Break nothing.',
-  heroSubtitle:
-    'Battle-tested hooks that give Claude Code reflexes — block secrets, enforce tests, inject context. Pick yours, copy one command, done.',
+  heroSubtitleMain: 'Install a production-ready Claude Code hook workflow in one command',
+  heroSubtitleSub: 'or fine-tune it hook by hook',
+  howItWorksTitle: 'Up and running in 60 seconds',
+  howItWorksSteps: [
+    {
+      step: '01',
+      title: 'Browse',
+      desc: 'Filter 68 hooks by event type, category, or your stack.',
+    },
+    {
+      step: '02',
+      title: 'Select',
+      desc: 'Your install command updates live as you pick.',
+    },
+    {
+      step: '03',
+      title: 'Install',
+      desc: 'Paste the npx command in your project root. Done.',
+    },
+  ] as const,
+  githubLinkLabel: 'GitHub',
   installTerminalLabel: 'project root',
   installPlaceholder: 'pick your hooks below',
   installCaption: 'Writes the hooks into .claude/hooks and patches settings.json — nothing else.',
