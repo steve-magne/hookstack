@@ -4,7 +4,6 @@ export const T = {
     'Browse 68 production-ready hooks for Claude Code & GitHub Copilot. Block secrets, enforce tests, inject context — select yours and install with one npx command.',
   footerText: 'Hookstack — Community catalogue of agentic hooks',
   navCatalogue: 'Catalogue',
-  navContribute: 'Contribute',
   hooksSelectedOne: 'hook selected',
   hooksSelectedMany: 'hooks selected',
   heroTitle1: 'Get your',
@@ -64,23 +63,6 @@ export const T = {
   settingsFragment: 'settings.json fragment',
   addedToSelection: 'Added to selection',
   addToMyConfig: 'Add to my config',
-  contributeTitle: 'Contribute a repository',
-  contributeSubtitle:
-    'Share a public GitHub repository that uses HookStack. A Claude Code agent analyzes it, detects unlisted patterns and opens a PR to enrich the registry.',
-  contributeSteps: [
-    'Enter your public GitHub repository URL.',
-    'A submission issue is prepared on the registry repository.',
-    'A GitHub Action clones the repository and runs Claude Code analysis.',
-    'Newly detected hooks arrive as a PR (auto-generated label).',
-  ],
-  contributeFormLabel: 'Your public GitHub repository URL',
-  contributeSubmitBtn: 'Prepare submission',
-  contributeError: 'Enter a valid public GitHub repository URL (https://github.com/org/repo).',
-  contributeSuccessText:
-    'Your submission is ready. Open the pre-filled issue to trigger the automatic repository analysis:',
-  contributeIssueLink: 'Create submission issue',
-  contributeNote:
-    'A GitHub Action labeled repo-submission will clone the repository, detect hooks and open a PR on the registry.',
   categoryLabels: {
     security: 'Security',
     context: 'Context',

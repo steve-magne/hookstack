@@ -9,6 +9,7 @@ import { HookConfigurator } from './HookConfigurator'
 import { SplitFlap } from './SplitFlap'
 import { duration, sectionReveal, spring, splitFlap, staggerContainer } from '@/lib/motion'
 import { allHooks, filterHooks } from '@/lib/hooks'
+import { track } from '@/lib/analytics'
 import { useT } from '@/lib/locale-context'
 import { useSelection } from '@/store/selection'
 import {
@@ -112,10 +113,13 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   }, [])
 
   const toggleStack = useCallback((s: Stack) => {
+    // track() hors de l'updater : un updater doit rester pur (React le rejoue en
+    // StrictMode/concurrent, ce qui doublerait l'événement).
+    track('filter_stack', { stack: s, active: !selectedStacks.includes(s) })
     setSelectedStacks((prev) =>
       prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
     )
-  }, [])
+  }, [selectedStacks])
 
   const results = useMemo(
     () =>
@@ -203,7 +207,10 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
           </div>
           {selectedStacks.length > 0 ? (
             <button
-              onClick={() => setSelectedStacks([])}
+              onClick={() => {
+                track('reset_stack_filter', { previous_count: selectedStacks.length })
+                setSelectedStacks([])
+              }}
               className="text-[11px] font-medium text-zinc-400 transition-colors hover:text-zinc-200"
             >
               {T.stackFilterReset}
@@ -218,7 +225,10 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
           {(['event', 'category'] as GroupBy[]).map((g) => (
             <button
               key={g}
-              onClick={() => setGroupBy(g)}
+              onClick={() => {
+                if (g !== groupBy) track('toggle_grouping', { group_by: g })
+                setGroupBy(g)
+              }}
               aria-pressed={groupBy === g}
               className={`relative rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
                 groupBy === g ? 'text-zinc-900' : 'text-zinc-400 hover:text-white'

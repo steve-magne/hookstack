@@ -11,12 +11,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly' as const,
       priority: 1,
     },
-    {
-      url: `${BASE}/contribute`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.5,
-    },
   ]
 
   const hookPages = allHooks.map((hook) => ({

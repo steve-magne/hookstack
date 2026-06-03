@@ -4,6 +4,14 @@ import { useState, type ReactNode } from 'react'
 import { Button } from './Button'
 import { CopySwap } from './CopySwap'
 import { useT } from '@/lib/locale-context'
+import { track } from '@/lib/analytics'
+
+/** Décompte les hooks d'une commande `install [--hooks=a,b,c]`. */
+function parseInstall(command: string) {
+  const [, hooksPart = ''] = command.split('--hooks=')
+  const count = hooksPart ? hooksPart.split(',').filter(Boolean).length : 0
+  return { hook_count: count, is_default: !command.includes('--hooks=') }
+}
 
 /**
  * InstallCommand — le « terminal » d'installation, pièce maîtresse du site.
@@ -15,19 +23,24 @@ import { useT } from '@/lib/locale-context'
  *
  * `meta` : slot optionnel à droite du chrome (ex. compteur de sélection pulsé).
  */
-export function InstallCommand({ command, meta, mobileCopyPrompt }: { command: string; meta?: ReactNode; mobileCopyPrompt?: string }) {
+export function InstallCommand({ command, meta, mobileCopyPrompt, source = 'sticky_banner' }: { command: string; meta?: ReactNode; mobileCopyPrompt?: string; source?: string }) {
   const T = useT()
   const [copied, setCopied] = useState(false)
   const [mobileCopied, setMobileCopied] = useState(false)
 
   const copy = async () => {
-    await navigator.clipboard.writeText(command)
+    // Conversion : à marquer comme key event dans GA4. Émis sur le clic (intention),
+    // avant le presse-papiers — qui peut rejeter (focus, permissions Safari) sans
+    // que l'intention de copier change.
+    track('copy_install_command', { source, method: 'button', ...parseInstall(command) })
+    try { await navigator.clipboard.writeText(command) } catch { /* presse-papiers indisponible */ }
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
 
   const copyMobile = async () => {
-    await navigator.clipboard.writeText(mobileCopyPrompt ?? command)
+    track('copy_install_command', { source, method: 'mobile_prompt', ...parseInstall(command) })
+    try { await navigator.clipboard.writeText(mobileCopyPrompt ?? command) } catch { /* presse-papiers indisponible */ }
     setMobileCopied(true)
     setTimeout(() => setMobileCopied(false), 1500)
   }

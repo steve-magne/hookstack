@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
 import './globals.css'
-import Link from 'next/link'
 import { MotionProvider } from '@/components/MotionProvider'
 import { Header } from '@/components/Header'
 import { T } from '@/lib/i18n'
@@ -46,10 +45,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* Footer */}
           <footer data-component="Footer" className="border-t border-[var(--color-border)] py-6 text-center text-sm text-zinc-500">
             <span>{T.footerText}</span>
-            <span className="mx-2 text-zinc-700">·</span>
-            <Link href="/contribute" className="text-zinc-400 transition-colors hover:text-white">
-              {T.navContribute}
-            </Link>
           </footer>
           {/* GitHubFab */}
           <a

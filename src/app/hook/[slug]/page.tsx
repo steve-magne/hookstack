@@ -1,5 +1,6 @@
 import { CategoryBadge, HookTypeBadge } from '@/components/Badge'
 import { HookSelectButton } from '@/components/HookSelectButton'
+import { HookDetailTracker } from '@/components/HookDetailTracker'
 import { allHooks, getHookBySlug } from '@/lib/hooks'
 import { T } from '@/lib/i18n'
 import { PROVIDER_LABELS } from '@/types/hook'
@@ -84,6 +85,7 @@ export default async function HookDetailPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <HookDetailTracker slug={hook.slug} name={hook.name} category={hook.category} event={hook.hook_type} />
       {/* HookDetailPage */}
       <div data-component="HookDetailPage" className="mx-auto max-w-3xl px-4 py-8">
         {/* HookDetailPage-back */}

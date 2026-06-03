@@ -56,7 +56,6 @@ A hook is a script executed by Claude Code at specific events:
 2. Click + on any hook to add it to your selection
 3. Copy the generated \`.claude/settings.json\` fragment
 4. Run the generated install script to create hook files under \`.claude/hooks/\`
-5. Or contribute your own hooks at ${BASE}/contribute
 
 ## Hook script conventions
 
@@ -73,7 +72,6 @@ ${hookSections}
 ## Links
 
 - Catalogue: ${BASE}
-- Contribute a repository: ${BASE}/contribute
 - Sitemap: ${BASE}/sitemap.xml
 `
 

@@ -20,8 +20,4 @@ describe('T translations', () => {
     const expected = ['security', 'context', 'validation', 'notification', 'workflow', 'documentation']
     expect(Object.keys(T.categoryLabels).sort()).toEqual(expected.sort())
   })
-
-  it('contributeSteps has at least one step', () => {
-    expect(T.contributeSteps.length).toBeGreaterThan(0)
-  })
 })

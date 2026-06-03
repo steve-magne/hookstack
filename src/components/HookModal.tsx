@@ -12,6 +12,7 @@ import { Button } from './Button'
 import { CategoryBadge, HookTypeBadge } from './Badge'
 import { CopySwap } from './CopySwap'
 import { spring } from '@/lib/motion'
+import { track } from '@/lib/analytics'
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false)
@@ -47,7 +48,8 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
   }, [onClose])
 
   const copyFragment = async () => {
-    await navigator.clipboard.writeText(settingsFragment)
+    track('copy_settings_fragment', { hook_slug: hook.slug, hook_name: hook.name, source: 'modal' })
+    try { await navigator.clipboard.writeText(settingsFragment) } catch { /* presse-papiers indisponible */ }
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
@@ -153,6 +155,7 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
             </m.button>
             <Link
               href={`/hook/${hook.slug}`}
+              onClick={() => track('view_full_page', { hook_slug: hook.slug, hook_name: hook.name })}
               className="flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-white"
             >
               {T.viewFullPage}
