@@ -11,6 +11,8 @@ Browse the catalogue, select what you need, run one command.
 [![Hooks](https://img.shields.io/badge/hooks-66%2B-6366f1?style=flat-square)](https://hookstack.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![CodeQL](https://github.com/steve-magne/hookstack/actions/workflows/codeql.yml/badge.svg?style=flat-square)](https://github.com/steve-magne/hookstack/actions/workflows/codeql.yml)
+[![Known Vulnerabilities](https://snyk.io/test/github/steve-magne/hookstack/badge.svg?style=flat-square)](https://snyk.io/test/github/steve-magne/hookstack)
 
 ### **[→ hookstack.vercel.app](https://hookstack.vercel.app)**
 
