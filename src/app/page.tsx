@@ -66,7 +66,7 @@ export default function HomePage() {
           {/* Halo d'accent localisé — statique, derrière le titre. */}
           <div
             aria-hidden
-            className="pointer-events-none absolute left-1/2 top-4 -z-10 h-64 w-[44rem] max-w-full -translate-x-1/2 rounded-full bg-indigo-600/15 blur-[120px]"
+            className="pointer-events-none absolute left-1/2 top-4 -z-10 h-64 w-[44rem] max-w-full -translate-x-1/2 rounded-full blur-[120px]"
           />
 
           <h1 className="mx-auto max-w-3xl text-balance text-5xl font-bold leading-[1.04] tracking-tight text-white sm:text-6xl">
