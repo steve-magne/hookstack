@@ -29,9 +29,9 @@ export function InstallCommand({ command, meta }: { command: string; meta?: Reac
   const slugs = hooksPart ? hooksPart.split(',').filter(Boolean) : []
 
   return (
-    <div className="overflow-hidden rounded-xl border border-zinc-700/70 bg-[#0c0c12] shadow-lg shadow-black/40">
-      {/* Chrome — feux macOS + label + slot meta */}
-      <div className="flex items-center gap-2 border-b border-white/5 bg-white/[0.015] px-3.5 py-2">
+    <div data-component="InstallCommand" className="overflow-hidden rounded-xl border border-zinc-700/70 bg-[#0c0c12] shadow-lg shadow-black/40">
+      {/* InstallCommand-chrome — feux macOS + label + slot meta */}
+      <div data-component="InstallCommand-chrome" className="flex items-center gap-2 border-b border-white/5 bg-white/[0.015] px-3.5 py-2">
         <span aria-hidden className="flex gap-1.5">
           <span className="size-2.5 rounded-full bg-[#ff5f57]" />
           <span className="size-2.5 rounded-full bg-[#febc2e]" />
@@ -41,8 +41,8 @@ export function InstallCommand({ command, meta }: { command: string; meta?: Reac
         {meta && <div className="ml-auto">{meta}</div>}
       </div>
 
-      {/* Commande + CTA */}
-      <div className="flex items-center gap-3 px-4 py-3">
+      {/* InstallCommand-body — commande + CTA copier */}
+      <div data-component="InstallCommand-body" className="flex items-center gap-3 px-4 py-3">
         <code className="min-w-0 flex-1 truncate font-mono text-[13px] sm:text-sm">
           <span className="select-none text-zinc-600">$ </span>
           <span className="text-violet-300">npx</span>{' '}

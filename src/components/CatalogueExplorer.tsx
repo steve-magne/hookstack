@@ -212,9 +212,9 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
     : 0
 
   return (
-    <div>
-      {/* Install terminal — only the command pins; the caption scrolls away. */}
-      <div className="mb-8">
+    <div data-component="CatalogueExplorer">
+      {/* CatalogueExplorer-install-banner — commande sticky, caption défile */}
+      <div data-component="CatalogueExplorer-install-banner" className="mb-8">
         <div className="sticky top-3 z-30">
           <div className="relative">
             <m.span
@@ -239,10 +239,10 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
         <p className="mt-2 px-1 text-[11px] text-zinc-400">{T.installCaption}</p>
       </div>
 
-      {/* Controls — stack chooser + grouping toggle, on one line */}
-      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Stack filter — tailor the catalogue to the user's ecosystem */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      {/* CatalogueExplorer-controls — stack chooser + grouping toggle */}
+      <div data-component="CatalogueExplorer-controls" className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* CatalogueExplorer-stack-filter */}
+        <div data-component="CatalogueExplorer-stack-filter" className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-300">
             <Layers className="size-3.5 text-zinc-500" />
             {T.stackFilterTitle}
@@ -284,8 +284,8 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
           )}
         </div>
 
-        {/* Grouping toggle */}
-        <div className="inline-flex self-end shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 sm:self-auto">
+        {/* CatalogueExplorer-grouping-toggle */}
+        <div data-component="CatalogueExplorer-grouping-toggle" className="inline-flex self-end shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 sm:self-auto">
           {(['event', 'category'] as GroupBy[]).map((g) => (
             <button
               key={g}
@@ -310,9 +310,9 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
         </div>
       </div>
 
-      {/* Grouped list — cascade on enter, FLIP on filter */}
+      {/* CatalogueExplorer-grouped-list — cascade on enter, FLIP on filter */}
       {results.length > 0 ? (
-        <m.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-8">
+        <m.div data-component="CatalogueExplorer-grouped-list" variants={staggerContainer} initial="hidden" animate="show" className="space-y-8">
           <AnimatePresence mode="popLayout">
             {groups.map((grp) => (
               <m.section
@@ -368,11 +368,11 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
         {active && <HookModal key="hook-modal" hook={active} onClose={() => setActive(null)} />}
       </AnimatePresence>
 
-      {/* Floating preview card — fixed, glides between rows (spring.gentle).
-          Anchored vertically to the hovered row; benefit is the hero. */}
+      {/* CatalogueExplorer-preview-card — flottante fixe, glisse entre lignes */}
       <AnimatePresence>
         {preview && (
           <m.div
+            data-component="CatalogueExplorer-preview-card"
             key="preview-card"
             initial={{ opacity: 0, x: -10, y: previewY }}
             animate={{ opacity: 1, x: 0, y: previewY }}
@@ -464,8 +464,9 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
         )}
       </AnimatePresence>
 
+      {/* CatalogueExplorer-configurator */}
       {showConfigurator && (
-        <section id="config" className="mt-12 scroll-mt-20">
+        <section data-component="CatalogueExplorer-configurator" id="config" className="mt-12 scroll-mt-20">
           <HookConfigurator />
         </section>
       )}
