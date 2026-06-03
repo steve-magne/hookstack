@@ -81,9 +81,28 @@ export default function HomePage() {
             />
           </h1>
 
-          <p className="mx-auto mt-6 max-w-xl text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg">
-            {T.heroSubtitle}
+          <p className="mx-auto mt-6 max-w-2xl text-pretty text-base leading-snug text-zinc-300 sm:text-lg">
+            {T.heroSubtitleMain}
           </p>
+          <p className="mt-2 text-sm text-zinc-500">
+            {T.heroSubtitleSub}
+          </p>
+        </section>
+
+        {/* HowItWorksSection */}
+        <section data-component="HowItWorksSection" className="pb-14">
+          <p className="mb-8 text-center text-xs font-semibold uppercase tracking-widest text-zinc-500">
+            {T.howItWorksTitle}
+          </p>
+          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 sm:grid-cols-3">
+            {T.howItWorksSteps.map(({ step, title, desc }) => (
+              <div key={step} className="flex flex-col gap-3 bg-zinc-950 px-6 py-5">
+                <span className="font-mono text-xs font-semibold text-indigo-400">{step}</span>
+                <span className="text-sm font-semibold text-white">{title}</span>
+                <span className="text-sm leading-relaxed text-zinc-400">{desc}</span>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* CatalogueSection */}
