@@ -78,7 +78,7 @@ export function HookConfigurator() {
         </AnimatePresence>
       </div>
 
-      <InstallCommand command={pluginCmd} />
+      <InstallCommand command={pluginCmd} source="configurator" />
     </div>
   )
 }
