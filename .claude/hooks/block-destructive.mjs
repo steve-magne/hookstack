@@ -17,9 +17,16 @@ const BLOCKED = [
   [/chmod\s+-R\s+777\s+\//i, 'chmod 777 récursif sur / interdit'],
 ];
 
+// Retire les chaînes entre guillemets (arguments -m "...", --body "...", etc.)
+// pour éviter les faux positifs sur des mentions documentaires de patterns dangereux.
+function stripQuotedArgs(cmd) {
+  return cmd.replace(/"(?:[^"\\]|\\.)*"/g, '""').replace(/'(?:[^'\\]|\\.)*'/g, "''");
+}
+
 export function run(input) {
   const command = input.tool_input?.command ?? '';
-  const blocked = BLOCKED.find(([pattern]) => pattern.test(command));
+  const stripped = stripQuotedArgs(command);
+  const blocked = BLOCKED.find(([pattern]) => pattern.test(stripped));
   return blocked
     ? { decision: 'block', reason: `Commande destructive bloquée : ${blocked[1]}` }
     : null;
