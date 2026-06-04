@@ -21,7 +21,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const VERSION = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8')).version
 
 async function fetchHooks(slugs) {
-  const url = `${API_BASE}/api/hooks?slugs=${slugs.map(encodeURIComponent).join(',')}`
+  // No slugs → ask the API for the default recommended set (the `is_must` hooks).
+  const url = slugs.length
+    ? `${API_BASE}/api/hooks?slugs=${slugs.map(encodeURIComponent).join(',')}`
+    : `${API_BASE}/api/hooks`
   const res = await fetch(url)
   if (!res.ok) {
     const body = await res.text().catch(() => '')
@@ -124,8 +127,9 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 async function interactiveInstall(slugs, args) {
   p.intro(pc.bgCyan(pc.black(' hookstack-cli ')))
 
+  const useDefaults = slugs.length === 0
   const s = p.spinner()
-  s.start(`Fetching ${plural(slugs.length, 'hook')}`)
+  s.start(useDefaults ? 'Fetching recommended hooks' : `Fetching ${plural(slugs.length, 'hook')}`)
   let data
   try {
     data = await fetchHooks(slugs)
@@ -136,7 +140,7 @@ async function interactiveInstall(slugs, args) {
   }
   const { hooks } = data
   const notFound = slugs.filter(slug => !hooks.find(h => h.slug === slug))
-  s.stop(`Fetched ${plural(hooks.length, 'hook')}`)
+  s.stop(`Fetched ${plural(hooks.length, 'hook')}${useDefaults ? ' (recommended set)' : ''}`)
   if (notFound.length) p.log.warn(`Unknown slugs skipped: ${notFound.join(', ')}`)
   if (hooks.length === 0) {
     p.cancel('No hooks to install.')
@@ -178,7 +182,8 @@ async function interactiveInstall(slugs, args) {
 }
 
 async function directInstall(slugs, args) {
-  console.log(`\nFetching ${plural(slugs.length, 'hook')}…`)
+  const useDefaults = slugs.length === 0
+  console.log(`\nFetching ${useDefaults ? 'recommended hooks' : plural(slugs.length, 'hook')}…`)
   let data
   try {
     data = await fetchHooks(slugs)
@@ -205,10 +210,11 @@ const HELP = `
   hookstack — Claude Code hook installer
 
   Usage:
+    npx hookstack-cli@latest install                       # recommended set
     npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...
 
   Options:
-    --hooks <slugs>   Comma-separated list of hook slugs
+    --hooks <slugs>   Comma-separated list of hook slugs (default: recommended set)
     --global, -g      Install into ~/.claude instead of ./.claude
     --scope <s>       "project" (default) or "global"
     --yes, -y         Skip prompts (non-interactive install)
@@ -223,7 +229,11 @@ async function main() {
   const args = parseArgs(process.argv)
 
   if (args.version) { console.log(VERSION); return }
-  if (args.help || args.hooks.length === 0) { console.log(HELP); return }
+  if (args.help) { console.log(HELP); return }
+
+  // Bare invocation with nothing actionable (no command, no --hooks) → show help.
+  // An explicit `install` with no --hooks installs the recommended set.
+  if (!args.command && args.hooks.length === 0) { console.log(HELP); return }
 
   const command = args.command ?? 'install'
   if (command !== 'install') {
