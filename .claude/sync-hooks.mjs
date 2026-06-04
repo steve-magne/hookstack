@@ -127,6 +127,44 @@ console.log(
     (noSnippet ? `, ${noSnippet} sans source` : ''),
 );
 
+// ── Étape 1b : normaliser implementation.config.hooks[].command ─────────────
+// Le CLI (hookstack-cli) lit ces champs directement depuis le registre.
+// On s'assure que chaque commande est de la forme "node $CLAUDE_PROJECT_DIR/..."
+// pour éviter les commandes malformées (ex. "node bash ..." héritées de l'ère .sh).
+
+const BAD_CMD_RE = /^(node\s+bash|bash\s+bash|bash\s+node)\b/;
+let cmdDrift = 0;
+let cmdFixed = 0;
+
+for (const hook of registry) {
+  const rel = hook.implementation?.script_path;
+  const config = hook.implementation?.config;
+  if (!rel || !config?.hooks) continue;
+
+  const expectedCmd = `node $CLAUDE_PROJECT_DIR/.claude/hooks/${basename(rel)}`;
+
+  for (const entries of Object.values(config.hooks)) {
+    for (const group of entries) {
+      for (const entry of group.hooks ?? []) {
+        if (typeof entry.command !== 'string') continue;
+        if (BAD_CMD_RE.test(entry.command)) {
+          cmdDrift++;
+          if (CHECK) {
+            console.error(`  ✗ commande malformée : ${hook.slug} → "${entry.command}"`);
+          } else {
+            entry.command = expectedCmd;
+            cmdFixed++;
+          }
+        }
+      }
+    }
+  }
+}
+
+if (cmdDrift > 0 && !CHECK) {
+  console.log(`  ${DRY_RUN ? '[dry] ' : ''}↻ ${cmdFixed} commande(s) normalisée(s) dans implementation.config`);
+}
+
 // ── Étape 2 : reconstruire settings.json depuis implementation.config ────────
 // (inchangé — cette moitié fonctionne déjà)
 
@@ -186,8 +224,14 @@ events.forEach((evt) => {
 
 // ── Mode --check : pas d'écriture, exit selon dérive ─────────────────────────
 if (CHECK) {
-  if (drift > 0) {
-    console.error(`\n✗ ${drift} dérive(s) entre registry.json et les .mjs sur disque.`);
+  const totalDrift = drift + cmdDrift;
+  if (totalDrift > 0) {
+    if (drift > 0) {
+      console.error(`\n✗ ${drift} dérive(s) entre registry.json et les .mjs sur disque.`);
+    }
+    if (cmdDrift > 0) {
+      console.error(`\n✗ ${cmdDrift} commande(s) malformée(s) dans implementation.config (ex. "node bash …").`);
+    }
     console.error("  Lancer 'node .claude/sync-hooks.mjs' pour resynchroniser.");
     process.exit(1);
   }
@@ -197,9 +241,12 @@ if (CHECK) {
 
 // ── Écritures ────────────────────────────────────────────────────────────────
 if (!DRY_RUN) {
-  if (updated > 0) {
+  if (updated > 0 || cmdFixed > 0) {
     writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2) + '\n', 'utf8');
-    console.log(`\n✓ registry.json mis à jour (${updated} code_snippet)`);
+    const parts = [];
+    if (updated > 0) parts.push(`${updated} code_snippet`);
+    if (cmdFixed > 0) parts.push(`${cmdFixed} commande(s) normalisée(s)`);
+    console.log(`\n✓ registry.json mis à jour (${parts.join(', ')})`);
   }
   writeFileSync(SETTINGS_PATH, JSON.stringify(newSettings, null, 2) + '\n', 'utf8');
   console.log('✓ .claude/settings.json mis à jour');
