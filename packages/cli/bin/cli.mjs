@@ -21,7 +21,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const VERSION = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8')).version
 
 async function fetchHooks(slugs) {
-  const url = `${API_BASE}/api/hooks?slugs=${slugs.map(encodeURIComponent).join(',')}`
+  const url = slugs.length === 0
+    ? `${API_BASE}/api/hooks`
+    : `${API_BASE}/api/hooks?slugs=${slugs.map(encodeURIComponent).join(',')}`
   const res = await fetch(url)
   if (!res.ok) {
     const body = await res.text().catch(() => '')
@@ -125,7 +127,8 @@ async function interactiveInstall(slugs, args) {
   p.intro(pc.bgCyan(pc.black(' hookstack-cli ')))
 
   const s = p.spinner()
-  s.start(`Fetching ${plural(slugs.length, 'hook')}`)
+  const isDefault = slugs.length === 0
+  s.start(isDefault ? 'Fetching default HookStack…' : `Fetching ${plural(slugs.length, 'hook')}`)
   let data
   try {
     data = await fetchHooks(slugs)
@@ -136,33 +139,39 @@ async function interactiveInstall(slugs, args) {
   }
   const { hooks } = data
   const notFound = slugs.filter(slug => !hooks.find(h => h.slug === slug))
-  s.stop(`Fetched ${plural(hooks.length, 'hook')}`)
+  s.stop(isDefault
+    ? `Default HookStack — ${plural(hooks.length, 'hook')}`
+    : `Fetched ${plural(hooks.length, 'hook')}`)
   if (notFound.length) p.log.warn(`Unknown slugs skipped: ${notFound.join(', ')}`)
   if (hooks.length === 0) {
     p.cancel('No hooks to install.')
     process.exit(1)
   }
 
+  if (isDefault) {
+    p.log.info(`The default HookStack gives your Claude Code setup ${plural(hooks.length, 'battle-tested hook')} covering security, context, validation and workflow.`)
+  }
+
   const scope = await p.select({
-    message: 'Installation scope',
+    message: 'Where do you want to install?',
     initialValue: args.scope,
     options: [
-      { value: 'project', label: 'Project', hint: './.claude — committed with your project' },
-      { value: 'global', label: 'Global', hint: '~/.claude — every project on this machine' },
+      { value: 'project', label: 'This project', hint: './.claude — committed with your repo' },
+      { value: 'global', label: 'All my projects', hint: '~/.claude — every project on this machine' },
     ],
   })
   if (p.isCancel(scope)) { p.cancel('Cancelled.'); process.exit(0) }
 
   const dirs = resolveScopeRoot(scope, { cwd: process.cwd(), home: homedir() })
 
-  p.note(summaryPanel(buildSummaryRows(hooks, { root: dirs.root })), 'Installation Summary')
+  p.note(summaryPanel(buildSummaryRows(hooks, { root: dirs.root })), `${plural(hooks.length, 'Hook')} to install`)
   p.note(securityPanel(buildSecurityRows(hooks)), 'Security')
 
   const ok = await p.confirm({ message: `Install ${plural(hooks.length, 'hook')} into ${scope === 'global' ? '~/.claude' : './.claude'}?` })
   if (p.isCancel(ok) || !ok) { p.cancel('Cancelled.'); process.exit(0) }
 
   const s2 = p.spinner()
-  s2.start('Installing')
+  s2.start('Installing…')
   let result
   try {
     result = doInstall(hooks, dirs, scope, p.log)
@@ -173,12 +182,14 @@ async function interactiveInstall(slugs, args) {
   }
   s2.stop(`Wrote ${plural(result.scriptCount, 'script')} + patched settings.json`)
 
+  p.log.info(`Browse more hooks → ${pc.cyan(`${API_BASE}/#catalogue`)}`)
   p.log.info(`⭐  star us → ${pc.cyan(REPO_URL)}`)
-  p.outro(pc.green(`✓ Installed ${plural(result.hookCount, 'hook')} — restart Claude Code to activate.`))
+  p.outro(pc.green(`✓ ${plural(result.hookCount, 'hook')} installed — restart Claude Code to activate.`))
 }
 
 async function directInstall(slugs, args) {
-  console.log(`\nFetching ${plural(slugs.length, 'hook')}…`)
+  const isDefault = slugs.length === 0
+  console.log(isDefault ? '\nInstalling default HookStack…' : `\nFetching ${plural(slugs.length, 'hook')}…`)
   let data
   try {
     data = await fetchHooks(slugs)
@@ -205,25 +216,25 @@ const HELP = `
   hookstack — Claude Code hook installer
 
   Usage:
-    npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...
+    npx hookstack-cli@latest install              # install the default HookStack
+    npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...  # custom selection
 
   Options:
-    --hooks <slugs>   Comma-separated list of hook slugs
+    --hooks <slugs>   Comma-separated list of hook slugs (omit for default set)
     --global, -g      Install into ~/.claude instead of ./.claude
     --scope <s>       "project" (default) or "global"
     --yes, -y         Skip prompts (non-interactive install)
     --version, -v     Show version
     --help, -h        Show this help
 
-  Runs interactively in a terminal; falls back to a direct install when piped
-  or when --yes is passed. Browse hooks at https://hookstack.vercel.app
+  Browse hooks at https://hookstack.vercel.app
 `
 
 async function main() {
   const args = parseArgs(process.argv)
 
   if (args.version) { console.log(VERSION); return }
-  if (args.help || args.hooks.length === 0) { console.log(HELP); return }
+  if (args.help) { console.log(HELP); return }
 
   const command = args.command ?? 'install'
   if (command !== 'install') {
