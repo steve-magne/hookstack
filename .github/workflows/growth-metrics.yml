@@ -1,0 +1,39 @@
+name: growth-metrics
+
+# Snapshot hebdomadaire des métriques de croissance (stars, downloads npm, issues).
+# Gratuit : GITHUB_TOKEN + API publique npm, aucune IA. Voir doc/hookstack/growth/metrics.md.
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # chaque lundi 08:00 UTC
+  workflow_dispatch: {} # déclenchement manuel possible
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Capture metrics snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .claude/skills/growth-coach/scripts/metrics.mjs
+
+      - name: Commit log if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- doc/hookstack/growth/metrics.log.ndjson; then
+            git add doc/hookstack/growth/metrics.log.ndjson
+            git commit -m "chore(growth): weekly metrics snapshot"
+            git push
+          else
+            echo "No metrics change to commit."
+          fi
