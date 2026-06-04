@@ -16,6 +16,7 @@ import {
 } from './core.mjs'
 
 const API_BASE = process.env.HOOKSTACK_API_BASE || 'https://hookstack.vercel.app'
+const REPO_URL = 'github.com/steve-magne/hookstack'
 const VERSION = '0.1.3'
 
 async function fetchHooks(slugs) {
@@ -171,6 +172,7 @@ async function interactiveInstall(slugs, args) {
   }
   s2.stop(`Wrote ${plural(result.scriptCount, 'script')} + patched settings.json`)
 
+  p.log.info(`⭐  star us → ${pc.cyan(REPO_URL)}`)
   p.outro(pc.green(`✓ Installed ${plural(result.hookCount, 'hook')} — restart Claude Code to activate.`))
 }
 
@@ -194,7 +196,7 @@ async function directInstall(slugs, args) {
   const log = { warn: m => console.warn(`  ! ${m}`) }
   const result = doInstall(hooks, dirs, args.scope, log)
   console.log(`  ✓ ${dirs.settingsPath}`)
-  console.log(`\n✅ Installed ${plural(result.hookCount, 'hook')}${result.scriptCount ? ` + ${plural(result.scriptCount, 'script')}` : ''} (${args.scope}).`)
+  console.log(`\n✅ ${plural(result.hookCount, 'hook')} installed · star us → ${REPO_URL}`)
   console.log('   Restart Claude Code to activate.\n')
 }
 
