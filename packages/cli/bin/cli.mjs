@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 import { homedir } from 'os'
-import { join } from 'path'
+import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
@@ -17,7 +17,8 @@ import {
 
 const API_BASE = process.env.HOOKSTACK_API_BASE || 'https://hookstack.vercel.app'
 const REPO_URL = 'github.com/steve-magne/hookstack'
-const VERSION = '0.1.3'
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const VERSION = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8')).version
 
 async function fetchHooks(slugs) {
   const url = `${API_BASE}/api/hooks?slugs=${slugs.map(encodeURIComponent).join(',')}`
@@ -222,18 +223,12 @@ async function main() {
   const args = parseArgs(process.argv)
 
   if (args.version) { console.log(VERSION); return }
-  if (args.help || (!args.command && args.hooks.length === 0)) { console.log(HELP); return }
+  if (args.help || args.hooks.length === 0) { console.log(HELP); return }
 
   const command = args.command ?? 'install'
   if (command !== 'install') {
     console.error(`✗ Unknown command: ${command}`)
     console.error('  Run --help for usage.')
-    process.exit(1)
-  }
-
-  if (args.hooks.length === 0) {
-    console.error('✗ No hooks specified. Use --hooks=<slug1>,<slug2>')
-    console.error('  Browse hooks at https://hookstack.vercel.app')
     process.exit(1)
   }
 
