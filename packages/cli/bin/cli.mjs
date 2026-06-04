@@ -30,6 +30,15 @@ async function fetchHooks(slugs) {
   return res.json()
 }
 
+async function fetchCatalog() {
+  const res = await fetch(`${API_BASE}/api/hooks`)
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`API error ${res.status}: ${body}`)
+  }
+  return res.json()
+}
+
 // ── panel rendering ────────────────────────────────────────────────────────
 
 // Truncate to a visible width then pad — operate on PLAIN text only. Color is
@@ -121,8 +130,40 @@ function doInstall(hooks, dirs, scope, log) {
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 
-async function interactiveInstall(slugs, args) {
+async function interactiveBrowse(args) {
   p.intro(pc.bgCyan(pc.black(' hookstack-cli ')))
+
+  const s = p.spinner()
+  s.start('Fetching catalog…')
+  let data
+  try {
+    data = await fetchCatalog()
+  } catch (e) {
+    s.stop(pc.red('Fetch failed'))
+    p.cancel(e.message)
+    process.exit(1)
+  }
+  const { hooks } = data
+  s.stop(`${hooks.length} hooks available`)
+
+  hooks.sort((a, b) => (a.category ?? '').localeCompare(b.category ?? '') || a.name.localeCompare(b.name))
+
+  const selected = await p.multiselect({
+    message: 'Select hooks to install  (space = toggle, enter = confirm)',
+    options: hooks.map(h => ({
+      value: h.slug,
+      label: h.name,
+      hint: [h.category, h.benefit].filter(Boolean).join(' · '),
+    })),
+    required: true,
+  })
+  if (p.isCancel(selected)) { p.cancel('Cancelled.'); process.exit(0) }
+
+  await interactiveInstall(selected, args, { skipIntro: true })
+}
+
+async function interactiveInstall(slugs, args, { skipIntro = false } = {}) {
+  if (!skipIntro) p.intro(pc.bgCyan(pc.black(' hookstack-cli ')))
 
   const s = p.spinner()
   s.start(`Fetching ${plural(slugs.length, 'hook')}`)
@@ -223,7 +264,7 @@ async function main() {
   const args = parseArgs(process.argv)
 
   if (args.version) { console.log(VERSION); return }
-  if (args.help || args.hooks.length === 0) { console.log(HELP); return }
+  if (args.help) { console.log(HELP); return }
 
   const command = args.command ?? 'install'
   if (command !== 'install') {
@@ -233,6 +274,13 @@ async function main() {
   }
 
   const interactive = Boolean(process.stdout.isTTY) && !args.yes
+
+  if (args.hooks.length === 0) {
+    if (interactive) await interactiveBrowse(args)
+    else { console.log(HELP); return }
+    return
+  }
+
   if (interactive) await interactiveInstall(args.hooks, args)
   else await directInstall(args.hooks, args)
 }

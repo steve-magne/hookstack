@@ -5,7 +5,16 @@ export async function GET(req: NextRequest) {
   const slugs = req.nextUrl.searchParams.get('slugs')?.split(',').filter(Boolean) ?? []
 
   if (slugs.length === 0) {
-    return NextResponse.json({ error: 'No slugs specified' }, { status: 400 })
+    const catalog = allHooks.map(h => ({
+      slug: h.slug,
+      name: h.name,
+      category: h.category,
+      benefit: h.benefit ?? null,
+    }))
+    return NextResponse.json(
+      { hooks: catalog },
+      { headers: { 'Cache-Control': 'public, max-age=300' } },
+    )
   }
 
   const hooks = allHooks
