@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
+import { createInterface } from 'readline'
 import { homedir } from 'os'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import * as p from '@clack/prompts'
 import pc from 'picocolors'
 import {
   parseArgs,
@@ -32,10 +32,13 @@ async function fetchHooks(slugs) {
   return res.json()
 }
 
+function ask(question) {
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  return new Promise(resolve => rl.question(question, a => { rl.close(); resolve(a.trim()) }))
+}
+
 // ── panel rendering ────────────────────────────────────────────────────────
 
-// Truncate to a visible width then pad — operate on PLAIN text only. Color is
-// applied afterwards so ANSI codes never throw off column alignment.
 function truncPad(value, width) {
   const s = String(value ?? '')
   return (s.length > width ? s.slice(0, width - 1) + '…' : s).padEnd(width)
@@ -56,7 +59,6 @@ export function summaryPanel(rows) {
   return lines.join('\n')
 }
 
-// Boolean capability cell: pad the plain "yes"/"no" first, then colorize.
 function capCell(on, width) {
   const text = (on ? 'yes' : 'no').padEnd(width)
   return on ? pc.yellow(text) : pc.dim(text)
@@ -124,67 +126,64 @@ function doInstall(hooks, dirs, scope, log) {
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 async function interactiveInstall(slugs, args) {
-  p.intro(pc.bgCyan(pc.black(' hookstack-cli ')))
-
-  const s = p.spinner()
   const isDefault = slugs.length === 0
-  s.start(isDefault ? 'Fetching default HookStack…' : `Fetching ${plural(slugs.length, 'hook')}`)
+  console.log(pc.bgCyan(pc.black(' hookstack-cli ')))
+  console.log(isDefault ? '\nFetching default HookStack…' : `\nFetching ${plural(slugs.length, 'hook')}…`)
+
   let data
   try {
     data = await fetchHooks(slugs)
   } catch (e) {
-    s.stop(pc.red('Fetch failed'))
-    p.cancel(e.message)
+    console.error(pc.red(`\n✗ Fetch failed: ${e.message}`))
     process.exit(1)
   }
   const { hooks } = data
   const notFound = slugs.filter(slug => !hooks.find(h => h.slug === slug))
-  s.stop(isDefault
-    ? `Default HookStack — ${plural(hooks.length, 'hook')}`
-    : `Fetched ${plural(hooks.length, 'hook')}`)
-  if (notFound.length) p.log.warn(`Unknown slugs skipped: ${notFound.join(', ')}`)
+  console.log(isDefault
+    ? `✓ Default HookStack — ${plural(hooks.length, 'hook')}`
+    : `✓ Fetched ${plural(hooks.length, 'hook')}`)
+  if (notFound.length) console.warn(`  ! Unknown slugs skipped: ${notFound.join(', ')}`)
   if (hooks.length === 0) {
-    p.cancel('No hooks to install.')
+    console.error('\n✗ No hooks to install.')
     process.exit(1)
   }
 
-  if (isDefault) {
-    p.log.info(`The default HookStack gives your Claude Code setup ${plural(hooks.length, 'battle-tested hook')} covering security, context, validation and workflow.`)
-  }
-
-  const scope = await p.select({
-    message: 'Where do you want to install?',
-    initialValue: args.scope,
-    options: [
-      { value: 'project', label: 'This project', hint: './.claude — committed with your repo' },
-      { value: 'global', label: 'All my projects', hint: '~/.claude — every project on this machine' },
-    ],
-  })
-  if (p.isCancel(scope)) { p.cancel('Cancelled.'); process.exit(0) }
+  // Scope selection
+  let scope = args.scope
+  console.log('\n  Where to install?')
+  console.log(`  ${pc.cyan('1')}  This project     ${pc.dim('./.claude — committed with your repo')}`)
+  console.log(`  ${pc.cyan('2')}  All my projects  ${pc.dim('~/.claude — every project on this machine')}`)
+  const scopeAnswer = await ask(`  → [${scope === 'global' ? '2' : '1'}]: `)
+  if (scopeAnswer === '2' || scopeAnswer === 'global') scope = 'global'
+  else if (scopeAnswer === 'q') { console.log('Cancelled.'); process.exit(0) }
+  else scope = 'project'
 
   const dirs = resolveScopeRoot(scope, { cwd: process.cwd(), home: homedir() })
 
-  p.note(summaryPanel(buildSummaryRows(hooks, { root: dirs.root })), `${plural(hooks.length, 'Hook')} to install`)
-  p.note(securityPanel(buildSecurityRows(hooks)), 'Security')
+  console.log(`\n  ${pc.bold(`${plural(hooks.length, 'Hook')} to install`)}`)
+  console.log(summaryPanel(buildSummaryRows(hooks, { root: dirs.root })))
+  console.log(`\n  ${pc.bold('Security')}`)
+  console.log(securityPanel(buildSecurityRows(hooks)))
 
-  const ok = await p.confirm({ message: `Install ${plural(hooks.length, 'hook')} into ${scope === 'global' ? '~/.claude' : './.claude'}?` })
-  if (p.isCancel(ok) || !ok) { p.cancel('Cancelled.'); process.exit(0) }
+  const confirmAnswer = await ask(`\n  Install ${plural(hooks.length, 'hook')} into ${scope === 'global' ? '~/.claude' : './.claude'}? [Y/n]: `)
+  if (confirmAnswer.toLowerCase() === 'n' || confirmAnswer.toLowerCase() === 'no') {
+    console.log('Cancelled.')
+    process.exit(0)
+  }
 
-  const s2 = p.spinner()
-  s2.start('Installing…')
+  console.log('\nInstalling…')
   let result
   try {
-    result = doInstall(hooks, dirs, scope, p.log)
+    result = doInstall(hooks, dirs, scope, { warn: m => console.warn(`  ! ${m}`) })
   } catch (e) {
-    s2.stop(pc.red('Install failed'))
-    p.cancel(e.message)
+    console.error(pc.red(`\n✗ Install failed: ${e.message}`))
     process.exit(1)
   }
-  s2.stop(`Wrote ${plural(result.scriptCount, 'script')} + patched settings.json`)
 
-  p.log.info(`Browse more hooks → ${pc.cyan(`${API_BASE}/#catalogue`)}`)
-  p.log.info(`⭐  star us → ${pc.cyan(REPO_URL)}`)
-  p.outro(pc.green(`✓ ${plural(result.hookCount, 'hook')} installed — restart Claude Code to activate.`))
+  console.log(`  ✓ ${dirs.settingsPath}`)
+  console.log(`\n  Browse more hooks → ${pc.cyan(`${API_BASE}/#catalogue`)}`)
+  console.log(`  ⭐  star us → ${pc.cyan(REPO_URL)}`)
+  console.log(pc.green(`\n✓ ${plural(result.hookCount, 'hook')} installed — restart Claude Code to activate.\n`))
 }
 
 async function directInstall(slugs, args) {
