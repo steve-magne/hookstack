@@ -32,7 +32,7 @@ describe('registry-auto-sync', () => {
 
   it('ne fait rien sans projectDir', () => {
     const exec = vi.fn();
-    expect(run({ tool_input: { file_path: '/proj/registry/registry.json' } }, { exec, projectDir: undefined })).toBeNull();
+    expect(run({ tool_input: { file_path: '/proj/registry/registry.json' } }, { exec, projectDir: null })).toBeNull();
     expect(exec).not.toHaveBeenCalled();
   });
 

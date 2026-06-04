@@ -48,8 +48,11 @@ export function run({
   return { runner, status: result.status, message };
 }
 
-/* v8 ignore next 4 */
+/* v8 ignore next 6 */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const result = run();
-  if (result) process.stderr.write(result.message);
+  if (result) {
+    process.stderr.write(result.message);
+    if (result.status !== 0) process.exit(2);
+  }
 }

@@ -30,9 +30,11 @@ export function run({
   const hasPkg = exists(join(projectDir, 'package.json'));
   if (hasPkg && exists(join(projectDir, 'tsconfig.json')))
     checks.push(['TypeScript', 'npx --no-install tsc --noEmit']);
-  if (hasPkg) checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 .']);
+  const eslintConfigs = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml', '.eslintrc'];
+  if (hasPkg && eslintConfigs.some((f) => exists(join(projectDir, f))))
+    checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 .']);
   if (hasPkg)
-    checks.push(['Tests', 'pnpm test --run 2>/dev/null || npx --no-install vitest run 2>/dev/null || true']);
+    checks.push(['Tests', 'pnpm test --run 2>/dev/null || npx --no-install vitest run 2>/dev/null']);
 
   const results = checks.map(([label, cmd]) => check(label, cmd));
   const failed = results.filter((r) => !r).length;
@@ -43,8 +45,9 @@ export function run({
   return { checks: checks.length, failed, message: messages.join('') };
 }
 
-/* v8 ignore next 4 */
+/* v8 ignore next 5 */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const result = run();
   process.stderr.write(result.message);
+  if (result.failed > 0) process.exit(2);
 }
