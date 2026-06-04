@@ -2,13 +2,13 @@
 
 ## Vue d'ensemble
 
-**Hookstack** est une plateforme web communautaire permettant aux développeurs de **découvrir, sélectionner et installer des hooks agentiques** dans leurs projets — principalement pour Claude Code (GitHub Copilot à venir). Le registre est vivant : il s'enrichit automatiquement en analysant des dépôts GitHub réels soumis par la communauté.
+**Hookstack** est une plateforme web permettant aux développeurs de **découvrir, sélectionner et installer des hooks agentiques** dans leurs projets — pour Claude Code. Le registre est vivant : il s'enrichit automatiquement en analysant des dépôts GitHub réels soumis.
 
 **Tagline officielle** : *"Get your HookStack in 1 minute"*
 
 **Production** : https://hookstack.vercel.app
 
-**Catalogue (juin 2026)** : 68 hooks répartis en 6 catégories (security, context, validation, notification, workflow, documentation).
+**Catalogue (juin 2026)** : hooks répartis en 6 catégories (security, context, validation, notification, workflow, documentation).
 
 ## Thème visuel
 

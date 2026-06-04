@@ -123,7 +123,7 @@ Backlog = **GitHub Issues** (label `growth` + `content`/`outreach`/`spike`/`seo`
 
 ## Architecture
 
-Hookstack est un catalogue communautaire de hooks agentiques (Claude Code, GitHub Copilot). Next.js 15 (App Router) + TypeScript + Tailwind v4.
+Hookstack est un catalogue de hooks agentiques pour Claude Code. Next.js 15 (App Router) + TypeScript + Tailwind v4.
 
 **Source de données** : `registry/registry.json` est la seule source de vérité — lue directement par `src/lib/hooks.ts` (via `allHooks`). Sans `.env`, tout fonctionne en mode registre local.
 

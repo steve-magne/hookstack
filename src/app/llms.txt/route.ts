@@ -31,11 +31,11 @@ export async function GET() {
 
   const content = `# HookStack
 
-> Community catalogue of HookStack for Claude Code & GitHub Copilot. Browse ${allHooks.length}+ hooks and generate your settings.json in 2 minutes.
+> Open-source catalogue of Claude Code hooks. Browse ${allHooks.length} hooks and generate your settings.json in 2 minutes.
 
 ## What is HookStack?
 
-HookStack (${BASE}) is an open-source catalogue of HookStack for Claude Code and GitHub Copilot. Each hook is a Node.js script (.mjs) that runs at a lifecycle event to enforce security, add quality checks, inject context, or automate workflows.
+HookStack (${BASE}) is an open-source catalogue of Claude Code hooks. Each hook is a Node.js script (.mjs) that runs at a lifecycle event to enforce security, add quality checks, inject context, or automate workflows.
 
 ## What is a Claude Code hook?
 
