@@ -975,7 +975,7 @@
             {
               "hooks": [
                 {
-                  "command": "node bash .claude/hooks/enforce-package-managers.mjs",
+                  "command": "node .claude/hooks/enforce-package-managers.mjs",
                   "type": "command"
                 }
               ],
@@ -1101,7 +1101,7 @@
               "hooks": [
                 {
                   "asyncRewake": true,
-                  "command": "node bash .claude/hooks/quality-check.mjs",
+                  "command": "node .claude/hooks/quality-check.mjs",
                   "rewakeMessage": "Des erreurs qualité ont été détectées après la dernière modification :",
                   "rewakeSummary": "Erreurs qualité détectées",
                   "statusMessage": "Vérification qualité en cours...",
@@ -1293,7 +1293,7 @@
             {
               "hooks": [
                 {
-                  "command": "node bash $CLAUDE_PROJECT_DIR/.claude/hooks/missing-test-detection.mjs",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/missing-test-detection.mjs",
                   "type": "command"
                 }
               ]
@@ -1353,7 +1353,7 @@
             {
               "hooks": [
                 {
-                  "command": "node bash $CLAUDE_PROJECT_DIR/.claude/hooks/per-file-coverage.mjs",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/per-file-coverage.mjs",
                   "type": "command"
                 }
               ]
@@ -1475,7 +1475,7 @@
               "hooks": [
                 {
                   "asyncRewake": true,
-                  "command": "node bash .claude/hooks/quality-check.mjs",
+                  "command": "node .claude/hooks/quality-check.mjs",
                   "type": "command"
                 }
               ]
@@ -1537,7 +1537,7 @@
             {
               "hooks": [
                 {
-                  "command": "node bash .claude/hooks/i18n-validation.mjs",
+                  "command": "node .claude/hooks/i18n-validation.mjs",
                   "type": "command"
                 }
               ]
