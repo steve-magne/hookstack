@@ -4,21 +4,11 @@ import { allHooks } from '@/lib/hooks'
 export async function GET(req: NextRequest) {
   const slugs = req.nextUrl.searchParams.get('slugs')?.split(',').filter(Boolean) ?? []
 
-  if (slugs.length === 0) {
-    const catalog = allHooks.map(h => ({
-      slug: h.slug,
-      name: h.name,
-      category: h.category,
-      benefit: h.benefit ?? null,
-    }))
-    return NextResponse.json(
-      { hooks: catalog },
-      { headers: { 'Cache-Control': 'public, max-age=300' } },
-    )
-  }
+  const source = slugs.length === 0
+    ? allHooks.filter(h => h.is_must)
+    : allHooks.filter(h => slugs.includes(h.slug))
 
-  const hooks = allHooks
-    .filter(h => slugs.includes(h.slug))
+  const hooks = source
     .map(h => ({
       slug: h.slug,
       name: h.name,
