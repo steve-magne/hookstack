@@ -45,10 +45,14 @@ jobs:
         working-directory: packages/cli
         run: npm publish --access public --provenance
 
+      - name: Publish summary
+        run: |
+          echo "## hookstack-cli v${{ steps.bump.outputs.new }} published to npm" >> $GITHUB_STEP_SUMMARY
+
       - name: Commit version bump
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add packages/cli/package.json
-          git commit -m "chore: bump hookstack-cli version [skip ci]" || true
+          git commit -m "chore: bump hookstack-cli version to v${{ steps.bump.outputs.new }} [skip ci]" || true
           git push
