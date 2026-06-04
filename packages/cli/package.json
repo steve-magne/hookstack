@@ -1,6 +1,6 @@
 {
   "name": "hookstack-cli",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "CLI installer for the Hookstack catalogue of Claude Code hooks",
   "type": "module",
   "bin": {
