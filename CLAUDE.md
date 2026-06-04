@@ -89,6 +89,16 @@ Le dossier **`doc/hookstack/`** est la référence centrale pour la vision produ
 
 **Règle d'alimentation** : si tu découvres en session une information sur la vision, une décision produit, une contrainte métier ou un pattern marketing utile dans >80% des sessions futures → l'ajouter dans le fichier pertinent de `doc/hookstack/`. Seulement ce qui reste vrai sur la durée (pas de notes éphémères).
 
+## Système de croissance (growth)
+
+Objectif : `steve-magne/hookstack` → **5000 ⭐** + trafic sur `hookstack.vercel.app`. Le **système d'exécution** vit dans [`doc/hookstack/growth/`](doc/hookstack/growth/README.md) (stratégie) et est piloté par 3 skills :
+
+- **`/growth-coach`** — diagnostique la phase, recommande les 1–3 actions à plus fort levier, gère le board GitHub Issues (`growth-coach review` = bilan ; `growth-coach seed` = poser le board).
+- **`/growth-post`** — produit un post prêt-à-coller (X / LinkedIn / Reddit-HN), draft-and-review (ne publie jamais).
+- **`/growth-outreach`** — trouve des cibles (repos, threads, newsletters) et rédige l'outreach personnalisé.
+
+Backlog = **GitHub Issues** (label `growth` + `content`/`outreach`/`spike`/`seo`/`idea`). Métriques : `node .claude/skills/growth-coach/scripts/metrics.mjs` (snapshot stars/downloads, auto chaque lundi via `.github/workflows/growth-metrics.yml`). **Boucle hebdo** : `/growth-coach` lundi, `/growth-post` en semaine, `/growth-coach review` vendredi. Règle KISS : le système n'auto-poste jamais (zéro API payante, zéro risque de ban).
+
 ---
 
 ## Mission produit
