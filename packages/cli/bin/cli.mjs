@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, realpathSync } from 'fs'
 import { createInterface } from 'readline'
 import { homedir } from 'os'
 import { join, dirname } from 'path'
@@ -247,7 +247,8 @@ async function main() {
   else await directInstall(args.hooks, args)
 }
 
-/* v8 ignore next 3 */
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main()
+/* v8 ignore next 4 */
+const _argv1 = (() => { try { return realpathSync(process.argv[1]) } catch { return process.argv[1] } })()
+if (_argv1 === fileURLToPath(import.meta.url)) {
+  main().catch(err => { console.error(pc.red(`\n✗ ${err.message || err}`)); process.exit(1) })
 }
