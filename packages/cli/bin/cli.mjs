@@ -24,7 +24,16 @@ async function fetchHooks(slugs) {
   const url = slugs.length === 0
     ? `${API_BASE}/api/hooks`
     : `${API_BASE}/api/hooks?slugs=${slugs.map(encodeURIComponent).join(',')}`
-  const res = await fetch(url)
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 15_000)
+  let res
+  try {
+    res = await fetch(url, { signal: ctrl.signal })
+  } catch (e) {
+    throw new Error(e.name === 'AbortError' ? 'Request timed out (15 s) — check your connection' : e.message)
+  } finally {
+    clearTimeout(timer)
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => '')
     throw new Error(`API error ${res.status}: ${body}`)
@@ -164,8 +173,21 @@ async function interactiveInstall(slugs, args) {
 
   const dirs = resolveScopeRoot(scope, { cwd: process.cwd(), home: homedir() })
 
-  p.note(summaryPanel(buildSummaryRows(hooks, { root: dirs.root })), `${plural(hooks.length, 'Hook')} to install`)
-  p.note(securityPanel(buildSecurityRows(hooks)), 'Security')
+  const PREVIEW_MAX = 8
+  const summaryRows = buildSummaryRows(hooks, { root: dirs.root })
+  const previewRows = summaryRows.slice(0, PREVIEW_MAX)
+  const overflow = summaryRows.length - previewRows.length
+  const summaryContent = summaryPanel(previewRows) + (overflow > 0 ? `\n  ${pc.dim(`… and ${overflow} more`)}` : '')
+  p.note(summaryContent, `${plural(hooks.length, 'Hook')} to install`)
+
+  const secRows = buildSecurityRows(hooks)
+  const secContent = hooks.length > PREVIEW_MAX
+    ? [
+        pc.dim(`${secRows.filter(r => r.shell).length} hooks run shell commands · ${secRows.filter(r => r.network).length} use network · ${secRows.filter(r => r.fsWrite).length} write files`),
+        pc.dim(`Details: ${API_BASE}/hook/<slug>`),
+      ].join('\n')
+    : securityPanel(secRows)
+  p.note(secContent, 'Security')
 
   const ok = await p.confirm({ message: `Install ${plural(hooks.length, 'hook')} into ${scope === 'global' ? '~/.claude' : './.claude'}?` })
   if (p.isCancel(ok) || !ok) { p.cancel('Cancelled.'); process.exit(0) }
@@ -248,7 +270,10 @@ async function main() {
   else await directInstall(args.hooks, args)
 }
 
-/* v8 ignore next 3 */
+/* v8 ignore next 5 */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main()
+  main().catch(e => {
+    console.error(`\n✗ ${e.message}`)
+    process.exit(1)
+  })
 }
