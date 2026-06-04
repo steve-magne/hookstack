@@ -35,7 +35,15 @@ const SETTINGS_PATH = resolve(ROOT, '.claude/settings.json');
 // Stacks à exclure : si tous les éléments sont dans cette liste, le hook est exclu
 const EXCLUDED_STACKS = new Set(['python', 'java']);
 
-function isExcluded(stack) {
+// Slugs catalogue-only sur ce projet (remplacés par une alternative active)
+// Ces hooks restent visibles dans le catalogue mais ne sont pas injectés dans settings.json
+const EXCLUDED_SLUGS = new Set([
+  'notification-tts-voice',   // remplacé par notification-sound
+  'stop-tts-completion',      // remplacé par stop-sound
+]);
+
+function isExcluded(stack, slug) {
+  if (EXCLUDED_SLUGS.has(slug)) return true;
   if (!stack || stack.length === 0) return false;
   return stack.every((s) => EXCLUDED_STACKS.has(s));
 }
@@ -48,13 +56,19 @@ const registry = loadJSON(REGISTRY_PATH);
 const existingSettings = loadJSON(SETTINGS_PATH);
 
 // Filtrer les hooks éligibles à l'activation locale (settings.json)
-const eligible = registry.filter((h) => !isExcluded(h.stack));
-const excluded = registry.filter((h) => isExcluded(h.stack));
+const eligible = registry.filter((h) => !isExcluded(h.stack, h.slug));
+const excluded = registry.filter((h) => isExcluded(h.stack, h.slug));
 
 console.log(`\nRegistre : ${registry.length} hooks total`);
 console.log(`  Éligibles : ${eligible.length}`);
-console.log(`  Exclus (python/java only) : ${excluded.length}`);
-excluded.forEach((h) => console.log(`    - ${h.slug} [${h.stack}]`));
+const excludedByStack = excluded.filter((h) => !EXCLUDED_SLUGS.has(h.slug));
+const excludedBySlug = excluded.filter((h) => EXCLUDED_SLUGS.has(h.slug));
+console.log(`  Exclus (python/java only) : ${excludedByStack.length}`);
+excludedByStack.forEach((h) => console.log(`    - ${h.slug} [${h.stack}]`));
+if (excludedBySlug.length) {
+  console.log(`  Exclus (remplacés localement) : ${excludedBySlug.length}`);
+  excludedBySlug.forEach((h) => console.log(`    - ${h.slug}`));
+}
 
 // ── Étape 1 : DISQUE -> code_snippet (le fichier .mjs est la vérité) ─────────
 //

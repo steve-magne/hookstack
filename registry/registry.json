@@ -70,11 +70,11 @@
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
-    "description": "Blocks potentially destructive shell commands (rm -rf /, mkfs, dd to a disk, git reset --hard on sensitive paths) before the agent runs them.",
+    "description": "Blocks potentially destructive shell commands before the agent runs them: wiping root, home or CWD, git reset --hard, TRUNCATE, mkfs, dd to a disk, chmod 777 recursively.",
     "hook_type": "PreToolUse",
     "id": "pre-bash-block-destructive",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Bloc les commandes Bash destructives irréversibles (PreToolUse)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst BLOCKED = [\n  [/rm\\s+-rf?\\s+\\/(?:\\s|$)/, 'rm -rf / interdit'],\n  [/git\\s+push\\s+.*--force(?:-with-lease)?\\s+.*(?:main|master)/, 'force-push sur main/master interdit'],\n  [/DROP\\s+(?:TABLE|DATABASE)\\s+\\w+/i, 'DROP TABLE/DATABASE interdit sans confirmation explicite'],\n  [/>\\s*\\/dev\\/(?:sda|nvme|disk)\\d*/i, 'Écriture directe sur disque bloquée'],\n  [/chmod\\s+-R\\s+777\\s+\\//i, 'chmod 777 récursif sur / interdit'],\n];\n\nexport function run(input) {\n  const command = input.tool_input?.command ?? '';\n  const blocked = BLOCKED.find(([pattern]) => pattern.test(command));\n  return blocked\n    ? { decision: 'block', reason: `Commande destructive bloquée : ${blocked[1]}` }\n    : null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Bloc les commandes Bash destructives irréversibles (PreToolUse)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst BLOCKED = [\n  [/rm\\s+-rf?\\s+\\/(?:\\s|$)/, 'rm -rf / interdit'],\n  [/rm\\s+-rf?\\s+[~*]/, 'rm -rf ~ / rm -rf * interdit (suppression de masse)'],\n  [/rm\\s+-rf?\\s+\\$HOME\\b/, 'rm -rf $HOME interdit'],\n  [/git\\s+push\\s+.*--force(?:-with-lease)?\\s+.*(?:main|master)/, 'force-push sur main/master interdit'],\n  [/git\\s+reset\\s+--hard/, 'git reset --hard interdit — pertes de modifications non commitées ; faites-le manuellement si intentionnel'],\n  [/DROP\\s+(?:TABLE|DATABASE)\\s+\\w+/i, 'DROP TABLE/DATABASE interdit sans confirmation explicite'],\n  [/TRUNCATE\\s+(?:TABLE\\s+)?\\w+/i, 'TRUNCATE interdit sans confirmation explicite'],\n  [/>\\s*\\/dev\\/(?:sda|nvme|disk)\\d*/i, 'Écriture directe sur disque bloquée'],\n  [/\\bmkfs\\b/i, 'Formatage de système de fichiers interdit'],\n  [/\\bdd\\s+if=/i, 'Opération dd sur disque interdite'],\n  [/chmod\\s+-R\\s+777\\s+\\//i, 'chmod 777 récursif sur / interdit'],\n];\n\n// Retire les chaînes entre guillemets (arguments -m \"...\", --body \"...\", etc.)\n// pour éviter les faux positifs sur des mentions documentaires de patterns dangereux.\nfunction stripQuotedArgs(cmd) {\n  return cmd.replace(/\"(?:[^\"\\\\]|\\\\.)*\"/g, '\"\"').replace(/'(?:[^'\\\\]|\\\\.)*'/g, \"''\");\n}\n\nexport function run(input) {\n  const command = input.tool_input?.command ?? '';\n  const stripped = stripQuotedArgs(command);\n  const blocked = BLOCKED.find(([pattern]) => pattern.test(stripped));\n  return blocked\n    ? { decision: 'block', reason: `Commande destructive bloquée : ${blocked[1]}` }\n    : null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
         "hooks": {
           "PreToolUse": [
@@ -111,13 +111,16 @@
       "security",
       "bash",
       "safety",
-      "guardrail"
+      "guardrail",
+      "git",
+      "database"
     ],
     "trigger": "Bash",
     "use_cases": [
       "Guardrail on dev machines",
       "Data loss prevention",
-      "Shared environments"
+      "Shared environments",
+      "Database safety"
     ],
     "votes": 0
   },
@@ -179,6 +182,54 @@
       "Configuration protection",
       "Compliance",
       "Local secrets integrity"
+    ],
+    "votes": 0
+  },
+  {
+    "benefit": "Lock files stay intact - package manager only",
+    "category": "security",
+    "description": "Prevents the agent from directly modifying lock files (pnpm-lock.yaml, package-lock.json, yarn.lock, Cargo.lock, Gemfile.lock, poetry.lock, etc.). Lock files must only be written by the package manager to stay consistent and reproducible.",
+    "hook_type": "PreToolUse",
+    "id": "pre-edit-protect-lockfiles",
+    "implementation": {
+      "code_snippet": "#!/usr/bin/env node\n// Bloque les éditions directes de fichiers de lock (PreToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst LOCKFILES = [\n  /pnpm-lock\\.yaml$/,\n  /package-lock\\.json$/,\n  /yarn\\.lock$/,\n  /Gemfile\\.lock$/,\n  /poetry\\.lock$/,\n  /Pipfile\\.lock$/,\n  /composer\\.lock$/,\n  /Cargo\\.lock$/,\n];\n\nexport function run(input) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath) return null;\n  const match = LOCKFILES.find((p) => p.test(filePath));\n  return match\n    ? {\n        decision: 'block',\n        reason: `Lock file ${filePath} must not be edited directly. Run the package manager instead (pnpm install, npm install, cargo build…).`,\n      }\n    : null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/protect-lockfiles.mjs",
+                  "type": "command"
+                }
+              ],
+              "matcher": "Write|Edit"
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/protect-lockfiles.mjs",
+      "type": "settings_json"
+    },
+    "is_must": true,
+    "name": "Lock file write protection",
+    "provider": [
+      "claude-code"
+    ],
+    "slug": "pre-edit-protect-lockfiles",
+    "tags": [
+      "security",
+      "files",
+      "lockfile",
+      "protection",
+      "dependencies",
+      "reproducibility"
+    ],
+    "trigger": "Write|Edit",
+    "use_cases": [
+      "Prevent lock file corruption",
+      "Ensure reproducible builds",
+      "Multi-ecosystem projects (npm, pnpm, yarn, cargo, bundler)"
     ],
     "votes": 0
   },
@@ -1701,6 +1752,98 @@
     "use_cases": [
       "Get notified without watching the screen when the task is done",
       "Audio feedback at the end of a long session"
+    ],
+    "votes": 0
+  },
+  {
+    "benefit": "A chime to catch your attention, no voice needed",
+    "category": "notification",
+    "description": "Plays a system sound (Glass.aiff on macOS, paplay on Linux, PowerShell beep on Windows) when the agent needs the user's attention. A silent alternative to TTS that works offline and requires no voice engine.",
+    "hook_type": "Notification",
+    "id": "notification-sound",
+    "implementation": {
+      "code_snippet": "#!/usr/bin/env node\n// Joue un son système quand Claude attend l'utilisateur (Notification)\nimport { execSync } from 'child_process';\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 5_000, stdio: 'ignore', shell: true });\n}\n\nexport function run(_input, { exec = defaultExec, platform = process.platform } = {}) {\n  try {\n    if (platform === 'darwin') {\n      exec('afplay /System/Library/Sounds/Glass.aiff');\n    } else if (platform === 'linux') {\n      exec('paplay /usr/share/sounds/freedesktop/stereo/message.oga 2>/dev/null || aplay /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null || true');\n    } else if (platform === 'win32') {\n      exec('powershell -c \"[console]::beep(660, 300)\"');\n    }\n  } catch {\n    // Son absent ou erreur — non bloquant\n  }\n  return null;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
+      "config": {
+        "hooks": {
+          "Notification": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/notification-sound.mjs",
+                  "type": "command"
+                }
+              ],
+              "matcher": ""
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/notification-sound.mjs",
+      "type": "settings_json"
+    },
+    "name": "System sound notification",
+    "provider": [
+      "claude-code"
+    ],
+    "slug": "notification-sound",
+    "tags": [
+      "notification",
+      "sound",
+      "audio",
+      "macos",
+      "cross-platform"
+    ],
+    "trigger": "*",
+    "use_cases": [
+      "Alert the user during long autonomous runs",
+      "Works in silent environments where TTS is unwanted",
+      "Minimal-distraction attention signal"
+    ],
+    "votes": 0
+  },
+  {
+    "benefit": "A satisfying chime the moment Claude finishes",
+    "category": "notification",
+    "description": "Plays a completion sound (Hero.aiff on macOS, paplay on Linux, PowerShell beep on Windows) when the agent stops. Instant audio feedback without TTS, no voice engine required.",
+    "hook_type": "Stop",
+    "id": "stop-sound",
+    "implementation": {
+      "code_snippet": "#!/usr/bin/env node\n// Joue un son de completion quand Claude termine une tâche (Stop)\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 5_000, stdio: 'ignore', shell: true });\n}\n\nexport function run({ exec = defaultExec, platform = process.platform } = {}) {\n  try {\n    if (platform === 'darwin') {\n      exec('afplay /System/Library/Sounds/Hero.aiff');\n    } else if (platform === 'linux') {\n      exec('paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || aplay /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null || true');\n    } else if (platform === 'win32') {\n      exec('powershell -c \"[console]::beep(880, 400)\"');\n    }\n  } catch {\n    // Son absent ou erreur — non bloquant\n  }\n  return null;\n}\n\n/* v8 ignore next 3 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  run();\n}\n",
+      "config": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-sound.mjs",
+                  "type": "command"
+                }
+              ],
+              "matcher": ""
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/stop-sound.mjs",
+      "type": "settings_json"
+    },
+    "name": "System sound on task completion",
+    "provider": [
+      "claude-code"
+    ],
+    "slug": "stop-sound",
+    "tags": [
+      "stop",
+      "sound",
+      "audio",
+      "completion",
+      "cross-platform"
+    ],
+    "trigger": "*",
+    "use_cases": [
+      "Audio feedback when a long task finishes",
+      "Minimal-distraction alternative to TTS",
+      "Complement stop-tts-completion with a lighter signal"
     ],
     "votes": 0
   },

@@ -39,6 +39,10 @@
           },
           {
             "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/protect-lockfiles.mjs"
+          },
+          {
+            "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-write-main-guard.mjs"
           }
         ],
@@ -218,7 +222,7 @@
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-tts.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-sound.mjs"
           }
         ]
       }
@@ -232,7 +236,7 @@
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/notification-tts.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/notification-sound.mjs"
           }
         ]
       }

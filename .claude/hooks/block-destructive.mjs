@@ -5,15 +5,28 @@ import { fileURLToPath } from 'url';
 
 const BLOCKED = [
   [/rm\s+-rf?\s+\/(?:\s|$)/, 'rm -rf / interdit'],
+  [/rm\s+-rf?\s+[~*]/, 'rm -rf ~ / rm -rf * interdit (suppression de masse)'],
+  [/rm\s+-rf?\s+\$HOME\b/, 'rm -rf $HOME interdit'],
   [/git\s+push\s+.*--force(?:-with-lease)?\s+.*(?:main|master)/, 'force-push sur main/master interdit'],
+  [/git\s+reset\s+--hard/, 'git reset --hard interdit — pertes de modifications non commitées ; faites-le manuellement si intentionnel'],
   [/DROP\s+(?:TABLE|DATABASE)\s+\w+/i, 'DROP TABLE/DATABASE interdit sans confirmation explicite'],
+  [/TRUNCATE\s+(?:TABLE\s+)?\w+/i, 'TRUNCATE interdit sans confirmation explicite'],
   [/>\s*\/dev\/(?:sda|nvme|disk)\d*/i, 'Écriture directe sur disque bloquée'],
+  [/\bmkfs\b/i, 'Formatage de système de fichiers interdit'],
+  [/\bdd\s+if=/i, 'Opération dd sur disque interdite'],
   [/chmod\s+-R\s+777\s+\//i, 'chmod 777 récursif sur / interdit'],
 ];
 
+// Retire les chaînes entre guillemets (arguments -m "...", --body "...", etc.)
+// pour éviter les faux positifs sur des mentions documentaires de patterns dangereux.
+function stripQuotedArgs(cmd) {
+  return cmd.replace(/"(?:[^"\\]|\\.)*"/g, '""').replace(/'(?:[^'\\]|\\.)*'/g, "''");
+}
+
 export function run(input) {
   const command = input.tool_input?.command ?? '';
-  const blocked = BLOCKED.find(([pattern]) => pattern.test(command));
+  const stripped = stripQuotedArgs(command);
+  const blocked = BLOCKED.find(([pattern]) => pattern.test(stripped));
   return blocked
     ? { decision: 'block', reason: `Commande destructive bloquée : ${blocked[1]}` }
     : null;
