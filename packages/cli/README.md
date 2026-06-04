@@ -2,7 +2,7 @@
 
 **Install Claude Code hooks in one command.**
 
-[hookstack.vercel.app](https://hookstack.vercel.app) — browse 66+ community-vetted lifecycle hooks for Claude Code & GitHub Copilot, then run this CLI to wire them into your project.
+[hookstack.vercel.app](https://hookstack.vercel.app) — browse a growing catalogue of Claude Code hooks, then run this CLI to wire them into your project.
 
 ---
 

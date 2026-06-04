@@ -1,7 +1,7 @@
 export const T = {
   metaTitle: 'HookStack — Claude Code hooks catalogue. Install in 1 minute.',
   metaDescription:
-    'Browse 68 production-ready hooks for Claude Code & GitHub Copilot. Block secrets, enforce tests, inject context — select yours and install with one npx command.',
+    'Browse production-ready Claude Code hooks. Block secrets, enforce tests, inject context — select yours and install with one npx command.',
   footerText: 'Hookstack — Community catalogue of agentic hooks',
   navCatalogue: 'Catalogue',
   hooksSelectedOne: 'hook selected',

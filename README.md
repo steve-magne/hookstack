@@ -4,11 +4,11 @@
 
 **Your AI agent runs fast. Hooks keep it honest.**
 
-66+ community-vetted lifecycle hooks for Claude Code & GitHub Copilot.  
-Browse the catalogue, select what you need, run one command.
+A growing catalogue of production-ready lifecycle hooks for Claude Code.  
+Browse, select what you need, run one command.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![Hooks](https://img.shields.io/badge/hooks-66%2B-6366f1?style=flat-square)](https://hookstack.vercel.app)
+[![Hooks](https://img.shields.io/badge/hooks-catalogue-6366f1?style=flat-square)](https://hookstack.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![CodeQL](https://github.com/steve-magne/hookstack/actions/workflows/codeql.yml/badge.svg?style=flat-square)](https://github.com/steve-magne/hookstack/actions/workflows/codeql.yml)

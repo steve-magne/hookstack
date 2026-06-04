@@ -2,7 +2,7 @@
   "name": "hookstack",
   "private": true,
   "version": "0.1.0",
-  "description": "Catalogue communautaire de hooks agentiques pour Claude Code & GitHub Copilot",
+  "description": "Catalogue de hooks agentiques pour Claude Code",
   "packageManager": "pnpm@10.28.2",
   "engines": {
     "node": ">=22.0.0"
