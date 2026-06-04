@@ -955,66 +955,6 @@
     "is_must": true
   },
   {
-    "benefit": "Project instructions loaded before the first word",
-    "category": "context",
-    "community_examples": [
-      {
-        "added_by": "claude-code-analysis",
-        "file_path": ".claude/instructions.md",
-        "repo": "https://github.com/facebook/react"
-      }
-    ],
-    "description": "At session start, automatically injects the contents of the .claude/instructions.md file into the agent's context, excluding specific subdirectories (e.g. compiler). The agent starts with the project conventions and instructions without manual reminders.",
-    "hook_type": "SessionStart",
-    "id": "session-start-load-instructions",
-    "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Charge les instructions agent depuis .claude/instructions.md au démarrage (SessionStart)\nimport { readFileSync, writeFileSync, existsSync } from 'fs';\nimport { join } from 'path';\nimport { tmpdir } from 'os';\nimport { fileURLToPath } from 'url';\n\nexport function run({\n  exists = existsSync,\n  readFile = readFileSync,\n  writeFile = writeFileSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n  tmpFile = join(tmpdir(), `claude-instructions-${process.pid}.md`),\n} = {}) {\n  const instructionsPath = join(projectDir, '.claude', 'instructions.md');\n  if (!exists(instructionsPath)) return null;\n\n  const content = readFile(instructionsPath, 'utf8').trim();\n  if (!content) return null;\n\n  // Sauvegarde dans /tmp pour que d'autres hooks puissent le lire\n  writeFile(tmpFile, content);\n  return { message: '[load-instructions] Instructions chargées depuis .claude/instructions.md\\n' };\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result?.message) process.stderr.write(result.message);\n}\n",
-      "config": {
-        "hooks": {
-          "SessionStart": [
-            {
-              "hooks": [
-                {
-                  "command": "if [[ \"$PWD\" != */compiler* ]]; then cat .claude/instructions.md 2>/dev/null || true; fi",
-                  "type": "command"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "script_path": ".claude/hooks/load-instructions.mjs",
-      "type": "settings_json",
-      "security": {
-        "snyk": {
-          "high": 0,
-          "medium": 0,
-          "low": 0,
-          "scannedAt": "2026-06-03T12:35:39.440Z"
-        }
-      }
-    },
-    "name": "Load project instructions at startup",
-    "provider": [
-      "claude-code"
-    ],
-    "slug": "session-start-load-instructions",
-    "tags": [
-      "context",
-      "session",
-      "instructions",
-      "onboarding"
-    ],
-    "trigger": "*",
-    "use_cases": [
-      "Agent onboarding",
-      "Persistent project context",
-      "Automatic team instructions"
-    ],
-    "votes": 0,
-    "is_must": true
-  },
-  {
     "benefit": "Forces uv and pnpm, kills pip/npm drift",
     "category": "validation",
     "community_examples": [
