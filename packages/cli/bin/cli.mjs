@@ -153,7 +153,7 @@ async function interactiveInstall(slugs, args) {
   }
   const { hooks } = data
   const notFound = slugs.filter(slug => !hooks.find(h => h.slug === slug))
-  spin.stop(`Found ${pc.bold(String(hooks.length))} hook${hooks.length === 1 ? '' : 's'}`)
+  spin.stop(`Selected ${pc.bold(String(hooks.length))} hook${hooks.length === 1 ? '' : 's'}`)
   if (notFound.length) p.log.warn(`Unknown slugs skipped: ${notFound.join(', ')}`)
   if (hooks.length === 0) { p.cancel('No hooks to install.'); process.exit(1) }
 
@@ -221,8 +221,8 @@ async function interactiveInstall(slugs, args) {
     `⭐  Star us         ${pc.cyan(REPO_URL)}`,
   ].filter(v => v !== null).join('\n')
 
-  p.note(resultLines, `Installed ${plural(result.hookCount, 'hook')}`)
-  p.outro(pc.green('Done!') + pc.dim('  Restart Claude Code to activate.'))
+  p.note(resultLines, 'Resume installation')
+  p.outro(pc.green('Done!') + pc.dim("  You've just HookStacked your agent workflow."))
 }
 
 async function directInstall(slugs, args) {
