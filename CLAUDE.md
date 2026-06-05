@@ -121,6 +121,8 @@ Backlog = **GitHub Issues** (label `growth` + `content`/`outreach`/`spike`/`seo`
 
 **Le deliverable est la commande `npx hookstack-cli@latest`**, pas un copier-coller de JSON. `HookConfigurator.tsx` (l. 21) construit `pluginCmd` avec les slugs sélectionnés. Ne jamais décrire le flow comme "coller un settings.json" dans la doc ou le README.
 
+**Compatibilité GitHub Copilot** : le CLI supporte un mode `--copilot` (ou option `3` dans le prompt interactif) qui génère un `settings.json` avec des **chemins relatifs** (sans `$CLAUDE_PROJECT_DIR/`). Copilot ne résout pas cette variable, contrairement à Claude Code. La logique vit dans `collectIncomingHooks` (`packages/cli/bin/core.mjs`) : le scope `'copilot'` remplace `$CLAUDE_PROJECT_DIR/` par une chaîne vide.
+
 ## Architecture
 
 Hookstack est un catalogue de hooks agentiques pour Claude Code. Next.js 15 (App Router) + TypeScript + Tailwind v4.
