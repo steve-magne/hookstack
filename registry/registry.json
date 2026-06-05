@@ -37,6 +37,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -98,6 +105,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -162,6 +176,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -209,7 +230,16 @@
         }
       },
       "script_path": ".claude/hooks/protect-lockfiles.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
+        }
+      }
     },
     "is_must": true,
     "name": "Lock file write protection",
@@ -265,6 +295,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -319,6 +356,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -379,6 +423,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -433,6 +484,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -487,6 +545,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -542,6 +607,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -600,6 +672,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -657,6 +736,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -711,6 +797,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -770,6 +863,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -825,6 +925,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -878,6 +985,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -931,6 +1045,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -992,6 +1113,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1057,6 +1185,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1121,6 +1256,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1185,6 +1327,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1247,6 +1396,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1309,6 +1465,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1369,6 +1532,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1436,6 +1606,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1491,6 +1668,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1553,6 +1737,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1613,6 +1804,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1673,6 +1871,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1719,7 +1924,16 @@
         }
       },
       "script_path": ".claude/hooks/notification-sound.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
+        }
+      }
     },
     "name": "System sound notification",
     "provider": [
@@ -1765,7 +1979,16 @@
         }
       },
       "script_path": ".claude/hooks/stop-sound.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "security": {
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
+        }
+      }
     },
     "name": "System sound on task completion",
     "provider": [
@@ -1825,6 +2048,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1885,6 +2115,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -1945,6 +2182,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2005,6 +2249,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2066,6 +2317,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2127,6 +2385,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2188,6 +2453,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2249,6 +2521,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2315,6 +2594,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2375,6 +2661,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2436,6 +2729,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2508,6 +2808,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2569,6 +2876,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2630,6 +2944,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2683,6 +3004,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2740,6 +3068,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2797,6 +3132,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2850,6 +3192,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2904,6 +3253,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -2958,6 +3314,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3012,6 +3375,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3066,6 +3436,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3119,6 +3496,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3173,6 +3557,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3225,6 +3616,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3279,6 +3677,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3337,6 +3742,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3391,6 +3803,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3447,6 +3866,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3506,6 +3932,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3565,6 +3998,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3624,6 +4064,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3683,6 +4130,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3741,6 +4195,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3796,6 +4257,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3851,6 +4319,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3907,6 +4382,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
@@ -3979,6 +4461,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     }
@@ -4030,6 +4519,13 @@
           "medium": 0,
           "low": 0,
           "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T01:54:33.033Z"
         }
       }
     },
