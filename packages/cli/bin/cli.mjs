@@ -151,10 +151,13 @@ async function interactiveInstall(slugs, args) {
   // Scope selection
   let scope = args.scope
   console.log('\n  Where to install?')
-  console.log(`  ${pc.cyan('1')}  This project     ${pc.dim('./.claude — committed with your repo')}`)
-  console.log(`  ${pc.cyan('2')}  All my projects  ${pc.dim('~/.claude — every project on this machine')}`)
-  const scopeAnswer = await ask(`  → [${scope === 'global' ? '2' : '1'}]: `)
+  console.log(`  ${pc.cyan('1')}  This project              ${pc.dim('./.claude — committed with your repo')}`)
+  console.log(`  ${pc.cyan('2')}  All my projects           ${pc.dim('~/.claude — every project on this machine')}`)
+  console.log(`  ${pc.cyan('3')}  This GitHub Copilot project  ${pc.dim('./.claude — settings.json adapted, committed with your repo')}`)
+  const defaultChoice = scope === 'global' ? '2' : scope === 'copilot' ? '3' : '1'
+  const scopeAnswer = await ask(`  → [${defaultChoice}]: `)
   if (scopeAnswer === '2' || scopeAnswer === 'global') scope = 'global'
+  else if (scopeAnswer === '3' || scopeAnswer === 'copilot') scope = 'copilot'
   else if (scopeAnswer === 'q') { console.log('Cancelled.'); process.exit(0) }
   else scope = 'project'
 
@@ -165,7 +168,8 @@ async function interactiveInstall(slugs, args) {
   console.log(`\n  ${pc.bold('Security')}`)
   console.log(securityPanel(buildSecurityRows(hooks)))
 
-  const confirmAnswer = await ask(`\n  Install ${plural(hooks.length, 'hook')} into ${scope === 'global' ? '~/.claude' : './.claude'}? [Y/n]: `)
+  const scopeLabel = scope === 'global' ? '~/.claude' : scope === 'copilot' ? './.claude (GitHub Copilot mode)' : './.claude'
+  const confirmAnswer = await ask(`\n  Install ${plural(hooks.length, 'hook')} into ${scopeLabel}? [Y/n]: `)
   if (confirmAnswer.toLowerCase() === 'n' || confirmAnswer.toLowerCase() === 'no') {
     console.log('Cancelled.')
     process.exit(0)
@@ -221,7 +225,8 @@ const HELP = `
   Options:
     --hooks <slugs>   Comma-separated list of hook slugs (omit for default set)
     --global, -g      Install into ~/.claude instead of ./.claude
-    --scope <s>       "project" (default) or "global"
+    --copilot         Install into ./.claude with paths adapted for GitHub Copilot
+    --scope <s>       "project" (default), "global", or "copilot"
     --yes, -y         Skip prompts (non-interactive install)
     --version, -v     Show version
     --help, -h        Show this help

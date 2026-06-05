@@ -92,6 +92,16 @@ npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-bloc
 
 That's it. The CLI writes `.claude/hooks/*.mjs` and patches `.claude/settings.json` — no manual copy-paste, no JSON editing.
 
+### GitHub Copilot
+
+Hookstack works with **GitHub Copilot** too. Add `--copilot` to generate a `settings.json` with relative paths (no `$CLAUDE_PROJECT_DIR`) that Copilot can resolve:
+
+```bash
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,load-git-context --copilot
+```
+
+Or pick option **3** when the interactive prompt asks "Where to install?".
+
 ---
 
 ## Contribute a hook

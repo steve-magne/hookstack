@@ -36,6 +36,7 @@ export function parseArgs(argv) {
     if (arg === '--yes' || arg === '-y') { result.yes = true; continue }
     if (arg === '--global' || arg === '-g') { result.scope = 'global'; continue }
     if (arg === '--project') { result.scope = 'project'; continue }
+    if (arg === '--copilot') { result.scope = 'copilot'; continue }
     if (arg.startsWith('--scope=')) {
       const v = arg.slice('--scope='.length)
       if (v === 'global' || v === 'project') result.scope = v
@@ -98,7 +99,8 @@ export function mergeHooks(existing, incoming) {
 
 // Gathers the hook fragments from an API hook list into a single event→entries
 // map. For global scope, rewrites $CLAUDE_PROJECT_DIR to the absolute global
-// root so commands resolve outside any project.
+// root so commands resolve outside any project. For copilot scope, strips
+// $CLAUDE_PROJECT_DIR/ so paths become relative (GitHub Copilot compatible).
 export function collectIncomingHooks(hooks, { scope = 'project', globalRoot } = {}) {
   const incoming = {}
   for (const hook of hooks) {
@@ -107,14 +109,16 @@ export function collectIncomingHooks(hooks, { scope = 'project', globalRoot } = 
     for (const [event, entries] of Object.entries(fragment)) {
       incoming[event] ??= []
       for (const entry of entries) {
-        const rewrite = scope === 'global' && globalRoot
         incoming[event].push({
           ...entry,
-          hooks: entry.hooks.map(h =>
-            rewrite && typeof h.command === 'string'
-              ? { ...h, command: h.command.replace(PROJECT_DIR_RE, globalRoot) }
-              : h,
-          ),
+          hooks: entry.hooks.map(h => {
+            if (!h.command || typeof h.command !== 'string') return h
+            if (scope === 'global' && globalRoot)
+              return { ...h, command: h.command.replace(PROJECT_DIR_RE, globalRoot) }
+            if (scope === 'copilot')
+              return { ...h, command: h.command.replace(/\$\{?CLAUDE_PROJECT_DIR\}?\//g, '') }
+            return h
+          }),
         })
       }
     }

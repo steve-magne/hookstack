@@ -107,6 +107,15 @@ describe('collectIncomingHooks', () => {
     const out = collectIncomingHooks(hooks, { scope: 'global', globalRoot: '/home/u' })
     expect(out.PreToolUse[0].hooks[0].command).toBe('node /home/u/.claude/hooks/s.mjs')
   })
+  it('copilot : retire $CLAUDE_PROJECT_DIR/', () => {
+    const out = collectIncomingHooks(hooks, { scope: 'copilot' })
+    expect(out.PreToolUse[0].hooks[0].command).toBe('node .claude/hooks/s.mjs')
+  })
+  it('copilot : retire aussi la forme ${CLAUDE_PROJECT_DIR}/', () => {
+    const h = [{ slug: 's', config: { hooks: { Stop: [{ hooks: [{ command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/s.mjs' }] }] } } }]
+    const out = collectIncomingHooks(h, { scope: 'copilot' })
+    expect(out.Stop[0].hooks[0].command).toBe('node .claude/hooks/s.mjs')
+  })
   it('ignore les hooks sans fragment config', () => {
     expect(collectIncomingHooks([{ slug: 'x' }], {})).toEqual({})
   })
