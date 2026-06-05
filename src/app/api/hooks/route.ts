@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
     .map(h => ({
       slug: h.slug,
       name: h.name,
+      benefit: h.benefit ?? null,
       category: h.category,
       hook_type: h.hook_type,
       trigger: h.trigger,

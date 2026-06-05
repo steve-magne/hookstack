@@ -1,0 +1,49 @@
+name: Sync CodeQL verdicts
+
+# Refreshes per-hook CodeQL alert counts in registry.json.
+# Triggers after each CodeQL analysis run completes on main, plus
+# weekly + manual fallback. Kept off PR events — never races publish-cli,
+# never fails on forks that lack security-events read access.
+
+on:
+  workflow_run:
+    workflows: ["CodeQL"] # must match your CodeQL workflow's `name:` field exactly
+    branches: [main]
+    types: [completed]
+  schedule:
+    - cron: '0 7 * * 1' # Mondays 07:00 UTC (offset from Snyk at 06:00)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  security-events: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # Skip if the triggering CodeQL run itself failed.
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Sync CodeQL alerts → registry verdicts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node .claude/sync-codeql.mjs
+
+      - name: Commit refreshed verdicts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet registry/registry.json; then
+            echo "No verdict changes."
+          else
+            git add registry/registry.json
+            git commit -m "chore(security): refresh CodeQL verdicts [skip ci]"
+            git push
+          fi

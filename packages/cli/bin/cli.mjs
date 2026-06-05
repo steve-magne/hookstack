@@ -11,7 +11,6 @@ import {
   mergeHooks,
   assertSafeTarget,
   collectIncomingHooks,
-  buildSummaryRows,
   buildSecurityRows,
 } from './core.mjs'
 
@@ -71,29 +70,36 @@ function capCell(on, width) {
   return on ? pc.yellow(text) : pc.dim(text)
 }
 
-const SNYK_COLOR = { high: pc.red, medium: pc.yellow, low: pc.cyan, safe: pc.green, unknown: pc.dim }
+const VERDICT_COLOR = { high: pc.red, medium: pc.yellow, low: pc.cyan, safe: pc.green, unknown: pc.dim }
 
 export function securityPanel(rows) {
-  const W = { name: 28, cap: 8, snyk: 10 }
+  const W = { name: 24, benefit: 34, cap: 7, snyk: 9, codeql: 8 }
   const header = pc.dim(
-    ''.padEnd(W.name) + 'Shell'.padEnd(W.cap) + 'Net'.padEnd(W.cap) +
-    'Writes'.padEnd(W.cap) + 'Snyk',
+    ''.padEnd(W.name) +
+    ''.padEnd(W.benefit) +
+    'Shell'.padEnd(W.cap) +
+    'Net'.padEnd(W.cap) +
+    'Writes'.padEnd(W.cap) +
+    'Snyk'.padEnd(W.snyk) +
+    'CodeQL',
   )
-  const body = rows.map(r =>
-    truncPad(r.name, W.name) +
-    capCell(r.shell, W.cap) +
-    capCell(r.network, W.cap) +
-    capCell(r.fsWrite, W.cap) +
-    (SNYK_COLOR[r.snyk.level] ?? pc.dim)(truncPad(r.snyk.label, W.snyk)),
-  )
-  const anyUnknown = rows.some(r => r.snyk.level === 'unknown')
+  const body = rows.flatMap(r => {
+    const benefitText = r.benefit ? truncPad(r.benefit, W.benefit) : ''.padEnd(W.benefit)
+    const row = truncPad(r.name, W.name) +
+      pc.dim(benefitText) +
+      capCell(r.shell, W.cap) +
+      capCell(r.network, W.cap) +
+      capCell(r.fsWrite, W.cap) +
+      (VERDICT_COLOR[r.snyk.level] ?? pc.dim)(truncPad(r.snyk.label, W.snyk)) +
+      (VERDICT_COLOR[r.codeql.level] ?? pc.dim)(r.codeql.label)
+    return [row]
+  })
   const footer = [
     '',
     pc.dim('Shell = runs commands · Net = network access · Writes = filesystem writes'),
-    anyUnknown ? pc.dim('Snyk "—" = not scanned yet') : null,
     pc.dim(`Details: ${API_BASE}/hook/<slug>`),
-  ].filter(v => v !== null).join('\n')
-  return [header, ...body, footer].join('\n')
+  ].join('\n')
+  return [header, '', ...body, footer].join('\n')
 }
 
 // ── install ───────────────────────────────────────────────────────────────────
@@ -184,12 +190,10 @@ async function interactiveInstall(slugs, args) {
   scope = scopeResult
 
   const dirs = resolveScopeRoot(scope, { cwd: process.cwd(), home: homedir() })
-  const summaryRows = buildSummaryRows(hooks, { root: dirs.root })
   const secRows = buildSecurityRows(hooks)
 
-  // Panels
-  p.note(summaryPanel(summaryRows), 'Installation Summary')
-  p.note(securityPanel(secRows), 'Security Assessment')
+  // Panel
+  p.note(securityPanel(secRows), 'Installation Summary')
 
   // Confirm
   const scopeLabel = scope === 'global' ? '~/.claude' : scope === 'copilot' ? './.claude (Copilot mode)' : './.claude'
