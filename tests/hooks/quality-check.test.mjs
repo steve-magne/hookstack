@@ -92,4 +92,22 @@ describe('quality-check', () => {
     const result = run(makeOpts({ hasEslintConfig: true, execResults: { tsc: err, eslint: err, 'pnpm test': err, vitest: err } }));
     expect(result.message).toContain('vérification(s) échouée(s)');
   });
+
+  it('la commande de test inclut yarn comme fallback', () => {
+    const opts = makeOpts();
+    run(opts);
+    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('yarn test --run'));
+  });
+
+  it('la commande de test inclut bun comme fallback', () => {
+    const opts = makeOpts();
+    run(opts);
+    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('bun test'));
+  });
+
+  it('la commande de test inclut npm test --if-present comme fallback', () => {
+    const opts = makeOpts();
+    run(opts);
+    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('npm test --if-present'));
+  });
 });

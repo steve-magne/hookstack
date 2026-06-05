@@ -4,11 +4,25 @@ import { detect, run } from '../../.claude/hooks/run-tests.mjs';
 
 const PROJECT_DIR = '/fake/project';
 
-function makeOpts({ scripts = { test: 'vitest' }, hasPkg = true, hasPyproject = false, hasGoMod = false, spawnStatus = 0 } = {}) {
+function makeOpts({
+  scripts = { test: 'vitest' },
+  hasPkg = true,
+  hasPnpmLock = false,
+  hasYarnLock = false,
+  hasBunLockb = false,
+  hasBunLock = false,
+  hasPyproject = false,
+  hasGoMod = false,
+  spawnStatus = 0,
+} = {}) {
   return {
     projectDir: PROJECT_DIR,
     exists: (p) => {
       if (p.endsWith('package.json')) return hasPkg;
+      if (p.endsWith('pnpm-lock.yaml')) return hasPnpmLock;
+      if (p.endsWith('yarn.lock')) return hasYarnLock;
+      if (p.endsWith('bun.lockb')) return hasBunLockb;
+      if (p.endsWith('bun.lock')) return hasBunLock;
       if (p.endsWith('pyproject.toml')) return hasPyproject;
       if (p.endsWith('go.mod')) return hasGoMod;
       return false;
@@ -23,10 +37,40 @@ function makeOpts({ scripts = { test: 'vitest' }, hasPkg = true, hasPyproject = 
 }
 
 describe('detect', () => {
-  it('retourne pnpm test si scripts.test existe', () => {
+  it('retourne pnpm si pnpm-lock.yaml existe', () => {
+    const opts = makeOpts({ hasPnpmLock: true });
+    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });
+    expect(result).toEqual(['pnpm', ['test', '--', '--run']]);
+  });
+
+  it('retourne npm si aucun lockfile spécifique', () => {
     const opts = makeOpts();
     const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });
-    expect(result).toEqual(['pnpm', ['test', '--run']]);
+    expect(result).toEqual(['npm', ['test', '--', '--run']]);
+  });
+
+  it('retourne yarn si yarn.lock existe', () => {
+    const opts = makeOpts({ hasYarnLock: true });
+    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });
+    expect(result).toEqual(['yarn', ['test', '--', '--run']]);
+  });
+
+  it('retourne bun si bun.lockb existe (bun <1.2)', () => {
+    const opts = makeOpts({ hasBunLockb: true });
+    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });
+    expect(result).toEqual(['bun', ['test']]);
+  });
+
+  it('retourne bun si bun.lock existe (bun ≥1.2)', () => {
+    const opts = makeOpts({ hasBunLock: true });
+    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });
+    expect(result).toEqual(['bun', ['test']]);
+  });
+
+  it('pnpm est prioritaire sur yarn si les deux lockfiles existent', () => {
+    const opts = makeOpts({ hasPnpmLock: true, hasYarnLock: true });
+    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });
+    expect(result).toEqual(['pnpm', ['test', '--', '--run']]);
   });
 
   it('retourne null si pas de package.json ni pytest ni go.mod', () => {
