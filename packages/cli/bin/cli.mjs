@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync, mkdirSync, existsSync, realpathSync } from 'fs'
-import { createInterface } from 'readline'
 import { homedir } from 'os'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import pc from 'picocolors'
+import * as p from '@clack/prompts'
 import {
   parseArgs,
   resolveScopeRoot,
@@ -32,17 +32,18 @@ async function fetchHooks(slugs) {
   return res.json()
 }
 
-function ask(question) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout })
-  return new Promise(resolve => rl.question(question, a => { rl.close(); resolve(a.trim()) }))
-}
+// ── ASCII banner ──────────────────────────────────────────────────────────────
 
-// ── panel rendering ────────────────────────────────────────────────────────
+const BANNER = pc.cyan([
+  '██╗  ██╗ ██████╗  ██████╗ ██╗  ██╗███████╗████████╗ █████╗  ██████╗██╗  ██╗',
+  '██║  ██║██╔═══██╗██╔═══██╗██║ ██╔╝██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝',
+  '███████║██║   ██║██║   ██║█████╔╝ ███████╗   ██║   ███████║██║     █████╔╝ ',
+  '██╔══██║██║   ██║██║   ██║██╔═██╗ ╚════██║   ██║   ██╔══██║██║     ██╔═██╗ ',
+  '██║  ██║╚██████╔╝╚██████╔╝██║  ██╗███████║   ██║   ██║  ██║╚██████╗██║  ██╗',
+  '╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝',
+].join('\n'))
 
-function truncPad(value, width) {
-  const s = String(value ?? '')
-  return (s.length > width ? s.slice(0, width - 1) + '…' : s).padEnd(width)
-}
+// ── panel content builders ────────────────────────────────────────────────────
 
 export function summaryPanel(rows) {
   const lines = []
@@ -50,13 +51,19 @@ export function summaryPanel(rows) {
     lines.push(pc.cyan(r.path ?? `${r.name} (settings only)`))
     const meta = [
       r.category,
-      r.events.join(', ') + (r.blocking ? pc.yellow(' · can block') : ''),
+      r.events.join(', ') + (r.blocking ? pc.yellow(' · ⚡ can block') : ''),
       r.matcher ? `matcher: ${r.matcher}` : null,
     ].filter(Boolean).join(pc.dim(' · '))
-    lines.push('  ' + pc.dim(meta))
-    if (r.source) lines.push('  ' + pc.dim(`source: ${r.source}`))
+    lines.push(pc.dim('  ' + meta))
+    if (r.source) lines.push(pc.dim(`  source: ${r.source}`))
+    lines.push('')
   }
-  return lines.join('\n')
+  return lines.join('\n').trimEnd()
+}
+
+function truncPad(value, width) {
+  const s = String(value ?? '')
+  return (s.length > width ? s.slice(0, width - 1) + '…' : s).padEnd(width)
 }
 
 function capCell(on, width) {
@@ -67,10 +74,10 @@ function capCell(on, width) {
 const SNYK_COLOR = { high: pc.red, medium: pc.yellow, low: pc.cyan, safe: pc.green, unknown: pc.dim }
 
 export function securityPanel(rows) {
-  const W = { name: 26, cap: 8, snyk: 10 }
+  const W = { name: 28, cap: 8, snyk: 10 }
   const header = pc.dim(
     ''.padEnd(W.name) + 'Shell'.padEnd(W.cap) + 'Net'.padEnd(W.cap) +
-    'Writes'.padEnd(W.cap) + 'Snyk'.padEnd(W.snyk),
+    'Writes'.padEnd(W.cap) + 'Snyk',
   )
   const body = rows.map(r =>
     truncPad(r.name, W.name) +
@@ -89,7 +96,7 @@ export function securityPanel(rows) {
   return [header, ...body, footer].join('\n')
 }
 
-// ── install ──────────────────────────────────────────────────────────────
+// ── install ───────────────────────────────────────────────────────────────────
 
 function doInstall(hooks, dirs, scope, log) {
   mkdirSync(dirs.claudeDir, { recursive: true })
@@ -121,73 +128,101 @@ function doInstall(hooks, dirs, scope, log) {
   return { hookCount: hooks.length, scriptCount }
 }
 
-// ── flows ──────────────────────────────────────────────────────────────────
+// ── flows ─────────────────────────────────────────────────────────────────────
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 
-async function interactiveInstall(slugs, args) {
-  const isDefault = slugs.length === 0
-  console.log(pc.bgCyan(pc.black(' hookstack-cli ')))
-  console.log(isDefault ? '\nFetching default HookStack…' : `\nFetching ${plural(slugs.length, 'hook')}…`)
+function onCancel() {
+  p.cancel('Installation cancelled.')
+  process.exit(0)
+}
 
+async function interactiveInstall(slugs, args) {
+  console.log('\n' + BANNER + '\n')
+  p.intro(pc.bold('hooks') + pc.dim(`  Claude Code hook installer  v${VERSION}`))
+
+  // Fetch
+  const spin = p.spinner()
+  spin.start(slugs.length === 0 ? 'Fetching default HookStack…' : `Fetching ${plural(slugs.length, 'hook')}…`)
   let data
   try {
     data = await fetchHooks(slugs)
   } catch (e) {
-    console.error(pc.red(`\n✗ Fetch failed: ${e.message}`))
+    spin.stop(pc.red(`Fetch failed: ${e.message}`), 1)
     process.exit(1)
   }
   const { hooks } = data
   const notFound = slugs.filter(slug => !hooks.find(h => h.slug === slug))
-  console.log(isDefault
-    ? `✓ Default HookStack — ${plural(hooks.length, 'hook')}`
-    : `✓ Fetched ${plural(hooks.length, 'hook')}`)
-  if (notFound.length) console.warn(`  ! Unknown slugs skipped: ${notFound.join(', ')}`)
-  if (hooks.length === 0) {
-    console.error('\n✗ No hooks to install.')
-    process.exit(1)
-  }
+  spin.stop(`Selected ${pc.bold(String(hooks.length))} hook${hooks.length === 1 ? '' : 's'}`)
+  if (notFound.length) p.log.warn(`Unknown slugs skipped: ${notFound.join(', ')}`)
+  if (hooks.length === 0) { p.cancel('No hooks to install.'); process.exit(1) }
 
-  // Scope selection
+  // Scope
   let scope = args.scope
-  console.log('\n  Where to install?')
-  console.log(`  ${pc.cyan('1')}  This project              ${pc.dim('./.claude — committed with your repo')}`)
-  console.log(`  ${pc.cyan('2')}  All my projects           ${pc.dim('~/.claude — every project on this machine')}`)
-  console.log(`  ${pc.cyan('3')}  This GitHub Copilot project  ${pc.dim('./.claude — settings.json adapted, committed with your repo')}`)
-  const defaultChoice = scope === 'global' ? '2' : scope === 'copilot' ? '3' : '1'
-  const scopeAnswer = await ask(`  → [${defaultChoice}]: `)
-  if (scopeAnswer === '2' || scopeAnswer === 'global') scope = 'global'
-  else if (scopeAnswer === '3' || scopeAnswer === 'copilot') scope = 'copilot'
-  else if (scopeAnswer === 'q') { console.log('Cancelled.'); process.exit(0) }
-  else scope = 'project'
+  const scopeResult = await p.select({
+    message: 'Where to install?',
+    options: [
+      {
+        value: 'project',
+        label: 'This project',
+        hint: './.claude  —  committed with your repo',
+      },
+      {
+        value: 'global',
+        label: 'All my projects',
+        hint: '~/.claude  —  every project on this machine',
+      },
+      {
+        value: 'copilot',
+        label: 'GitHub Copilot project',
+        hint: './.claude  —  paths adapted for Copilot',
+      },
+    ],
+    initialValue: scope,
+  })
+  if (p.isCancel(scopeResult)) return onCancel()
+  scope = scopeResult
 
   const dirs = resolveScopeRoot(scope, { cwd: process.cwd(), home: homedir() })
+  const summaryRows = buildSummaryRows(hooks, { root: dirs.root })
+  const secRows = buildSecurityRows(hooks)
 
-  console.log(`\n  ${pc.bold(`${plural(hooks.length, 'Hook')} to install`)}`)
-  console.log(summaryPanel(buildSummaryRows(hooks, { root: dirs.root })))
-  console.log(`\n  ${pc.bold('Security')}`)
-  console.log(securityPanel(buildSecurityRows(hooks)))
+  // Panels
+  p.note(summaryPanel(summaryRows), 'Installation Summary')
+  p.note(securityPanel(secRows), 'Security Assessment')
 
-  const scopeLabel = scope === 'global' ? '~/.claude' : scope === 'copilot' ? './.claude (GitHub Copilot mode)' : './.claude'
-  const confirmAnswer = await ask(`\n  Install ${plural(hooks.length, 'hook')} into ${scopeLabel}? [Y/n]: `)
-  if (confirmAnswer.toLowerCase() === 'n' || confirmAnswer.toLowerCase() === 'no') {
-    console.log('Cancelled.')
-    process.exit(0)
-  }
+  // Confirm
+  const scopeLabel = scope === 'global' ? '~/.claude' : scope === 'copilot' ? './.claude (Copilot mode)' : './.claude'
+  const confirmed = await p.confirm({
+    message: `Install ${plural(hooks.length, 'hook')} into ${pc.cyan(scopeLabel)}?`,
+  })
+  if (p.isCancel(confirmed) || !confirmed) return onCancel()
 
-  console.log('\nInstalling…')
+  // Install
+  const spin2 = p.spinner()
+  spin2.start('Installing…')
   let result
   try {
-    result = doInstall(hooks, dirs, scope, { warn: m => console.warn(`  ! ${m}`) })
+    result = doInstall(hooks, dirs, scope, { warn: m => p.log.warn(m) })
   } catch (e) {
-    console.error(pc.red(`\n✗ Install failed: ${e.message}`))
+    spin2.stop(pc.red(`Install failed: ${e.message}`), 1)
     process.exit(1)
   }
+  spin2.stop(`Installed ${pc.bold(String(result.hookCount))} hook${result.hookCount === 1 ? '' : 's'}`)
 
-  console.log(`  ✓ ${dirs.settingsPath}`)
-  console.log(`\n  Browse more hooks → ${pc.cyan(`${API_BASE}/#catalogue`)}`)
-  console.log(`  ⭐  star us → ${pc.cyan(REPO_URL)}`)
-  console.log(pc.green(`\n✓ ${plural(result.hookCount, 'hook')} installed — restart Claude Code to activate.\n`))
+  // Result panel
+  const resultLines = [
+    pc.green(`✓ ${dirs.settingsPath}`),
+    result.scriptCount > 0
+      ? pc.green(`✓ ${result.scriptCount} script${result.scriptCount === 1 ? '' : 's'} written to ${dirs.hooksDir}`)
+      : null,
+    '',
+    `Browse more hooks  ${pc.cyan(`${API_BASE}/#catalogue`)}`,
+    `⭐  Star us         ${pc.cyan(REPO_URL)}`,
+  ].filter(v => v !== null).join('\n')
+
+  p.note(resultLines, 'Resume installation')
+  p.outro(pc.green('Done!') + pc.dim("  You've just HookStacked your agent workflow."))
 }
 
 async function directInstall(slugs, args) {
