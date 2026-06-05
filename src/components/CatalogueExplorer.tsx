@@ -261,7 +261,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                 exit={{ opacity: 0, transition: { duration: 0.15 } }}
                 transition={spring.smooth}
               >
-                <div className="sticky top-[116px] z-20 mb-1 flex items-center gap-3 bg-[#0a0a0a] px-3 pt-2 pb-1 [box-shadow:0_-8px_0_0_#0a0a0a]">
+                <div className="sticky top-[138px] z-20 mb-1 flex items-center gap-3 bg-[#0a0a0a] px-3 pt-2 pb-1 [box-shadow:0_-8px_0_0_#0a0a0a]">
                   <h3
                     onMouseEnter={grp.isEvent ? (e) => handleEventHover(grp.key as HookType, grp.count, e.currentTarget.getBoundingClientRect().top) : undefined}
                     onMouseLeave={grp.isEvent ? handleLeave : undefined}
