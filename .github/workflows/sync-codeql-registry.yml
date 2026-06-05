@@ -6,12 +6,8 @@ name: Sync CodeQL verdicts
 # never fails on forks that lack security-events read access.
 
 on:
-  workflow_run:
-    workflows: ["CodeQL"] # must match your CodeQL workflow's `name:` field exactly
-    branches: [main]
-    types: [completed]
   schedule:
-    - cron: '0 7 * * 1' # Mondays 07:00 UTC (offset from Snyk at 06:00)
+    - cron: '0 7 * * 1' # Mondays 07:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -21,8 +17,6 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    # Skip if the triggering CodeQL run itself failed.
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v6
 
