@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync, mkdirSync, existsSync, realpathSync } from 'fs'
+import { join as pathJoin } from 'path'
 import { homedir } from 'os'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -12,6 +13,7 @@ import {
   assertSafeTarget,
   collectIncomingHooks,
   buildSecurityRows,
+  doInstallTests,
 } from './core.mjs'
 
 const API_BASE = process.env.HOOKSTACK_API_BASE || 'https://hookstack.vercel.app'
@@ -214,11 +216,31 @@ async function interactiveInstall(slugs, args) {
   }
   spin2.stop(`Installed ${pc.bold(String(result.hookCount))} hook${result.hookCount === 1 ? '' : 's'}`)
 
+  // Unit tests prompt (project/copilot scope only)
+  let testResult = null
+  const hooksWithTests = hooks.filter(h => h.test_snippet)
+  if (scope !== 'global' && hooksWithTests.length > 0) {
+    const wantTests = await p.confirm({
+      message: `Install unit tests for ${plural(hooksWithTests.length, 'hook')} into ${pc.cyan('tests/hooks/')}? ${pc.dim('(vitest — helps SonarQube gating)')}`,
+      initialValue: true,
+    })
+    if (!p.isCancel(wantTests) && wantTests) {
+      try {
+        testResult = doInstallTests(hooks, process.cwd(), { mkdirSync, writeFileSync, join: pathJoin })
+      } catch (e) {
+        p.log.warn(`Could not write tests: ${e.message}`)
+      }
+    }
+  }
+
   // Result panel
   const resultLines = [
     pc.green(`✓ ${dirs.settingsPath}`),
     result.scriptCount > 0
       ? pc.green(`✓ ${result.scriptCount} script${result.scriptCount === 1 ? '' : 's'} written to ${dirs.hooksDir}`)
+      : null,
+    testResult?.testCount > 0
+      ? pc.green(`✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} written to tests/hooks/`)
       : null,
     '',
     `Browse more hooks  ${pc.cyan(`${API_BASE}/#catalogue`)}`,
@@ -250,6 +272,15 @@ async function directInstall(slugs, args) {
   const log = { warn: m => console.warn(`  ! ${m}`) }
   const result = doInstall(hooks, dirs, args.scope, log)
   console.log(`  ✓ ${dirs.settingsPath}`)
+  if (args.withTests && args.scope !== 'global') {
+    try {
+      const testResult = doInstallTests(hooks, process.cwd(), { mkdirSync, writeFileSync, join: pathJoin })
+      if (testResult.testCount > 0)
+        console.log(`  ✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} written to tests/hooks/`)
+    } catch (e) {
+      console.warn(`  ! Could not write tests: ${e.message}`)
+    }
+  }
   console.log(`\n✅ ${plural(result.hookCount, 'hook')} installed · star us → ${REPO_URL}`)
   console.log('   Restart Claude Code to activate.\n')
 }
@@ -266,6 +297,7 @@ const HELP = `
     --global, -g      Install into ~/.claude instead of ./.claude
     --copilot         Install into ./.claude with paths adapted for GitHub Copilot
     --scope <s>       "project" (default), "global", or "copilot"
+    --with-tests      Also install vitest unit tests into tests/hooks/ (project scope only)
     --yes, -y         Skip prompts (non-interactive install)
     --version, -v     Show version
     --help, -h        Show this help

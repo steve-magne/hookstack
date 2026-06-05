@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
         : null,
       script_path: h.implementation.script_path ?? null,
       code_snippet: h.implementation.code_snippet ?? null,
+      test_snippet: h.implementation.test_snippet ?? null,
       security: h.implementation.security ?? null,
       community_examples: (h.community_examples ?? []).map(c => ({ repo: c.repo })),
     }))

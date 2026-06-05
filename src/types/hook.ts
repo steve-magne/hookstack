@@ -72,6 +72,7 @@ export interface HookImplementation {
   type: 'settings_json'
   config: Record<string, unknown>
   code_snippet?: string
+  test_snippet?: string
   script_path?: string
   /** Third-party security verdicts, populated by CI (see .claude/scan-snyk.mjs). */
   security?: HookSecurity
