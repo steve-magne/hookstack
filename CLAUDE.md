@@ -59,9 +59,7 @@ hookstack/
 ├── .claude/
 │   ├── settings.json                # Config hooks Claude Code actifs pour ce projet
 │   ├── hooks/                       # Scripts hooks Node.js (.mjs) — sécurité, qualité
-│   └── skills/analyze-repo/         # Skill CI : analyse un dépôt GitHub → PR registre
-├── .github/
-│   └── workflows/analyze-repo.yml   # Action déclenchée sur issue labelisée repo-submission
+│   └── skills/analyze-repo/         # Skill : analyse un dépôt GitHub ou une doc → entrées registre
 ├── supabase/
 │   └── schema.sql                   # Schéma BDD Supabase (table soumissions)
 ├── doc/hookstack/                      # Documentation produit (personas, valeur, hook 101…)
@@ -129,7 +127,7 @@ Hookstack est un catalogue de hooks agentiques pour Claude Code. Next.js 15 (App
 
 **Source de données** : `registry/registry.json` est la seule source de vérité — lue directement par `src/lib/hooks.ts` (via `allHooks`). Sans `.env`, tout fonctionne en mode registre local.
 
-**Registre** : `registry/registry.json` est la source canonique et unique du registre versionné — c'est aussi ce que le front-end importe. Les scripts `.claude/skills/analyze-repo/scripts/merge-hooks.js` et `.claude/skills/analyze-repo/scripts/extract-json.js` servent au pipeline CI (`.github/workflows/analyze-repo.yml`). L'Action se déclenche sur les issues labellisées `repo-submission` et ouvre une PR `auto-generated` via Claude Code + `ANTHROPIC_API_KEY`.
+**Registre** : `registry/registry.json` est la source canonique et unique du registre versionné — c'est aussi ce que le front-end importe. Les scripts sous `.claude/skills/analyze-repo/scripts/` alimentent le skill `/analyze-repo` (fetch, validation, merge, apply).
 
 **État global** : Zustand persisté dans `src/store/selection.ts` (clé `hookstack-selection`) — stocke les slugs des hooks sélectionnés.
 
