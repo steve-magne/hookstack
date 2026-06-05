@@ -11,7 +11,14 @@ const FORBIDDEN = [
 export function run(input) {
   if (input.tool_name !== 'Bash') return null;
   const cmd = input.tool_input?.command ?? '';
-  const hit = FORBIDDEN.find(({ pattern }) => pattern.test(cmd));
+  // Supprime le contenu des chaînes entre guillemets pour éviter les faux positifs
+  // quand npm/yarn apparaissent comme valeurs d'arguments texte (ex. git commit -m "...npm...",
+  // gh pr create --body "...yarn...") tout en continuant à bloquer les vraies invocations
+  // de gestionnaire de paquets même après des opérateurs shell (&&, ||, ;).
+  const stripped = cmd
+    .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+    .replace(/'(?:[^'\\]|\\.)*'/g, "''");
+  const hit = FORBIDDEN.find(({ pattern }) => pattern.test(stripped));
   return hit
     ? { decision: 'block', reason: `Utiliser '${hit.replacement}' à la place. Ce projet impose pnpm (pas npm ni yarn).` }
     : null;
