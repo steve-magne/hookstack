@@ -4,7 +4,7 @@
   "description": "CLI installer for the Hookstack catalogue of Claude Code hooks",
   "type": "module",
   "bin": {
-    "hookstack-cli": "./bin/cli.mjs"
+    "hookstack-cli": "./bin/cli"
   },
   "files": [
     "bin/",
