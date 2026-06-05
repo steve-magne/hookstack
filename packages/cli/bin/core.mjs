@@ -159,6 +159,16 @@ export function snykVerdict(snyk) {
   return { label: 'Safe', level: 'safe' }
 }
 
+// Maps a stored CodeQL scan to a short verdict label.
+export function codeqlVerdict(codeql) {
+  if (!codeql || typeof codeql !== 'object') return { label: '—', level: 'unknown' }
+  const { critical = 0, high = 0, medium = 0, low = 0 } = codeql
+  if (critical > 0 || high > 0) return { label: 'High Risk', level: 'high' }
+  if (medium > 0) return { label: 'Med Risk', level: 'medium' }
+  if (low > 0) return { label: 'Low Risk', level: 'low' }
+  return { label: 'Safe', level: 'safe' }
+}
+
 export function shortRepo(url) {
   if (!url) return null
   return String(url)
@@ -184,12 +194,14 @@ export function buildSummaryRows(hooks, { root }) {
   })
 }
 
-// Display rows for the "Security" panel: local static capabilities + Snyk verdict.
+// Display rows for the "Installation Summary" panel: description + static capabilities + verdicts.
 export function buildSecurityRows(hooks) {
   return hooks.map(h => ({
     slug: h.slug,
     name: h.name ?? h.slug,
+    benefit: h.benefit ?? null,
     ...analyzeSecurity(h.code_snippet),
     snyk: snykVerdict(h.security?.snyk),
+    codeql: codeqlVerdict(h.security?.codeql),
   }))
 }
