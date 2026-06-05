@@ -28,8 +28,10 @@ jobs:
 
       - name: Extract repo URL from issue
         id: extract
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          REPO_URL=$(printf '%s' "${{ github.event.issue.body }}" | grep -oE 'https://github\.com/[A-Za-z0-9._/-]+' | head -1)
+          REPO_URL=$(printf '%s' "$ISSUE_BODY" | grep -oE 'https://github\.com/[A-Za-z0-9._/-]+' | head -1)
           echo "repo_url=$REPO_URL" >> "$GITHUB_OUTPUT"
           if [ -z "$REPO_URL" ]; then
             echo "Aucune URL de dépôt trouvée dans l'issue." >&2
