@@ -92,6 +92,16 @@ npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-bloc
 
 That's it. The CLI writes `.claude/hooks/*.mjs` and patches `.claude/settings.json` — no manual copy-paste, no JSON editing.
 
+### With unit tests
+
+Add `--with-tests` to also install vitest unit tests into `tests/hooks/` — useful if SonarQube or a coverage gate rejects new files without tests:
+
+```bash
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,load-git-context --with-tests
+```
+
+In interactive mode the CLI asks automatically after install. In `--yes` mode, pass the flag explicitly.
+
 ### GitHub Copilot
 
 Hookstack works with **GitHub Copilot** too. Add `--copilot` to generate a `settings.json` with relative paths (no `$CLAUDE_PROJECT_DIR`) that Copilot can resolve:

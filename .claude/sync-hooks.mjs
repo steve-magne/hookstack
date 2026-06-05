@@ -127,12 +127,41 @@ console.log(
     (noSnippet ? `, ${noSnippet} sans source` : ''),
 );
 
-// ── Étape 1b : normaliser implementation.config.hooks[].command ─────────────
+// ── Étape 1b : DISQUE -> test_snippet (tests/hooks/<slug>.test.mjs) ─────────
+
+const TESTS_DIR = resolve(ROOT, 'tests/hooks');
+let testsUpdated = 0;
+let testsUnchanged = 0;
+
+for (const hook of registry) {
+  const testPath = resolve(TESTS_DIR, `${hook.slug}.test.mjs`);
+  if (!existsSync(testPath)) continue;
+
+  const disk = readFileSync(testPath, 'utf8');
+  const current = hook.implementation?.test_snippet ?? '';
+  if (disk === current) { testsUnchanged++; continue; }
+
+  if (CHECK) {
+    // test_snippet drift is informational only — not a hard failure
+  } else if (!DRY_RUN) {
+    if (!hook.implementation) hook.implementation = {};
+    hook.implementation.test_snippet = disk;
+    testsUpdated++;
+  }
+}
+
+if (testsUpdated > 0 || testsUnchanged > 0) {
+  console.log(`\n── Tests (disque -> registre) ──`);
+  console.log(`  ${testsUnchanged} synchrone(s), ${testsUpdated} mis à jour`);
+}
+
+// ── Étape 1c : normaliser implementation.config.hooks[].command ─────────────
 // Le CLI (hookstack-cli) lit ces champs directement depuis le registre.
 // On s'assure que chaque commande est de la forme "node $CLAUDE_PROJECT_DIR/..."
 // pour éviter les commandes malformées (ex. "node bash ..." héritées de l'ère .sh).
 
 const BAD_CMD_RE = /^(node\s+bash|bash\s+bash|bash\s+node)\b/;
+
 let cmdDrift = 0;
 let cmdFixed = 0;
 
@@ -241,10 +270,11 @@ if (CHECK) {
 
 // ── Écritures ────────────────────────────────────────────────────────────────
 if (!DRY_RUN) {
-  if (updated > 0 || cmdFixed > 0) {
+  if (updated > 0 || cmdFixed > 0 || testsUpdated > 0) {
     writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2) + '\n', 'utf8');
     const parts = [];
     if (updated > 0) parts.push(`${updated} code_snippet`);
+    if (testsUpdated > 0) parts.push(`${testsUpdated} test_snippet`);
     if (cmdFixed > 0) parts.push(`${cmdFixed} commande(s) normalisée(s)`);
     console.log(`\n✓ registry.json mis à jour (${parts.join(', ')})`);
   }

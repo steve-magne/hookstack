@@ -24,7 +24,9 @@ npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...
 Options:
   --hooks <slugs>   Comma-separated hook slugs (required)
   --global, -g      Install into ~/.claude instead of ./.claude
-  --scope <s>       "project" (default) or "global"
+  --copilot         Install into ./.claude with paths adapted for GitHub Copilot
+  --scope <s>       "project" (default), "global", or "copilot"
+  --with-tests      Also install vitest unit tests into tests/hooks/ (project scope only)
   --yes, -y         Skip prompts (non-interactive / CI)
   --version, -v     Print version
   --help, -h        Show help
@@ -46,6 +48,9 @@ Skips all prompts — useful in CI or dotfile bootstrap scripts.
 ```bash
 # CI bootstrap
 npx hookstack-cli@latest install --hooks=secret-detection,git-push-guard --yes --scope=project
+
+# CI bootstrap with unit tests (avoids SonarQube gating on new files without tests)
+npx hookstack-cli@latest install --hooks=secret-detection,git-push-guard --yes --with-tests
 ```
 
 ---
@@ -56,6 +61,7 @@ For each hook the CLI:
 
 - Writes the `.mjs` script to `.claude/hooks/` (or `~/.claude/hooks/` for global scope)
 - Patches `.claude/settings.json` to register the hook on the right lifecycle event
+- Optionally writes vitest unit tests to `tests/hooks/` when `--with-tests` is passed (or confirmed interactively)
 
 No new dependencies are added to your project. Hooks are plain Node.js scripts — no SDK, no agent modification.
 

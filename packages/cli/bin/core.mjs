@@ -27,6 +27,7 @@ export function parseArgs(argv) {
     version: false,
     scope: 'project',
     yes: false,
+    withTests: false,
   }
 
   for (let i = 0; i < args.length; i++) {
@@ -34,6 +35,7 @@ export function parseArgs(argv) {
     if (arg === '--help' || arg === '-h') { result.help = true; continue }
     if (arg === '--version' || arg === '-v') { result.version = true; continue }
     if (arg === '--yes' || arg === '-y') { result.yes = true; continue }
+    if (arg === '--with-tests') { result.withTests = true; continue }
     if (arg === '--global' || arg === '-g') { result.scope = 'global'; continue }
     if (arg === '--project') { result.scope = 'project'; continue }
     if (arg === '--copilot') { result.scope = 'copilot'; continue }
@@ -175,6 +177,21 @@ export function shortRepo(url) {
     .replace(/^https?:\/\/github\.com\//, '')
     .replace(/\.git$/, '')
     .replace(/\/$/, '')
+}
+
+// Writes test files for installed hooks into <projectRoot>/tests/hooks/.
+// Only hooks that have a test_snippet are written; others are silently skipped.
+export function doInstallTests(hooks, projectRoot, { mkdirSync, writeFileSync, join }) {
+  const testsDir = join(projectRoot, 'tests', 'hooks')
+  mkdirSync(testsDir, { recursive: true })
+  let testCount = 0
+  for (const hook of hooks) {
+    if (!hook.test_snippet) continue
+    const dest = join(testsDir, `${hook.slug}.test.mjs`)
+    writeFileSync(dest, hook.test_snippet, 'utf8')
+    testCount++
+  }
+  return { testCount }
 }
 
 // Display rows for the "Installation Summary" panel.
