@@ -14,6 +14,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@clack/prompts": "^0.9.1",
     "picocolors": "^1.1.1"
   },
   "keywords": [
