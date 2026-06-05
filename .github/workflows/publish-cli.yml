@@ -9,6 +9,10 @@ on:
       - packages/cli/**
       - .github/workflows/publish-cli.yml
 
+concurrency:
+  group: publish-cli
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -33,10 +37,14 @@ jobs:
         id: bump
         working-directory: packages/cli
         run: |
+          PUBLISHED=$(npm view hookstack-cli version 2>/dev/null || node -e "
+            const pkg = JSON.parse(require('fs').readFileSync('package.json','utf8'));
+            process.stdout.write(pkg.version);
+          ")
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            const [maj, min, patch] = pkg.version.split('.').map(Number);
+            const [maj, min, patch] = '$PUBLISHED'.split('.').map(Number);
             pkg.version = maj + '.' + min + '.' + (patch + 1);
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
             console.log('new=' + pkg.version);
