@@ -713,7 +713,7 @@
     "hook_type": "Stop",
     "id": "stop-run-tests",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Exécute la suite de tests à la fin d'une session (Stop)\nimport { spawnSync } from 'child_process';\nimport { existsSync, readFileSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\n// Détecte le runner de tests adapté au projet.\nexport function detect({ exists = existsSync, readFile = readFileSync, projectDir } = {}) {\n  const pkg = join(projectDir, 'package.json');\n  if (exists(pkg)) {\n    try {\n      const scripts = JSON.parse(readFile(pkg, 'utf8')).scripts ?? {};\n      if (scripts.test) return ['pnpm', ['test', '--run']];\n    } catch {}\n  }\n  if (exists(join(projectDir, 'pytest.ini')) || exists(join(projectDir, 'pyproject.toml')))\n    return ['python', ['-m', 'pytest', '--tb=short', '-q']];\n  if (exists(join(projectDir, 'go.mod'))) return ['go', ['test', './...']];\n  return null;\n}\n\nexport function run({\n  exists = existsSync,\n  readFile = readFileSync,\n  spawn = spawnSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const runner = detect({ exists, readFile, projectDir });\n  if (!runner) return null;\n\n  const [cmd, args] = runner;\n  const result = spawn(cmd, args, {\n    cwd: projectDir,\n    encoding: 'utf8',\n    timeout: 120_000,\n    stdio: ['ignore', 'pipe', 'pipe'],\n  });\n\n  const out = (result.stdout ?? '') + (result.stderr ?? '');\n  let message = `[run-tests] Exécution : ${cmd} ${args.join(' ')}\\n`;\n  if (result.status !== 0) {\n    message += `[run-tests] ÉCHEC (exit ${result.status})\\n${out.slice(-2000)}\\n`;\n  } else {\n    const last = out.split('\\n').filter(Boolean).slice(-5).join('\\n');\n    message += `[run-tests] ✓ Tests passés\\n${last}\\n`;\n  }\n  return { runner, status: result.status, message };\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) {\n    process.stderr.write(result.message);\n    if (result.status !== 0) process.exit(2);\n  }\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Exécute la suite de tests à la fin d'une session (Stop)\nimport { spawnSync } from 'child_process';\nimport { existsSync, readFileSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\n// Détecte le runner de tests adapté au projet.\nexport function detect({ exists = existsSync, readFile = readFileSync, projectDir } = {}) {\n  const pkg = join(projectDir, 'package.json');\n  if (exists(pkg)) {\n    try {\n      const scripts = JSON.parse(readFile(pkg, 'utf8')).scripts ?? {};\n      if (scripts.test) {\n        const mgr = exists(join(projectDir, 'pnpm-lock.yaml')) ? 'pnpm'\n          : exists(join(projectDir, 'bun.lockb')) || exists(join(projectDir, 'bun.lock')) ? 'bun'\n          : exists(join(projectDir, 'yarn.lock')) ? 'yarn'\n          : 'npm';\n        // bun test is non-watch by default and doesn't accept --run\n        if (mgr === 'bun') return ['bun', ['test']];\n        return [mgr, ['test', '--', '--run']];\n      }\n    } catch {}\n  }\n  if (exists(join(projectDir, 'pytest.ini')) || exists(join(projectDir, 'pyproject.toml')))\n    return ['python', ['-m', 'pytest', '--tb=short', '-q']];\n  if (exists(join(projectDir, 'go.mod'))) return ['go', ['test', './...']];\n  return null;\n}\n\nexport function run({\n  exists = existsSync,\n  readFile = readFileSync,\n  spawn = spawnSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const runner = detect({ exists, readFile, projectDir });\n  if (!runner) return null;\n\n  const [cmd, args] = runner;\n  const result = spawn(cmd, args, {\n    cwd: projectDir,\n    encoding: 'utf8',\n    timeout: 120_000,\n    stdio: ['ignore', 'pipe', 'pipe'],\n  });\n\n  const out = (result.stdout ?? '') + (result.stderr ?? '');\n  let message = `[run-tests] Exécution : ${cmd} ${args.join(' ')}\\n`;\n  if (result.status !== 0) {\n    message += `[run-tests] ÉCHEC (exit ${result.status})\\n${out.slice(-2000)}\\n`;\n  } else {\n    const last = out.split('\\n').filter(Boolean).slice(-5).join('\\n');\n    message += `[run-tests] ✓ Tests passés\\n${last}\\n`;\n  }\n  return { runner, status: result.status, message };\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) {\n    process.stderr.write(result.message);\n    if (result.status !== 0) process.exit(2);\n  }\n}\n",
       "config": {
         "hooks": {
           "Stop": [
@@ -1228,7 +1228,7 @@
     "hook_type": "Stop",
     "id": "stop-quality-check",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Bilan qualité complet à la fin d'une session : typecheck + lint + tests (Stop)\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run({\n  exec,\n  exists = existsSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const doExec =\n    exec ?? ((cmd) => execSync(cmd, { cwd: projectDir, stdio: 'pipe', timeout: 60_000 }));\n\n  const messages = [];\n  function check(label, cmd) {\n    try {\n      doExec(cmd);\n      messages.push(`[quality-check] ✓ ${label}\\n`);\n      return true;\n    } catch (err) {\n      const out = err.stdout?.toString()?.trim() ?? '';\n      messages.push(`[quality-check] ✗ ${label}\\n${out ? out.slice(-500) + '\\n' : ''}`);\n      return false;\n    }\n  }\n\n  const checks = [];\n  const hasPkg = exists(join(projectDir, 'package.json'));\n  if (hasPkg && exists(join(projectDir, 'tsconfig.json')))\n    checks.push(['TypeScript', 'npx --no-install tsc --noEmit']);\n  const eslintConfigs = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml', '.eslintrc'];\n  if (hasPkg && eslintConfigs.some((f) => exists(join(projectDir, f))))\n    checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 .']);\n  if (hasPkg)\n    checks.push(['Tests', 'pnpm test --run 2>/dev/null || npx --no-install vitest run 2>/dev/null']);\n\n  const results = checks.map(([label, cmd]) => check(label, cmd));\n  const failed = results.filter((r) => !r).length;\n\n  if (failed > 0) messages.push(`[quality-check] ${failed}/${checks.length} vérification(s) échouée(s).\\n`);\n  else if (checks.length > 0) messages.push('[quality-check] ✓ Tous les contrôles qualité passent.\\n');\n\n  return { checks: checks.length, failed, message: messages.join('') };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  process.stderr.write(result.message);\n  if (result.failed > 0) process.exit(2);\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Bilan qualité complet à la fin d'une session : typecheck + lint + tests (Stop)\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run({\n  exec,\n  exists = existsSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const doExec =\n    exec ?? ((cmd) => execSync(cmd, { cwd: projectDir, stdio: 'pipe', timeout: 60_000 }));\n\n  const messages = [];\n  function check(label, cmd) {\n    try {\n      doExec(cmd);\n      messages.push(`[quality-check] ✓ ${label}\\n`);\n      return true;\n    } catch (err) {\n      const out = err.stdout?.toString()?.trim() ?? '';\n      messages.push(`[quality-check] ✗ ${label}\\n${out ? out.slice(-500) + '\\n' : ''}`);\n      return false;\n    }\n  }\n\n  const checks = [];\n  const hasPkg = exists(join(projectDir, 'package.json'));\n  if (hasPkg && exists(join(projectDir, 'tsconfig.json')))\n    checks.push(['TypeScript', 'npx --no-install tsc --noEmit']);\n  const eslintConfigs = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml', '.eslintrc'];\n  if (hasPkg && eslintConfigs.some((f) => exists(join(projectDir, f))))\n    checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 .']);\n  if (hasPkg)\n    checks.push(['Tests', 'pnpm test --run 2>/dev/null || yarn test --run 2>/dev/null || bun test 2>/dev/null || npm test --if-present 2>/dev/null || npx --no-install vitest run 2>/dev/null']);\n\n  const results = checks.map(([label, cmd]) => check(label, cmd));\n  const failed = results.filter((r) => !r).length;\n\n  if (failed > 0) messages.push(`[quality-check] ${failed}/${checks.length} vérification(s) échouée(s).\\n`);\n  else if (checks.length > 0) messages.push('[quality-check] ✓ Tous les contrôles qualité passent.\\n');\n\n  return { checks: checks.length, failed, message: messages.join('') };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  process.stderr.write(result.message);\n  if (result.failed > 0) process.exit(2);\n}\n",
       "config": {
         "hooks": {
           "Stop": [
@@ -2463,7 +2463,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/post-tool-failure-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('post-tool-failure-log', () => {\n  it(\"journalise un échec d'outil\", () => {\n    const deps = base();\n    const { entry } = run({ tool_name: 'Bash', tool_input: { command: 'x' }, error: 'boom' }, deps);\n    expect(entry).toMatchObject({ ts: TS, tool: 'Bash', error: 'boom' });\n    expect(deps.append).toHaveBeenCalled();\n  });\n});\n"
     },
     "name": "Structured tool failure log",
     "provider": [
@@ -3014,7 +3015,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/post-tool-batch-typecheck.mjs';\n\nconst fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };\n\ndescribe('post-tool-batch-typecheck', () => {\n  it('ignore un batch sans .ts', () => {\n    expect(run({ tool_calls: [{ tool_name: 'Read', tool_input: {} }] }, { exec: vi.fn() })).toBeNull();\n  });\n  it('injecte les erreurs tsc en contexte', () => {\n    const input = { tool_calls: [{ tool_name: 'Edit', tool_input: { file_path: 'a.ts' } }] };\n    const r = run(input, { exec: fail('TS errors') });\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('TypeScript errors');\n  });\n});\n"
     },
     "is_must": true,
     "name": "Typecheck after parallel file edits",
@@ -3078,7 +3080,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/file-changed-reload-env.mjs';\n\ndescribe('file-changed-reload-env', () => {\n  it('recharge les variables valides', () => {\n    const append = vi.fn();\n    const r = run(\n      { file_path: '.env', event: 'change' },\n      { readFile: () => 'FOO=1\\n# comment\\nBAR=2', append, envFile: '/tmp/env' },\n    );\n    expect(r.count).toBe(2);\n    expect(append).toHaveBeenCalledWith('/tmp/env', 'export FOO=1\\n');\n  });\n  it('ignore unlink', () => {\n    expect(run({ event: 'unlink' }, { envFile: '/tmp/env' })).toBeNull();\n  });\n  it('ignore sans CLAUDE_ENV_FILE', () => {\n    expect(run({ file_path: '.env' }, { envFile: undefined })).toBeNull();\n  });\n});\n"
     },
     "name": "Reload .env on file change",
     "provider": [
@@ -3142,7 +3145,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/file-changed-run-tests.mjs';\n\nconst fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };\n\ndescribe('file-changed-run-tests', () => {\n  it('ignore un événement unlink', () => {\n    expect(run({ event: 'unlink' }, { exec: vi.fn() })).toBeNull();\n  });\n  it('rapporte un succès', () => {\n    const r = run({ file_path: 'a.ts' }, { exec: () => Buffer.from('ok') });\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('passed');\n  });\n  it('rapporte un échec', () => {\n    const r = run({ file_path: 'a.ts' }, { exec: fail('test failed') });\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('FAILED');\n  });\n});\n"
     },
     "name": "Auto-run tests when source files change",
     "provider": [
@@ -3264,7 +3268,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/post-compact-save-summary.mjs';\n\ndescribe('post-compact-save-summary', () => {\n  it('journalise un résumé', () => {\n    const append = vi.fn();\n    const e = run({ compact_summary: 'résumé', trigger: 'manual' }, { append, mkdir: vi.fn(), projectDir: '/p', now: () => 'T' });\n    expect(e).toContain('résumé');\n    expect(append).toHaveBeenCalled();\n  });\n  it('ignore un résumé vide', () => {\n    expect(run({ compact_summary: '  ' }, { append: vi.fn(), mkdir: vi.fn() })).toBeNull();\n  });\n});\n"
     },
     "name": "Save compaction summary to log",
     "provider": [
@@ -3325,7 +3330,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-failure-rate-limit-alert.mjs';\n\ndescribe('stop-failure-rate-limit-alert', () => {\n  it('retourne une séquence terminale', () => {\n    expect(run().terminalSequence).toContain('rate limit');\n  });\n});\n"
     },
     "name": "Desktop notification on rate limit",
     "provider": [
@@ -3386,7 +3392,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-failure-log-api-errors.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('stop-failure-log-api-errors', () => {\n  it(\"construit une ligne d'erreur API\", () => {\n    const line = run({ error: 'rate_limit', error_details: '429', session_id: 's1' }, base());\n    expect(line).toContain('rate_limit');\n    expect(line).toContain('session:s1');\n  });\n});\n"
     },
     "name": "Log API errors to file",
     "provider": [
@@ -3447,7 +3454,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/task-created-naming-convention.mjs';\n\ndescribe('task-created-naming-convention', () => {\n  it('accepte un sujet avec ticket', () => {\n    expect(run({ task_subject: '[PROJ-123] faire X' })).toBeNull();\n  });\n  it('rejette un sujet sans ticket', () => {\n    const r = run({ task_subject: 'faire X' });\n    expect(r.exitCode).toBe(2);\n    expect(r.message).toContain('ticket reference');\n  });\n});\n"
     },
     "name": "Enforce task naming conventions",
     "provider": [
@@ -3507,7 +3515,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/task-completed-test-gate.mjs';\n\ndescribe('task-completed-test-gate', () => {\n  it('passe si les tests réussissent', () => {\n    expect(run({ task_subject: 'x' }, { exec: vi.fn() })).toBeNull();\n  });\n  it('bloque si les tests échouent', () => {\n    const exec = () => { const e = new Error('fail'); e.stdout = Buffer.from('1 failed'); throw e; };\n    const r = run({ task_subject: 'Ma tâche' }, { exec });\n    expect(r.exitCode).toBe(2);\n    expect(r.message).toContain('Ma tâche');\n  });\n});\n"
     },
     "is_must": true,
     "name": "Test suite gate before task completion",
@@ -3628,7 +3637,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/permission-denied-auto-mode-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('permission-denied-auto-mode-log', () => {\n  it('construit une ligne avec outil et raison', () => {\n    const deps = base();\n    const line = run({ tool_name: 'Bash', tool_input: { command: 'rm' }, reason: 'denied' }, deps);\n    expect(line).toContain('Bash');\n    expect(line).toContain('denied');\n    expect(deps.append).toHaveBeenCalledWith('/proj/.claude/permission-denied.log', line);\n  });\n});\n"
     },
     "name": "Log auto-mode permission denials",
     "provider": [
@@ -3689,7 +3699,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/setup-install-deps.mjs';\n\ndescribe('setup-install-deps', () => {\n  it('installe via pnpm si lockfile présent', () => {\n    const exec = vi.fn();\n    const exists = (p) => p.endsWith('pnpm-lock.yaml');\n    const r = run({ cwd: '/p' }, { exec, exists });\n    expect(r.cmd).toBe('pnpm install --frozen-lockfile');\n  });\n  it('ignore si node_modules présent', () => {\n    expect(run({ cwd: '/p' }, { exec: vi.fn(), exists: (p) => p.endsWith('node_modules') })).toBeNull();\n  });\n  it('retourne null sans manifeste', () => {\n    expect(run({ cwd: '/p' }, { exec: vi.fn(), exists: () => false })).toBeNull();\n  });\n});\n"
     },
     "name": "Install project dependencies on init",
     "provider": [
@@ -3754,7 +3765,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/message-display-redact-secrets.mjs';\n\ndescribe('message-display-redact-secrets', () => {\n  it('caviarde une clé Anthropic', () => {\n    const r = run({ delta: 'key sk-ant-api03-abcdefghijklmnopqrstuvwxyz' });\n    expect(r?.hookSpecificOutput?.displayContent).toContain('[REDACTED-ANTHROPIC-KEY]');\n  });\n  it('caviarde un Bearer token', () => {\n    const r = run({ delta: 'Authorization: Bearer abcdefghijklmnopqrstuvwxyz123' });\n    expect(r?.hookSpecificOutput?.displayContent).toContain('Bearer [REDACTED]');\n  });\n  it('retourne null si rien à caviarder', () => {\n    expect(run({ delta: 'texte normal' })).toBeNull();\n  });\n});\n"
     },
     "name": "Redact secrets from displayed output",
     "provider": [
@@ -3815,7 +3827,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/instructions-loaded-audit-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('instructions-loaded-audit-log', () => {\n  it(\"construit une ligne d'audit\", () => {\n    const line = run({ memory_type: 'project', load_reason: 'startup', file_path: 'CLAUDE.md' }, base());\n    expect(line).toContain('project');\n    expect(line).toContain('CLAUDE.md');\n  });\n});\n"
     },
     "name": "Audit log for CLAUDE.md file loads",
     "provider": [
@@ -4270,7 +4283,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/session-start-pull-if-main.mjs';\n\ndescribe('session-start-pull-if-main', () => {\n  it('retourne null hors de main', () => {\n    expect(run({ exec: () => 'feature' })).toBeNull();\n  });\n  it('signale une divergence', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('show-current')) return 'main';\n      if (cmd.includes('remote')) return 'origin';\n      if (cmd === 'git rev-parse HEAD') return 'aaa';\n      if (cmd.includes('@{u}') && cmd.includes('rev-parse')) return 'bbb';\n      if (cmd.includes('HEAD..@{u}')) return '2';\n      if (cmd.includes('@{u}..HEAD')) return '1';\n      return '';\n    };\n    expect(run({ exec, pull: vi.fn() })).toContain('diverge');\n  });\n  it('pull en avance pure', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('show-current')) return 'main';\n      if (cmd.includes('remote')) return 'origin';\n      if (cmd === 'git rev-parse HEAD') return 'aaa';\n      if (cmd.includes('@{u}') && cmd.includes('rev-parse')) return 'bbb';\n      if (cmd.includes('HEAD..@{u}')) return '3';\n      if (cmd.includes('@{u}..HEAD')) return '0';\n      return '';\n    };\n    const pull = vi.fn();\n    const out = run({ exec, pull });\n    expect(pull).toHaveBeenCalled();\n    expect(out).toContain('synchronisé');\n  });\n});\n"
     },
     "is_must": true,
     "name": "Auto-pull on main at session start",
@@ -4332,7 +4346,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/session-start-stash-warning.mjs';\n\ndescribe('session-start-stash-warning', () => {\n  it('avertit pour un stash ancien', () => {\n    const old = new Date(Date.now() - 10 * 86400000).toISOString();\n    const exec = () => `stash@{0}|${old}|WIP`;\n    expect(run({ exec })).toContain('Stashs Git oubliés');\n  });\n  it('retourne null sans stash', () => {\n    expect(run({ exec: () => '' })).toBeNull();\n  });\n  it('retourne null si stash récent', () => {\n    const recent = new Date().toISOString();\n    expect(run({ exec: () => `stash@{0}|${recent}|WIP` })).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Stale stash warning at session start",

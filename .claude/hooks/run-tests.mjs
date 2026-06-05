@@ -11,7 +11,15 @@ export function detect({ exists = existsSync, readFile = readFileSync, projectDi
   if (exists(pkg)) {
     try {
       const scripts = JSON.parse(readFile(pkg, 'utf8')).scripts ?? {};
-      if (scripts.test) return ['pnpm', ['test', '--run']];
+      if (scripts.test) {
+        const mgr = exists(join(projectDir, 'pnpm-lock.yaml')) ? 'pnpm'
+          : exists(join(projectDir, 'bun.lockb')) || exists(join(projectDir, 'bun.lock')) ? 'bun'
+          : exists(join(projectDir, 'yarn.lock')) ? 'yarn'
+          : 'npm';
+        // bun test is non-watch by default and doesn't accept --run
+        if (mgr === 'bun') return ['bun', ['test']];
+        return [mgr, ['test', '--', '--run']];
+      }
     } catch {}
   }
   if (exists(join(projectDir, 'pytest.ini')) || exists(join(projectDir, 'pyproject.toml')))

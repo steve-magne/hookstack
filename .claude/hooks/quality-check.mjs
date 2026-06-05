@@ -34,7 +34,7 @@ export function run({
   if (hasPkg && eslintConfigs.some((f) => exists(join(projectDir, f))))
     checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 .']);
   if (hasPkg)
-    checks.push(['Tests', 'pnpm test --run 2>/dev/null || npx --no-install vitest run 2>/dev/null']);
+    checks.push(['Tests', 'pnpm test --run 2>/dev/null || yarn test --run 2>/dev/null || bun test 2>/dev/null || npm test --if-present 2>/dev/null || npx --no-install vitest run 2>/dev/null']);
 
   const results = checks.map(([label, cmd]) => check(label, cmd));
   const failed = results.filter((r) => !r).length;
