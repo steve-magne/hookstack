@@ -1073,7 +1073,7 @@
       "Post-hoc review"
     ],
     "votes": 0,
-    "is_must": true
+    "is_must": false
   },
   {
     "benefit": "Forces uv and pnpm, kills pip/npm drift",
@@ -2214,7 +2214,7 @@
       "Replay or analyze a past session"
     ],
     "votes": 0,
-    "is_must": true
+    "is_must": false
   },
   {
     "benefit": "Each session gets a name, not a hash",
