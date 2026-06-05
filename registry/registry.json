@@ -1814,6 +1814,7 @@
         }
       }
     },
+    "is_must": true,
     "name": "TTS voice notification",
     "provider": [
       "claude-code"
@@ -1881,6 +1882,7 @@
         }
       }
     },
+    "is_must": true,
     "name": "Voice task-completion announcement",
     "provider": [
       "claude-code"
