@@ -162,10 +162,6 @@ pnpm install
 pnpm dev          # → http://localhost:3000
 ```
 
-No `.env` required — the catalogue, filters, selection, and config generation all work in **local seed mode** out of the box.
-
-Optionally copy `.env.example` and set `NEXT_PUBLIC_REGISTRY_REPO` to point submissions at your fork's issue tracker.
-
 ```bash
 pnpm typecheck    # TypeScript check
 pnpm lint         # ESLint

@@ -1,5 +1,33 @@
 # CLAUDE.md
 
+## Présentation du projet
+
+**Hookstack** est un catalogue communautaire de hooks agentiques pour **Claude Code**. Un hook est un script Node.js `.mjs` branché sur le cycle de vie de l'agent (PreToolUse, PostToolUse, SessionStart, Stop…) via `.claude/settings.json` — pas un plugin, pas un SDK, juste un événement.
+
+**Promesse** : *"Get your HookStack in 1 minute"* — un développeur arrive sur le site, sélectionne ses hooks, copie la commande générée, et les hooks sont actifs dans son projet.
+
+```
+Browse catalogue  →  Select hooks  →  npx hookstack-cli@latest install --hooks=…  →  Done
+```
+
+### Dogfood
+
+Le projet est son propre cobaye. Les hooks de la collection (`.claude/hooks/*.mjs`) sont actifs sur ce dépôt via `.claude/settings.json` — ils sont exécutés à chaque session Claude Code sur ce projet, ce qui les valide en conditions réelles. Quand un `.mjs` est modifié, le hook `registry-auto-sync.mjs` (FileChanged) relance automatiquement `node .claude/sync-hooks.mjs` pour propager le code dans `registry/registry.json` (`code_snippet`). **Le `.mjs` sur disque est la source de vérité du code** ; le registre en est le reflet.
+
+### Points d'entrée utilisateurs — cohérence obligatoire
+
+Les utilisateurs découvrent le projet par trois canaux. Le message, le flow et les exemples de commandes doivent rester **strictement cohérents** entre eux :
+
+| Canal | Fichier / URL |
+|---|---|
+| Dépôt GitHub | [`README.md`](README.md) — tagline, exemples CLI, tableau des hooks phares |
+| Site web | `https://hookstack.vercel.app` — catalogue filtrable + `HookConfigurator` |
+| Package npm | [`packages/cli/README.md`](packages/cli/README.md) — référence CLI (`npx hookstack-cli@latest`) |
+
+> Règle : toute évolution du flow utilisateur, des slugs d'exemple ou du wording CLI doit être répercutée dans les trois. Le README GitHub et le README npm sont les deux faces d'une même promesse — une divergence brouille le message.
+
+---
+
 ## Directives comportementales
 
 **KISS** : toujours choisir la solution la plus simple qui résout le problème. Pas d'abstraction prématurée, pas de généralisation anticipée.
@@ -226,6 +254,3 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
 **Garde-fous CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) : sur chaque PR, `pnpm typecheck` + `pnpm test` + `node .claude/sync-hooks.mjs --check` (échoue si le registre a dérivé des `.mjs`). Côté session, deux hooks Stop calqués sur le même patron auto-désactivable surveillent les fichiers modifiés : `stop-per-file-coverage` (couverture ≥80 %) et `stop-per-file-lint` (ESLint).
 
-## Variables d'environnement
-
-Voir `.env.example` : `NEXT_PUBLIC_REGISTRY_REPO` (format `org/repo`) — repo GitHub où les issues de soumission sont créées. Optionnel pour le développement local.
