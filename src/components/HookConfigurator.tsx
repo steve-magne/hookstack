@@ -1,12 +1,11 @@
 'use client'
 
-import { useMemo } from 'react'
-import { AnimatePresence, m } from 'motion/react'
-import { useSelection } from '@/store/selection'
 import { allHooks } from '@/lib/hooks'
 import { useT } from '@/lib/locale-context'
-import { InstallCommand } from './InstallCommand'
 import { spring } from '@/lib/motion'
+import { useSelection } from '@/store/selection'
+import { AnimatePresence, m } from 'motion/react'
+import { useMemo } from 'react'
 
 export function HookConfigurator() {
   const T = useT()
@@ -77,8 +76,6 @@ export function HookConfigurator() {
           ))}
         </AnimatePresence>
       </div>
-
-      <InstallCommand command={pluginCmd} source="configurator" />
     </div>
   )
 }

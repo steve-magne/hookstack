@@ -1,16 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, m } from 'motion/react'
-import { ArrowDownLeft, Check, EyeOff, Filter, ShieldCheck, Zap } from 'lucide-react'
-import { HookRow } from './HookRow'
-import { HookModal } from './HookModal'
-import { HookConfigurator } from './HookConfigurator'
-import { SplitFlap } from './SplitFlap'
-import { duration, sectionReveal, spring, splitFlap, staggerContainer } from '@/lib/motion'
-import { allHooks, filterHooks } from '@/lib/hooks'
 import { track } from '@/lib/analytics'
+import { allHooks, filterHooks } from '@/lib/hooks'
 import { useT } from '@/lib/locale-context'
+import { duration, sectionReveal, splitFlap, spring, staggerContainer } from '@/lib/motion'
 import { useSelection } from '@/store/selection'
 import {
   HOOK_TYPE_INFO,
@@ -22,7 +15,14 @@ import {
   type HookType,
   type Stack,
 } from '@/types/hook'
+import { ArrowDownLeft, Check, EyeOff, Filter, ShieldCheck, Zap } from 'lucide-react'
+import { AnimatePresence, m } from 'motion/react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CategoryBadge, HookTypeBadge } from './Badge'
+import { HookConfigurator } from './HookConfigurator'
+import { HookModal } from './HookModal'
+import { HookRow } from './HookRow'
+import { SplitFlap } from './SplitFlap'
 
 type GroupBy = 'event' | 'category'
 
@@ -176,91 +176,89 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   return (
     <div data-component="CatalogueExplorer">
       {/* CatalogueExplorer-controls — stack chooser + grouping toggle */}
-      <div data-component="CatalogueExplorer-controls" className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div data-component="CatalogueExplorer-controls" className="mb-8 flex flex-wrap items-center justify-center gap-3 sm:justify-start sm:gap-4">
         {/* CatalogueExplorer-stack-filter */}
-        <div data-component="CatalogueExplorer-stack-filter" className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div data-component="CatalogueExplorer-stack-filter" className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
           <Filter className="size-3.5 shrink-0 text-zinc-500" aria-hidden />
-          <div className="flex flex-wrap items-center gap-1.5">
-            {(Object.keys(STACK_LABELS) as Stack[]).map((s) => {
-              const isActive = selectedStacks.includes(s)
-              return (
-                <button
-                  key={s}
-                  onClick={() => toggleStack(s)}
-                  aria-pressed={isActive}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
-                    isActive
-                      ? STACK_COLORS[s].active
-                      : 'border-zinc-700/70 bg-zinc-800/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
-                  }`}
-                >
-                  <span
-                    className={`grid size-4 place-items-center rounded-[4px] font-mono text-[9px] font-bold leading-none ${STACK_MONO_COLOR[s]}`}
-                  >
-                    {STACK_MONOGRAM[s]}
-                  </span>
-                  {STACK_LABELS[s]}
-                  {isActive && <Check className="size-3" />}
-                </button>
-              )
-            })}
-            {selectedSlugs.length > 0 && (
+          {(Object.keys(STACK_LABELS) as Stack[]).map((s) => {
+            const isActive = selectedStacks.includes(s)
+            return (
               <button
-                onClick={() => setHideSelected((v) => !v)}
-                aria-pressed={hideSelected}
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
-                  hideSelected
-                    ? 'border-amber-500/50 bg-amber-500/15 text-amber-300'
+                key={s}
+                onClick={() => toggleStack(s)}
+                aria-pressed={isActive}
+                className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition-colors ${
+                  isActive
+                    ? STACK_COLORS[s].active
                     : 'border-zinc-700/70 bg-zinc-800/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
                 }`}
               >
-                <EyeOff className="size-3" />
-                {T.filterHideSelected}
-                {hideSelected && <Check className="size-3" />}
+                <span
+                  className={`grid size-4 place-items-center rounded-[4px] font-mono text-[9px] font-bold leading-none ${STACK_MONO_COLOR[s]}`}
+                >
+                  {STACK_MONOGRAM[s]}
+                </span>
+                <span className="hidden sm:inline">{STACK_LABELS[s]}</span>
+                {isActive && <Check className="size-3" />}
               </button>
-            )}
-          </div>
-          {selectedStacks.length > 0 ? (
+            )
+          })}
+          {selectedSlugs.length > 0 && (
+            <button
+              onClick={() => setHideSelected((v) => !v)}
+              aria-pressed={hideSelected}
+              className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition-colors ${
+                hideSelected
+                  ? 'border-amber-500/50 bg-amber-500/15 text-amber-300'
+                  : 'border-zinc-700/70 bg-zinc-800/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+              }`}
+            >
+              <EyeOff className="size-3" />
+              <span className="hidden sm:inline">{T.filterHideSelected}</span>
+              {hideSelected && <Check className="size-3" />}
+            </button>
+          )}
+          {selectedStacks.length > 0 && (
             <button
               onClick={() => {
                 track('reset_stack_filter', { previous_count: selectedStacks.length })
                 setSelectedStacks([])
               }}
-              className="text-[11px] font-medium text-zinc-400 transition-colors hover:text-zinc-200"
+              className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
             >
               {T.stackFilterReset}
             </button>
-          ) : (
-            <span className="text-[11px] text-zinc-400">{T.stackFilterHint}</span>
           )}
         </div>
 
         {/* CatalogueExplorer-grouping-toggle */}
-        <div data-component="CatalogueExplorer-grouping-toggle" className="inline-flex self-end shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 sm:self-auto">
-          {(['event', 'category'] as GroupBy[]).map((g) => (
-            <button
-              key={g}
-              onClick={() => {
-                if (g !== groupBy) track('toggle_grouping', { group_by: g })
-                setGroupBy(g)
-              }}
-              aria-pressed={groupBy === g}
-              className={`relative rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                groupBy === g ? 'text-zinc-900' : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              {groupBy === g && (
-                <m.span
-                  layoutId="groupToggle"
-                  transition={spring.smooth}
-                  className="absolute inset-0 rounded-lg bg-white shadow-sm"
-                />
-              )}
-              <span className="relative z-10">
-                {g === 'event' ? T.groupByEvent : T.groupByCategory}
-              </span>
-            </button>
-          ))}
+        <div data-component="CatalogueExplorer-grouping-toggle" className="sm:ml-auto">
+          <div className="inline-flex shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
+            {(['event', 'category'] as GroupBy[]).map((g) => (
+              <button
+                key={g}
+                onClick={() => {
+                  if (g !== groupBy) track('toggle_grouping', { group_by: g })
+                  setGroupBy(g)
+                }}
+                aria-pressed={groupBy === g}
+                className={`relative rounded-lg px-2.5 py-1.5 text-xs sm:px-3.5 sm:text-sm font-medium transition-colors ${
+                  groupBy === g ? 'text-zinc-900' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                {groupBy === g && (
+                  <m.span
+                    layoutId="groupToggle"
+                    transition={spring.smooth}
+                    className="absolute inset-0 rounded-lg bg-white shadow-sm"
+                  />
+                )}
+                <span className="relative z-10">
+                  {g === 'event' ? T.groupByEvent : T.groupByCategory}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
