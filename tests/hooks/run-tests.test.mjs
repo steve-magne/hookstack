@@ -8,8 +8,6 @@ function makeOpts({
   scripts = { test: 'vitest' },
   hasPkg = true,
   hasPnpmLock = false,
-  hasPnpmWorkspace = false,
-  hasLocalBin = false,         // simule node_modules/.bin/<runner>
   hasYarnLock = false,
   hasBunLockb = false,
   hasBunLock = false,
@@ -22,8 +20,6 @@ function makeOpts({
     exists: (p) => {
       if (p.endsWith('package.json')) return hasPkg;
       if (p.endsWith('pnpm-lock.yaml')) return hasPnpmLock;
-      if (p.endsWith('pnpm-workspace.yaml')) return hasPnpmWorkspace;
-      if (p.includes('node_modules/.bin/')) return hasLocalBin;
       if (p.endsWith('yarn.lock')) return hasYarnLock;
       if (p.endsWith('bun.lockb')) return hasBunLockb;
       if (p.endsWith('bun.lock')) return hasBunLock;
@@ -73,52 +69,6 @@ describe('detect', () => {
 
   it('pnpm est prioritaire sur yarn si les deux lockfiles existent', () => {
     const opts = makeOpts({ hasPnpmLock: true, hasYarnLock: true });
-    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });
-    expect(result).toEqual(['pnpm', ['test', '--', '--run']]);
-  });
-
-  // ─── pnpm + pnpm-workspace.yaml (bypass pnpm) ──────────────────────────────
-
-  it('bypass pnpm et utilise node_modules/.bin/vitest quand pnpm-workspace.yaml existe', () => {
-    const opts = makeOpts({
-      scripts: { test: 'vitest run' },
-      hasPnpmLock: true,
-      hasPnpmWorkspace: true,
-      hasLocalBin: true,
-    });
-    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });
-    expect(result).toEqual([`${PROJECT_DIR}/node_modules/.bin/vitest`, ['run']]);
-  });
-
-  it('ajoute --run si le script vitest ne contient pas "run"', () => {
-    const opts = makeOpts({
-      scripts: { test: 'vitest' },
-      hasPnpmLock: true,
-      hasPnpmWorkspace: true,
-      hasLocalBin: true,
-    });
-    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });
-    expect(result).toEqual([`${PROJECT_DIR}/node_modules/.bin/vitest`, ['--run']]);
-  });
-
-  it('fonctionne avec jest en pnpm workspace (pas de --run ajouté)', () => {
-    const opts = makeOpts({
-      scripts: { test: 'jest --watchAll=false' },
-      hasPnpmLock: true,
-      hasPnpmWorkspace: true,
-      hasLocalBin: true,
-    });
-    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });
-    expect(result).toEqual([`${PROJECT_DIR}/node_modules/.bin/jest`, ['--watchAll=false']]);
-  });
-
-  it('repasse sur pnpm si le binaire local est absent dans node_modules/.bin', () => {
-    const opts = makeOpts({
-      scripts: { test: 'vitest run' },
-      hasPnpmLock: true,
-      hasPnpmWorkspace: true,
-      hasLocalBin: false,
-    });
     const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });
     expect(result).toEqual(['pnpm', ['test', '--', '--run']]);
   });

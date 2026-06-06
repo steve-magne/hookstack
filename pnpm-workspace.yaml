@@ -1,6 +1,0 @@
-# Fichier de configuration pnpm (≥ 10.4). Pas de clé `packages:` → pas de
-# sémantique monorepo, uniquement des réglages.
-# Autorise le build de sharp (dépendance transitive de next/image) pour éviter
-# ERR_PNPM_IGNORED_BUILDS sur `pnpm install --frozen-lockfile` en CI.
-onlyBuiltDependencies:
-  - sharp

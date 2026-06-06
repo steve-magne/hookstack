@@ -18,20 +18,6 @@ export function detect({ exists = existsSync, readFile = readFileSync, projectDi
           : 'npm';
         // bun test is non-watch by default and doesn't accept --run
         if (mgr === 'bun') return ['bun', ['test']];
-        // pnpm 10+ avec pnpm-workspace.yaml (même sans packages:) traite le répertoire
-        // comme une racine workspace et fait échouer `pnpm test` avec "packages field
-        // missing or empty". On bypass pnpm et on appelle le binaire local directement.
-        if (mgr === 'pnpm' && exists(join(projectDir, 'pnpm-workspace.yaml'))) {
-          const parts = scripts.test.trim().split(/\s+/).filter(Boolean);
-          const bin = parts[0];                 // ex. 'vitest', 'jest'
-          const args = parts.slice(1);          // ex. ['run']
-          const binPath = join(projectDir, 'node_modules', '.bin', bin);
-          if (bin && exists(binPath)) {
-            // Ajoute --run si vitest n'est pas déjà en mode non-watch
-            const needsRun = bin === 'vitest' && !args.includes('run') && !args.includes('--run');
-            return [binPath, needsRun ? [...args, '--run'] : args];
-          }
-        }
         return [mgr, ['test', '--', '--run']];
       }
     } catch {}
