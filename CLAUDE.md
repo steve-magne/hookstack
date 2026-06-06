@@ -1,5 +1,54 @@
 # CLAUDE.md
 
+## Présentation du projet
+
+**Hookstack** est un catalogue communautaire de hooks agentiques pour **Claude Code**. Un hook est un script Node.js `.mjs` branché sur le cycle de vie de l'agent (PreToolUse, PostToolUse, SessionStart, Stop…) via `.claude/settings.json` — pas un plugin, pas un SDK, juste un événement.
+
+**Promesse** : *"Get your HookStack in 1 minute"* — un développeur arrive sur le site et peut immédiatement injecter une stack de hooks prédéfinis pour son type de projet via une seule commande `npx`. S'il le souhaite, il explore le catalogue, sélectionne des hooks plus spécifiques, copie la commande `npx` générée et les installe dans son projet.
+
+```
+Arrive  →  Stack prédéfinie (fast path)  →  npx hookstack-cli@latest install  →  Done
+                    ↓ optionnel
+          Browse catalogue + sélection fine  →  commande mise à jour  →  Done
+```
+
+### Dogfood
+
+Le projet est son propre cobaye. Les hooks de la collection (`.claude/hooks/*.mjs`) sont actifs sur ce dépôt via `.claude/settings.json` — ils sont exécutés à chaque session Claude Code sur ce projet, ce qui les valide en conditions réelles. Quand un `.mjs` est modifié, le hook `registry-auto-sync.mjs` (FileChanged) relance automatiquement `node .claude/sync-hooks.mjs` pour propager le code dans `registry/registry.json` (`code_snippet`). **Le `.mjs` sur disque est la source de vérité du code** ; le registre en est le reflet.
+
+### Points d'entrée utilisateurs — cohérence obligatoire
+
+Les utilisateurs découvrent le projet par trois canaux. Le message, le flow et les exemples de commandes doivent rester **strictement cohérents** entre eux :
+
+| Canal | Fichier / URL |
+|---|---|
+| Dépôt GitHub | [`README.md`](README.md) — tagline, exemples CLI, tableau des hooks phares |
+| Site web | `https://hookstack.vercel.app` — catalogue filtrable + `HookConfigurator` |
+| Package npm | [`packages/cli/README.md`](packages/cli/README.md) — référence CLI (`npx hookstack-cli@latest`) |
+
+> Règle : toute évolution du flow utilisateur, des slugs d'exemple ou du wording CLI doit être répercutée dans les trois. Le README GitHub et le README npm sont les deux faces d'une même promesse — une divergence brouille le message.
+
+### Composants du repo
+
+| Dossier | Rôle |
+|---|---|
+| [`/src/`](src/) | Site web Next.js — catalogue, HookConfigurator, pages (`hookstack.vercel.app`) |
+| [`/packages/cli/`](packages/cli/) | Package npm public `hookstack-cli` — CLI installé par les utilisateurs via `npx` |
+| [`/registry/`](registry/) | `registry.json` — source de vérité des **métadonnées** du catalogue (`name`, `benefit`, `description`, `config`…) ; `code_snippet` dérivé automatiquement des `.mjs` |
+| [`/doc/hookstack/`](doc/hookstack/) | Vision produit, marketing, brainstorm, positionnement (ne pas modifier sans raison) |
+| [`/README.md`](README.md) | README vendeur GitHub — destiné aux early adopters et contributeurs |
+
+### Règle d'or : propagation des changements
+
+⚠️ Toute modification visuelle ou stratégique **doit être évaluée** sur les quatre surfaces :
+
+1. **Site** [`/src/`](src/) — cohérence visuelle et UX
+2. **CLI** [`/packages/cli/`](packages/cli/) — tonalité des messages, flags, exemples dans `README.md`
+3. **Docs marketing** [`/doc/hookstack/`](doc/hookstack/) — vision alignée avec la réalité du produit
+4. **README** [`/README.md`](README.md) — pitch actualisé, exemples CLI cohérents
+
+---
+
 ## Directives comportementales
 
 **KISS** : toujours choisir la solution la plus simple qui résout le problème. Pas d'abstraction prématurée, pas de généralisation anticipée.
@@ -97,37 +146,13 @@ Objectif : `steve-magne/hookstack` → **5000 ⭐** + trafic sur `hookstack.verc
 
 Backlog = **GitHub Issues** (label `growth` + `content`/`outreach`/`spike`/`seo`/`idea`). Métriques : `node .claude/skills/growth-coach/scripts/metrics.mjs` (snapshot stars/downloads, auto chaque lundi via `.github/workflows/growth-metrics.yml`). **Boucle hebdo** : `/growth-coach` lundi, `/growth-post` en semaine, `/growth-coach review` vendredi. Règle KISS : le système n'auto-poste jamais (zéro API payante, zéro risque de ban).
 
----
-
-## Mission produit
-
-**Promesse** : "Get your HookStack in 1 minute" — tagline officiel du site (`T.heroTitle1/heroHighlight/heroTitle2` dans `src/lib/i18n.ts`).
-
-**URL de production** : `https://hookstack.vercel.app`
-
-**Flow utilisateur** :
-
-1. Browse le catalogue (filtres par catégorie, event, keyword)
-2. Sélectionne des hooks (panier persisté en `localStorage`)
-3. Copie la commande générée par `HookConfigurator` :
-
-   ```bash
-   npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...
-   ```
-
-4. La lance à la racine de son projet → le CLI écrit les `.mjs` dans `.claude/hooks/` et patche `.claude/settings.json`
-
-**Le deliverable est la commande `npx hookstack-cli@latest`**, pas un copier-coller de JSON. `HookConfigurator.tsx` (l. 21) construit `pluginCmd` avec les slugs sélectionnés. Ne jamais décrire le flow comme "coller un settings.json" dans la doc ou le README.
-
-**Compatibilité GitHub Copilot** : le CLI supporte un mode `--copilot` (ou option `3` dans le prompt interactif) qui génère un `settings.json` avec des **chemins relatifs** (sans `$CLAUDE_PROJECT_DIR/`). Copilot ne résout pas cette variable, contrairement à Claude Code. La logique vit dans `collectIncomingHooks` (`packages/cli/bin/core.mjs`) : le scope `'copilot'` remplace `$CLAUDE_PROJECT_DIR/` par une chaîne vide.
-
 ## Architecture
 
 Hookstack est un catalogue de hooks agentiques pour Claude Code. Next.js 15 (App Router) + TypeScript + Tailwind v4.
 
-**Source de données** : `registry/registry.json` est la seule source de vérité — lue directement par `src/lib/hooks.ts` (via `allHooks`). Sans `.env`, tout fonctionne en mode registre local.
+**Source de données** : `registry/registry.json` est la source de vérité des **métadonnées** du catalogue — lue directement par `src/lib/hooks.ts` (via `allHooks`). C'est ce que le front-end et le CLI consomment. Sans `.env`, tout fonctionne en mode registre local. Le champ `code_snippet` y est un miroir des `.mjs` (jamais édité à la main).
 
-**Registre** : `registry/registry.json` est la source canonique et unique du registre versionné — c'est aussi ce que le front-end importe. Les scripts sous `.claude/skills/analyze-repo/scripts/` alimentent le skill `/analyze-repo` (fetch, validation, merge, apply).
+**Registre** : `registry/registry.json` est la source canonique des **métadonnées** du catalogue versionné. Le code exécutable, lui, vit dans `.claude/hooks/*.mjs` et est propagé vers `code_snippet` par le sync. Les scripts sous `.claude/skills/analyze-repo/scripts/` alimentent le skill `/analyze-repo` (fetch, validation, merge, apply).
 
 **État global** : Zustand persisté dans `src/store/selection.ts` (clé `hookstack-selection`) — stocke les slugs des hooks sélectionnés.
 
@@ -226,6 +251,3 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
 **Garde-fous CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) : sur chaque PR, `pnpm typecheck` + `pnpm test` + `node .claude/sync-hooks.mjs --check` (échoue si le registre a dérivé des `.mjs`). Côté session, deux hooks Stop calqués sur le même patron auto-désactivable surveillent les fichiers modifiés : `stop-per-file-coverage` (couverture ≥80 %) et `stop-per-file-lint` (ESLint).
 
-## Variables d'environnement
-
-Voir `.env.example` : `NEXT_PUBLIC_REGISTRY_REPO` (format `org/repo`) — repo GitHub où les issues de soumission sont créées. Optionnel pour le développement local.
