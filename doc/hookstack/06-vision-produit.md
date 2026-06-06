@@ -8,10 +8,10 @@ Un catalogue communautaire de hooks agentiques, couplé à un CLI qui installe l
 
 ## La promesse en 3 écrans
 
-**Écran 1 — Browse & sélectionne**
-Le catalogue filtrable (par event type, par catégorie, par keyword, par stack). L'utilisateur coche les hooks qui lui correspondent.
+**Écran 1 — Fast path : stack prédéfinie**
+Le développeur arrive sur le site et voit immédiatement une stack de hooks recommandés pour son type de projet. Il n'a pas besoin de parcourir le catalogue — la commande est déjà prête. *Path avancé* : s'il veut affiner, il ouvre le catalogue filtrable (par event type, catégorie, keyword, stack) et coche les hooks supplémentaires qui lui correspondent.
 
-> **État actuel** : implémenté. `CatalogueExplorer` gère filtres, regroupement, et sélection persistée en `localStorage`. Le sélecteur de stack (chips TypeScript/Python/Node.js) filtre les hooks tech-spécifiques.
+> **État actuel** : le catalogue filtrable et la sélection persistée (`localStorage`) sont implémentés. `CatalogueExplorer` gère filtres, regroupement, et le sélecteur de stack (chips TypeScript/Python/Node.js) filtre les hooks tech-spécifiques.
 
 **Écran 2 — Configure**
 `HookConfigurator` affiche en temps réel la commande `npx hookstack-cli@latest install --hooks=...` générée depuis la sélection. Un clic copie.

@@ -20,14 +20,15 @@
 
 ### Workflow A — Développeur cherche des hooks
 
-1. Arriver sur `/` : voir le catalogue filtrable par event type ou catégorie
-2. Sélectionner des hooks via les cases à cocher (persistées en `localStorage`)
-3. `HookConfigurator` génère en temps réel la commande :
-   ```bash
-   npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...
-   ```
-4. Copier la commande → la coller dans un terminal à la racine du projet
-5. Le CLI installe les `.mjs` dans `.claude/hooks/` et patche `.claude/settings.json`
+**Fast path (< 1 min)** : le développeur arrive sur le site, voit une stack de hooks prédéfinis adaptés à son type de projet et lance directement la commande proposée :
+
+```bash
+npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...
+```
+
+**Path avancé (optionnel)** : s'il veut affiner, il explore le catalogue (filtres par event type, catégorie, keyword), sélectionne des hooks supplémentaires via les cases à cocher (persistées en `localStorage`). `HookConfigurator` met à jour la commande en temps réel. Il copie la commande et la colle dans un terminal à la racine de son projet.
+
+Dans les deux cas, le CLI installe les `.mjs` dans `.claude/hooks/` et patche `.claude/settings.json`.
 
 > **Le deliverable est la commande `npx hookstack-cli@latest`**, jamais un copier-coller de JSON.
 

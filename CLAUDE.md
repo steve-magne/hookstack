@@ -4,10 +4,12 @@
 
 **Hookstack** est un catalogue communautaire de hooks agentiques pour **Claude Code**. Un hook est un script Node.js `.mjs` branché sur le cycle de vie de l'agent (PreToolUse, PostToolUse, SessionStart, Stop…) via `.claude/settings.json` — pas un plugin, pas un SDK, juste un événement.
 
-**Promesse** : *"Get your HookStack in 1 minute"* — un développeur arrive sur le site, sélectionne ses hooks, copie la commande générée, et les hooks sont actifs dans son projet.
+**Promesse** : *"Get your HookStack in 1 minute"* — un développeur arrive sur le site et peut immédiatement injecter une stack de hooks prédéfinis pour son type de projet via une seule commande `npx`. S'il le souhaite, il explore le catalogue, sélectionne des hooks plus spécifiques, copie la commande `npx` générée et les installe dans son projet.
 
 ```
-Browse catalogue  →  Select hooks  →  npx hookstack-cli@latest install --hooks=…  →  Done
+Arrive  →  Stack prédéfinie (fast path)  →  npx hookstack-cli@latest install  →  Done
+                    ↓ optionnel
+          Browse catalogue + sélection fine  →  commande mise à jour  →  Done
 ```
 
 ### Dogfood
@@ -124,30 +126,6 @@ Objectif : `steve-magne/hookstack` → **5000 ⭐** + trafic sur `hookstack.verc
 - **`/growth-outreach`** — trouve des cibles (repos, threads, newsletters) et rédige l'outreach personnalisé.
 
 Backlog = **GitHub Issues** (label `growth` + `content`/`outreach`/`spike`/`seo`/`idea`). Métriques : `node .claude/skills/growth-coach/scripts/metrics.mjs` (snapshot stars/downloads, auto chaque lundi via `.github/workflows/growth-metrics.yml`). **Boucle hebdo** : `/growth-coach` lundi, `/growth-post` en semaine, `/growth-coach review` vendredi. Règle KISS : le système n'auto-poste jamais (zéro API payante, zéro risque de ban).
-
----
-
-## Mission produit
-
-**Promesse** : "Get your HookStack in 1 minute" — tagline officiel du site (`T.heroTitle1/heroHighlight/heroTitle2` dans `src/lib/i18n.ts`).
-
-**URL de production** : `https://hookstack.vercel.app`
-
-**Flow utilisateur** :
-
-1. Browse le catalogue (filtres par catégorie, event, keyword)
-2. Sélectionne des hooks (panier persisté en `localStorage`)
-3. Copie la commande générée par `HookConfigurator` :
-
-   ```bash
-   npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...
-   ```
-
-4. La lance à la racine de son projet → le CLI écrit les `.mjs` dans `.claude/hooks/` et patche `.claude/settings.json`
-
-**Le deliverable est la commande `npx hookstack-cli@latest`**, pas un copier-coller de JSON. `HookConfigurator.tsx` (l. 21) construit `pluginCmd` avec les slugs sélectionnés. Ne jamais décrire le flow comme "coller un settings.json" dans la doc ou le README.
-
-**Compatibilité GitHub Copilot** : le CLI supporte un mode `--copilot` (ou option `3` dans le prompt interactif) qui génère un `settings.json` avec des **chemins relatifs** (sans `$CLAUDE_PROJECT_DIR/`). Copilot ne résout pas cette variable, contrairement à Claude Code. La logique vit dans `collectIncomingHooks` (`packages/cli/bin/core.mjs`) : le scope `'copilot'` remplace `$CLAUDE_PROJECT_DIR/` par une chaîne vide.
 
 ## Architecture
 
