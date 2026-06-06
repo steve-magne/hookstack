@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, m } from 'motion/react'
-import { ArrowDownLeft, Check, Layers, ShieldCheck, Zap } from 'lucide-react'
+import { ArrowDownLeft, Check, EyeOff, Filter, ShieldCheck, Zap } from 'lucide-react'
 import { HookRow } from './HookRow'
 import { HookModal } from './HookModal'
 import { HookConfigurator } from './HookConfigurator'
@@ -89,6 +89,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   const T = useT()
   const [groupBy, setGroupBy] = useState<GroupBy>('event')
   const [selectedStacks, setSelectedStacks] = useState<Stack[]>([])
+  const [hideSelected, setHideSelected] = useState(false)
   const [active, setActive] = useState<Hook | null>(null)
   type Preview =
     | { kind: 'hook'; hook: Hook; y: number }
@@ -121,17 +122,19 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
     )
   }, [selectedStacks])
 
-  const results = useMemo(
-    () =>
-      filterHooks(allHooks, {
-        query: '',
-        categories: initialCategory ? [initialCategory] : [],
-        providers: [],
-        events: [],
-        stacks: selectedStacks,
-      }),
-    [initialCategory, selectedStacks]
-  )
+  const results = useMemo(() => {
+    const filtered = filterHooks(allHooks, {
+      query: '',
+      categories: initialCategory ? [initialCategory] : [],
+      providers: [],
+      events: [],
+      stacks: selectedStacks,
+    })
+    if (hideSelected && selectedSlugs.length > 0) {
+      return filtered.filter((h) => !selectedSlugs.includes(h.slug))
+    }
+    return filtered
+  }, [initialCategory, selectedStacks, hideSelected, selectedSlugs])
 
   const groups = useMemo(() => buildGroups(results, groupBy, T.categoryLabels), [results, groupBy, T])
 
@@ -176,20 +179,17 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
       <div data-component="CatalogueExplorer-controls" className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* CatalogueExplorer-stack-filter */}
         <div data-component="CatalogueExplorer-stack-filter" className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-300">
-            <Layers className="size-3.5 text-zinc-500" />
-            {T.stackFilterTitle}
-          </span>
+          <Filter className="size-3.5 shrink-0 text-zinc-500" aria-hidden />
           <div className="flex flex-wrap items-center gap-1.5">
             {(Object.keys(STACK_LABELS) as Stack[]).map((s) => {
-              const active = selectedStacks.includes(s)
+              const isActive = selectedStacks.includes(s)
               return (
                 <button
                   key={s}
                   onClick={() => toggleStack(s)}
-                  aria-pressed={active}
+                  aria-pressed={isActive}
                   className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
-                    active
+                    isActive
                       ? STACK_COLORS[s].active
                       : 'border-zinc-700/70 bg-zinc-800/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
                   }`}
@@ -200,10 +200,25 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                     {STACK_MONOGRAM[s]}
                   </span>
                   {STACK_LABELS[s]}
-                  {active && <Check className="size-3" />}
+                  {isActive && <Check className="size-3" />}
                 </button>
               )
             })}
+            {selectedSlugs.length > 0 && (
+              <button
+                onClick={() => setHideSelected((v) => !v)}
+                aria-pressed={hideSelected}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+                  hideSelected
+                    ? 'border-amber-500/50 bg-amber-500/15 text-amber-300'
+                    : 'border-zinc-700/70 bg-zinc-800/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                }`}
+              >
+                <EyeOff className="size-3" />
+                {T.filterHideSelected}
+                {hideSelected && <Check className="size-3" />}
+              </button>
+            )}
           </div>
           {selectedStacks.length > 0 ? (
             <button
