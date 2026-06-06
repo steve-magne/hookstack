@@ -164,17 +164,24 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
     return map
   }, [groups])
 
-  // Vertical anchor for the floating card — clamped to stay on screen.
-  // Used for both `initial` (appear in place) and `animate` (glide between rows).
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Vertical anchor: align card top with hovered row top, clamped to viewport.
   const previewY = preview
     ? Math.max(
         80,
-        Math.min(preview.y - 12, (typeof window !== 'undefined' ? window.innerHeight : 800) - 400)
+        Math.min(preview.y, (typeof window !== 'undefined' ? window.innerHeight : 800) - 480)
       )
     : 0
 
+  // Horizontal anchor: card starts at the container's horizontal midpoint (right half).
+  const previewLeft = containerRef.current
+    ? containerRef.current.getBoundingClientRect().left +
+      containerRef.current.getBoundingClientRect().width / 2
+    : undefined
+
   return (
-    <div data-component="CatalogueExplorer">
+    <div ref={containerRef} data-component="CatalogueExplorer">
       {/* CatalogueExplorer-controls — stack chooser + grouping toggle */}
       <div data-component="CatalogueExplorer-controls" className="mb-8 flex flex-wrap items-center justify-center gap-3 sm:justify-start sm:gap-4">
         {/* CatalogueExplorer-stack-filter */}
@@ -326,15 +333,15 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
           <m.div
             data-component="CatalogueExplorer-preview-card"
             key="preview-card"
-            initial={{ opacity: 0, x: -10, y: previewY }}
+            initial={{ opacity: 0, x: 10, y: previewY }}
             animate={{ opacity: 1, x: 0, y: previewY }}
-            exit={{ opacity: 0, x: -10, transition: { duration: duration.micro } }}
+            exit={{ opacity: 0, x: 10, transition: { duration: duration.micro } }}
             transition={{
               y: spring.gentle,
               x: spring.gentle,
               opacity: { duration: duration.base },
             }}
-            style={{ position: 'fixed', left: 24, top: 0 }}
+            style={{ position: 'fixed', left: previewLeft, top: 0 }}
             className="pointer-events-none z-50 hidden w-80 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 shadow-2xl shadow-black/50 backdrop-blur-md xl:block"
           >
             {preview.kind === 'hook' ? (

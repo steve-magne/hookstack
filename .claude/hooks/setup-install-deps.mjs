@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// Installe les dépendances au démarrage si node_modules est absent (SessionStart/WorktreeCreate)
+// Installe les dépendances au démarrage si node_modules est absent (SessionStart/WorktreeCreate).
+// Dans un worktree distinct, update-deps.mjs gère l'install en mode détaché — ce hook
+// s'abstient pour éviter la race condition (deux pnpm install concurrents → ENOTEMPTY).
 import { readFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -7,6 +9,14 @@ import { fileURLToPath } from 'url';
 export function run(input, { exec, exists = existsSync } = {}) {
   const cwd = input.cwd;
   const has = (f) => exists(`${cwd}/${f}`);
+
+  // Skip in a distinct worktree: update-deps.mjs already spawned pnpm there.
+  try {
+    const list = execSync('git worktree list', { cwd, encoding: 'utf8', timeout: 5_000 }).trim();
+    const mainDir = list.split('\n')[0]?.split(/\s+/)[0] ?? '';
+    if (mainDir && mainDir !== cwd) return null;
+  } catch { /* not a git repo — fall through */ }
+
   if (has('node_modules')) return null; // already installed
 
   let cmd = null;
