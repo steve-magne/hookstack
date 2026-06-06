@@ -95,7 +95,7 @@ export default function HomePage() {
         <StickyInstallBanner />
 
         {/* FineTuneSection */}
-        <section data-component="FineTuneSection" className="pb-14 pt-6">
+        <section data-component="FineTuneSection" className="pt-6">
           {/* Separator "or fine-tune it hook by hook" */}
           <div className="mb-10 flex items-center gap-4">
             <div className="h-px flex-1 bg-zinc-800" />
@@ -103,15 +103,6 @@ export default function HomePage() {
             <div className="h-px flex-1 bg-zinc-800" />
           </div>
 
-          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 sm:grid-cols-3">
-            {T.howItWorksSteps.map(({ step, title, desc }) => (
-              <div key={step} className="flex flex-col gap-3 bg-zinc-950 px-6 py-5">
-                <span className="font-mono text-xs font-semibold text-indigo-400">{step}</span>
-                <span className="text-sm font-semibold text-white">{title}</span>
-                <span className="text-sm leading-relaxed text-zinc-400">{desc}</span>
-              </div>
-            ))}
-          </div>
         </section>
 
         {/* CatalogueSection */}
