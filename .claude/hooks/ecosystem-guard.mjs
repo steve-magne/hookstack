@@ -1,65 +1,49 @@
 #!/usr/bin/env node
-// Rappel de propagation cross-fichiers après édition d'un fichier stratégique (PostToolUse Write|Edit)
-import { readFileSync } from 'fs';
+// Rappel de propagation cross-fichiers après édition d'un fichier stratégique (PostToolUse Write|Edit).
+// Lit la carte d'impact depuis `.claude/ecosystem-map.json` — créer ce fichier dans votre projet.
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 import { fileURLToPath } from 'url';
 
-// Carte d'impact : fichier stratégique → fichiers à vérifier pour cohérence.
-// Adapter les entrées `matches` à la structure de votre projet.
-const IMPACT_MAP = [
-  {
-    matches: ['src/lib/i18n.ts'],
-    label: 'UI copy / taglines du site',
-    check: ['README.md', 'packages/cli/README.md'],
-    tip: 'Si le pitch ou les taglines ont changé → propager vers README.md et packages/cli/README.md',
-  },
-  {
-    matches: ['README.md'],
-    label: 'README projet (GitHub)',
-    check: ['packages/cli/README.md', 'src/lib/i18n.ts'],
-    tip: 'README GitHub modifié → vérifier la cohérence avec packages/cli/README.md et src/lib/i18n.ts',
-  },
-  {
-    matches: ['packages/cli/README.md'],
-    label: 'CLI README (npm)',
-    check: ['README.md', 'src/lib/i18n.ts'],
-    tip: 'README npm modifié → vérifier la cohérence avec README.md et le copy du site (i18n.ts)',
-  },
-  {
-    matches: ['doc/hookstack/'],
-    label: 'vision / stratégie produit',
-    check: ['src/lib/i18n.ts', 'README.md', 'packages/cli/README.md'],
-    tip: 'Doc stratégique modifiée → propager vers le copy du site (i18n.ts), README.md et CLI README si nécessaire',
-  },
-  {
-    matches: ['DESIGN.md'],
-    label: 'système de design',
-    check: ['doc/hookstack/05-ux.md'],
-    tip: 'Design system modifié → mettre à jour doc/hookstack/05-ux.md si la décision est pérenne',
-  },
-];
+function loadMap(projectDir, readFile = readFileSync, exists = existsSync) {
+  const mapPath = join(projectDir, '.claude', 'ecosystem-map.json');
+  if (!exists(mapPath)) return null;
+  try {
+    return JSON.parse(readFile(mapPath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
 
-export function run(input, { projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd() } = {}) {
+export function run(input, {
+  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+  readFile = readFileSync,
+  exists = existsSync,
+} = {}) {
   const filePath = input.tool_input?.file_path ?? '';
   if (!filePath) return null;
+
+  const map = loadMap(projectDir, readFile, exists);
+  if (!map || map.length === 0) return null;
 
   // Rendre le chemin relatif au répertoire projet
   const rel = filePath.startsWith(projectDir + '/')
     ? filePath.slice(projectDir.length + 1)
     : filePath;
 
-  const impact = IMPACT_MAP.find((g) =>
-    g.matches.some((m) => rel === m || rel.startsWith(m)),
+  const impact = map.find((g) =>
+    (g.matches ?? []).some((m) => rel === m || rel.startsWith(m)),
   );
   if (!impact) return null;
 
-  const checkList = impact.check.map((f) => `  - ${f}`).join('\n');
+  const checkList = (impact.check ?? []).map((f) => `  - ${f}`).join('\n');
   const message = [
-    `⚠️  ECOSYSTEM GUARD — fichier stratégique modifié : ${rel} (${impact.label})`,
-    impact.tip,
+    `⚠️  ECOSYSTEM GUARD — fichier stratégique modifié : ${rel} (${impact.label ?? ''})`,
+    impact.tip ?? '',
     `Fichiers à vérifier pour cohérence :`,
     checkList,
     `Vérification rapide : node .claude/ecosystem-check.mjs`,
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 
   return {
     hookSpecificOutput: {

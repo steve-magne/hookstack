@@ -239,37 +239,6 @@ for (const [event, matchers] of Object.entries(hooksMap)) {
   }
 }
 
-// ── Étape 2b : préserver les hooks locaux (dans settings.json mais absents du registre) ─
-// Permet de dogfooder des hooks projet-spécifiques sans les publier dans le catalogue.
-const registryCommands = new Set(
-  eligible.map((h) => `node $CLAUDE_PROJECT_DIR/.claude/hooks/${basename(h.implementation.script_path)}`),
-);
-
-let localPreserved = 0;
-for (const [event, groups] of Object.entries(existingSettings.hooks ?? {})) {
-  for (const group of groups) {
-    const local = (group.hooks ?? []).filter(
-      (h) => typeof h.command === 'string' && !registryCommands.has(h.command),
-    );
-    if (local.length === 0) continue;
-
-    const matcher = group.matcher ?? '';
-    if (!newHooks[event]) newHooks[event] = [];
-    const target = newHooks[event].find((g) => (g.matcher ?? '') === matcher);
-    if (target) {
-      target.hooks.push(...local);
-    } else {
-      newHooks[event].push({ hooks: local, ...(matcher ? { matcher } : {}) });
-    }
-    localPreserved += local.length;
-  }
-}
-
-if (localPreserved > 0) {
-  console.log(`\n── Hooks locaux préservés ──`);
-  console.log(`  ${localPreserved} hook(s) projet-spécifique(s) conservé(s) (absents du registre)`);
-}
-
 const newSettings = {
   permissions: existingSettings.permissions ?? {},
   hooks: newHooks,

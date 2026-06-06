@@ -1,0 +1,32 @@
+[
+  {
+    "matches": ["src/lib/i18n.ts"],
+    "label": "UI copy / taglines du site",
+    "check": ["README.md", "packages/cli/README.md"],
+    "tip": "Si le pitch ou les taglines ont changé → propager vers README.md et packages/cli/README.md"
+  },
+  {
+    "matches": ["README.md"],
+    "label": "README projet (GitHub)",
+    "check": ["packages/cli/README.md", "src/lib/i18n.ts"],
+    "tip": "README GitHub modifié → vérifier la cohérence avec packages/cli/README.md et src/lib/i18n.ts"
+  },
+  {
+    "matches": ["packages/cli/README.md"],
+    "label": "CLI README (npm)",
+    "check": ["README.md", "src/lib/i18n.ts"],
+    "tip": "README npm modifié → vérifier la cohérence avec README.md et le copy du site (i18n.ts)"
+  },
+  {
+    "matches": ["doc/hookstack/"],
+    "label": "vision / stratégie produit",
+    "check": ["src/lib/i18n.ts", "README.md", "packages/cli/README.md"],
+    "tip": "Doc stratégique modifiée → propager vers le copy du site (i18n.ts), README.md et CLI README si nécessaire"
+  },
+  {
+    "matches": ["DESIGN.md"],
+    "label": "système de design",
+    "check": ["doc/hookstack/05-ux.md"],
+    "tip": "Design system modifié → mettre à jour doc/hookstack/05-ux.md si la décision est pérenne"
+  }
+]
