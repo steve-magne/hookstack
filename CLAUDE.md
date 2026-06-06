@@ -28,6 +28,25 @@ Les utilisateurs découvrent le projet par trois canaux. Le message, le flow et 
 
 > Règle : toute évolution du flow utilisateur, des slugs d'exemple ou du wording CLI doit être répercutée dans les trois. Le README GitHub et le README npm sont les deux faces d'une même promesse — une divergence brouille le message.
 
+### Composants du repo
+
+| Dossier | Rôle |
+|---|---|
+| [`/src/`](src/) | Site web Next.js — catalogue, HookConfigurator, pages (`hookstack.vercel.app`) |
+| [`/packages/cli/`](packages/cli/) | Package npm public `hookstack-cli` — CLI installé par les utilisateurs via `npx` |
+| [`/registry/`](registry/) | `registry.json` — source de vérité des **métadonnées** du catalogue (`name`, `benefit`, `description`, `config`…) ; `code_snippet` dérivé automatiquement des `.mjs` |
+| [`/doc/hookstack/`](doc/hookstack/) | Vision produit, marketing, brainstorm, positionnement (ne pas modifier sans raison) |
+| [`/README.md`](README.md) | README vendeur GitHub — destiné aux early adopters et contributeurs |
+
+### Règle d'or : propagation des changements
+
+⚠️ Toute modification visuelle ou stratégique **doit être évaluée** sur les quatre surfaces :
+
+1. **Site** [`/src/`](src/) — cohérence visuelle et UX
+2. **CLI** [`/packages/cli/`](packages/cli/) — tonalité des messages, flags, exemples dans `README.md`
+3. **Docs marketing** [`/doc/hookstack/`](doc/hookstack/) — vision alignée avec la réalité du produit
+4. **README** [`/README.md`](README.md) — pitch actualisé, exemples CLI cohérents
+
 ---
 
 ## Directives comportementales
@@ -131,9 +150,9 @@ Backlog = **GitHub Issues** (label `growth` + `content`/`outreach`/`spike`/`seo`
 
 Hookstack est un catalogue de hooks agentiques pour Claude Code. Next.js 15 (App Router) + TypeScript + Tailwind v4.
 
-**Source de données** : `registry/registry.json` est la seule source de vérité — lue directement par `src/lib/hooks.ts` (via `allHooks`). Sans `.env`, tout fonctionne en mode registre local.
+**Source de données** : `registry/registry.json` est la source de vérité des **métadonnées** du catalogue — lue directement par `src/lib/hooks.ts` (via `allHooks`). C'est ce que le front-end et le CLI consomment. Sans `.env`, tout fonctionne en mode registre local. Le champ `code_snippet` y est un miroir des `.mjs` (jamais édité à la main).
 
-**Registre** : `registry/registry.json` est la source canonique et unique du registre versionné — c'est aussi ce que le front-end importe. Les scripts sous `.claude/skills/analyze-repo/scripts/` alimentent le skill `/analyze-repo` (fetch, validation, merge, apply).
+**Registre** : `registry/registry.json` est la source canonique des **métadonnées** du catalogue versionné. Le code exécutable, lui, vit dans `.claude/hooks/*.mjs` et est propagé vers `code_snippet` par le sync. Les scripts sous `.claude/skills/analyze-repo/scripts/` alimentent le skill `/analyze-repo` (fetch, validation, merge, apply).
 
 **État global** : Zustand persisté dans `src/store/selection.ts` (clé `hookstack-selection`) — stocke les slugs des hooks sélectionnés.
 
