@@ -68,7 +68,7 @@ Chaque repo analysé = un potentiel ambassadeur. Le workflow B crée automatique
 2. Sous-titre     — Install a production-ready Claude Code hook workflow in one command
 3. Promesse       — "UP AND RUNNING IN 60 SECONDS" (badge uppercase)
 4. Install direct — terminal `npx hookstack-cli@latest install` (commande par défaut = hooks recommandés)
-5. Caption        — "Writes the hooks into .claude/hooks and patches settings.json — nothing else."
+5. Caption        — "Will writes the hooks into .claude/hooks and patches settings.json — nothing else."
 
 ── or fine-tune it hook by hook ──  (séparateur horizontal)
 

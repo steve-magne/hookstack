@@ -11,14 +11,14 @@ export const T = {
   heroTitle2: 'in 1 minute',
   heroTitleA: 'Ship fast.',
   heroTitleB: 'Break nothing.',
-  heroSubtitleMain: 'Install a production-ready Claude Code hook workflow in one command',
+  heroSubtitleMain: 'Install a production-ready Claude Code HookStack in one command',
   heroSubtitleSub: 'or fine-tune it hook by hook',
   howItWorksTitle: 'Up and running in 60 seconds',
   howItWorksSteps: [
     {
       step: '01',
       title: 'Browse',
-      desc: 'Filter 68 hooks by event type, category, or your stack.',
+      desc: 'Filter hooks by event type, category, or your stack.',
     },
     {
       step: '02',
@@ -34,7 +34,7 @@ export const T = {
   githubLinkLabel: 'GitHub',
   installTerminalLabel: 'project root',
   installPlaceholder: 'pick your hooks below',
-  installCaption: 'Writes the hooks into .claude/hooks and patches settings.json — nothing else.',
+  installCaption: 'Will writes the hooks into .claude/hooks and patches settings.json — nothing else.',
   mobileCopyBtn: 'Copy and Paste to Claude Code App',
   catalogueTitle: 'Hooks catalogue',
   noResults: 'No hook matches these filters.',
