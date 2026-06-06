@@ -1,5 +1,22 @@
 # CLAUDE.md
 
+## Carte d'impact écosystème
+
+Hookstack couvre **4 surfaces** qui doivent rester cohérentes. Quand tu modifies l'une, propager vers les autres si le contenu est stratégique.
+
+| Tu changes… | Vérifie aussi… |
+|---|---|
+| `src/lib/i18n.ts` (copy/taglines UI) | `README.md`, `packages/cli/README.md` |
+| `README.md` (pitch GitHub) | `packages/cli/README.md`, `src/lib/i18n.ts` |
+| `packages/cli/README.md` (pitch npm) | `README.md`, `src/lib/i18n.ts` |
+| `doc/hookstack/` (vision/stratégie) | `src/lib/i18n.ts`, `README.md`, `packages/cli/README.md` |
+| `DESIGN.md` (design system) | `doc/hookstack/05-ux.md` |
+
+> **Vérification rapide** : `node .claude/ecosystem-check.mjs` — vérifie les invariants de cohérence.
+> Le hook `ecosystem-guard` (PostToolUse) rappelle automatiquement ces dépendances à chaque édition stratégique.
+
+---
+
 ## Directives comportementales
 
 **KISS** : toujours choisir la solution la plus simple qui résout le problème. Pas d'abstraction prématurée, pas de généralisation anticipée.
