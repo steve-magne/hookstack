@@ -11,6 +11,7 @@ export function run({ exec = defaultExec, platform = process.platform } = {}) {
   try {
     if (platform === 'darwin') {
       exec('afplay /System/Library/Sounds/Hero.aiff');
+      exec('osascript -e \'display notification "Claude has finished working" with title "Claude Code"\'');
     } else if (platform === 'linux') {
       exec('paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || aplay /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null || true');
     } else if (platform === 'win32') {

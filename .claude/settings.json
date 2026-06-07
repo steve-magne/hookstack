@@ -61,6 +61,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/websearch-temporal-context.mjs"
+          }
+        ],
+        "matcher": "WebSearch"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-guard.mjs"
           }
         ],
@@ -111,6 +120,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-stash-warning.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/agents-md-loader.mjs"
           }
         ]
       },
@@ -157,6 +170,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/typecheck.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/nextjs-quality-checker.mjs"
           }
         ],
         "matcher": "Write|Edit"
@@ -369,6 +386,17 @@
           }
         ],
         "matcher": "*.mjs|registry.json"
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-ghostty.mjs",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "WorktreeRemove": [

@@ -4554,5 +4554,159 @@
       "test_snippet": "import { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/block-push-closed-pr.mjs';\n\nconst makeInput = (command) => ({ tool_input: { command } });\n\ndescribe('block-push-closed-pr', () => {\n  it('laisse passer les commandes non-push', () => {\n    expect(run(makeInput('git status'))).toBeNull();\n    expect(run(makeInput('git commit -m \"foo\"'))).toBeNull();\n  });\n\n  it('ignore main et master', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('main\\n')\n      .mockReturnValueOnce('master\\n');\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n  });\n\n  it('bloque si la PR est mergée', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('fix/my-feature\\n')\n      .mockReturnValueOnce('MERGED\\n');\n    const result = run(makeInput('git push'), { exec });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toMatch(/mergée/);\n    expect(result?.reason).toMatch(/fix\\/my-feature/);\n  });\n\n  it('bloque si la PR est fermée', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('fix/closed-branch\\n')\n      .mockReturnValueOnce('CLOSED\\n');\n    const result = run(makeInput('git push'), { exec });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toMatch(/fermée/);\n  });\n\n  it('laisse passer si la PR est ouverte', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('fix/open-pr\\n')\n      .mockReturnValueOnce('OPEN\\n');\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n  });\n\n  it('laisse passer si gh échoue (pas de PR)', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('fix/no-pr\\n')\n      .mockImplementationOnce(() => { throw new Error('no PR'); });\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n  });\n\n  it('laisse passer si git rev-parse échoue', () => {\n    const exec = vi.fn().mockImplementationOnce(() => { throw new Error(); });\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n  });\n});\n"
     },
     "is_must": true
+  },
+  {
+    "slug": "pre-websearch-temporal-context",
+    "name": "WebSearch temporal context injector",
+    "benefit": "Prevents stale search results by silently adding the current year",
+    "description": "Intercepts every WebSearch call and appends the current year to queries that lack temporal context (no year, no 'latest', 'recent', 'current', etc.). Ensures the agent retrieves up-to-date documentation, changelogs and release notes instead of outdated results.",
+    "category": "context",
+    "provider": ["claude-code"],
+    "hook_type": "PreToolUse",
+    "trigger": "WebSearch",
+    "stack": null,
+    "tags": ["search", "context", "freshness", "temporal"],
+    "use_cases": [
+      "Keep dependency version lookups current",
+      "Avoid outdated API documentation in research tasks",
+      "Ensure changelog and release note searches return latest versions"
+    ],
+    "is_must": false,
+    "votes": 0,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/websearch-temporal-context.mjs",
+      "code_snippet": "",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "matcher": "WebSearch",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/websearch-temporal-context.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "slug": "session-start-agents-md",
+    "name": "AGENTS.md context loader",
+    "benefit": "Auto-loads your AGENTS.md so every session starts with full agent context",
+    "description": "Reads AGENTS.md from the project root at session start and injects it as additional context. Works seamlessly alongside CLAUDE.md — useful for projects that use the OpenAI Codex / multi-agent AGENTS.md convention to document agent roles, capabilities and coordination rules.",
+    "category": "context",
+    "provider": ["claude-code"],
+    "hook_type": "SessionStart",
+    "trigger": "*",
+    "stack": null,
+    "tags": ["session", "context", "agents", "multi-agent"],
+    "use_cases": [
+      "Multi-agent projects using AGENTS.md for role definitions",
+      "Teams migrating from Codex/OpenAI Codex to Claude Code",
+      "Projects with explicit agent coordination rules"
+    ],
+    "is_must": false,
+    "votes": 0,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/agents-md-loader.mjs",
+      "code_snippet": "",
+      "config": {
+        "hooks": {
+          "SessionStart": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/agents-md-loader.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "slug": "worktree-ghostty-tab",
+    "name": "Ghostty tab on worktree create",
+    "benefit": "Opens a Ghostty terminal in the new worktree automatically",
+    "description": "Hooks into WorktreeCreate to open a new Ghostty window pre-cd'd to the worktree path, so you can immediately run dev commands without navigating manually. macOS only. Silently skips if Ghostty is not installed.",
+    "category": "workflow",
+    "provider": ["claude-code"],
+    "hook_type": "WorktreeCreate",
+    "trigger": "*",
+    "stack": null,
+    "tags": ["worktree", "ghostty", "terminal", "macos", "dx"],
+    "use_cases": [
+      "Open a dedicated terminal for each new worktree session",
+      "Speed up context-switching between parallel feature branches"
+    ],
+    "is_must": false,
+    "votes": 0,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/worktree-ghostty.mjs",
+      "code_snippet": "",
+      "config": {
+        "hooks": {
+          "WorktreeCreate": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-ghostty.mjs",
+                  "timeout": 10
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "slug": "post-write-nextjs-quality",
+    "name": "Next.js App Router quality checker",
+    "benefit": "Catches missing 'use client' and legacy Pages Router patterns before they silently break",
+    "description": "After each file write or edit, scans JS/TS files for common Next.js App Router mistakes: Server Components using React hooks without 'use client', Pages Router data-fetching methods (getServerSideProps/getStaticProps) inside app/, and plain <img>/<a> tags where next/image and next/link should be used. Blocks on critical errors, warns on best-practice issues.",
+    "category": "validation",
+    "provider": ["claude-code"],
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "stack": ["typescript"],
+    "tags": ["nextjs", "react", "app-router", "quality", "typescript"],
+    "use_cases": [
+      "Catch missing 'use client' in interactive components",
+      "Detect Pages Router patterns during App Router migrations",
+      "Enforce next/image and next/link usage"
+    ],
+    "is_must": false,
+    "votes": 0,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/nextjs-quality-checker.mjs",
+      "code_snippet": "",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/nextjs-quality-checker.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
   }
 ]
