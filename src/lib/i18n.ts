@@ -1,7 +1,25 @@
+export const SEO_KEYWORDS = [
+  'Claude Code hooks',
+  'agentic hooks',
+  'agentic workflow',
+  'vibe coding',
+  'GitHub Copilot hooks',
+  'deterministic behavior',
+  'HookStack',
+  'Claude Code',
+  'agentic hook',
+  'AI coding hooks',
+  'PreToolUse',
+  'PostToolUse',
+  'AI development workflow',
+  'coding automation',
+  'Claude Code extensions',
+]
+
 export const T = {
-  metaTitle: 'HookStack — Claude Code hooks catalogue. Install in 1 minute.',
+  metaTitle: 'HookStack — Agentic Hooks for Claude Code & Vibe Coding',
   metaDescription:
-    'Browse production-ready Claude Code hooks. Block secrets, enforce tests, inject context — select yours and install with one npx command.',
+    'Catalogue of agentic hooks for Claude Code & GitHub Copilot. Add deterministic behavior to your vibe coding workflow. Install in one npx command.',
   footerText: 'Hookstack — Community catalogue of agentic hooks',
   navCatalogue: 'Catalogue',
   hooksSelectedOne: 'hook selected',
@@ -83,6 +101,29 @@ export const T = {
   pluginInstallHint: 'Run once in your project root:',
   previewClickToAdd: 'Click the row to add it',
   previewMustHint: 'Recommended — already selected',
+  faqTitle: 'Frequently asked questions',
+  faq: [
+    {
+      q: 'What is an agentic hook?',
+      a: 'An agentic hook is a Node.js script triggered by Claude Code lifecycle events — PreToolUse, PostToolUse, SessionStart, Stop. Hooks enforce deterministic behavior in agentic workflows: block dangerous commands, run tests automatically, inject context, and notify your team — without relying on the LLM to remember.',
+    },
+    {
+      q: 'How do agentic hooks improve vibe coding?',
+      a: 'Vibe coding lets an AI agent like Claude Code drive most of your implementation while you set direction. Hooks add CI-like guardrails that fire on every agent action — making your agentic workflow production-safe, auditable, and repeatable regardless of what the model decides to do.',
+    },
+    {
+      q: 'Does HookStack work with GitHub Copilot?',
+      a: 'HookStack is built around Claude Code hooks today. The agentic hook patterns are portable: any AI coding agent that exposes lifecycle events can adopt the same deterministic-behavior approach. GitHub Copilot Workspace and similar tools are natural targets as they mature.',
+    },
+    {
+      q: 'Why are Claude Code hooks better than prompt instructions?',
+      a: 'Prompts are probabilistic — the model may or may not follow them. Claude Code hooks are deterministic Node.js scripts that execute unconditionally on matching events. No drift, no hallucination, no forgotten rules. That guarantee is what makes agentic workflows trustworthy in production.',
+    },
+    {
+      q: 'How do I install Claude Code hooks with HookStack?',
+      a: 'Browse the catalogue, select the hooks you want, then run the generated npx hookstack-cli@latest install command in your project root. HookStack writes the scripts to .claude/hooks/ and patches your settings.json — nothing else touched.',
+    },
+  ] as const,
 }
 
 export type Translations = typeof T

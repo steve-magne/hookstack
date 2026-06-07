@@ -2,7 +2,7 @@ import { CategoryBadge, HookTypeBadge } from '@/components/Badge'
 import { HookSelectButton } from '@/components/HookSelectButton'
 import { HookDetailTracker } from '@/components/HookDetailTracker'
 import { allHooks, getHookBySlug } from '@/lib/hooks'
-import { T } from '@/lib/i18n'
+import { T, SEO_KEYWORDS } from '@/lib/i18n'
 import { PROVIDER_LABELS } from '@/types/hook'
 import { ArrowLeft } from 'lucide-react'
 import type { Metadata } from 'next'
@@ -23,12 +23,14 @@ export async function generateMetadata({
   const hook = getHookBySlug(slug)
   if (!hook) return {}
 
+  const keywords = [...SEO_KEYWORDS, ...hook.tags]
+
   return {
     title: hook.name,
     description: hook.description,
-    keywords: hook.tags.join(', '),
+    keywords,
     openGraph: {
-      title: hook.name,
+      title: `${hook.name} — HookStack`,
       description: hook.description,
       url: `${BASE}/hook/${slug}`,
       siteName: 'HookStack',
@@ -36,7 +38,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary',
-      title: hook.name,
+      title: `${hook.name} — HookStack`,
       description: hook.description,
     },
     alternates: { canonical: `${BASE}/hook/${slug}` },
@@ -69,7 +71,7 @@ export default async function HookDetailPage({
     '@type': 'SoftwareSourceCode',
     name: hook.name,
     description: hook.description,
-    keywords: hook.tags.join(', '),
+    keywords: [...SEO_KEYWORDS, ...hook.tags].join(', '),
     programmingLanguage: 'JavaScript',
     url: `${BASE}/hook/${hook.slug}`,
     isPartOf: {
@@ -79,11 +81,25 @@ export default async function HookDetailPage({
     },
   }
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'HookStack', item: BASE },
+      { '@type': 'ListItem', position: 2, name: 'Hooks', item: `${BASE}/#catalogue` },
+      { '@type': 'ListItem', position: 3, name: hook.name, item: `${BASE}/hook/${hook.slug}` },
+    ],
+  }
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <HookDetailTracker slug={hook.slug} name={hook.name} category={hook.category} event={hook.hook_type} />
       {/* HookDetailPage */}
