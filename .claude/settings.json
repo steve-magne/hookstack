@@ -61,19 +61,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/websearch-temporal-context.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-guard.mjs"
           }
         ],
-        "matcher": "WebSearch"
+        "matcher": "Edit|Write"
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-guard.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/websearch-temporal-context.mjs"
           }
         ],
-        "matcher": "Edit|Write"
+        "matcher": "WebSearch"
       }
     ],
     "UserPromptSubmit": [
@@ -388,17 +388,6 @@
         "matcher": "*.mjs|registry.json"
       }
     ],
-    "WorktreeCreate": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-ghostty.mjs",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
     "WorktreeRemove": [
       {
         "hooks": [
@@ -494,6 +483,17 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/instructions-loaded-audit-log.mjs"
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-ghostty.mjs",
+            "timeout": 10
           }
         ]
       }
