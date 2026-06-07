@@ -3,18 +3,19 @@ import Script from 'next/script'
 import './globals.css'
 import { MotionProvider } from '@/components/MotionProvider'
 import { Header } from '@/components/Header'
-import { T } from '@/lib/i18n'
+import { T, SEO_KEYWORDS } from '@/lib/i18n'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://hookstack.vercel.app'),
   title: {
-    template: '%s | Hookstack',
-    default: 'Hookstack',
+    template: '%s | HookStack',
+    default: 'HookStack',
   },
   description: T.metaDescription,
+  keywords: SEO_KEYWORDS,
   robots: { index: true, follow: true },
   openGraph: {
-    siteName: 'Hookstack',
+    siteName: 'HookStack',
     locale: 'en_US',
     type: 'website',
   },

@@ -2,7 +2,7 @@ import { CatalogueExplorer } from '@/components/CatalogueExplorer'
 import { StickyInstallBanner } from '@/components/StickyInstallBanner'
 import { SplitFlap } from '@/components/SplitFlap'
 import { allHooks } from '@/lib/hooks'
-import { T } from '@/lib/i18n'
+import { T, SEO_KEYWORDS } from '@/lib/i18n'
 import { splitFlapHero } from '@/lib/motion'
 import type { Metadata } from 'next'
 
@@ -11,6 +11,7 @@ const BASE = 'https://hookstack.vercel.app'
 export const metadata: Metadata = {
   title: T.metaTitle,
   description: T.metaDescription,
+  keywords: SEO_KEYWORDS,
   openGraph: {
     title: T.metaTitle,
     description: T.metaDescription,
@@ -56,10 +57,36 @@ export default function HomePage() {
     })),
   }
 
+  const softwareJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'hookstack-cli',
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Any',
+    description:
+      'CLI to install agentic hooks for Claude Code from the HookStack catalogue. Enforce deterministic behavior in your vibe coding workflow in one command.',
+    url: 'https://www.npmjs.com/package/hookstack-cli',
+    downloadUrl: 'https://www.npmjs.com/package/hookstack-cli',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    keywords: SEO_KEYWORDS.join(', '),
+  }
+
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: T.faq.map(({ q, a }) => ({
+      '@type': 'Question',
+      name: q,
+      acceptedAnswer: { '@type': 'Answer', text: a },
+    })),
+  }
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       {/* HomePage */}
       <div data-component="HomePage" className="mx-auto max-w-6xl px-4">
         {/* HeroSection */}
@@ -110,6 +137,31 @@ export default function HomePage() {
           <CatalogueExplorer />
         </section>
       </div>
+
+      {/* FaqSection */}
+      <section
+        data-component="FaqSection"
+        className="mx-auto max-w-3xl px-4 pb-24"
+        aria-labelledby="faq-heading"
+      >
+        <h2
+          id="faq-heading"
+          className="mb-10 text-xl font-semibold text-white"
+        >
+          {T.faqTitle}
+        </h2>
+        <dl className="space-y-0">
+          {T.faq.map(({ q, a }) => (
+            <div
+              key={q}
+              className="border-t border-[var(--color-border)] py-6 last:border-b"
+            >
+              <dt className="mb-2 font-medium text-white">{q}</dt>
+              <dd className="text-sm leading-relaxed text-zinc-400">{a}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
     </>
   )
 }

@@ -4,20 +4,26 @@ import type { MetadataRoute } from 'next'
 const BASE = 'https://hookstack.vercel.app'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticPages = [
+  const staticPages: MetadataRoute.Sitemap = [
     {
       url: BASE,
       lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
+      changeFrequency: 'weekly',
       priority: 1,
+    },
+    {
+      url: `${BASE}/contribute`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
     },
   ]
 
-  const hookPages = allHooks.map((hook) => ({
+  const hookPages: MetadataRoute.Sitemap = allHooks.map((hook) => ({
     url: `${BASE}/hook/${hook.slug}`,
     lastModified: new Date(),
-    changeFrequency: 'monthly' as const,
-    priority: 0.7,
+    changeFrequency: 'monthly',
+    priority: hook.is_must ? 0.9 : 0.7,
   }))
 
   return [...staticPages, ...hookPages]
