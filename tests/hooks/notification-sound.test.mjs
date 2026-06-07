@@ -9,6 +9,12 @@ describe('notification-sound', () => {
     expect(exec).toHaveBeenCalledWith(expect.stringContaining('Glass.aiff'));
   });
 
+  it('affiche une notification macOS quand Claude attend', () => {
+    const exec = vi.fn();
+    run({}, { exec, platform: 'darwin' });
+    expect(exec).toHaveBeenCalledWith(expect.stringContaining('display notification'));
+  });
+
   it('joue paplay sur Linux', () => {
     const exec = vi.fn();
     run({}, { exec, platform: 'linux' });

@@ -9,6 +9,12 @@ describe('stop-sound', () => {
     expect(exec).toHaveBeenCalledWith(expect.stringContaining('Hero.aiff'));
   });
 
+  it('affiche une notification macOS à la fin', () => {
+    const exec = vi.fn();
+    run({ exec, platform: 'darwin' });
+    expect(exec).toHaveBeenCalledWith(expect.stringContaining('display notification'));
+  });
+
   it('joue paplay sur Linux', () => {
     const exec = vi.fn();
     run({ exec, platform: 'linux' });

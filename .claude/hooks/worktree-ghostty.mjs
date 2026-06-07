@@ -1,0 +1,31 @@
+#!/usr/bin/env node
+// Ouvre un nouvel onglet Ghostty sur le chemin du worktree créé (WorktreeCreate)
+import { readFileSync } from 'fs';
+import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
+
+function defaultExec(cmd) {
+  execSync(cmd, { timeout: 10_000, stdio: 'ignore', shell: true });
+}
+
+export function run(input, { exec = defaultExec, platform = process.platform } = {}) {
+  const worktreePath = input?.worktree_path;
+  if (!worktreePath || platform !== 'darwin') return null;
+
+  // WorktreeRemove n'a pas de champ branch — on n'ouvre rien dans ce cas
+  const isCreate = Boolean(input?.branch);
+  if (!isCreate) return null;
+
+  try {
+    exec(`ghostty --working-directory="${worktreePath}" &`);
+  } catch {
+    // Ghostty absent ou erreur — non bloquant
+  }
+  return null;
+}
+
+/* v8 ignore next 4 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'));
+  run(input);
+}

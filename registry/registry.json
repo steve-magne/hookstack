@@ -1909,7 +1909,7 @@
     "hook_type": "Notification",
     "id": "notification-sound",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Joue un son système quand Claude attend l'utilisateur (Notification)\nimport { execSync } from 'child_process';\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 5_000, stdio: 'ignore', shell: true });\n}\n\nexport function run(_input, { exec = defaultExec, platform = process.platform } = {}) {\n  try {\n    if (platform === 'darwin') {\n      exec('afplay /System/Library/Sounds/Glass.aiff');\n    } else if (platform === 'linux') {\n      exec('paplay /usr/share/sounds/freedesktop/stereo/message.oga 2>/dev/null || aplay /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null || true');\n    } else if (platform === 'win32') {\n      exec('powershell -c \"[console]::beep(660, 300)\"');\n    }\n  } catch {\n    // Son absent ou erreur — non bloquant\n  }\n  return null;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Joue un son système quand Claude attend l'utilisateur (Notification)\nimport { execSync } from 'child_process';\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 5_000, stdio: 'ignore', shell: true });\n}\n\nexport function run(_input, { exec = defaultExec, platform = process.platform } = {}) {\n  try {\n    if (platform === 'darwin') {\n      exec('afplay /System/Library/Sounds/Glass.aiff');\n      exec('osascript -e \\'display notification \"Claude needs your input\" with title \"Claude Code\"\\'');\n    } else if (platform === 'linux') {\n      exec('paplay /usr/share/sounds/freedesktop/stereo/message.oga 2>/dev/null || aplay /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null || true');\n    } else if (platform === 'win32') {\n      exec('powershell -c \"[console]::beep(660, 300)\"');\n    }\n  } catch {\n    // Son absent ou erreur — non bloquant\n  }\n  return null;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
         "hooks": {
           "Notification": [
@@ -1936,7 +1936,7 @@
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
       },
-      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/notification-sound.mjs';\n\ndescribe('notification-sound', () => {\n  it('joue afplay Glass.aiff sur macOS', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'darwin' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('Glass.aiff'));\n  });\n\n  it('joue paplay sur Linux', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'linux' });\n    expect(exec).toHaveBeenCalled();\n  });\n\n  it('joue un beep PowerShell sur Windows', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'win32' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('powershell'));\n  });\n\n  it('retourne null (non bloquant)', () => {\n    const exec = vi.fn();\n    expect(run({}, { exec, platform: 'darwin' })).toBeNull();\n  });\n\n  it(\"ne leve pas d'erreur si exec echoue\", () => {\n    const exec = vi.fn(() => { throw new Error('afplay absent'); });\n    expect(() => run({}, { exec, platform: 'darwin' })).not.toThrow();\n  });\n\n  it('ne joue rien sur plateforme inconnue', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'freebsd' });\n    expect(exec).not.toHaveBeenCalled();\n  });\n});\n"
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/notification-sound.mjs';\n\ndescribe('notification-sound', () => {\n  it('joue afplay Glass.aiff sur macOS', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'darwin' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('Glass.aiff'));\n  });\n\n  it('affiche une notification macOS quand Claude attend', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'darwin' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('display notification'));\n  });\n\n  it('joue paplay sur Linux', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'linux' });\n    expect(exec).toHaveBeenCalled();\n  });\n\n  it('joue un beep PowerShell sur Windows', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'win32' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('powershell'));\n  });\n\n  it('retourne null (non bloquant)', () => {\n    const exec = vi.fn();\n    expect(run({}, { exec, platform: 'darwin' })).toBeNull();\n  });\n\n  it(\"ne leve pas d'erreur si exec echoue\", () => {\n    const exec = vi.fn(() => { throw new Error('afplay absent'); });\n    expect(() => run({}, { exec, platform: 'darwin' })).not.toThrow();\n  });\n\n  it('ne joue rien sur plateforme inconnue', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'freebsd' });\n    expect(exec).not.toHaveBeenCalled();\n  });\n});\n"
     },
     "name": "System sound notification",
     "provider": [
@@ -1965,7 +1965,7 @@
     "hook_type": "Stop",
     "id": "stop-sound",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Joue un son de completion quand Claude termine une tâche (Stop)\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 5_000, stdio: 'ignore', shell: true });\n}\n\nexport function run({ exec = defaultExec, platform = process.platform } = {}) {\n  try {\n    if (platform === 'darwin') {\n      exec('afplay /System/Library/Sounds/Hero.aiff');\n    } else if (platform === 'linux') {\n      exec('paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || aplay /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null || true');\n    } else if (platform === 'win32') {\n      exec('powershell -c \"[console]::beep(880, 400)\"');\n    }\n  } catch {\n    // Son absent ou erreur — non bloquant\n  }\n  return null;\n}\n\n/* v8 ignore next 3 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  run();\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Joue un son de completion quand Claude termine une tâche (Stop)\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 5_000, stdio: 'ignore', shell: true });\n}\n\nexport function run({ exec = defaultExec, platform = process.platform } = {}) {\n  try {\n    if (platform === 'darwin') {\n      exec('afplay /System/Library/Sounds/Hero.aiff');\n      exec('osascript -e \\'display notification \"Claude has finished working\" with title \"Claude Code\"\\'');\n    } else if (platform === 'linux') {\n      exec('paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || aplay /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null || true');\n    } else if (platform === 'win32') {\n      exec('powershell -c \"[console]::beep(880, 400)\"');\n    }\n  } catch {\n    // Son absent ou erreur — non bloquant\n  }\n  return null;\n}\n\n/* v8 ignore next 3 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  run();\n}\n",
       "config": {
         "hooks": {
           "Stop": [
@@ -1992,7 +1992,7 @@
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
       },
-      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-sound.mjs';\n\ndescribe('stop-sound', () => {\n  it('joue Hero.aiff sur macOS', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'darwin' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('Hero.aiff'));\n  });\n\n  it('joue paplay sur Linux', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'linux' });\n    expect(exec).toHaveBeenCalled();\n  });\n\n  it('joue un beep PowerShell sur Windows', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'win32' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('powershell'));\n  });\n\n  it('retourne null (non bloquant)', () => {\n    const exec = vi.fn();\n    expect(run({ exec, platform: 'darwin' })).toBeNull();\n  });\n\n  it(\"ne leve pas d'erreur si exec echoue\", () => {\n    const exec = vi.fn(() => { throw new Error('afplay absent'); });\n    expect(() => run({ exec, platform: 'darwin' })).not.toThrow();\n  });\n\n  it('ne joue rien sur plateforme inconnue', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'freebsd' });\n    expect(exec).not.toHaveBeenCalled();\n  });\n});\n"
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-sound.mjs';\n\ndescribe('stop-sound', () => {\n  it('joue Hero.aiff sur macOS', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'darwin' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('Hero.aiff'));\n  });\n\n  it('affiche une notification macOS à la fin', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'darwin' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('display notification'));\n  });\n\n  it('joue paplay sur Linux', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'linux' });\n    expect(exec).toHaveBeenCalled();\n  });\n\n  it('joue un beep PowerShell sur Windows', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'win32' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('powershell'));\n  });\n\n  it('retourne null (non bloquant)', () => {\n    const exec = vi.fn();\n    expect(run({ exec, platform: 'darwin' })).toBeNull();\n  });\n\n  it(\"ne leve pas d'erreur si exec echoue\", () => {\n    const exec = vi.fn(() => { throw new Error('afplay absent'); });\n    expect(() => run({ exec, platform: 'darwin' })).not.toThrow();\n  });\n\n  it('ne joue rien sur plateforme inconnue', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'freebsd' });\n    expect(exec).not.toHaveBeenCalled();\n  });\n});\n"
     },
     "name": "System sound on task completion",
     "provider": [
@@ -4554,5 +4554,191 @@
       "test_snippet": "import { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/block-push-closed-pr.mjs';\n\nconst makeInput = (command) => ({ tool_input: { command } });\n\ndescribe('block-push-closed-pr', () => {\n  it('laisse passer les commandes non-push', () => {\n    expect(run(makeInput('git status'))).toBeNull();\n    expect(run(makeInput('git commit -m \"foo\"'))).toBeNull();\n  });\n\n  it('ignore main et master', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('main\\n')\n      .mockReturnValueOnce('master\\n');\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n  });\n\n  it('bloque si la PR est mergée', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('fix/my-feature\\n')\n      .mockReturnValueOnce('MERGED\\n');\n    const result = run(makeInput('git push'), { exec });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toMatch(/mergée/);\n    expect(result?.reason).toMatch(/fix\\/my-feature/);\n  });\n\n  it('bloque si la PR est fermée', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('fix/closed-branch\\n')\n      .mockReturnValueOnce('CLOSED\\n');\n    const result = run(makeInput('git push'), { exec });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toMatch(/fermée/);\n  });\n\n  it('laisse passer si la PR est ouverte', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('fix/open-pr\\n')\n      .mockReturnValueOnce('OPEN\\n');\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n  });\n\n  it('laisse passer si gh échoue (pas de PR)', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('fix/no-pr\\n')\n      .mockImplementationOnce(() => { throw new Error('no PR'); });\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n  });\n\n  it('laisse passer si git rev-parse échoue', () => {\n    const exec = vi.fn().mockImplementationOnce(() => { throw new Error(); });\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n  });\n});\n"
     },
     "is_must": true
+  },
+  {
+    "slug": "pre-websearch-temporal-context",
+    "name": "WebSearch temporal context injector",
+    "benefit": "Prevents stale search results by silently adding the current year",
+    "description": "Intercepts every WebSearch call and appends the current year to queries that lack temporal context (no year, no 'latest', 'recent', 'current', etc.). Ensures the agent retrieves up-to-date documentation, changelogs and release notes instead of outdated results.",
+    "category": "context",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PreToolUse",
+    "trigger": "WebSearch",
+    "stack": null,
+    "tags": [
+      "search",
+      "context",
+      "freshness",
+      "temporal"
+    ],
+    "use_cases": [
+      "Keep dependency version lookups current",
+      "Avoid outdated API documentation in research tasks",
+      "Ensure changelog and release note searches return latest versions"
+    ],
+    "is_must": false,
+    "votes": 0,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/websearch-temporal-context.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Injecte l'année courante dans les requêtes WebSearch sans contexte temporel (PreToolUse)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst TEMPORAL_WORDS = ['latest', 'recent', 'current', 'new', 'now', 'today', 'this year', 'last year'];\nconst YEAR_PATTERN = /\\b20\\d{2}\\b/;\n\nexport function run(input, { currentYear = new Date().getFullYear() } = {}) {\n  const query = input.tool_input?.query ?? '';\n  if (!query) return null;\n\n  const hasYear = YEAR_PATTERN.test(query);\n  const hasTemporal = TEMPORAL_WORDS.some((w) => query.toLowerCase().includes(w));\n\n  if (hasYear || hasTemporal) return null;\n\n  return {\n    hookSpecificOutput: {\n      hookEventName: 'PreToolUse',\n      modifiedToolInput: { query: `${query} ${currentYear}` },\n    },\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "matcher": "WebSearch",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/websearch-temporal-context.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "slug": "session-start-agents-md",
+    "name": "AGENTS.md context loader",
+    "benefit": "Auto-loads your AGENTS.md so every session starts with full agent context",
+    "description": "Reads AGENTS.md from the project root at session start and injects it as additional context. Works seamlessly alongside CLAUDE.md — useful for projects that use the OpenAI Codex / multi-agent AGENTS.md convention to document agent roles, capabilities and coordination rules.",
+    "category": "context",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "SessionStart",
+    "trigger": "*",
+    "stack": null,
+    "tags": [
+      "session",
+      "context",
+      "agents",
+      "multi-agent"
+    ],
+    "use_cases": [
+      "Multi-agent projects using AGENTS.md for role definitions",
+      "Teams migrating from Codex/OpenAI Codex to Claude Code",
+      "Projects with explicit agent coordination rules"
+    ],
+    "is_must": false,
+    "votes": 0,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/agents-md-loader.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Charge AGENTS.md comme contexte supplémentaire au démarrage de session (SessionStart)\nimport { readFileSync, existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  _input,\n  {\n    projectDir = process.env.CLAUDE_PROJECT_DIR,\n    readFile = readFileSync,\n    fileExists = existsSync,\n  } = {},\n) {\n  if (!projectDir) return null;\n\n  const agentsPath = join(projectDir, 'AGENTS.md');\n  if (!fileExists(agentsPath)) return null;\n\n  const content = readFile(agentsPath, 'utf8');\n  if (!content.trim()) return null;\n\n  return {\n    hookSpecificOutput: {\n      hookEventName: 'SessionStart',\n      additionalContext: content,\n    },\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "config": {
+        "hooks": {
+          "SessionStart": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/agents-md-loader.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "slug": "worktree-ghostty-tab",
+    "name": "Ghostty tab on worktree create",
+    "benefit": "Opens a Ghostty terminal in the new worktree automatically",
+    "description": "Hooks into WorktreeCreate to open a new Ghostty window pre-cd'd to the worktree path, so you can immediately run dev commands without navigating manually. macOS only. Silently skips if Ghostty is not installed.",
+    "category": "workflow",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "WorktreeCreate",
+    "trigger": "*",
+    "stack": null,
+    "tags": [
+      "worktree",
+      "ghostty",
+      "terminal",
+      "macos",
+      "dx"
+    ],
+    "use_cases": [
+      "Open a dedicated terminal for each new worktree session",
+      "Speed up context-switching between parallel feature branches"
+    ],
+    "is_must": false,
+    "votes": 0,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/worktree-ghostty.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Ouvre un nouvel onglet Ghostty sur le chemin du worktree créé (WorktreeCreate)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 10_000, stdio: 'ignore', shell: true });\n}\n\nexport function run(input, { exec = defaultExec, platform = process.platform } = {}) {\n  const worktreePath = input?.worktree_path;\n  if (!worktreePath || platform !== 'darwin') return null;\n\n  // WorktreeRemove n'a pas de champ branch — on n'ouvre rien dans ce cas\n  const isCreate = Boolean(input?.branch);\n  if (!isCreate) return null;\n\n  try {\n    exec(`ghostty --working-directory=\"${worktreePath}\" &`);\n  } catch {\n    // Ghostty absent ou erreur — non bloquant\n  }\n  return null;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
+      "config": {
+        "hooks": {
+          "WorktreeCreate": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-ghostty.mjs",
+                  "timeout": 10
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "slug": "post-write-nextjs-quality",
+    "name": "Next.js App Router quality checker",
+    "benefit": "Catches missing 'use client' and legacy Pages Router patterns before they silently break",
+    "description": "After each file write or edit, scans JS/TS files for common Next.js App Router mistakes: Server Components using React hooks without 'use client', Pages Router data-fetching methods (getServerSideProps/getStaticProps) inside app/, and plain <img>/<a> tags where next/image and next/link should be used. Blocks on critical errors, warns on best-practice issues.",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "stack": [
+      "typescript"
+    ],
+    "tags": [
+      "nextjs",
+      "react",
+      "app-router",
+      "quality",
+      "typescript"
+    ],
+    "use_cases": [
+      "Catch missing 'use client' in interactive components",
+      "Detect Pages Router patterns during App Router migrations",
+      "Enforce next/image and next/link usage"
+    ],
+    "is_must": false,
+    "votes": 0,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/nextjs-quality-checker.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// Vérifie les patterns Next.js App Router après écriture (PostToolUse Write|Edit)\nimport { readFileSync, existsSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst INTERACTIVE_PATTERNS = [\n  /\\buseState\\b/,\n  /\\buseEffect\\b/,\n  /\\buseReducer\\b/,\n  /\\buseRef\\b/,\n  /\\bonClick\\b/,\n  /\\bonChange\\b/,\n  /\\bonSubmit\\b/,\n  /\\bonKeyDown\\b/,\n];\n\nconst PAGES_ROUTER_PATTERNS = [/\\bgetServerSideProps\\b/, /\\bgetStaticProps\\b/, /\\bgetStaticPaths\\b/];\n\nexport function run(input, { readFile = readFileSync, fileExists = existsSync } = {}) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath || !/\\.[jt]sx?$/.test(filePath)) return null;\n  if (!fileExists(filePath)) return null;\n\n  const content = readFile(filePath, 'utf8');\n  const isInAppDir = /[/\\\\]app[/\\\\]/.test(filePath);\n  const hasUseClient = /['\"]use client['\"]/.test(content);\n  const hasInteractive = INTERACTIVE_PATTERNS.some((p) => p.test(content));\n  const hasPagesRouter = PAGES_ROUTER_PATTERNS.some((p) => p.test(content));\n\n  const warnings = [];\n  const errors = [];\n\n  // Server Component with interactive hooks → must add 'use client'\n  if (isInAppDir && !hasUseClient && hasInteractive) {\n    errors.push(\n      `'use client' directive missing — file uses React hooks or event handlers (useState/useEffect/onClick…).`,\n    );\n  }\n\n  // Pages Router data fetching in app/ → migration signal\n  if (isInAppDir && hasPagesRouter) {\n    warnings.push(\n      `Pages Router API (getServerSideProps/getStaticProps) detected in app/ — use Server Components or Route Handlers instead.`,\n    );\n  }\n\n  // <img> tag when next/image is imported or could be used\n  if (/<img\\s/i.test(content) && !content.includes('next/image')) {\n    warnings.push(`<img> tag detected — consider next/image for automatic optimization and lazy loading.`);\n  }\n\n  // <a href> for internal paths (not http/mailto/tel)\n  const internalAnchor = /<a\\s[^>]*href=[\"'][^\"'#]/.test(content) && !/href=[\"']https?:/.test(content);\n  if (internalAnchor && !content.includes('next/link')) {\n    warnings.push(`Internal <a href> detected — use next/link for prefetching and client-side navigation.`);\n  }\n\n  if (errors.length === 0 && warnings.length === 0) return null;\n\n  const lines = [...errors.map((e) => `❌ ${e}`), ...warnings.map((w) => `⚠️  ${w}`)].join('\\n');\n  const message = `Next.js quality check — ${filePath}\\n${lines}\\n`;\n\n  if (errors.length > 0) {\n    return { message };\n  }\n\n  // Warnings only: write to stderr (non-blocking)\n  process.stderr.write(message);\n  return null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/nextjs-quality-checker.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
   }
 ]
