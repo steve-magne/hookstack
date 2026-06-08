@@ -4789,5 +4789,150 @@
       "Reducing context window usage when processing office documents"
     ],
     "votes": 0
+  },
+  {
+    "benefit": "Stop Claude from wasting tokens trying to read .exe, .pyc, .pkl or .zip files",
+    "category": "context-optimization",
+    "description": "Intercepts Read tool calls on binary files (executables, compiled bytecode, archives, databases, ML model files, WebAssembly) and immediately blocks them with a helpful message. Claude cannot process binary content meaningfully — this hook prevents it from consuming tokens on garbage data and suggests Bash alternatives like `file` or `ls -lh`.",
+    "hook_type": "PreToolUse",
+    "id": "pre-read-block-binary",
+    "implementation": {
+      "code_snippet": "#!/usr/bin/env node\n// Bloque les lectures de fichiers binaires inutilisables par Claude (PreToolUse Read)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\nimport { extname, basename } from 'path';\n\nconst BINARY_EXTENSIONS = new Set([\n  // Exécutables et librairies compilées\n  'exe', 'dll', 'so', 'dylib', 'bin',\n  // Bytecode compilé\n  'pyc', 'pyo', 'pyd', 'class', 'o', 'a', 'lib', 'obj',\n  // Archives\n  'zip', 'tar', 'gz', 'bz2', 'xz', '7z', 'rar', 'jar', 'war', 'ear',\n  // Bases de données\n  'db', 'sqlite', 'sqlite3',\n  // Modèles ML / artefacts\n  'pkl', 'pickle', 'pt', 'pth', 'h5', 'pb', 'onnx', 'npy', 'npz',\n  // WebAssembly et autres\n  'wasm', 'node',\n]);\n\nexport function run(input) {\n  if (input.tool_name !== 'Read') return null;\n\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath) return null;\n\n  const ext = extname(filePath).toLowerCase().replace('.', '');\n  if (!BINARY_EXTENSIONS.has(ext)) return null;\n\n  const name = basename(filePath);\n  return {\n    decision: 'block',\n    reason: `[block-binary] \\`${name}\\` is a binary file (.${ext}) — Claude cannot process it meaningfully. Inspect metadata with Bash instead (e.g. \\`file\\`, \\`ls -lh\\`).`,\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-read-block-binary.mjs",
+                  "type": "command"
+                }
+              ],
+              "matcher": "Read"
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/pre-read-block-binary.mjs",
+      "type": "settings_json",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/pre-read-block-binary.mjs';\n\ndescribe('pre-read-block-binary', () => {\n  it('laisse passer si tool_name != Read', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: 'app.exe' } })).toBeNull();\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({ tool_name: 'Read' })).toBeNull();\n  });\n\n  it('laisse passer une extension supportée (.ts)', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'src/index.ts' } })).toBeNull();\n  });\n\n  it('laisse passer un .json', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'data.json' } })).toBeNull();\n  });\n\n  it('bloque un .exe', () => {\n    const r = run({ tool_name: 'Read', tool_input: { file_path: '/usr/bin/app.exe' } });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('app.exe');\n    expect(r?.reason).toContain('.exe');\n  });\n\n  it('bloque un .pyc', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '__pycache__/foo.pyc' } })?.decision).toBe('block');\n  });\n\n  it('bloque un .jar', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'lib/spring.jar' } })?.decision).toBe('block');\n  });\n\n  it('bloque un .zip', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'dist/bundle.zip' } })?.decision).toBe('block');\n  });\n\n  it('bloque un .pkl', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'model.pkl' } })?.decision).toBe('block');\n  });\n\n  it('bloque un .sqlite3', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'db/dev.sqlite3' } })?.decision).toBe('block');\n  });\n\n  it('bloque un .wasm', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'lib/module.wasm' } })?.decision).toBe('block');\n  });\n\n  it('bloque un .so (extension majuscule)', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'lib/native.SO' } })?.decision).toBe('block');\n  });\n\n  it('la reason mentionne de consulter Bash', () => {\n    const r = run({ tool_name: 'Read', tool_input: { file_path: 'app.dll' } });\n    expect(r?.reason).toContain('Bash');\n  });\n});\n"
+    },
+    "is_must": true,
+    "name": "Binary file read blocker",
+    "provider": [
+      "claude-code"
+    ],
+    "slug": "pre-read-block-binary",
+    "tags": [
+      "context-optimization",
+      "security",
+      "binary",
+      "tokens",
+      "productivity"
+    ],
+    "trigger": "Read",
+    "use_cases": [
+      "Preventing token waste on .pyc/.class bytecode files",
+      "Blocking reads of ML model weights (.pkl, .pt, .onnx)",
+      "Stopping accidental reads of archives or compiled binaries"
+    ],
+    "votes": 0
+  },
+  {
+    "benefit": "Get a schema + row count instead of dumping 10 000 lines of JSON into context",
+    "category": "context-optimization",
+    "description": "Intercepts Read calls on large JSON, CSV, JSONL or TSV files (> 50 KB) and replaces the raw content with a compact summary: array length + item schema for JSON, headers + first 5 rows + total row count for CSV, first 3 line schemas for JSONL. Falls back silently for small files or parse errors.",
+    "hook_type": "PreToolUse",
+    "id": "pre-read-json-csv-compact",
+    "implementation": {
+      "code_snippet": "#!/usr/bin/env node\n// Résume les grands fichiers JSON/CSV/JSONL avant lecture pour économiser le contexte (PreToolUse Read)\nimport { readFileSync, existsSync, statSync } from 'fs';\nimport { fileURLToPath } from 'url';\nimport { extname, basename } from 'path';\n\nconst BYTE_THRESHOLD = 50_000;\nconst CSV_PREVIEW_ROWS = 5;\nconst JSONL_PREVIEW_LINES = 3;\n\nfunction inferJsonSchema(value, depth = 0) {\n  if (depth > 2) return typeof value;\n  if (value === null) return 'null';\n  if (Array.isArray(value)) {\n    const inner = value.length ? inferJsonSchema(value[0], depth + 1) : 'unknown';\n    return `Array<${inner}> (${value.length} items)`;\n  }\n  if (typeof value === 'object') {\n    const keys = Object.keys(value).slice(0, 12);\n    const fields = keys.map((k) => `${k}: ${inferJsonSchema(value[k], depth + 1)}`);\n    const extra = Object.keys(value).length > 12 ? ` … +${Object.keys(value).length - 12} more` : '';\n    return `{ ${fields.join(', ')}${extra} }`;\n  }\n  return typeof value;\n}\n\nfunction summarizeJson(raw, filePath) {\n  let parsed;\n  try { parsed = JSON.parse(raw); } catch { return null; }\n\n  const lines = raw.split('\\n').length;\n  const bytes = Buffer.byteLength(raw, 'utf8');\n  const name = basename(filePath);\n\n  if (Array.isArray(parsed)) {\n    const schema = parsed.length ? inferJsonSchema(parsed[0]) : 'empty';\n    return `[json-csv-compact] \\`${name}\\` — JSON array (${parsed.length} items, ${lines} lines, ${(bytes / 1024).toFixed(1)} KB)\\nItem schema: ${schema}`;\n  }\n\n  const schema = inferJsonSchema(parsed);\n  return `[json-csv-compact] \\`${name}\\` — JSON object (${lines} lines, ${(bytes / 1024).toFixed(1)} KB)\\nSchema: ${schema}`;\n}\n\nfunction summarizeCsv(raw, filePath) {\n  const lines = raw.split('\\n').filter((l) => l.trim());\n  if (!lines.length) return null;\n\n  const name = basename(filePath);\n  const headers = lines[0];\n  const preview = lines.slice(1, 1 + CSV_PREVIEW_ROWS);\n  const total = lines.length - 1;\n\n  const cols = headers.split(',').length;\n  const rows = [headers, ...preview].join('\\n');\n  return `[json-csv-compact] \\`${name}\\` — CSV (${total} rows, ${cols} columns)\\nFirst ${preview.length} rows:\\n\\`\\`\\`\\n${rows}\\n\\`\\`\\``;\n}\n\nfunction summarizeJsonl(raw, filePath) {\n  const lines = raw.split('\\n').filter((l) => l.trim());\n  if (!lines.length) return null;\n\n  const name = basename(filePath);\n  const preview = lines.slice(0, JSONL_PREVIEW_LINES).map((l) => {\n    try { return inferJsonSchema(JSON.parse(l)); } catch { return l.slice(0, 80); }\n  });\n\n  return `[json-csv-compact] \\`${name}\\` — JSONL (${lines.length} lines)\\nFirst ${preview.length} line schemas:\\n${preview.map((s, i) => `  ${i + 1}. ${s}`).join('\\n')}`;\n}\n\nexport function run(input, { readFile = readFileSync, exists = existsSync, stat = statSync } = {}) {\n  if (input.tool_name !== 'Read') return null;\n\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath) return null;\n\n  const ext = extname(filePath).toLowerCase().replace('.', '');\n  if (!['json', 'csv', 'jsonl', 'tsv', 'ndjson'].includes(ext)) return null;\n\n  if (!exists(filePath)) return null;\n\n  let size;\n  try { size = stat(filePath).size; } catch { return null; }\n  if (size < BYTE_THRESHOLD) return null;\n\n  let raw;\n  try { raw = readFile(filePath, 'utf8'); } catch { return null; }\n\n  let summary;\n  if (ext === 'json') summary = summarizeJson(raw, filePath);\n  else if (ext === 'csv' || ext === 'tsv') summary = summarizeCsv(raw, filePath);\n  else summary = summarizeJsonl(raw, filePath);\n\n  if (!summary) return null;\n\n  return { decision: 'block', reason: summary };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-read-json-csv-compact.mjs",
+                  "type": "command"
+                }
+              ],
+              "matcher": "Read"
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/pre-read-json-csv-compact.mjs",
+      "type": "settings_json",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/pre-read-json-csv-compact.mjs';\n\nconst bigJson = (n) => JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: i, name: `user_${i}`, email: `u${i}@x.com` })));\nconst bigCsv = (n) => ['id,name,email', ...Array.from({ length: n }, (_, i) => `${i},user_${i},u${i}@x.com`)].join('\\n');\nconst bigJsonl = (n) => Array.from({ length: n }, (_, i) => JSON.stringify({ id: i, val: i * 2 })).join('\\n');\n\nfunction makeDeps(content, size = 100_000) {\n  return {\n    readFile: vi.fn(() => content),\n    exists: vi.fn(() => true),\n    stat: vi.fn(() => ({ size })),\n  };\n}\n\ndescribe('pre-read-json-csv-compact', () => {\n  it('laisse passer si tool_name != Read', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: 'data.json' } })).toBeNull();\n  });\n\n  it('laisse passer si extension non supportée', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'file.ts' } })).toBeNull();\n  });\n\n  it(\"laisse passer si le fichier n'existe pas\", () => {\n    const deps = { readFile: vi.fn(), exists: vi.fn(() => false), stat: vi.fn(() => ({ size: 100_000 })) };\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'big.json' } }, deps)).toBeNull();\n  });\n\n  it('laisse passer si fichier petit (< seuil)', () => {\n    const content = JSON.stringify([{ id: 1 }]);\n    const deps = makeDeps(content, 100);\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'small.json' } }, deps)).toBeNull();\n  });\n\n  it('résume un grand tableau JSON', () => {\n    const content = bigJson(300);\n    const deps = makeDeps(content);\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/users.json' } }, deps);\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('users.json');\n    expect(result?.reason).toContain('300 items');\n    expect(result?.reason).toContain('id');\n  });\n\n  it('résume un grand objet JSON', () => {\n    const obj = Object.fromEntries(Array.from({ length: 300 }, (_, i) => [`key${i}`, i]));\n    const content = JSON.stringify(obj, null, 2);\n    const deps = makeDeps(content);\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/config.json' } }, deps);\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('config.json');\n  });\n\n  it('résume un grand CSV', () => {\n    const content = bigCsv(300);\n    const deps = makeDeps(content);\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/data.csv' } }, deps);\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('data.csv');\n    expect(result?.reason).toContain('300 rows');\n    expect(result?.reason).toContain('id,name,email');\n  });\n\n  it('résume un grand JSONL', () => {\n    const content = bigJsonl(300);\n    const deps = makeDeps(content);\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/events.jsonl' } }, deps);\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('events.jsonl');\n    expect(result?.reason).toContain('300 lines');\n  });\n\n  it('laisse passer si JSON invalide', () => {\n    const content = 'not json\\n'.repeat(300);\n    const deps = makeDeps(content);\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '/tmp/bad.json' } }, deps)).toBeNull();\n  });\n});\n"
+    },
+    "is_must": true,
+    "name": "Large JSON/CSV compactor",
+    "provider": [
+      "claude-code"
+    ],
+    "slug": "pre-read-json-csv-compact",
+    "tags": [
+      "context-optimization",
+      "json",
+      "csv",
+      "tokens",
+      "productivity"
+    ],
+    "trigger": "Read",
+    "use_cases": [
+      "Exploring a large data export without flooding context",
+      "Understanding package-lock.json or yarn.lock structure",
+      "Quickly grasping the schema of a CSV dataset"
+    ],
+    "votes": 0
+  },
+  {
+    "benefit": "Fetch any web page as clean Markdown — strip boilerplate HTML before it enters context",
+    "category": "context-optimization",
+    "description": "Intercepts WebFetch calls, fetches the URL with curl, detects HTML responses, and converts them to Markdown via pandoc (falling back to a built-in tag stripper). Injects the converted content directly, skipping the raw HTML that Claude would otherwise process. Non-HTML responses (JSON APIs, plain text) pass through unchanged. Truncates to 30 000 chars.",
+    "hook_type": "PreToolUse",
+    "id": "pre-webfetch-html-to-markdown",
+    "implementation": {
+      "code_snippet": "#!/usr/bin/env node\n// Convertit les pages HTML en Markdown avant traitement WebFetch (PreToolUse WebFetch)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst MAX_CHARS = 30_000;\n\nfunction defaultFetchUrl(url) {\n  return execSync('curl -sL --max-time 10 --user-agent \"Mozilla/5.0\" \"$HOOK_URL\"', {\n    encoding: 'utf8',\n    timeout: 15_000,\n    env: { ...process.env, HOOK_URL: url },\n  }).trim();\n}\n\nfunction defaultConvertHtml(html) {\n  return execSync('pandoc -f html -t markdown --wrap=none', {\n    input: html,\n    encoding: 'utf8',\n    timeout: 10_000,\n  }).trim();\n}\n\nfunction defaultHasPandoc() {\n  try { execSync('which pandoc', { encoding: 'utf8', timeout: 2_000 }); return true; } catch { return false; }\n}\n\nfunction stripHtml(html) {\n  return html\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\").replace(/&nbsp;/g, ' ')\n    .replace(/[ \\t]{2,}/g, ' ')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nexport function run(input, {\n  fetchUrl = defaultFetchUrl,\n  convertHtml = defaultConvertHtml,\n  hasPandoc = defaultHasPandoc,\n} = {}) {\n  if (input.tool_name !== 'WebFetch') return null;\n\n  const url = input.tool_input?.url ?? '';\n  if (!url || !/^https?:\\/\\//i.test(url)) return null;\n\n  let html;\n  try { html = fetchUrl(url); } catch { return null; }\n  if (!html?.trim()) return null;\n\n  // Uniquement les pages HTML — laisser passer JSON, binaires, etc.\n  if (!/<html|<!doctype\\s+html/i.test(html.slice(0, 2000))) return null;\n\n  let markdown;\n  try {\n    markdown = hasPandoc() ? convertHtml(html) : stripHtml(html);\n  } catch {\n    try { markdown = stripHtml(html); } catch { return null; }\n  }\n\n  if (!markdown?.trim()) return null;\n\n  let content = markdown.trim();\n  let truncated = false;\n  if (content.length > MAX_CHARS) {\n    content = content.slice(0, MAX_CHARS);\n    truncated = true;\n  }\n\n  let domain;\n  try { domain = new URL(url).hostname; } catch { domain = url; }\n  const suffix = truncated ? ` (truncated to ${MAX_CHARS} chars)` : '';\n\n  return {\n    decision: 'block',\n    reason: `[webfetch-html-to-markdown] \\`${domain}\\` converted to Markdown${suffix}:\\n\\n${content}`,\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-webfetch-html-to-markdown.mjs",
+                  "type": "command"
+                }
+              ],
+              "matcher": "WebFetch"
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/pre-webfetch-html-to-markdown.mjs",
+      "type": "settings_json",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/pre-webfetch-html-to-markdown.mjs';\n\nconst HTML = `<!DOCTYPE html><html><head><style>body{color:red}</style></head><body><h1>Hello</h1><p>World</p><script>alert(1)</script></body></html>`;\nconst MARKDOWN = '# Hello\\n\\nWorld';\n\nfunction makeDeps({ fetchResult = HTML, convertResult = MARKDOWN, pandoc = true } = {}) {\n  return {\n    fetchUrl: vi.fn(() => fetchResult),\n    convertHtml: vi.fn(() => convertResult),\n    hasPandoc: vi.fn(() => pandoc),\n  };\n}\n\ndescribe('pre-webfetch-html-to-markdown', () => {\n  it('laisse passer si tool_name != WebFetch', () => {\n    expect(run({ tool_name: 'Read', tool_input: { url: 'https://example.com' } }, makeDeps())).toBeNull();\n  });\n\n  it('laisse passer si url absente', () => {\n    expect(run({ tool_name: 'WebFetch', tool_input: {} }, makeDeps())).toBeNull();\n  });\n\n  it('laisse passer si url non http', () => {\n    expect(run({ tool_name: 'WebFetch', tool_input: { url: 'ftp://example.com' } }, makeDeps())).toBeNull();\n  });\n\n  it('laisse passer si fetch échoue', () => {\n    const deps = makeDeps();\n    deps.fetchUrl = vi.fn(() => { throw new Error('network'); });\n    expect(run({ tool_name: 'WebFetch', tool_input: { url: 'https://example.com' } }, deps)).toBeNull();\n  });\n\n  it('laisse passer si la réponse n\\'est pas du HTML (JSON API)', () => {\n    const deps = makeDeps({ fetchResult: '{\"ok\":true}' });\n    expect(run({ tool_name: 'WebFetch', tool_input: { url: 'https://api.example.com/v1' } }, deps)).toBeNull();\n  });\n\n  it('convertit une page HTML avec pandoc', () => {\n    const result = run({ tool_name: 'WebFetch', tool_input: { url: 'https://docs.example.com/guide' } }, makeDeps());\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('docs.example.com');\n    expect(result?.reason).toContain('# Hello');\n  });\n\n  it('utilise le stripHtml si pandoc absent', () => {\n    const deps = makeDeps({ pandoc: false });\n    const result = run({ tool_name: 'WebFetch', tool_input: { url: 'https://example.com' } }, deps);\n    expect(result?.decision).toBe('block');\n    expect(deps.convertHtml).not.toHaveBeenCalled();\n    expect(result?.reason).toContain('Hello');\n  });\n\n  it('fallback stripHtml si pandoc échoue', () => {\n    const deps = makeDeps();\n    deps.convertHtml = vi.fn(() => { throw new Error('pandoc error'); });\n    const result = run({ tool_name: 'WebFetch', tool_input: { url: 'https://example.com' } }, deps);\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('Hello');\n  });\n\n  it('tronque le contenu si trop long', () => {\n    const deps = makeDeps({ convertResult: 'a'.repeat(40_000) });\n    const result = run({ tool_name: 'WebFetch', tool_input: { url: 'https://example.com' } }, deps);\n    expect(result?.reason).toContain('truncated');\n    expect(result?.reason.length).toBeLessThan(35_000);\n  });\n\n  it('laisse passer si le résultat converti est vide', () => {\n    const deps = makeDeps({ convertResult: '   ', pandoc: false, fetchResult: '<!DOCTYPE html><html><body></body></html>' });\n    expect(run({ tool_name: 'WebFetch', tool_input: { url: 'https://example.com' } }, deps)).toBeNull();\n  });\n\n  it('inclut le domaine dans la reason', () => {\n    const result = run({ tool_name: 'WebFetch', tool_input: { url: 'https://nextjs.org/docs' } }, makeDeps());\n    expect(result?.reason).toContain('nextjs.org');\n  });\n});\n"
+    },
+    "is_must": true,
+    "name": "WebFetch HTML-to-Markdown converter",
+    "provider": [
+      "claude-code"
+    ],
+    "slug": "pre-webfetch-html-to-markdown",
+    "tags": [
+      "context-optimization",
+      "html",
+      "markdown",
+      "tokens",
+      "webfetch",
+      "productivity"
+    ],
+    "trigger": "WebFetch",
+    "use_cases": [
+      "Reading documentation pages without loading CSS/JS boilerplate",
+      "Extracting article content from blog posts",
+      "Reducing token usage during web research sessions"
+    ],
+    "votes": 0
   }
 ]
