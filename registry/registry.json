@@ -4740,5 +4740,54 @@
         }
       }
     }
+  },
+  {
+    "benefit": "Read any PDF, DOCX or PPTX as clean Markdown — slash token usage on binary files",
+    "category": "context-optimization",
+    "description": "Intercepts Read tool calls on binary documents (PDF, DOCX, PPTX, ODT, RTF, XLSX, EPUB, HTML) and converts them to Markdown via pandoc or pdftotext before Claude processes them. Injects the converted content directly, eliminating the need for Claude to parse raw binary data and drastically reducing token consumption. Falls back silently if no conversion tool is available.",
+    "hook_type": "PreToolUse",
+    "id": "pre-read-file-to-markdown",
+    "implementation": {
+      "code_snippet": "#!/usr/bin/env node\n// Convertit PDF/DOCX/PPTX et autres fichiers binaires en Markdown avant lecture (PreToolUse Read)\nimport { readFileSync, existsSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\nimport { extname, basename } from 'path';\n\nconst MAX_CHARS = 50_000;\n\nconst SUPPORTED = new Set(['pdf', 'docx', 'pptx', 'odt', 'rtf', 'doc', 'ppt', 'xlsx', 'epub', 'html', 'htm']);\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { encoding: 'utf8', timeout: 30_000 }).trim();\n}\n\nfunction hasBinary(name, exec) {\n  try { exec(`which ${name}`); return true; } catch { return false; }\n}\n\nexport function run(input, { exec = defaultExec, exists = existsSync } = {}) {\n  if (input.tool_name !== 'Read') return null;\n\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath) return null;\n\n  const ext = extname(filePath).toLowerCase().replace('.', '');\n  if (!SUPPORTED.has(ext)) return null;\n\n  if (!exists(filePath)) return null;\n\n  const hasPdftotext = ext === 'pdf' && hasBinary('pdftotext', exec);\n  const hasPandoc = hasBinary('pandoc', exec);\n\n  if (!hasPdftotext && !hasPandoc) return null;\n\n  let markdown;\n  try {\n    if (ext === 'pdf' && hasPdftotext) {\n      markdown = exec(`pdftotext \"${filePath}\" -`);\n    } else if (hasPandoc) {\n      markdown = exec(`pandoc --to markdown --wrap=none \"${filePath}\"`);\n    } else {\n      return null;\n    }\n  } catch {\n    return null;\n  }\n\n  if (!markdown || !markdown.trim()) return null;\n\n  let content = markdown.trim();\n  let truncated = false;\n  if (content.length > MAX_CHARS) {\n    content = content.slice(0, MAX_CHARS);\n    truncated = true;\n  }\n\n  const name = basename(filePath);\n  const suffix = truncated ? ` (truncated to ${MAX_CHARS} chars)` : '';\n  const header = `[file-to-markdown] \\`${name}\\` converted to Markdown${suffix}:\\n\\n`;\n\n  return { decision: 'block', reason: header + content };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/file-to-markdown.mjs",
+                  "type": "command"
+                }
+              ],
+              "matcher": "Read"
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/file-to-markdown.mjs",
+      "type": "settings_json"
+    },
+    "is_must": true,
+    "name": "Binary file to Markdown converter",
+    "provider": [
+      "claude-code"
+    ],
+    "slug": "pre-read-file-to-markdown",
+    "tags": [
+      "context-optimization",
+      "pdf",
+      "markdown",
+      "tokens",
+      "docx",
+      "pptx",
+      "productivity"
+    ],
+    "trigger": "Read",
+    "use_cases": [
+      "Reading PDF documentation without wasting tokens on binary encoding",
+      "Analysing Word or PowerPoint files in agentic workflows",
+      "Reducing context window usage when processing office documents"
+    ],
+    "votes": 0
   }
 ]
