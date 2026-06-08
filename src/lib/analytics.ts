@@ -44,7 +44,10 @@ export type AnalyticsEvent =
   | 'view_hook_detail'
   | 'view_full_page'
   | 'filter_stack'
+  | 'filter_category'
+  | 'filter_event'
   | 'reset_stack_filter'
+  | 'reset_all_filters'
   | 'toggle_grouping'
 
 /**
