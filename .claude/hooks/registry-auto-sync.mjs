@@ -23,13 +23,24 @@ function shouldSync(filePath) {
   return /\.claude\/hooks\/[^/]+\.mjs$/.test(filePath);
 }
 
+// Extrait la racine du projet depuis le chemin du fichier modifié.
+// Cas worktree : le fichier peut vivre dans un répertoire différent de CLAUDE_PROJECT_DIR.
+function resolveProjectDir(filePath, fallback) {
+  const m = filePath.match(/^(.*)\/.claude\/hooks\/[^/]+\.mjs$/);
+  if (m) return m[1];
+  const r = filePath.match(/^(.*\/)registry\/registry\.json$/);
+  if (r) return r[1].replace(/\/$/, '');
+  return fallback;
+}
+
 export function run(input, { exec = defaultExec, projectDir = process.env.CLAUDE_PROJECT_DIR } = {}) {
   // FileChanged: input.file_path  |  PostToolUse (legacy): input.tool_input?.file_path
   const filePath = input.file_path ?? input.tool_input?.file_path ?? '';
   if (!shouldSync(filePath) || !projectDir) return null;
+  const effectiveDir = resolveProjectDir(filePath, projectDir);
 
   try {
-    const out = exec(projectDir);
+    const out = exec(effectiveDir);
     const summary = out.trim().split('\n').slice(-3).join(' | ');
     return { message: `[registry-auto-sync] ${summary}` };
   } catch (e) {
