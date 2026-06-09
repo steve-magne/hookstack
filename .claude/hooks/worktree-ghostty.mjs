@@ -24,8 +24,9 @@ export function run(input, { exec = defaultExec, platform = process.platform } =
   return null;
 }
 
-/* v8 ignore next 4 */
+/* v8 ignore next 5 */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const input = JSON.parse(readFileSync(0, 'utf8'));
   run(input);
+  process.stdout.write('{}');
 }
