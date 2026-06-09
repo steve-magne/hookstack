@@ -1,9 +1,8 @@
 import { CatalogueExplorer } from '@/components/CatalogueExplorer'
 import { StickyInstallBanner } from '@/components/StickyInstallBanner'
-import { SplitFlap } from '@/components/SplitFlap'
+import { HeroRotatingTitle } from '@/components/HeroRotatingTitle'
 import { allHooks } from '@/lib/hooks'
 import { T, SEO_KEYWORDS } from '@/lib/i18n'
-import { splitFlapHero } from '@/lib/motion'
 import type { Metadata } from 'next'
 
 const BASE = 'https://hookstack.vercel.app'
@@ -97,17 +96,7 @@ export default function HomePage() {
             className="pointer-events-none absolute left-1/2 top-4 -z-10 h-64 w-[44rem] max-w-full -translate-x-1/2 rounded-full blur-[120px]"
           />
 
-          <h1 className="mx-auto max-w-3xl text-balance text-5xl font-bold leading-[1.04] tracking-tight text-white sm:text-6xl">
-            <SplitFlap text={T.heroTitleA} eager {...splitFlapHero} />{' '}
-            <br className="hidden sm:block" />
-            <SplitFlap
-              text={T.heroTitleB}
-              delay={(T.heroTitleA.length + 1) * splitFlapHero.perChar}
-              eager
-              innerClassName="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent"
-              {...splitFlapHero}
-            />
-          </h1>
+          <HeroRotatingTitle />
 
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-base leading-snug text-zinc-300 sm:text-lg">
             {T.heroSubtitleMain}
