@@ -64,9 +64,8 @@ export function run({
   }
 
   const date = now().toISOString().slice(0, 10).replace(/-/g, '');
-  const projectName = currentRoot.split('/').pop() ?? 'project';
   const branchName = `work/session-${date}`;
-  const worktreePath = `${currentRoot}/../${projectName}-work-${date}`;
+  const worktreePath = `${currentRoot}/.claude/worktrees/session-${date}`;
 
   // Vérifier si un worktree pour aujourd'hui existe encore (non mergé)
   const freshList = exec('git worktree list');
