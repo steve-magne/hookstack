@@ -4,7 +4,6 @@ import type { Hook } from '@/types/hook'
 
 function makeHook(overrides: Partial<Hook> & { config: Record<string, unknown> }): Hook {
   return {
-    id: 'test-id',
     slug: 'test-hook',
     name: 'Test Hook',
     category: 'security',
@@ -14,7 +13,6 @@ function makeHook(overrides: Partial<Hook> & { config: Record<string, unknown> }
     description: '',
     use_cases: [],
     tags: [],
-    votes: 0,
     community_examples: [],
     implementation: {
       type: 'settings_json',

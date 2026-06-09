@@ -22,7 +22,6 @@ for (const hook of incoming) {
   const example = {
     repo: repoUrl ?? hook.community_examples?.[0]?.repo ?? '',
     file_path: hook.implementation?.script_path ?? '',
-    added_by: 'claude-code-analysis',
   }
 
   if (bySlug.has(hook.slug)) {
@@ -34,7 +33,6 @@ for (const hook of incoming) {
     }
   } else {
     hook.community_examples = example.repo ? [example] : []
-    hook.votes ??= 0
     registry.push(hook)
     bySlug.set(hook.slug, hook)
     added++

@@ -4,14 +4,12 @@
     "category": "security",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/detect-secrets.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Intercepts every shell command and scans it for API keys, tokens or plaintext passwords before execution. Blocks the command if a secret pattern is found.",
     "hook_type": "PreToolUse",
-    "id": "pre-bash-secret-detection",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Bloc les commandes Bash contenant des secrets potentiels (PreToolUse)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst SECRET_PATTERNS = [\n  /(?:ANTHROPIC|OPENAI|CLAUDE|GEMINI|GROQ)_API_KEY\\s*=\\s*['\"]?\\S{20,}/i,\n  /sk-(?:ant-|proj-)?[a-zA-Z0-9_-]{32,}/,\n  /ghp_[a-zA-Z0-9]{36}/,\n  /-----BEGIN (?:RSA |EC )?PRIVATE KEY/,\n  /(?:password|passwd|secret|token)\\s*=\\s*['\"][^'\"]{6,}/i,\n];\n\nexport function run(input) {\n  const command = input.tool_input?.command ?? '';\n  const match = SECRET_PATTERNS.find((p) => p.test(command));\n  return match\n    ? { decision: 'block', reason: 'Secret potentiel détecté dans la commande. Vérifiez avant de continuer.' }\n    : null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -64,22 +62,19 @@
       "Credential protection",
       "DevSecOps audit",
       "Leak prevention in CI/CD"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Stops a disk-wiping shell command before it runs",
     "category": "security",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/block-destructive.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Blocks potentially destructive shell commands before the agent runs them: wiping root, home or CWD, git reset --hard, TRUNCATE, mkfs, dd to a disk, chmod 777 recursively.",
     "hook_type": "PreToolUse",
-    "id": "pre-bash-block-destructive",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Bloc les commandes Bash destructives irréversibles (PreToolUse)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst BLOCKED = [\n  [/rm\\s+-rf?\\s+\\/(?:\\s|$)/, 'rm -rf / interdit'],\n  [/rm\\s+-rf?\\s+[~*]/, 'rm -rf ~ / rm -rf * interdit (suppression de masse)'],\n  [/rm\\s+-rf?\\s+\\$HOME\\b/, 'rm -rf $HOME interdit'],\n  [/git\\s+push\\s+.*--force(?:-with-lease)?\\s+.*(?:main|master)/, 'force-push sur main/master interdit'],\n  [/git\\s+reset\\s+--hard/, 'git reset --hard interdit — pertes de modifications non commitées ; faites-le manuellement si intentionnel'],\n  [/DROP\\s+(?:TABLE|DATABASE)\\s+\\w+/i, 'DROP TABLE/DATABASE interdit sans confirmation explicite'],\n  [/TRUNCATE\\s+(?:TABLE\\s+)?\\w+/i, 'TRUNCATE interdit sans confirmation explicite'],\n  [/>\\s*\\/dev\\/(?:sda|nvme|disk)\\d*/i, 'Écriture directe sur disque bloquée'],\n  [/\\bmkfs\\b/i, 'Formatage de système de fichiers interdit'],\n  [/\\bdd\\s+if=/i, 'Opération dd sur disque interdite'],\n  [/chmod\\s+-R\\s+777\\s+\\//i, 'chmod 777 récursif sur / interdit'],\n];\n\n// Retire les chaînes entre guillemets (arguments -m \"...\", --body \"...\", etc.)\n// pour éviter les faux positifs sur des mentions documentaires de patterns dangereux.\nfunction stripQuotedArgs(cmd) {\n  return cmd.replace(/\"(?:[^\"\\\\]|\\\\.)*\"/g, '\"\"').replace(/'(?:[^'\\\\]|\\\\.)*'/g, \"''\");\n}\n\nexport function run(input) {\n  const command = input.tool_input?.command ?? '';\n  const stripped = stripQuotedArgs(command);\n  const blocked = BLOCKED.find(([pattern]) => pattern.test(stripped));\n  return blocked\n    ? { decision: 'block', reason: `Commande destructive bloquée : ${blocked[1]}` }\n    : null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -135,22 +130,19 @@
       "Data loss prevention",
       "Shared environments",
       "Database safety"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Your .env and keys stay untouched by the agent",
     "category": "security",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/protect-paths.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Prevents the agent from modifying sensitive files (.env, secrets, private keys, CI lockfiles) by intercepting the Write and Edit tools and checking the target path.",
     "hook_type": "PreToolUse",
-    "id": "pre-edit-protect-paths",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Protège les fichiers sensibles contre l'écriture (PreToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst PROTECTED = [\n  /\\/\\.env$/,\n  /\\/\\.env\\.local$/,\n  /\\/\\.env\\.production/,\n  /\\/secrets\\//,\n  /\\/(id_rsa|id_ed25519|.*\\.pem)$/,\n];\n\nexport function run(input) {\n  const filePath = input.tool_input?.file_path ?? '';\n  const blocked = PROTECTED.find((p) => p.test(filePath));\n  return blocked\n    ? { decision: 'block', reason: `Fichier protégé : ${filePath}. Modifiez manuellement si intentionnel.` }\n    : null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -203,15 +195,13 @@
       "Configuration protection",
       "Compliance",
       "Local secrets integrity"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Lock files stay intact - package manager only",
     "category": "security",
     "description": "Prevents the agent from directly modifying lock files (pnpm-lock.yaml, package-lock.json, yarn.lock, Cargo.lock, Gemfile.lock, poetry.lock, etc.). Lock files must only be written by the package manager to stay consistent and reproducible.",
     "hook_type": "PreToolUse",
-    "id": "pre-edit-protect-lockfiles",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Bloque les éditions directes de fichiers de lock (PreToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst LOCKFILES = [\n  /pnpm-lock\\.yaml$/,\n  /package-lock\\.json$/,\n  /yarn\\.lock$/,\n  /Gemfile\\.lock$/,\n  /poetry\\.lock$/,\n  /Pipfile\\.lock$/,\n  /composer\\.lock$/,\n  /Cargo\\.lock$/,\n];\n\nexport function run(input) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath) return null;\n  const match = LOCKFILES.find((p) => p.test(filePath));\n  return match\n    ? {\n        decision: 'block',\n        reason: `Lock file ${filePath} must not be edited directly. Run the package manager instead (pnpm install, npm install, cargo build…).`,\n      }\n    : null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -260,8 +250,7 @@
       "Prevent lock file corruption",
       "Ensure reproducible builds",
       "Multi-ecosystem projects (npm, pnpm, yarn, cargo, bundler)"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "No accidental push straight to main",
@@ -269,7 +258,6 @@
     "community_examples": [],
     "description": "Detects direct git push commands to main/master and blocks them to force going through a branch and a pull request.",
     "hook_type": "PreToolUse",
-    "id": "pre-bash-guard-git-push-main",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Bloque git push --force vers main/master (PreToolUse Bash)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nexport function run(input) {\n  const command = input.tool_input?.command ?? '';\n  const isForce =\n    /git\\s+push\\b.*--force(?:-with-lease)?/.test(command) ||\n    /git\\s+push\\b.*-f\\b/.test(command);\n  const isMain = /\\b(main|master)\\b/.test(command);\n\n  return isForce && isMain\n    ? {\n        decision: 'block',\n        reason: 'Force-push vers main/master interdit. Créez une PR ou demandez confirmation explicite.',\n      }\n    : null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -322,8 +310,7 @@
       "Branch discipline",
       "Main branch protection",
       "GitFlow workflow"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "The agent follows your conventions, unprompted",
@@ -331,7 +318,6 @@
     "community_examples": [],
     "description": "On every user prompt, automatically injects the project conventions (stack, style rules, constraints) by reading a conventions file, so the agent stays aligned without manual reminders.",
     "hook_type": "UserPromptSubmit",
-    "id": "user-prompt-inject-conventions",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Injecte les règles d'agent dans chaque prompt (UserPromptSubmit)\nimport { readFileSync, existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run({\n  exists = existsSync,\n  readFile = readFileSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  // Priorité : .claude/agent-rules.md > CONVENTIONS.md > absent (no-op)\n  const candidates = [\n    join(projectDir, '.claude', 'agent-rules.md'),\n    join(projectDir, 'CONVENTIONS.md'),\n  ];\n\n  const target = candidates.find(exists);\n  if (!target) return null;\n\n  const content = readFile(target, 'utf8').trim();\n  if (!content) return null;\n\n  return `### Conventions du projet (injectées automatiquement)\\n\\n${content}\\n`;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) process.stdout.write(result);\n}\n",
       "config": {
@@ -383,7 +369,6 @@
       "Agent onboarding",
       "Team standards"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -391,14 +376,12 @@
     "category": "context",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/session-start-git.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "At session start, injects the repository state: current branch, git status, latest commits. The agent starts with a clear view of the project state.",
     "hook_type": "SessionStart",
-    "id": "session-start-load-git-context",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Injecte le contexte git (branche, statut) dans chaque prompt (UserPromptSubmit)\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 5_000 }).trim(); } catch { return ''; }\n}\n\nexport function run({ exec = defaultExec } = {}) {\n  const branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');\n  const commit = exec('git log -1 --pretty=\"%h %s\"');\n  const status = exec('git status --short');\n\n  if (!branch) return null;\n\n  const lines = ['## Contexte Git', `- Branche : \\`${branch}\\``];\n  if (commit) lines.push(`- Dernier commit : ${commit}`);\n  if (status) lines.push(`- Fichiers modifiés :\\n${status.split('\\n').map((l) => `  ${l}`).join('\\n')}`);\n  else lines.push('- Répertoire de travail propre');\n\n  return lines.join('\\n') + '\\n';\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) process.stdout.write(result);\n}\n",
       "config": {
@@ -450,8 +433,7 @@
       "Context resumption",
       "Git awareness",
       "Multiple sessions"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "No more answers stuck on last year's date",
@@ -459,7 +441,6 @@
     "community_examples": [],
     "description": "Adds the current date and time to the context of every prompt, preventing the agent from reasoning with an incorrect cutoff date.",
     "hook_type": "UserPromptSubmit",
-    "id": "user-prompt-inject-datetime",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Injecte la date et l'heure courantes dans chaque prompt (UserPromptSubmit)\nimport { fileURLToPath } from 'url';\n\nexport function run({ now = new Date() } = {}) {\n  const formatted = now.toLocaleString('fr-FR', {\n    weekday: 'long',\n    year: 'numeric',\n    month: 'long',\n    day: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    timeZoneName: 'short',\n  });\n  return `Date et heure courantes : ${formatted}\\n`;\n}\n\n/* v8 ignore next 3 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  process.stdout.write(run());\n}\n",
       "config": {
@@ -510,8 +491,7 @@
       "Correct temporal reasoning",
       "Timestamped logs",
       "Changelogs"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Every file lands already Prettier-clean",
@@ -519,7 +499,6 @@
     "community_examples": [],
     "description": "After every file write or edit, runs Prettier on the modified file to ensure consistent formatting without agent intervention.",
     "hook_type": "PostToolUse",
-    "id": "post-write-autoformat",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Formate le fichier avec prettier après écriture (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { stdio: 'ignore', timeout: 10_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath) return null;\n\n  try {\n    exec(`npx --no-install prettier --write \"${filePath}\"`);\n    return { formatted: filePath };\n  } catch {\n    // prettier absent ou erreur de format — non bloquant\n    return null;\n  }\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -572,8 +551,7 @@
       "Style consistency",
       "Reduced diff noise",
       "Code quality"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Lint errors fixed in the same loop, not in CI",
@@ -581,7 +559,6 @@
     "community_examples": [],
     "description": "Runs ESLint on the file just written and returns the errors to the agent so it fixes them immediately within the same loop.",
     "hook_type": "PostToolUse",
-    "id": "post-write-eslint",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Vérifie le fichier avec ESLint après écriture (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { stdio: 'pipe', timeout: 15_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath || !/\\.[cm]?[jt]sx?$/.test(filePath)) return null;\n\n  try {\n    exec(`npx --no-install eslint --max-warnings=0 \"${filePath}\"`);\n    return null;\n  } catch (err) {\n    const output = err.stdout?.toString() ?? '';\n    return output ? { message: `ESLint: ${output.trim()}\\n` } : null;\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
@@ -624,7 +601,7 @@
     ],
     "slug": "post-write-eslint",
     "stack": [
-      "node"
+      "typescript"
     ],
     "tags": [
       "validation",
@@ -637,8 +614,7 @@
       "Continuous quality",
       "Auto-fix loop",
       "Lint standards"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Type errors caught the moment a file is saved",
@@ -646,7 +622,6 @@
     "community_examples": [],
     "description": "Runs the TypeScript compiler in no-emit mode after a .ts/.tsx file is modified and reports typing errors back to the agent.",
     "hook_type": "PostToolUse",
-    "id": "post-edit-typecheck",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Vérifie les types TypeScript après écriture (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { dirname } from 'path';\nimport { fileURLToPath } from 'url';\n\nfunction makeDefaultExec(projectDir) {\n  return (cmd) => execSync(cmd, { cwd: projectDir, stdio: 'pipe', timeout: 30_000 });\n}\n\nexport function run(input, { exec, projectDir = process.env.CLAUDE_PROJECT_DIR } = {}) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath || !/\\.tsx?$/.test(filePath)) return null;\n\n  const cwd = projectDir ?? dirname(filePath);\n  const doExec = exec ?? makeDefaultExec(cwd);\n\n  try {\n    doExec('npx --no-install tsc --noEmit');\n    return null;\n  } catch (err) {\n    const output = err.stdout?.toString() ?? '';\n    return output ? { message: `TypeScript: ${output.trim()}\\n` } : null;\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
@@ -702,8 +677,7 @@
       "Type safety",
       "Early error detection",
       "Strict TypeScript projects"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Won't hand back until the test suite is green",
@@ -711,7 +685,6 @@
     "community_examples": [],
     "description": "When the agent finishes its response, runs the test suite. If tests fail, sends the agent back to work to fix them before handing back control.",
     "hook_type": "Stop",
-    "id": "stop-run-tests",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Exécute la suite de tests à la fin d'une session (Stop)\nimport { spawnSync } from 'child_process';\nimport { existsSync, readFileSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\n// Détecte le runner de tests adapté au projet.\nexport function detect({ exists = existsSync, readFile = readFileSync, projectDir } = {}) {\n  const pkg = join(projectDir, 'package.json');\n  if (exists(pkg)) {\n    try {\n      const scripts = JSON.parse(readFile(pkg, 'utf8')).scripts ?? {};\n      if (scripts.test) {\n        const mgr = exists(join(projectDir, 'pnpm-lock.yaml')) ? 'pnpm'\n          : exists(join(projectDir, 'bun.lockb')) || exists(join(projectDir, 'bun.lock')) ? 'bun'\n          : exists(join(projectDir, 'yarn.lock')) ? 'yarn'\n          : 'npm';\n        // bun test is non-watch by default and doesn't accept --run\n        if (mgr === 'bun') return ['bun', ['test']];\n        return [mgr, ['test', '--', '--run']];\n      }\n    } catch {}\n  }\n  if (exists(join(projectDir, 'pytest.ini')) || exists(join(projectDir, 'pyproject.toml')))\n    return ['python', ['-m', 'pytest', '--tb=short', '-q']];\n  if (exists(join(projectDir, 'go.mod'))) return ['go', ['test', './...']];\n  return null;\n}\n\nexport function run({\n  exists = existsSync,\n  readFile = readFileSync,\n  spawn = spawnSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const runner = detect({ exists, readFile, projectDir });\n  if (!runner) return null;\n\n  const [cmd, args] = runner;\n  const result = spawn(cmd, args, {\n    cwd: projectDir,\n    encoding: 'utf8',\n    timeout: 120_000,\n    stdio: ['ignore', 'pipe', 'pipe'],\n  });\n\n  const out = (result.stdout ?? '') + (result.stderr ?? '');\n  let message = `[run-tests] Exécution : ${cmd} ${args.join(' ')}\\n`;\n  if (result.status !== 0) {\n    message += `[run-tests] ÉCHEC (exit ${result.status})\\n${out.slice(-2000)}\\n`;\n  } else {\n    const last = out.split('\\n').filter(Boolean).slice(-5).join('\\n');\n    message += `[run-tests] ✓ Tests passés\\n${last}\\n`;\n  }\n  return { runner, status: result.status, message };\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) {\n    process.stderr.write(result.message);\n    if (result.status !== 0) process.exit(2);\n  }\n}\n",
       "config": {
@@ -763,8 +736,7 @@
       "Assisted TDD",
       "Regression safety net",
       "Quality before handoff"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Pings your Slack when the agent needs you",
@@ -772,7 +744,6 @@
     "community_examples": [],
     "description": "Relays agent notifications (permission request, awaiting input) to a Slack channel via webhook, useful for long or unattended sessions.",
     "hook_type": "Notification",
-    "id": "notification-slack",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Envoie une notification Slack quand Claude veut notifier l'utilisateur (Notification)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { stdio: 'ignore', timeout: 10_000 });\n}\n\nexport function run(\n  input,\n  {\n    exec = defaultExec,\n    webhook = process.env.SLACK_WEBHOOK_URL ?? '',\n    projectDir = process.env.CLAUDE_PROJECT_DIR,\n  } = {},\n) {\n  if (!webhook) return null;\n\n  const message = input.message ?? input.notification ?? '';\n  if (!message) return null;\n\n  const project = projectDir?.split('/').pop() ?? 'Claude';\n  const payload = JSON.stringify({ text: `*[${project}]* ${message}` });\n\n  try {\n    exec(\n      `curl -s -X POST -H 'Content-type: application/json' --data '${payload.replace(/'/g, \"'\\\\''\")}' '${webhook}'`,\n    );\n  } catch {\n    // Échec réseau — non bloquant\n  }\n  return payload;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -823,22 +794,19 @@
       "Long sessions",
       "Remote supervision",
       "Team collaboration"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Every session leaves an audit trail",
     "category": "notification",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/session-end-log.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "At session end, writes an audit line (timestamp, end reason, directory) to a local log file for DevSecOps traceability.",
     "hook_type": "SessionEnd",
-    "id": "session-end-audit-log",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Enregistre un résumé de session dans ~/.claude/audit-log.jsonl (SessionEnd)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\nimport { homedir } from 'os';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    append = appendFileSync,\n    mkdir = mkdirSync,\n    home = homedir(),\n    projectDir = process.env.CLAUDE_PROJECT_DIR,\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const logDir = join(home, '.claude');\n  mkdir(logDir, { recursive: true });\n\n  const entry = {\n    timestamp: now(),\n    project: projectDir?.split('/').pop() ?? 'unknown',\n    session_id: input.session_id ?? null,\n    total_cost_usd: input.total_cost_usd ?? null,\n    num_turns: input.num_turns ?? null,\n  };\n\n  append(join(logDir, 'audit-log.jsonl'), JSON.stringify(entry) + '\\n');\n  return entry;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -890,7 +858,6 @@
       "DevSecOps audit",
       "Usage reporting"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -899,7 +866,6 @@
     "community_examples": [],
     "description": "Controls the agent's network access by only allowing WebFetch to a list of approved domains. Any other URL is blocked.",
     "hook_type": "PreToolUse",
-    "id": "pre-webfetch-domain-allowlist",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Vérifie que l'URL est dans la liste des domaines autorisés (PreToolUse WebFetch)\nimport { readFileSync, existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nconst DEFAULT_DOMAINS = [\n  'github.com', 'raw.githubusercontent.com', 'npmjs.com',\n  'docs.anthropic.com', 'developer.mozilla.org', 'nodejs.org',\n  'www.typescriptlang.org', 'nextjs.org', 'tailwindcss.com',\n  'supabase.com', 'vercel.com',\n];\n\nexport function run(\n  input,\n  {\n    exists = existsSync,\n    readFile = readFileSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n  } = {},\n) {\n  const url = input.tool_input?.url ?? '';\n  if (!url) return null;\n\n  const allowlistFile = join(projectDir, '.claude', 'webfetch-allowlist.json');\n  const allowed = exists(allowlistFile)\n    ? JSON.parse(readFile(allowlistFile, 'utf8'))\n    : DEFAULT_DOMAINS;\n\n  try {\n    const hostname = new URL(url).hostname;\n    const ok = allowed.some((d) => hostname === d || hostname.endsWith('.' + d));\n    if (!ok) {\n      return {\n        decision: 'block',\n        reason: `Domaine non autorisé : ${hostname}. Ajoutez-le à .claude/webfetch-allowlist.json si nécessaire.`,\n      };\n    }\n  } catch {\n    // URL invalide — laisser passer\n  }\n  return null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -951,8 +917,7 @@
       "Network control",
       "Data compliance",
       "Restricted environments"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "See exactly how hard each session works",
@@ -960,7 +925,6 @@
     "community_examples": [],
     "description": "Increments a counter per tool type after each use and logs the activity, providing a view of the agent's usage intensity per session.",
     "hook_type": "PostToolUse",
-    "id": "post-bash-cost-tracker",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Journalise les commandes Bash avec leur durée (PostToolUse Bash)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    append = appendFileSync,\n    mkdir = mkdirSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const command = input.tool_input?.command ?? '';\n  if (!command) return null;\n\n  const logDir = join(projectDir, '.claude', 'data');\n  mkdir(logDir, { recursive: true });\n\n  const entry = {\n    ts: now(),\n    cmd: command.slice(0, 500),\n    exit: input.tool_response?.exit_code ?? null,\n  };\n\n  append(join(logDir, 'bash-history.jsonl'), JSON.stringify(entry) + '\\n');\n  return entry;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -1011,8 +975,7 @@
       "Observability",
       "Usage analysis",
       "Agentic FinOps"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "An automatic changelog of what the agent shipped",
@@ -1020,7 +983,6 @@
     "community_examples": [],
     "description": "At session end, captures the diff of modified files and appends it to a timestamped change log, creating an automatic changelog of what the agent produced.",
     "hook_type": "Stop",
-    "id": "stop-generate-changelog",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Génère une entrée de changelog depuis le diff git de la session (Stop)\nimport { execSync } from 'child_process';\nimport { appendFileSync, existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run({\n  exec,\n  append = appendFileSync,\n  exists = existsSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n  now = () => new Date().toISOString(),\n} = {}) {\n  const doExec =\n    exec ?? ((cmd) => { try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000, cwd: projectDir }).trim(); } catch { return ''; } });\n\n  const branch = doExec('git branch --show-current');\n  const diff = doExec('git diff --stat HEAD~1 HEAD 2>/dev/null || git diff --stat HEAD');\n  const commits = doExec('git log -5 --pretty=\"- %s (%h)\"');\n\n  if (!diff && !commits) return null;\n\n  const date = now().split('T')[0];\n  const entry = [\n    `\\n## ${date} — Session sur \\`${branch || 'main'}\\``,\n    '',\n    commits ? `### Commits\\n${commits}` : '',\n    diff ? `### Fichiers modifiés\\n\\`\\`\\`\\n${diff}\\n\\`\\`\\`` : '',\n  ]\n    .filter(Boolean)\n    .join('\\n');\n\n  const changelogPath = join(projectDir, 'CHANGELOG.md');\n  if (!exists(changelogPath)) {\n    return { written: false, message: '[session-changelog] CHANGELOG.md absent — entrée ignorée.\\n' };\n  }\n\n  append(changelogPath, entry + '\\n');\n  return { written: true, entry, message: '[session-changelog] ✓ Entrée ajoutée dans CHANGELOG.md\\n' };\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
@@ -1072,7 +1034,6 @@
       "Change traceability",
       "Post-hoc review"
     ],
-    "votes": 0,
     "is_must": false
   },
   {
@@ -1080,14 +1041,12 @@
     "category": "validation",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/enforce-package-managers.sh",
         "repo": "https://github.com/steve-magne/moving-live"
       }
     ],
     "description": "Blocks pip, poetry, npm and yarn commands; enforces uv (Python) and pnpm (Node.js). Generates an actionable message with the replacement command.",
     "hook_type": "PreToolUse",
-    "id": "pre-bash-enforce-package-managers",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Bloque npm et yarn, impose pnpm pour ce projet Node.js (PreToolUse Bash)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst FORBIDDEN = [\n  { pattern: /(^|[;&|\\s])npm(\\s|$)/, replacement: 'pnpm' },\n  { pattern: /(^|[;&|\\s])yarn(\\s|$)/, replacement: 'pnpm' },\n];\n\nexport function run(input) {\n  if (input.tool_name !== 'Bash') return null;\n  const cmd = input.tool_input?.command ?? '';\n  // Supprime le contenu des chaînes entre guillemets pour éviter les faux positifs\n  // quand npm/yarn apparaissent comme valeurs d'arguments texte (ex. git commit -m \"...npm...\",\n  // gh pr create --body \"...yarn...\") tout en continuant à bloquer les vraies invocations\n  // de gestionnaire de paquets même après des opérateurs shell (&&, ||, ;).\n  const stripped = cmd\n    .replace(/\"(?:[^\"\\\\]|\\\\.)*\"/g, '\"\"')\n    .replace(/'(?:[^'\\\\]|\\\\.)*'/g, \"''\");\n  const hit = FORBIDDEN.find(({ pattern }) => pattern.test(stripped));\n  return hit\n    ? { decision: 'block', reason: `Utiliser '${hit.replacement}' à la place. Ce projet impose pnpm (pas npm ni yarn).` }\n    : null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -1129,7 +1088,7 @@
     ],
     "slug": "pre-bash-enforce-package-managers",
     "stack": [
-      "node"
+      "typescript"
     ],
     "tags": [
       "package-manager",
@@ -1144,7 +1103,6 @@
       "Standardize package management tooling across a Python+Node monorepo",
       "Avoid virtual environment conflicts between pip and uv"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -1152,14 +1110,12 @@
     "category": "workflow",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/worktree-guard.sh",
         "repo": "https://github.com/steve-magne/moving-live"
       }
     ],
     "description": "Blocks any Edit/Write whose absolute path targets the main repo instead of the active worktree. Suggests the corrected path. Detects the worktree via .claude/active-worktree or via git rev-parse.",
     "hook_type": "PreToolUse",
-    "id": "pre-edit-worktree-guard",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Empêche l'édition de fichiers hors du worktree courant (PreToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { resolve } from 'path';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { encoding: 'utf8', timeout: 5_000 }).trim();\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath) return null;\n\n  try {\n    const worktreeRoot = exec('git rev-parse --show-toplevel');\n    const worktreeLines = exec('git worktree list').split('\\n');\n    const mainRoot = worktreeLines[0]?.split(/\\s+/)[0] ?? '';\n\n    // N'applique le garde que dans un worktree non principal\n    if (!mainRoot || worktreeRoot === mainRoot) return null;\n\n    const absFile = resolve(filePath);\n    if (!absFile.startsWith(worktreeRoot + '/')) {\n      return {\n        decision: 'block',\n        reason: `Écriture hors du worktree courant (${worktreeRoot}). Vérifiez le chemin cible.`,\n      };\n    }\n  } catch {\n    // git absent ou pas dans un repo — laisser passer\n  }\n  return null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -1211,7 +1167,6 @@
       "Prevent accidental changes to the main repo in worktree mode",
       "Parallel multi-agent workflows with per-worktree isolation"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -1219,14 +1174,12 @@
     "category": "validation",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/quality-check.sh",
         "repo": "https://github.com/steve-magne/moving-live"
       }
     ],
     "description": "Runs a quality check on every stop: type-check (tsc), ESLint (only if an ESLint config file is present), and tests. Blocks the agent from handing back until all checks pass.",
     "hook_type": "Stop",
-    "id": "stop-quality-check",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Bilan qualité complet à la fin d'une session : typecheck + lint + tests (Stop)\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run({\n  exec,\n  exists = existsSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const doExec =\n    exec ?? ((cmd) => execSync(cmd, { cwd: projectDir, stdio: 'pipe', timeout: 60_000 }));\n\n  const messages = [];\n  function check(label, cmd) {\n    try {\n      doExec(cmd);\n      messages.push(`[quality-check] ✓ ${label}\\n`);\n      return true;\n    } catch (err) {\n      const out = err.stdout?.toString()?.trim() ?? '';\n      messages.push(`[quality-check] ✗ ${label}\\n${out ? out.slice(-500) + '\\n' : ''}`);\n      return false;\n    }\n  }\n\n  const checks = [];\n  const hasPkg = exists(join(projectDir, 'package.json'));\n  if (hasPkg && exists(join(projectDir, 'tsconfig.json')))\n    checks.push(['TypeScript', 'npx --no-install tsc --noEmit']);\n  const eslintConfigs = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml', '.eslintrc'];\n  if (hasPkg && eslintConfigs.some((f) => exists(join(projectDir, f))))\n    checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 .']);\n  if (hasPkg)\n    checks.push(['Tests', 'pnpm test --run 2>/dev/null || yarn test --run 2>/dev/null || bun test 2>/dev/null || npm test --if-present 2>/dev/null || npx --no-install vitest run 2>/dev/null']);\n\n  const results = checks.map(([label, cmd]) => check(label, cmd));\n  const failed = results.filter((r) => !r).length;\n\n  if (failed > 0) messages.push(`[quality-check] ${failed}/${checks.length} vérification(s) échouée(s).\\n`);\n  else if (checks.length > 0) messages.push('[quality-check] ✓ Tous les contrôles qualité passent.\\n');\n\n  return { checks: checks.length, failed, message: messages.join('') };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  process.stderr.write(result.message);\n  if (result.failed > 0) process.exit(2);\n}\n",
       "config": {
@@ -1285,7 +1238,6 @@
       "Block sessions that leave lint errors or insufficient coverage",
       "Parallelize build + tests to minimize wait time"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -1293,14 +1245,12 @@
     "category": "workflow",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": "setup-worktree-env.sh",
         "repo": "https://github.com/steve-magne/moving-live"
       }
     ],
     "description": "On session start inside a freshly created worktree, copies the main repo's .env files into the worktree so it is ready to run.",
     "hook_type": "SessionStart",
-    "id": "worktree-create-setup-env",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// SessionStart : si la session démarre dans un worktree, copie depuis le dépôt principal\n// les fichiers d'environnement et secrets locaux. Deux passes :\n//   1. Liste statique de fichiers racine connus (multi-écosystème)\n//   2. Scan récursif (find, profondeur 4) pour couvrir les monorepos (apps/web/.env…)\nimport { execSync } from 'child_process';\nimport { existsSync, copyFileSync, mkdirSync, readFileSync } from 'fs';\nimport { join, dirname } from 'path';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\n// Fichiers racine copiés explicitement si présents.\n// Couvre Node/Bun, Vite, Next.js, CRA, Python dotenv, Ruby on Rails, direnv, Docker Compose.\nconst ROOT_FILES = [\n  // Dotenv standard — tous frameworks JS/TS/Python\n  '.env',\n  '.env.local',\n  '.env.development',\n  '.env.development.local',\n  '.env.test',\n  '.env.test.local',\n  '.env.staging',\n  '.env.staging.local',\n  '.env.production',\n  '.env.production.local',\n  '.env.override',            // convention docker-compose\n  // direnv\n  '.envrc',\n  // Ruby on Rails master key\n  'config/master.key',\n]\n\n// Répertoires exclus du scan récursif monorepo.\nconst SKIP_DIRS = [\n  'node_modules', '.git', 'dist', 'build', '.next', 'out',\n  'coverage', '.turbo', '.cache', '__pycache__', 'target', '.venv', 'venv',\n]\n\n/**\n * Scan récursif des sous-répertoires (profondeur 2–4) pour trouver les fichiers\n * `.env*` et `.envrc` dans les structures monorepo (apps/web/.env, packages/api/.env…).\n * Utilise `find` via execSync. Injecté en dépendance pour rester testable.\n */\nfunction defaultScanEnvFiles(dir) {\n  const excludes = SKIP_DIRS.map(d => `-not -path \"*/${d}/*\"`).join(' ')\n  const cmd = `find \"${dir}\" -mindepth 2 -maxdepth 4 -type f \\\\( -name \".env\" -o -name \".env.*\" -o -name \".envrc\" \\\\) ${excludes} 2>/dev/null`\n  try {\n    const out = execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim()\n    if (!out) return []\n    return out.split('\\n').map(abs => abs.slice(dir.length + 1))\n  } catch { return [] }\n}\n\nexport function run({\n  exec = defaultExec,\n  exists = existsSync,\n  copy = copyFileSync,\n  mkdir = mkdirSync,\n  scanEnvFiles = defaultScanEnvFiles,\n} = {}) {\n  const worktreeList = exec('git worktree list')\n  const mainDir = worktreeList.split('\\n')[0]?.split(/\\s+/)[0] ?? ''\n  const worktreeDir = exec('git rev-parse --show-toplevel')\n\n  if (!mainDir || !worktreeDir || mainDir === worktreeDir) return\n\n  // Fusion liste statique + résultats du scan monorepo (déduplication)\n  const candidates = [...ROOT_FILES]\n  for (const rel of scanEnvFiles(mainDir)) {\n    if (!candidates.includes(rel)) candidates.push(rel)\n  }\n\n  for (const rel of candidates) {\n    const src = join(mainDir, rel)\n    const dst = join(worktreeDir, rel)\n    if (exists(src) && !exists(dst)) {\n      const dstDir = dirname(dst)\n      if (!exists(dstDir)) mkdir(dstDir, { recursive: true })\n      copy(src, dst)\n      process.stderr.write(`Copié : ${rel} → ${worktreeDir}\\n`)\n    }\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  readFileSync(0, 'utf8')\n  run()\n  // SessionStart : stdout vide = aucun contexte ajouté.\n}\n",
       "config": {
@@ -1354,7 +1304,6 @@
       "Isolate environment variables (ports, secrets) per worktree",
       "Start multiple agents in parallel without port collisions"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -1362,14 +1311,12 @@
     "category": "workflow",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": "update-lib.sh",
         "repo": "https://github.com/steve-magne/moving-live"
       }
     ],
     "description": "On session start inside a worktree that has no node_modules yet, spawns the dependency install as a detached background process so the session never blocks.",
     "hook_type": "SessionStart",
-    "id": "worktree-create-update-deps",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// SessionStart : si la session démarre dans un worktree fraîchement créé (node_modules\n// absent), lance l'install des dépendances en process DÉTACHÉ pour ne pas bloquer le\n// démarrage de session, puis rend la main immédiatement.\n// NB : ce hook NE s'enregistre PAS sur WorktreeCreate — ce dernier remplace la création\n// du worktree, exige un chemin absolu sur stdout et ne supporte pas l'exécution async.\nimport { execSync, spawn } from 'child_process';\nimport { existsSync, readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\n/* v8 ignore next 3 */\nfunction defaultExec(cmd, opts = {}) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000, ...opts }).trim(); } catch { return ''; }\n}\n\n/* v8 ignore next 8 */\nfunction defaultDetach(cmd, args, cwd) {\n  const child = spawn(cmd, args, {\n    cwd,\n    detached: true,\n    stdio: 'ignore',\n  });\n  child.unref();\n}\n\nexport function run({\n  exec = defaultExec,\n  exists = existsSync,\n  detach = defaultDetach,\n} = {}) {\n  const worktreeDir = exec('git rev-parse --show-toplevel');\n  if (!worktreeDir) return;\n\n  // Uniquement dans un worktree distinct du dépôt principal.\n  const mainDir = exec('git worktree list').split('\\n')[0]?.split(/\\s+/)[0] ?? '';\n  if (!mainDir || mainDir === worktreeDir) return;\n\n  // Rien à faire sans package.json, ou si les deps sont déjà installées.\n  if (!exists(`${worktreeDir}/package.json`)) return;\n  if (exists(`${worktreeDir}/node_modules`)) return;\n\n  const hasPnpm = exec('which pnpm');\n  if (hasPnpm) {\n    detach('pnpm', ['install', '--frozen-lockfile', '--ignore-scripts'], worktreeDir);\n  } else {\n    detach('npm', ['ci', '--ignore-scripts'], worktreeDir);\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  readFileSync(0, 'utf8');\n  run();\n  // SessionStart : pas de stdout obligatoire (install lancé en détaché).\n}\n",
       "config": {
@@ -1412,7 +1359,7 @@
     ],
     "slug": "worktree-create-update-deps",
     "stack": [
-      "node"
+      "typescript"
     ],
     "tags": [
       "worktree",
@@ -1425,7 +1372,6 @@
       "Ensure every worktree starts with up-to-date dependencies",
       "Automate bootstrapping of a new isolated agent environment"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -1433,14 +1379,12 @@
     "category": "validation",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/missing-test-detection.sh",
         "repo": "https://github.com/steve-magne/moving-live"
       }
     ],
     "description": "On every session stop, inspects git diff to list modified source files and checks that a matching test file exists. Fails with the list of uncovered files if tests are missing.",
     "hook_type": "Stop",
-    "id": "stop-missing-test-detection",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Détecte les fichiers sources modifiés sans test correspondant (Stop)\nimport { readFileSync, existsSync, writeFileSync, unlinkSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { basename } from 'path';\nimport { fileURLToPath } from 'url';\n\nconst pid = process.ppid ?? 'unknown';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nexport function run({\n  exec = defaultExec,\n  exists = existsSync,\n  readFile = readFileSync,\n  writeFile = writeFileSync,\n  unlink = unlinkSync,\n  counterFile = `/tmp/.claude-missing-tests-count-${pid}`,\n  disableFile = `/tmp/.claude-missing-tests-disabled-${pid}`,\n} = {}) {\n  if (exists(disableFile)) {\n    process.stderr.write(`[missing-test-detection] SUSPENDU (≥3 échecs). rm '${disableFile}' pour réactiver.\\n`);\n    return { exitCode: 0 };\n  }\n\n  const base = exec('git merge-base origin/main HEAD');\n  const head = exec('git rev-parse HEAD');\n  const raw = base && base !== head\n    ? exec(`git diff --name-only ${base} HEAD`)\n    : exec('git diff --name-only HEAD');\n\n  const missing = [];\n  for (const f of raw.split('\\n').filter(Boolean)) {\n    if (!/^src\\/(lib|store|hooks)\\/[^/]+\\.ts$/.test(f)) continue;\n    if (/\\.(test|spec)\\.ts$/.test(f)) continue; // un fichier de test n'exige pas son propre test\n    if (!exists(f)) continue; // fichier supprimé → pas de test requis\n    const name = basename(f, '.ts');\n    const found = exec(`find src tests -name \"${name}.test.ts\" -o -name \"${name}.spec.ts\" 2>/dev/null`);\n    if (!found) missing.push(f);\n  }\n\n  if (!missing.length) {\n    try { unlink(counterFile); } catch {}\n    process.stderr.write('[missing-test-detection] ✓ Aucun fichier source sans test détecté.\\n');\n    return { exitCode: 0 };\n  }\n\n  let count = 0;\n  try { count = parseInt(readFile(counterFile, 'utf8').trim(), 10) || 0; } catch {}\n  count++;\n  writeFile(counterFile, String(count));\n\n  let msg = `[FAIL] Tests manquants pour les fichiers modifiés :\\n${missing.map(f => `  - ${f}`).join('\\n')}\\n→ Créer les fichiers de test correspondants.\\n`;\n  if (count >= 3) {\n    writeFile(disableFile, '');\n    msg += `[AUTO-DISABLE] hook suspendu après ${count} échecs. rm '${disableFile}' pour réactiver.\\n`;\n  }\n\n  return { exitCode: 2, message: msg };\n}\n\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result.message) process.stderr.write(result.message);\n  process.exit(result.exitCode);\n}\n",
       "config": {
@@ -1492,22 +1436,19 @@
     "use_cases": [
       "Ensure no business file ships without an associated test",
       "Integrate a lightweight 'Definition of Done' without running the full test suite"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Catches the file that quietly dropped coverage",
     "category": "validation",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/per-file-coverage.sh",
         "repo": "https://github.com/steve-magne/moving-live"
       }
     ],
     "description": "Reads the JSON coverage report (vitest/jest coverage-summary.json or pytest coverage.json) and checks that each file modified since the merge base reaches ≥80% line coverage. Reports files below the threshold with their exact percentage.",
     "hook_type": "Stop",
-    "id": "stop-per-file-coverage",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Vérifie la coverage ≥80% par fichier .ts/.tsx modifié (Stop)\nimport { readFileSync, existsSync, writeFileSync, unlinkSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst pid = process.ppid ?? 'unknown';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nconst SKIP = /^src\\/(types|constants|router|main)\\//;\n\nexport function run({\n  exec = defaultExec,\n  exists = existsSync,\n  readFile = readFileSync,\n  writeFile = writeFileSync,\n  unlink = unlinkSync,\n  cwd = process.cwd(),\n  counterFile = `/tmp/.claude-per-cov-count-${pid}`,\n  disableFile = `/tmp/.claude-per-cov-disabled-${pid}`,\n  covJson = './coverage/coverage-summary.json',\n} = {}) {\n  if (exists(disableFile)) {\n    process.stderr.write(`[per-file-coverage] SUSPENDU (≥3 échecs). rm '${disableFile}' pour réactiver.\\n`);\n    return { exitCode: 0 };\n  }\n\n  if (!exists(covJson)) return { exitCode: 0 };\n\n  const base = exec('git merge-base origin/main HEAD');\n  const head = exec('git rev-parse HEAD');\n  const raw = base && base !== head\n    ? exec(`git diff --name-only ${base} HEAD`)\n    : exec('git diff --name-only HEAD');\n\n  let coverage;\n  try { coverage = JSON.parse(readFile(covJson, 'utf8')); } catch { return { exitCode: 0 }; }\n\n  const lowCov = [];\n  for (const f of raw.split('\\n').filter(Boolean)) {\n    if (!/^src\\/.*\\.tsx?$/.test(f) || SKIP.test(f)) continue;\n    const pct = coverage[`${cwd}/${f}`]?.lines?.pct;\n    if (pct != null && pct < 80) lowCov.push({ f, pct });\n  }\n\n  if (!lowCov.length) {\n    try { unlink(counterFile); } catch {}\n    return { exitCode: 0 };\n  }\n\n  let count = 0;\n  try { count = parseInt(readFile(counterFile, 'utf8').trim(), 10) || 0; } catch {}\n  count++;\n  writeFile(counterFile, String(count));\n\n  let msg = `[FAIL] Coverage < 80% pour les fichiers modifiés :\\n${lowCov.map(({ f, pct }) => `  - ${f}: ${Math.round(pct)}%`).join('\\n')}\\n→ Ajouter des tests pour atteindre le seuil.\\n`;\n  if (count >= 3) {\n    writeFile(disableFile, '');\n    msg += `[AUTO-DISABLE] hook suspendu après ${count} échecs. rm '${disableFile}' pour réactiver.\\n`;\n  }\n\n  return { exitCode: 2, message: msg };\n}\n\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result.message) process.stdout.write(result.message);\n  process.exit(result.exitCode);\n}\n",
       "config": {
@@ -1563,11 +1504,9 @@
     "use_cases": [
       "Block a session that lowered coverage on a specific file without seeing it in global coverage",
       "Focus feedback on the files actually modified rather than the whole project"
-    ],
-    "votes": 0
+    ]
   },
   {
-    "id": "stop-per-file-lint",
     "slug": "stop-per-file-lint",
     "name": "Per-modified-file lint (Stop)",
     "benefit": "Blocks the session on a lint error you introduced",
@@ -1624,7 +1563,6 @@
       "git-diff",
       "definition-of-done"
     ],
-    "votes": 0,
     "is_must": true,
     "stack": [
       "typescript"
@@ -1635,14 +1573,12 @@
     "category": "workflow",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/quality-check.sh",
         "repo": "https://github.com/steve-magne/moving-live"
       }
     ],
     "description": "Per-session deduplication mechanism: uses $PPID as a stable session identifier, counts consecutive failures in /tmp, and automatically disables the hook after ≥3 failures without a fix. Shows reactivation instructions. Resets the counter on success. Prevents infinite asyncRewake re-wake loops.",
     "hook_type": "Stop",
-    "id": "stop-session-dedup-autodisable",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Auto-désactive les hooks Stop qui ont échoué ≥ N fois de suite (Stop)\nimport { readFileSync, existsSync, readdirSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nconst MAX_FAILURES = 3;\n\nexport function run({\n  exists = existsSync,\n  readdir = readdirSync,\n  readFile = readFileSync,\n  counterDir = '/tmp/claude-hook-counters',\n} = {}) {\n  if (!exists(counterDir)) return null;\n\n  try {\n    const counters = readdir(counterDir).filter((f) => f.endsWith('.counter'));\n    const toDisable = counters\n      .map((f) => {\n        try {\n          const count = parseInt(readFile(join(counterDir, f), 'utf8').trim(), 10);\n          return count >= MAX_FAILURES ? f.replace('.counter', '') : null;\n        } catch {\n          return null;\n        }\n      })\n      .filter(Boolean);\n\n    if (!toDisable.length) return null;\n\n    const message =\n      `[session-dedup] Hooks à désactiver (${MAX_FAILURES}+ échecs) : ${toDisable.join(', ')}\\n` +\n      '[session-dedup] Supprimez les fichiers /tmp/claude-hook-counters/*.counter pour réactiver.\\n';\n    return { toDisable, message };\n  } catch {\n    // Erreur de lecture — ignorer silencieusement\n    return null;\n  }\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
@@ -1697,7 +1633,6 @@
       "Automatically suspend quality checks when errors are known and being fixed",
       "Protect any potentially unstable Stop hook without changing its core logic"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -1705,14 +1640,12 @@
     "category": "validation",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/i18n-validation.sh",
         "repo": "https://github.com/steve-magne/moving-live"
       }
     ],
     "description": "Validates the consistency of translation files on every session stop: every key used in the code exists in the i18n files, and no orphan key lingers. Runs only if frontend files were modified.",
     "hook_type": "Stop",
-    "id": "stop-i18n-validation",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Valide la cohérence des fichiers de traduction (Stop)\nimport { readFileSync, existsSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run({\n  exec,\n  readFile = readFileSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const doExec =\n    exec ?? ((cmd) => execSync(cmd, { encoding: 'utf8', timeout: 5_000, cwd: projectDir }).trim());\n\n  // Cherche les fichiers de traduction JSON (ex: locales/fr.json, messages/en.json)\n  const i18nFiles = doExec('find . -path ./node_modules -prune -o -name \"*.json\" -print')\n    .split('\\n')\n    .filter((f) => /\\/(locales?|messages?|i18n)\\//i.test(f) && f.endsWith('.json'));\n\n  if (i18nFiles.length < 2) return null;\n\n  // Groupe par répertoire et vérifie la cohérence des clés\n  const byDir = {};\n  for (const f of i18nFiles) {\n    const dir = f.split('/').slice(0, -1).join('/');\n    byDir[dir] ??= [];\n    byDir[dir].push(f);\n  }\n\n  const issues = [];\n  for (const [, files] of Object.entries(byDir)) {\n    if (files.length < 2) continue;\n    const parsed = files\n      .map((f) => {\n        try { return { f, keys: new Set(Object.keys(JSON.parse(readFile(join(projectDir, f), 'utf8')))) }; } catch { return null; }\n      })\n      .filter(Boolean);\n\n    const allKeys = new Set(parsed.flatMap((p) => [...p.keys]));\n    for (const { f, keys } of parsed) {\n      const missing = [...allKeys].filter((k) => !keys.has(k));\n      if (missing.length > 0)\n        issues.push(`${f} manque ${missing.length} clé(s) : ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? '…' : ''}`);\n    }\n  }\n\n  const message =\n    issues.length > 0\n      ? `[i18n-validation] Incohérences détectées :\\n${issues.map((i) => `  - ${i}`).join('\\n')}\\n`\n      : '[i18n-validation] ✓ Fichiers de traduction cohérents.\\n';\n\n  return { issues, message };\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) process.stderr.write(result.message);\n}\n",
       "config": {
@@ -1763,22 +1696,19 @@
     "use_cases": [
       "Prevent shipping untranslated strings or orphan keys",
       "Validate translations automatically without waiting for CI"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Hear it out loud when the agent needs you",
     "category": "notification",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/notification-tts.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Announces out loud via the system text-to-speech (say/espeak) when the agent needs the user's attention.",
     "hook_type": "Notification",
-    "id": "notification-tts-voice",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Lit les notifications Claude à voix haute via le TTS système (Notification)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 15_000, stdio: 'ignore', shell: true });\n}\n\nexport function run(input, { exec = defaultExec, platform = process.platform } = {}) {\n  const message = input.message ?? input.notification ?? '';\n  if (!message) return null;\n\n  const text = message.replace(/[`*_#]/g, '').slice(0, 200);\n  const safe = text.replace(/\"/g, '\\\\\"');\n\n  try {\n    // macOS: say, Linux: espeak / spd-say\n    if (platform === 'darwin') exec(`say \"${safe}\"`);\n    else exec(`espeak \"${safe}\" 2>/dev/null || spd-say \"${safe}\"`);\n  } catch {\n    // TTS absent ou erreur — non bloquant\n  }\n  return text;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -1831,22 +1761,19 @@
     "use_cases": [
       "Alert the user during long autonomous runs",
       "Audible notification when the agent awaits a validation"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Get told out loud the moment work is done",
     "category": "notification",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/stop-tts.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Announces out loud via TTS that the agent has finished its task, with a random completion message.",
     "hook_type": "Stop",
-    "id": "stop-tts-completion",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Annonce la fin de session Claude par TTS (Stop)\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 10_000, stdio: 'ignore', shell: true });\n}\n\nexport function run({\n  exec = defaultExec,\n  platform = process.platform,\n  projectDir = process.env.CLAUDE_PROJECT_DIR,\n} = {}) {\n  const project = projectDir?.split('/').pop() ?? 'Claude';\n  const text = `Tâche terminée sur ${project}`;\n\n  try {\n    if (platform === 'darwin') exec(`say \"${text}\"`);\n    else exec(`espeak \"${text}\" 2>/dev/null || spd-say \"${text}\"`);\n  } catch {\n    // TTS absent — non bloquant\n  }\n  return text;\n}\n\n/* v8 ignore next 3 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  run();\n}\n",
       "config": {
@@ -1899,15 +1826,13 @@
     "use_cases": [
       "Get notified without watching the screen when the task is done",
       "Audio feedback at the end of a long session"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "A chime to catch your attention, no voice needed",
     "category": "notification",
     "description": "Plays a system sound (Glass.aiff on macOS, paplay on Linux, PowerShell beep on Windows) when the agent needs the user's attention. A silent alternative to TTS that works offline and requires no voice engine.",
     "hook_type": "Notification",
-    "id": "notification-sound",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Joue un son système quand Claude attend l'utilisateur (Notification)\nimport { execSync } from 'child_process';\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 5_000, stdio: 'ignore', shell: true });\n}\n\nexport function run(_input, { exec = defaultExec, platform = process.platform } = {}) {\n  try {\n    if (platform === 'darwin') {\n      exec('afplay /System/Library/Sounds/Glass.aiff');\n      exec('osascript -e \\'display notification \"Claude needs your input\" with title \"Claude Code\"\\'');\n    } else if (platform === 'linux') {\n      exec('paplay /usr/share/sounds/freedesktop/stereo/message.oga 2>/dev/null || aplay /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null || true');\n    } else if (platform === 'win32') {\n      exec('powershell -c \"[console]::beep(660, 300)\"');\n    }\n  } catch {\n    // Son absent ou erreur — non bloquant\n  }\n  return null;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -1955,15 +1880,13 @@
       "Alert the user during long autonomous runs",
       "Works in silent environments where TTS is unwanted",
       "Minimal-distraction attention signal"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "A satisfying chime the moment Claude finishes",
     "category": "notification",
     "description": "Plays a completion sound (Hero.aiff on macOS, paplay on Linux, PowerShell beep on Windows) when the agent stops. Instant audio feedback without TTS, no voice engine required.",
     "hook_type": "Stop",
-    "id": "stop-sound",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Joue un son de completion quand Claude termine une tâche (Stop)\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 5_000, stdio: 'ignore', shell: true });\n}\n\nexport function run({ exec = defaultExec, platform = process.platform } = {}) {\n  try {\n    if (platform === 'darwin') {\n      exec('afplay /System/Library/Sounds/Hero.aiff');\n      exec('osascript -e \\'display notification \"Claude has finished working\" with title \"Claude Code\"\\'');\n    } else if (platform === 'linux') {\n      exec('paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || aplay /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null || true');\n    } else if (platform === 'win32') {\n      exec('powershell -c \"[console]::beep(880, 400)\"');\n    }\n  } catch {\n    // Son absent ou erreur — non bloquant\n  }\n  return null;\n}\n\n/* v8 ignore next 3 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  run();\n}\n",
       "config": {
@@ -2011,22 +1934,19 @@
       "Audio feedback when a long task finishes",
       "Minimal-distraction alternative to TTS",
       "Complement stop-tts-completion with a lighter signal"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Hear each subagent spin up",
     "category": "notification",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/subagent-start-tts.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Announces out loud via TTS when a subagent starts, to track parallel agent activity.",
     "hook_type": "SubagentStart",
-    "id": "subagent-start-tts-announce",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Annonce le démarrage d'un sous-agent par TTS (SubagentStart)\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 10_000, stdio: 'ignore', shell: true });\n}\n\nexport function run({ exec = defaultExec, platform = process.platform } = {}) {\n  const text = 'Sous-agent démarré';\n  try {\n    if (platform === 'darwin') exec(`say \"${text}\"`);\n    else exec(`espeak \"${text}\" 2>/dev/null || spd-say \"${text}\"`);\n  } catch {}\n  return text;\n}\n\n/* v8 ignore next 3 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  run();\n}\n",
       "config": {
@@ -2078,22 +1998,19 @@
     "use_cases": [
       "Audio traceability of parallel agents",
       "Track subagent startup without a visual interface"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Hear each subagent finish, no audio clash",
     "category": "notification",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/subagent-stop-tts.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Announces the end of a subagent with a voice message. Uses a file lock to avoid TTS overlap when several subagents finish in parallel.",
     "hook_type": "SubagentStop",
-    "id": "subagent-stop-tts-summary",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Annonce la fin d'un sous-agent par TTS (SubagentStop)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 10_000, stdio: 'ignore', shell: true });\n}\n\nexport function run(input, { exec = defaultExec, platform = process.platform } = {}) {\n  const summary = input?.summary ?? '';\n  const text = summary\n    ? `Sous-agent terminé : ${summary.slice(0, 100).replace(/[`*_#]/g, '')}`\n    : 'Sous-agent terminé';\n  const safe = text.replace(/\"/g, '\\\\\"');\n\n  try {\n    if (platform === 'darwin') exec(`say \"${safe}\"`);\n    else exec(`espeak \"${safe}\" 2>/dev/null`);\n  } catch {}\n  return text;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  let input = {};\n  try { input = JSON.parse(readFileSync(0, 'utf8')); } catch {}\n  run(input);\n}\n",
       "config": {
@@ -2146,22 +2063,19 @@
     "use_cases": [
       "Audio tracking of completed parallel tasks",
       "Ordered subagent-end announcements without sound collisions"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Every prompt saved, replayable later",
     "category": "context",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/user-prompt-log.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Persists every user prompt into a per-session JSON file, allowing the exchange history to be retrieved.",
     "hook_type": "UserPromptSubmit",
-    "id": "user-prompt-log-session",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Journalise chaque prompt utilisateur dans .claude/data/sessions/ (UserPromptSubmit)\nimport { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    exists = existsSync,\n    readFile = readFileSync,\n    writeFile = writeFileSync,\n    mkdir = mkdirSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const sessionId = input.session_id ?? 'unknown';\n  const prompt = input.prompt ?? '';\n\n  const dir = join(projectDir, '.claude', 'data', 'sessions');\n  mkdir(dir, { recursive: true });\n\n  const file = join(dir, `${sessionId}.json`);\n  let data = { session_id: sessionId, prompts: [] };\n  if (exists(file)) {\n    try { data = JSON.parse(readFile(file, 'utf8')); } catch {}\n  }\n  data.prompts ??= [];\n  data.prompts.push({ prompt, timestamp: now() });\n  writeFile(file, JSON.stringify(data, null, 2));\n  return data;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -2213,7 +2127,6 @@
       "Audit prompts submitted per session",
       "Replay or analyze a past session"
     ],
-    "votes": 0,
     "is_must": false
   },
   {
@@ -2221,14 +2134,12 @@
     "category": "context",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/user-prompt-name-agent.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Automatically generates a creative one-word name for each session (e.g. Phoenix, Sage, Nova) on the first prompt, for more human-friendly session tracking.",
     "hook_type": "UserPromptSubmit",
-    "id": "user-prompt-llm-agent-name",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Attribue un nom à l'agent pour la session courante (UserPromptSubmit)\nimport { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nconst NAMES = ['Phoenix', 'Sage', 'Nova', 'Echo', 'Atlas', 'Cipher', 'Nexus', 'Oracle', 'Aurora', 'Vortex'];\n\nexport function run(\n  input,\n  {\n    exists = existsSync,\n    readFile = readFileSync,\n    writeFile = writeFileSync,\n    mkdir = mkdirSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n    pickName = () => NAMES[Math.floor(Math.random() * NAMES.length)],\n  } = {},\n) {\n  const sessionId = input.session_id ?? 'unknown';\n  const dir = join(projectDir, '.claude', 'data', 'sessions');\n  mkdir(dir, { recursive: true });\n\n  const file = join(dir, `${sessionId}.json`);\n  let data = { session_id: sessionId };\n  if (exists(file)) {\n    try { data = JSON.parse(readFile(file, 'utf8')); } catch {}\n  }\n\n  if (data.agent_name) return null;\n\n  data.agent_name = pickName();\n  writeFile(file, JSON.stringify(data, null, 2));\n  return `Tu t'appelles **${data.agent_name}** pour cette session.\\n`;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(result);\n}\n",
       "config": {
@@ -2280,7 +2191,6 @@
       "Identify sessions in logs by a memorable name",
       "Personalize subagent TTS announcements"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -2288,14 +2198,12 @@
     "category": "workflow",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/pre-compact-backup.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Automatically backs up the JSONL transcript file before every context compaction, to allow auditing or restoration.",
     "hook_type": "PreCompact",
-    "id": "pre-compact-transcript-backup",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Sauvegarde le résumé de compaction dans un fichier temporaire (PreCompact)\nimport { readFileSync, writeFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    writeFile = writeFileSync,\n    mkdir = mkdirSync,\n    backupDir = '/tmp/claude-compact-backups',\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const summary = input.summary ?? '';\n  const sessionId = input.session_id ?? `session-${Date.now()}`;\n  if (!summary) return null;\n\n  mkdir(backupDir, { recursive: true });\n  const file = join(backupDir, `${sessionId}.json`);\n  writeFile(file, JSON.stringify({ session_id: sessionId, saved_at: now(), summary }, null, 2));\n\n  return { file, message: `[pre-compact-backup] Contexte sauvegardé → ${file}\\n` };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
@@ -2348,7 +2256,6 @@
       "Keep a full history before compaction",
       "Audit long sessions"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -2356,14 +2263,12 @@
     "category": "security",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/permission-auto-allow.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Automatically approves permission requests for read-only operations (Read, Glob, Grep, safe Bash commands) without manual intervention.",
     "hook_type": "PermissionRequest",
-    "id": "permission-request-auto-allow-readonly",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Auto-autorise les outils lecture seule et les commandes Bash sûres (PermissionRequest)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst SAFE_BASH = [\n  /^ls/, /^pwd/, /^echo/, /^cat(?!.*>)/, /^head/, /^tail/, /^wc/,\n  /^which/, /^whereis/, /^file/, /^stat/,\n  /^git\\s+(status|log|diff|show|branch|tag)/,\n  /^npm\\s+(list|ls|outdated|view)/,\n];\n\nconst READ_ONLY_TOOLS = ['Read', 'Glob', 'Grep'];\n\nexport function run(input) {\n  const toolName = input.tool_name || '';\n  const toolInput = input.tool_input || {};\n\n  let allow = READ_ONLY_TOOLS.includes(toolName);\n  if (!allow && toolName === 'Bash') {\n    const cmd = (toolInput.command || '').trim();\n    allow = SAFE_BASH.some((p) => p.test(cmd));\n  }\n\n  return allow\n    ? {\n        hookSpecificOutput: {\n          hookEventName: 'PermissionRequest',\n          decision: { behavior: 'allow' },\n        },\n      }\n    : null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -2416,7 +2321,6 @@
       "Reduce interruptions for non-destructive operations",
       "Automated security policy based on command safety"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -2424,14 +2328,12 @@
     "category": "context",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/post-tool-failure-log.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Records every tool failure into a structured JSON file with timestamp, tool name, input and error, for debugging and auditing.",
     "hook_type": "PostToolUseFailure",
-    "id": "post-tool-failure-log",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Journalise les échecs d'outils pour le débogage (PostToolUseFailure)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    append = appendFileSync,\n    mkdir = mkdirSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const logDir = join(projectDir, '.claude', 'data');\n  mkdir(logDir, { recursive: true });\n\n  const entry = {\n    ts: now(),\n    tool: input.tool_name ?? 'unknown',\n    input: input.tool_input ?? {},\n    error: input.error ?? input.tool_response ?? null,\n  };\n\n  append(join(logDir, 'tool-failures.jsonl'), JSON.stringify(entry) + '\\n');\n  return { entry, message: `[post-tool-failure] Échec journalisé : ${entry.tool}\\n` };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  process.stderr.write(result.message);\n}\n",
       "config": {
@@ -2485,7 +2387,6 @@
       "Debug tools that fail during autonomous sessions",
       "Detect recurring failure patterns"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -2493,14 +2394,12 @@
     "category": "workflow",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/setup-check-deps.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Checks for the required system tools and automatically installs the project dependencies (npm ci, uv sync) at session startup.",
     "hook_type": "SessionStart",
-    "id": "setup-check-install-deps",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Vérifie que les dépendances du projet sont à jour au démarrage de session (SessionStart)\nimport { existsSync, statSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nconst SPECS = [\n  ['pnpm-lock.yaml', 'node_modules', 'pnpm install'],\n  ['package-lock.json', 'node_modules', 'npm ci'],\n  ['yarn.lock', 'node_modules', 'yarn install --frozen-lockfile'],\n  ['requirements.txt', '.venv', 'pip install -r requirements.txt'],\n];\n\nexport function run({\n  exists = existsSync,\n  stat = statSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const warnings = [];\n\n  for (const [lockfile, modulesDir, installCmd] of SPECS) {\n    const lock = join(projectDir, lockfile);\n    const mods = join(projectDir, modulesDir);\n    if (!exists(lock)) continue;\n    if (!exists(mods)) {\n      warnings.push(`[setup-check-deps] ⚠ ${modulesDir} absent — lancez : ${installCmd}\\n`);\n      continue;\n    }\n    if (stat(lock).mtimeMs > stat(mods).mtimeMs) {\n      warnings.push(`[setup-check-deps] ⚠ ${lockfile} plus récent que ${modulesDir} — lancez : ${installCmd}\\n`);\n    }\n  }\n\n  return { warnings, message: warnings.join('') };\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result.message) process.stderr.write(result.message);\n}\n",
       "config": {
@@ -2542,7 +2441,7 @@
     ],
     "slug": "setup-check-install-deps",
     "stack": [
-      "node",
+      "typescript",
       "python"
     ],
     "tags": [
@@ -2558,7 +2457,6 @@
       "Environment always ready as soon as a session opens",
       "Automatic onboarding on a new project"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -2566,14 +2464,12 @@
     "category": "workflow",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/session-end-cleanup.mjs",
         "repo": "https://github.com/disler/claude-code-hooks-mastery"
       }
     ],
     "description": "Automatically removes temporary files (.tmp) and stale artifacts from the logs directory at session end.",
     "hook_type": "SessionEnd",
-    "id": "session-end-cleanup-temp",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Nettoie les fichiers temporaires Claude datant de plus de 24h (SessionEnd)\nimport { readdirSync, statSync, unlinkSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nconst MAX_AGE_MS = 24 * 60 * 60 * 1_000;\nconst PREFIX = 'claude-';\n\nexport function run({\n  readdir = readdirSync,\n  stat = statSync,\n  unlink = unlinkSync,\n  tmp = '/tmp',\n  maxAge = MAX_AGE_MS,\n  now = () => Date.now(),\n} = {}) {\n  let cleaned = 0;\n  try {\n    for (const f of readdir(tmp)) {\n      if (!f.startsWith(PREFIX)) continue;\n      const fp = join(tmp, f);\n      try {\n        const age = now() - stat(fp).mtimeMs;\n        if (age > maxAge) {\n          unlink(fp);\n          cleaned++;\n        }\n      } catch {}\n    }\n  } catch {}\n\n  return cleaned > 0\n    ? { cleaned, message: `[session-end-cleanup] ${cleaned} fichier(s) temporaire(s) supprimé(s).\\n` }\n    : { cleaned: 0 };\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
@@ -2625,7 +2521,6 @@
       "Keep a clean logs directory without manual intervention",
       "Free disk space at the end of a long session"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -2633,14 +2528,12 @@
     "category": "context",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/reinject-after-compact.mjs",
         "repo": "https://code.claude.com/docs/fr/hooks-guide#ce-que-vous-pouvez-automatiser"
       }
     ],
     "description": "Re-injects the project conventions and critical context into the session after Claude Code compacts the context window, preventing the loss of important information.",
     "hook_type": "SessionStart",
-    "id": "session-start-reinject-after-compact",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Réinjecte le contexte sauvegardé avant la dernière compaction (SessionStart)\nimport { readFileSync, existsSync, readdirSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    exists = existsSync,\n    readFile = readFileSync,\n    readdir = readdirSync,\n    backupDir = '/tmp/claude-compact-backups',\n  } = {},\n) {\n  const sessionId = input.session_id ?? '';\n  if (!exists(backupDir)) return null;\n\n  // Cherche le backup de la session courante en priorité, sinon le plus récent\n  let backupFile = sessionId ? join(backupDir, `${sessionId}.json`) : null;\n\n  if (!backupFile || !exists(backupFile)) {\n    const files = readdir(backupDir)\n      .filter((f) => f.endsWith('.json'))\n      .map((f) => ({\n        f,\n        mtime: new Date(readFile(join(backupDir, f), 'utf8').split('\"saved_at\":\"')[1]?.split('\"')[0] ?? 0),\n      }))\n      .sort((a, b) => b.mtime - a.mtime);\n    backupFile = files[0] ? join(backupDir, files[0].f) : null;\n  }\n\n  if (!backupFile || !exists(backupFile)) return null;\n\n  try {\n    const { summary, saved_at } = JSON.parse(readFile(backupFile, 'utf8'));\n    if (summary) {\n      return `## Contexte de la session précédente (avant compaction du ${saved_at})\\n\\n${summary}\\n`;\n    }\n  } catch {\n    // Fichier corrompu — ignorer silencieusement\n  }\n  return null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(result);\n}\n",
       "config": {
@@ -2693,22 +2586,19 @@
       "Recall the project conventions (package manager, code style) after compaction",
       "Re-inject the current sprint or critical tasks",
       "Recall important test or build commands"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Every settings.json change is on the record",
     "category": "workflow",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/config-audit-log.mjs",
         "repo": "https://code.claude.com/docs/fr/hooks-guide#ce-que-vous-pouvez-automatiser"
       }
     ],
     "description": "Records every change to a Claude Code configuration file (settings.json, skills, etc.) into a timestamped audit log for traceability and compliance.",
     "hook_type": "ConfigChange",
-    "id": "config-change-audit-log",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Journalise les changements de configuration Claude Code (ConfigChange)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\nimport { homedir } from 'os';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    append = appendFileSync,\n    mkdir = mkdirSync,\n    home = homedir(),\n    projectDir = process.env.CLAUDE_PROJECT_DIR,\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const logDir = join(home, '.claude');\n  mkdir(logDir, { recursive: true });\n\n  const entry = {\n    ts: now(),\n    project: projectDir?.split('/').pop() ?? 'unknown',\n    change: input.change ?? input,\n  };\n\n  append(join(logDir, 'config-changes.jsonl'), JSON.stringify(entry) + '\\n');\n  return { entry, message: '[config-audit] Changement journalise.\\n' };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  process.stderr.write(result.message);\n}\n",
       "config": {
@@ -2761,7 +2651,6 @@
       "Compliance audit on settings.json changes",
       "Detect unauthorized configuration changes"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -2769,14 +2658,12 @@
     "category": "workflow",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/reload-direnv.mjs",
         "repo": "https://code.claude.com/docs/fr/hooks-guide#ce-que-vous-pouvez-automatiser"
       }
     ],
     "description": "Automatically reloads environment variables via direnv when Claude changes its working directory, ensuring Bash commands use the right environment for the current directory.",
     "hook_type": "CwdChanged",
-    "id": "cwd-changed-reload-direnv",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Recharge direnv quand le répertoire de travail change (CwdChanged)\nimport { readFileSync, existsSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd, cwd) {\n  execSync(cmd, { cwd, stdio: 'ignore', timeout: 5_000 });\n}\n\nexport function run(input, { exec = defaultExec, exists = existsSync } = {}) {\n  const newCwd = input.cwd ?? input.new_cwd ?? process.cwd();\n  const envrc = `${newCwd}/.envrc`;\n  if (!exists(envrc)) return null;\n\n  try {\n    exec('direnv allow .', newCwd);\n    return { message: `[reload-direnv] direnv rechargé dans ${newCwd}\\n` };\n  } catch {\n    // direnv absent — non bloquant\n    return null;\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
@@ -2840,7 +2727,6 @@
       "Automatic .envrc management with direnv",
       "Sync CLAUDE_ENV_FILE with the current directory's environment"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -2848,14 +2734,12 @@
     "category": "workflow",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/auto-allow-exit-plan.mjs",
         "repo": "https://code.claude.com/docs/fr/hooks-guide#ce-que-vous-pouvez-automatiser"
       }
     ],
     "description": "Automatically approves the ExitPlanMode permission request, removing the interactive dialog every time Claude finishes presenting a plan and asks to proceed.",
     "hook_type": "PermissionRequest",
-    "id": "permission-request-auto-allow-exit-plan",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Auto-autorise la sortie du mode plan (PermissionRequest)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nexport function run(input) {\n  const toolName = input.tool_name ?? input.tool ?? '';\n  if (toolName !== 'exit_plan_mode') return null;\n  return {\n    hookSpecificOutput: {\n      hookEventName: 'PermissionRequest',\n      decision: { behavior: 'allow' },\n    },\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -2908,7 +2792,6 @@
       "CI/CD automation with plan mode enabled",
       "Reduce interruptions during intensive interactive sessions"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -2916,14 +2799,12 @@
     "category": "workflow",
     "community_examples": [
       {
-        "added_by": "claude-code-analysis",
         "file_path": ".claude/hooks/bash-command-log.mjs",
         "repo": "https://code.claude.com/docs/fr/hooks-guide#ce-que-vous-pouvez-automatiser"
       }
     ],
     "description": "Records every Bash command executed by Claude into a timestamped log file for audit, debugging and a history of the session's actions.",
     "hook_type": "PostToolUse",
-    "id": "post-bash-command-log",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Journalise toutes les commandes Bash exécutées (PostToolUse Bash)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    append = appendFileSync,\n    mkdir = mkdirSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n    cwd = process.cwd(),\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const command = input.tool_input?.command ?? '';\n  if (!command) return null;\n\n  const logDir = join(projectDir, '.claude', 'data');\n  mkdir(logDir, { recursive: true });\n\n  const entry = {\n    ts: now(),\n    cmd: command.slice(0, 1000),\n    exit: input.tool_response?.exit_code ?? null,\n    cwd,\n  };\n\n  append(join(logDir, 'bash-log.jsonl'), JSON.stringify(entry) + '\\n');\n  return entry;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -2976,7 +2857,6 @@
       "Debug Claude Code sessions after the fact",
       "Action history for compliance or documentation"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -2984,7 +2864,6 @@
     "category": "validation",
     "description": "Runs tsc --noEmit once after a full batch of parallel tool calls that include TypeScript file edits. Avoids redundant per-file tsc invocations and reports type errors back to Claude as context for the next turn.",
     "hook_type": "PostToolBatch",
-    "id": "post-tool-batch-typecheck",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Vérifie les types TypeScript après un lot d'écritures (PostToolBatch)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { stdio: 'pipe', timeout: 30_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  const calls = input.tool_calls ?? [];\n  const hasTs = calls.some(\n    (c) => ['Write', 'Edit'].includes(c.tool_name) && /\\.tsx?$/.test(c.tool_input?.file_path ?? ''),\n  );\n  if (!hasTs) return null;\n\n  try {\n    exec('npx --no-install tsc --noEmit --pretty false 2>&1');\n    return null;\n  } catch (e) {\n    const out = (e.stdout ?? e.stderr ?? '').toString().slice(0, 2000);\n    return {\n      hookSpecificOutput: {\n        hookEventName: 'PostToolBatch',\n        additionalContext: `TypeScript errors after batch edit:\\n${out}`,\n      },\n    };\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -3040,15 +2919,13 @@
       "Run a single TypeScript check after Claude edits multiple .ts/.tsx files in parallel",
       "Surface type errors immediately after batch refactors or code generation",
       "Reduce tsc invocation overhead versus per-file PostToolUse hooks"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Edit .env and Bash picks it up instantly",
     "category": "workflow",
     "description": "Watches .env, .env.local and .envrc files and writes updated KEY=VALUE pairs to CLAUDE_ENV_FILE when any of them change on disk. Subsequent Bash commands automatically pick up the new values without restarting the session.",
     "hook_type": "FileChanged",
-    "id": "file-changed-reload-env",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Recharge les variables d'env d'un fichier modifié dans CLAUDE_ENV_FILE (FileChanged)\nimport { readFileSync, appendFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    readFile = readFileSync,\n    append = appendFileSync,\n    envFile = process.env.CLAUDE_ENV_FILE,\n  } = {},\n) {\n  if (!envFile || input.event === 'unlink') return null;\n\n  try {\n    const content = readFile(input.file_path, 'utf8');\n    const lines = content\n      .split('\\n')\n      .filter((l) => /^[A-Z_a-z][A-Z_a-z0-9]*=/.test(l) && !l.startsWith('#'));\n    for (const line of lines) {\n      append(envFile, `export ${line.trim()}\\n`);\n    }\n    return { count: lines.length, message: `[file-changed-reload-env] reloaded ${lines.length} vars from ${input.file_path}\\n` };\n  } catch (e) {\n    return { error: e.message, message: `[file-changed-reload-env] ${e.message}\\n` };\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
@@ -3103,7 +2980,6 @@
       "Sync .env.local overrides into Claude's Bash environment on the fly",
       "Keep API keys and feature flags up to date during active development"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -3111,7 +2987,6 @@
     "category": "validation",
     "description": "Triggers the project test suite asynchronously whenever a watched source file changes on disk. Results are injected as context for Claude on the next turn, so Claude can react to test failures without being explicitly asked.",
     "hook_type": "FileChanged",
-    "id": "file-changed-run-tests",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Relance les tests quand un fichier change (FileChanged)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { timeout: 90_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  if (input.event === 'unlink') return null;\n\n  try {\n    const out = exec('npm test --if-present 2>&1').toString();\n    return {\n      hookSpecificOutput: {\n        hookEventName: 'FileChanged',\n        additionalContext: `Tests passed after ${input.file_path} changed.\\n${out.slice(-500)}`,\n      },\n    };\n  } catch (e) {\n    const out = (e.stdout ?? e.stderr ?? e.message).toString().slice(0, 1000);\n    return {\n      hookSpecificOutput: {\n        hookEventName: 'FileChanged',\n        additionalContext: `Tests FAILED after ${input.file_path} changed:\\n${out}`,\n      },\n    };\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -3167,15 +3042,13 @@
       "Continuously validate that external file changes don't break tests during a session",
       "Automatically surface test regressions when hot-reloading tools modify source files",
       "Keep Claude informed of test status after every file system change"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Removing a worktree reclaims its disk and containers",
     "category": "workflow",
     "description": "Runs cleanup tasks when a worktree is removed: stops any Docker Compose services declared in the worktree and removes node_modules to reclaim disk space. Prevents orphaned containers and disk bloat after isolation: worktree subagent sessions.",
     "hook_type": "WorktreeRemove",
-    "id": "worktree-remove-cleanup",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Nettoie un worktree supprimé : docker compose down + node_modules (WorktreeRemove)\nimport { readFileSync, existsSync, rmSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 30_000 });\n}\n\nexport function run(input, { exec = defaultExec, exists = existsSync, rm = rmSync } = {}) {\n  const p = input.worktree_path;\n  if (!p) return null;\n\n  const actions = [];\n\n  try {\n    if (exists(join(p, 'docker-compose.yml')) || exists(join(p, 'docker-compose.yaml'))) {\n      exec(`docker compose -f ${p}/docker-compose.yml down --remove-orphans 2>&1`);\n      actions.push('docker-down');\n    }\n  } catch { /* ignore */ }\n\n  try {\n    const nm = join(p, 'node_modules');\n    if (exists(nm)) {\n      rm(nm, { recursive: true, force: true });\n      actions.push('rm-node-modules');\n    }\n  } catch { /* ignore */ }\n\n  return { actions };\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -3229,7 +3102,6 @@
       "Reclaim disk space by removing node_modules after worktree cleanup",
       "Prevent orphaned containers when parallel subagents each run their own stack"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -3237,7 +3109,6 @@
     "category": "documentation",
     "description": "Appends the compaction summary generated by Claude Code to a markdown log file inside the project. Provides a persistent record of what was summarized across context window resets, useful for long-running sessions and post-session review.",
     "hook_type": "PostCompact",
-    "id": "post-compact-save-summary",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Journalise le résumé de compaction dans .claude/compaction-log.md (PostCompact)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join, dirname } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    append = appendFileSync,\n    mkdir = mkdirSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? '.',\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const summary = input.compact_summary ?? '';\n  if (!summary.trim()) return null;\n\n  const logPath = join(projectDir, '.claude', 'compaction-log.md');\n  try { mkdir(dirname(logPath), { recursive: true }); } catch { /* exists */ }\n\n  const entry = `\\n## ${now()} (${input.trigger ?? 'auto'})\\n${summary}\\n`;\n  append(logPath, entry);\n  return entry;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -3290,7 +3161,6 @@
       "Review what Claude summarized at context boundaries for debugging or audit",
       "Reconstruct the timeline of a long session from compaction summaries"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -3298,7 +3168,6 @@
     "category": "notification",
     "description": "Fires a desktop notification via a terminal escape sequence when Claude Code hits an API rate limit. Lets you step away and come back when the quota resets without polling the terminal.",
     "hook_type": "StopFailure",
-    "id": "stop-failure-rate-limit-alert",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// StopFailure (rate_limit) : déclenche une notification bureau via OSC-9\nimport { fileURLToPath } from 'url';\n\nexport function run() {\n  const seq = '\\x1b]9;Claude Code — rate limit hit, paused\\x07';\n  return { terminalSequence: seq };\n}\n\n/* v8 ignore next 3 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  process.stdout.write(JSON.stringify(run()));\n}\n",
       "config": {
@@ -3353,7 +3222,6 @@
       "Avoid missing rate-limit pauses during long autonomous sessions",
       "Works in iTerm2, WezTerm, Windows Terminal and other OSC-9 compatible terminals"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -3361,7 +3229,6 @@
     "category": "workflow",
     "description": "Appends every API error (rate limit, auth failure, billing, server error, etc.) to a persistent log file with timestamp, error type, details and session ID. Enables post-mortem analysis of failed sessions.",
     "hook_type": "StopFailure",
-    "id": "stop-failure-log-api-errors",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Journalise les erreurs d'API à l'arrêt en échec (StopFailure)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join, dirname } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    append = appendFileSync,\n    mkdir = mkdirSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? '.',\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const logPath = join(projectDir, '.claude', 'api-errors.log');\n  try { mkdir(dirname(logPath), { recursive: true }); } catch { /* exists */ }\n\n  const line = `${now()} | ${input.error} | ${input.error_details ?? ''} | session:${input.session_id}\\n`;\n  append(logPath, line);\n  return line;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -3415,7 +3282,6 @@
       "Diagnose billing or authentication issues in CI/CD pipelines",
       "Correlate API failures with specific session IDs for debugging"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -3423,7 +3289,6 @@
     "category": "workflow",
     "description": "Blocks task creation when the subject does not start with a ticket reference in the format [PREFIX-123]. Ensures every agent-created task is traceable to a project management ticket before it enters the queue.",
     "hook_type": "TaskCreated",
-    "id": "task-created-naming-convention",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Impose une référence de ticket en tête du sujet d'une tâche (TaskCreated)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nexport function run(input) {\n  const subject = input.task_subject ?? '';\n  if (/^\\[[A-Z]+-\\d+\\]/.test(subject)) return null;\n  return {\n    exitCode: 2,\n    message:\n      `Task subject must start with a ticket reference, e.g. \"[PROJ-123] ${subject}\". ` +\n      'Update the subject to include a valid ticket number.',\n  };\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) {\n    process.stderr.write(result.message);\n    process.exit(result.exitCode);\n  }\n}\n",
       "config": {
@@ -3476,15 +3341,13 @@
       "Require ticket numbers on all tasks created by agent teams (e.g. [PROJ-42])",
       "Enforce consistent task naming in multi-agent CI pipelines",
       "Prevent orphaned tasks with no traceability to Linear, Jira or GitHub issues"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "No task closes on a red build",
     "category": "validation",
     "description": "Blocks a task from being marked as completed if the test suite fails. The agent receives the test output as feedback and must fix the failures before it can close the task, enforcing a green-build policy for every unit of work.",
     "hook_type": "TaskCompleted",
-    "id": "task-completed-test-gate",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Bloque la complétion d'une tâche si les tests échouent (TaskCompleted)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { stdio: 'pipe', timeout: 120_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  try {\n    exec('npm test --if-present 2>&1');\n    return null;\n  } catch (e) {\n    const out = (e.stdout ?? e.stderr ?? e.message).toString().slice(0, 800);\n    return {\n      exitCode: 2,\n      message: `Tests must pass before completing \"${input.task_subject}\".\\n${out}`,\n    };\n  }\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) {\n    process.stderr.write(result.message);\n    process.exit(result.exitCode);\n  }\n}\n",
       "config": {
@@ -3538,15 +3401,13 @@
       "Prevent agents from closing tasks with broken tests in multi-agent pipelines",
       "Enforce a green-build policy without human review for every agent task",
       "Surface test failures back to the agent as actionable feedback"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Auto-attach a checklist to any slash command",
     "category": "context",
     "description": "Injects skill-specific additional context whenever a slash command expands into a prompt. A configurable map lets you attach focused instructions (security checklist, style guide, domain rules) to specific skills without editing their definition.",
     "hook_type": "UserPromptExpansion",
-    "id": "user-prompt-expansion-skill-context",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Injecte du contexte additionnel lors de l'expansion de certains skills (UserPromptExpansion)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\n// Associe un nom de skill au contexte à injecter\nconst CONTEXT_MAP = {\n  'code-review': 'Check for security vulnerabilities, adherence to SOLID principles, and the conventions in CLAUDE.md.',\n  'security-review': 'Follow OWASP Top 10. Flag hardcoded secrets, injection risks, and insecure dependencies.',\n};\n\nexport function run(input) {\n  const skill = input.command_name ?? '';\n  const ctx = CONTEXT_MAP[skill];\n  if (!ctx) return null;\n  return {\n    hookSpecificOutput: {\n      hookEventName: 'UserPromptExpansion',\n      additionalContext: ctx,\n    },\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -3598,15 +3459,13 @@
       "Attach a security checklist automatically when /security-review is invoked",
       "Inject the team coding style guide when /code-review runs",
       "Pass domain-specific constraints to any skill without modifying its source"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "See what auto-mode silently blocked",
     "category": "workflow",
     "description": "Appends every auto-mode permission denial to a log file with timestamp, tool name, input and denial reason. Provides visibility into what the auto-mode classifier is blocking, helping you tune allow/deny rules over time.",
     "hook_type": "PermissionDenied",
-    "id": "permission-denied-auto-mode-log",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Journalise les permissions refusées (PermissionDenied)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join, dirname } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    append = appendFileSync,\n    mkdir = mkdirSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? '.',\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const logPath = join(projectDir, '.claude', 'permission-denied.log');\n  try { mkdir(dirname(logPath), { recursive: true }); } catch { /* exists */ }\n\n  const line = `${now()} | ${input.tool_name} | ${JSON.stringify(input.tool_input)} | ${input.reason}\\n`;\n  append(logPath, line);\n  return line;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -3659,15 +3518,13 @@
       "Understand which tool calls auto-mode is silently blocking in autonomous sessions",
       "Tune allow/deny rules by reviewing the denial log after a session",
       "Audit autonomous agent actions for compliance in CI/CD environments"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Fresh clone opens with node_modules ready",
     "category": "workflow",
     "description": "Detects the project's package manager from lock files (pnpm, yarn, npm) and runs a frozen install on first session startup. Ensures Claude Code always starts with a complete node_modules without requiring a manual install step.",
     "hook_type": "SessionStart",
-    "id": "setup-install-deps",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Installe les dépendances au démarrage si node_modules est absent (SessionStart/WorktreeCreate).\n// Dans un worktree distinct, update-deps.mjs gère l'install en mode détaché — ce hook\n// s'abstient pour éviter la race condition (deux pnpm install concurrents → ENOTEMPTY).\nimport { readFileSync, existsSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nexport function run(input, { exec, exists = existsSync } = {}) {\n  const cwd = input.cwd;\n  const has = (f) => exists(`${cwd}/${f}`);\n\n  // Skip in a distinct worktree: update-deps.mjs already spawned pnpm there.\n  try {\n    const list = execSync('git worktree list', { cwd, encoding: 'utf8', timeout: 5_000 }).trim();\n    const mainDir = list.split('\\n')[0]?.split(/\\s+/)[0] ?? '';\n    if (mainDir && mainDir !== cwd) return null;\n  } catch { /* not a git repo — fall through */ }\n\n  if (has('node_modules')) return null; // already installed\n\n  let cmd = null;\n  if (has('pnpm-lock.yaml')) cmd = 'pnpm install --frozen-lockfile';\n  else if (has('yarn.lock')) cmd = 'yarn install --frozen-lockfile';\n  else if (has('package-lock.json')) cmd = 'npm ci';\n  else if (has('package.json')) cmd = 'npm install';\n\n  if (!cmd) return null;\n\n  const doExec = exec ?? ((c) => execSync(c, { cwd, stdio: 'inherit', timeout: 180_000 }));\n  try {\n    doExec(cmd);\n    return { cmd, message: `[setup-install-deps] Running: ${cmd}\\n` };\n  } catch (e) {\n    return { cmd, error: e.message, message: `[setup-install-deps] Failed: ${e.message}\\n` };\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
@@ -3710,7 +3567,7 @@
     ],
     "slug": "setup-install-deps",
     "stack": [
-      "node"
+      "typescript"
     ],
     "tags": [
       "setup",
@@ -3726,7 +3583,6 @@
       "Guarantee node_modules is present before any tool calls run in a new project",
       "Unify the dev environment setup across team members via a shared hook"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -3734,7 +3590,6 @@
     "category": "security",
     "description": "Intercepts assistant message text as it streams to the screen and replaces patterns matching API keys, GitHub tokens and Bearer credentials with [REDACTED] placeholders. The transcript and model context retain the original text; only the rendered display is sanitized.",
     "hook_type": "MessageDisplay",
-    "id": "message-display-redact-secrets",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Caviarde les secrets dans le contenu affiché (MessageDisplay)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nexport function run(input) {\n  const delta = input.delta ?? '';\n\n  const redacted = delta\n    .replace(/sk-(?:ant-api03-|proj-)[A-Za-z0-9_-]{20,}/g, '[REDACTED-ANTHROPIC-KEY]')\n    .replace(/sk-[A-Za-z0-9]{20,}/g, '[REDACTED-API-KEY]')\n    .replace(/ghp_[A-Za-z0-9]{36}/g, '[REDACTED-GH-TOKEN]')\n    .replace(/ghs_[A-Za-z0-9]{36}/g, '[REDACTED-GH-TOKEN]')\n    .replace(/Bearer [A-Za-z0-9_\\-.]{20,}/g, 'Bearer [REDACTED]');\n\n  if (redacted === delta) return null;\n  return {\n    hookSpecificOutput: {\n      hookEventName: 'MessageDisplay',\n      displayContent: redacted,\n    },\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -3788,7 +3643,6 @@
       "Sanitize assistant output that echoes back tool results containing credentials",
       "Compliance screen recording: ensure no secrets appear in recorded sessions"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -3796,7 +3650,6 @@
     "category": "workflow",
     "description": "Records every CLAUDE.md and .claude/rules/*.md file loaded into context to a timestamped audit log. Captures the file path, memory scope (User/Project/Local/Managed) and load reason, providing full traceability of which instructions governed each session.",
     "hook_type": "InstructionsLoaded",
-    "id": "instructions-loaded-audit-log",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Journalise le chargement d'instructions / mémoire (InstructionsLoaded)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join, dirname } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    append = appendFileSync,\n    mkdir = mkdirSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? '.',\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const logPath = join(projectDir, '.claude', 'instructions-audit.log');\n  try { mkdir(dirname(logPath), { recursive: true }); } catch { /* exists */ }\n\n  const line = `${now()} | ${input.memory_type} | ${input.load_reason} | ${input.file_path}\\n`;\n  append(logPath, line);\n  return line;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
@@ -3850,7 +3703,6 @@
       "Debug unexpected model behaviour by reviewing which instruction files were loaded",
       "Track lazy-loaded nested CLAUDE.md files in monorepos for instruction coverage"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -3859,7 +3711,6 @@
     "community_examples": [],
     "description": "After every Python file write or edit, runs ruff format via uv to apply consistent style without any agent intervention.",
     "hook_type": "PostToolUse",
-    "id": "post-write-ruff-format",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n\nif (!filePath.endsWith('.py')) process.exit(0);\n\ntry {\n  execSync(`uv run ruff format \"${filePath}\"`, { timeout: 15_000, stdio: 'pipe' });\n} catch {\n  // uv/ruff not installed — skip silently\n}\n",
       "config": {
@@ -3916,7 +3767,6 @@
       "Consistent formatting across a team",
       "Reduced review noise on style changes"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -3925,7 +3775,6 @@
     "community_examples": [],
     "description": "Runs ruff check --fix on the modified Python file so lint violations are reported to the agent immediately and auto-fixable rules are applied inline.",
     "hook_type": "PostToolUse",
-    "id": "post-write-ruff-check",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n\nif (!filePath.endsWith('.py')) process.exit(0);\n\ntry {\n  execSync(`uv run ruff check --fix \"${filePath}\"`, {\n    encoding: 'utf8',\n    timeout: 15_000,\n    stdio: 'pipe',\n  });\n} catch (e) {\n  if (e.stdout) process.stderr.write(`[ruff-check] ${e.stdout}\\n`);\n}\n",
       "config": {
@@ -3982,8 +3831,7 @@
       "Catch unused imports and undefined names before they accumulate",
       "Auto-fix trivial violations (isort, unnecessary pass, etc.)",
       "Enforce project ruff rules without a CI round-trip"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Python type errors caught right after an edit",
@@ -3991,7 +3839,6 @@
     "community_examples": [],
     "description": "Runs pyright via uv on the modified .py file and reports type errors to the agent so they are fixed within the same loop.",
     "hook_type": "PostToolUse",
-    "id": "post-edit-pyright",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n\nif (!filePath.endsWith('.py')) process.exit(0);\n\ntry {\n  execSync(`uv run pyright \"${filePath}\"`, {\n    encoding: 'utf8',\n    timeout: 30_000,\n    stdio: 'pipe',\n  });\n} catch (e) {\n  if (e.stdout) process.stderr.write(`[pyright] ${e.stdout}\\n`);\n}\n",
       "config": {
@@ -4048,8 +3895,7 @@
       "Strict typing in Python projects with pyright",
       "Catch type mismatches immediately after an edit",
       "Pair with ruff for a complete Python quality pipeline"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Forces uv, ends pip/poetry drift",
@@ -4057,7 +3903,6 @@
     "community_examples": [],
     "description": "Blocks pip install, pip3 install and poetry add/install commands and redirects the agent to the uv equivalent. Prevents virtual environment fragmentation.",
     "hook_type": "PreToolUse",
-    "id": "pre-bash-enforce-uv",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nif (input.tool_name !== 'Bash') process.exit(0);\n\nconst cmd = input.tool_input?.command ?? '';\n\nconst BLOCKED = [\n  { re: /(^|[;&|\\s`])pip\\s+install\\b/,    fix: 'uv add' },\n  { re: /(^|[;&|\\s`])pip3\\s+install\\b/,   fix: 'uv add' },\n  { re: /(^|[;&|\\s`])poetry\\s+add\\b/,     fix: 'uv add' },\n  { re: /(^|[;&|\\s`])poetry\\s+install\\b/, fix: 'uv sync' },\n];\n\nconst hit = BLOCKED.find(({ re }) => re.test(cmd));\nif (hit) {\n  process.stdout.write(JSON.stringify({\n    decision: 'block',\n    reason: `Use '${hit.fix}' instead — this project manages dependencies with uv.`,\n  }));\n}\n",
       "config": {
@@ -4115,7 +3960,6 @@
       "Avoid pip/uv conflicts in the same virtualenv",
       "Enforce team tooling conventions without having to remind the agent"
     ],
-    "votes": 0,
     "is_must": true
   },
   {
@@ -4124,7 +3968,6 @@
     "community_examples": [],
     "description": "When the agent finishes, runs the full pytest suite via uv. If tests fail, Claude re-enters and receives the failure output as context to fix the regressions.",
     "hook_type": "Stop",
-    "id": "stop-pytest",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\n\nconst cwd = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\n\nconst isPython = ['pyproject.toml', 'setup.py', 'pytest.ini', 'setup.cfg']\n  .some(f => existsSync(`${cwd}/${f}`));\nif (!isPython) process.exit(0);\n\ntry {\n  execSync('uv run pytest --tb=short -q', {\n    encoding: 'utf8',\n    timeout: 120_000,\n    cwd,\n    stdio: 'inherit',\n  });\n} catch (e) {\n  process.exit(e.status ?? 1);\n}\n",
       "config": {
@@ -4181,15 +4024,13 @@
       "Regression safety net on every agent turn",
       "TDD loop: write code until tests go green",
       "Catch side-effects of refactors before control returns to the user"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Start on main and you're moved to a worktree",
     "category": "workflow",
     "description": "At session start, detects if the current branch is main/master and automatically creates a dated git worktree (work/session-YYYYMMDD). The agent is informed of the new path and instructed to work there instead of the main repo.",
     "hook_type": "SessionStart",
-    "id": "session-start-worktree-if-main",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// SessionStart: crée un worktree isolé si la session démarre sur main/master.\n// Nettoie automatiquement les worktrees dont la branche a été mergée dans main.\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nfunction defaultAddWorktree(path, branchName) {\n  execSync(`git worktree add \"${path}\" -b \"${branchName}\"`, {\n    encoding: 'utf8',\n    timeout: 15_000,\n    stdio: ['ignore', 'ignore', 'ignore'],\n  });\n}\n\nfunction defaultRemoveWorktree(mainRoot, wtPath, branchName) {\n  try { execSync(`git -C \"${mainRoot}\" worktree remove --force \"${wtPath}\"`, { timeout: 10_000 }); } catch { /* ignore */ }\n  try { execSync(`git -C \"${mainRoot}\" branch -D \"${branchName}\"`, { timeout: 5_000 }); } catch { /* ignore */ }\n}\n\nexport function run({\n  exec = defaultExec,\n  addWorktree = defaultAddWorktree,\n  removeWorktree = defaultRemoveWorktree,\n  exists = existsSync,\n  now = () => new Date(),\n} = {}) {\n  const branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');\n  if (!branch || !/^(main|master)$/.test(branch)) return null;\n\n  const currentRoot = exec('git rev-parse --show-toplevel');\n  if (!currentRoot) return null;\n\n  // Ne pas agir si on est déjà dans un worktree secondaire\n  const worktreeList = exec('git worktree list');\n  const mainRoot = worktreeList.split('\\n')[0]?.split(/\\s+/)[0] ?? '';\n  if (mainRoot !== currentRoot) return null;\n\n  // Synchroniser main avec le remote avant de créer le worktree\n  exec('git fetch --quiet origin main');\n  exec('git merge --ff-only origin/main');\n\n  // Nettoyer les worktrees dont la branche est fusionnée dans origin/main\n  const mergedBranches = new Set(\n    exec('git branch --merged origin/main')\n      .split('\\n')\n      .map((b) => b.trim().replace(/^\\*\\s*/, ''))\n      .filter(Boolean),\n  );\n\n  const secondaryLines = exec('git worktree list').split('\\n').slice(1);\n  for (const line of secondaryLines) {\n    if (!line.trim()) continue;\n    const parts = line.split(/\\s+/);\n    const wtPath = parts[0];\n    const wtBranch = (parts[2] ?? '').replace(/^\\[|\\]$/g, '');\n    if (wtBranch && mergedBranches.has(wtBranch)) {\n      removeWorktree(mainRoot, wtPath, wtBranch);\n    }\n  }\n\n  const date = now().toISOString().slice(0, 10).replace(/-/g, '');\n  const projectName = currentRoot.split('/').pop() ?? 'project';\n  const branchName = `work/session-${date}`;\n  const worktreePath = `${currentRoot}/../${projectName}-work-${date}`;\n\n  // Vérifier si un worktree pour aujourd'hui existe encore (non mergé)\n  const freshList = exec('git worktree list');\n  const todayLine = freshList.split('\\n').slice(1).find((l) => l.includes(branchName));\n  if (todayLine) {\n    const wtPath = todayLine.split(/\\s+/)[0];\n    return [\n      `## Worktree session existant`,\n      `- Session démarrée sur \\`main\\`. Le worktree du jour est déjà actif.`,\n      `- **Chemin** : \\`${wtPath}\\``,\n      `- **Branche** : \\`${branchName}\\``,\n      `- Effectuez vos modifications dans ce worktree, pas dans le dépôt principal.`,\n    ].join('\\n') + '\\n';\n  }\n\n  // Créer un worktree frais depuis main\n  try {\n    addWorktree(worktreePath, branchName);\n  } catch {\n    return [\n      `## ⚠️  Session démarrée sur \\`main\\``,\n      `- Impossible de créer un worktree automatiquement (branche \\`${branchName}\\` peut-être déjà existante).`,\n      `- Créez manuellement un worktree ou une branche avant de modifier des fichiers.`,\n    ].join('\\n') + '\\n';\n  }\n\n  if (!exists(worktreePath)) return null;\n\n  return [\n    `## Worktree isolé créé automatiquement`,\n    `- Session démarrée sur \\`main\\` : un worktree a été créé pour isoler les modifications.`,\n    `- **Chemin** : \\`${worktreePath}\\``,\n    `- **Branche** : \\`${branchName}\\``,\n    `- Travaillez dans ce worktree — évitez de modifier des fichiers dans le dépôt principal.`,\n  ].join('\\n') + '\\n';\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) process.stdout.write(result);\n}\n",
       "config": {
@@ -4244,15 +4085,13 @@
       "Isolated sessions",
       "Accidental main commits prevention",
       "Multi-session workflows"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Always start from a fresh, up-to-date main",
     "category": "context",
     "description": "At session start on main/master, silently fetches the remote and fast-forward pulls if the branch is behind. If the branch diverges, injects a warning instead of pulling. Ensures the agent always works from a fresh baseline.",
     "hook_type": "SessionStart",
-    "id": "session-start-pull-if-main",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// SessionStart: si on est sur main/master et qu'il y a des commits distants, lance git pull\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nfunction defaultPull() {\n  execSync('git pull --ff-only --quiet', { encoding: 'utf8', timeout: 30_000 });\n}\n\nexport function run({ exec = defaultExec, pull = defaultPull } = {}) {\n  const branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');\n  if (!branch || !/^(main|master)$/.test(branch)) return null;\n\n  // Vérifier qu'un remote existe\n  const remote = exec('git remote');\n  if (!remote) return null;\n\n  // Fetch silencieux pour connaître l'état du remote\n  exec('git fetch --quiet 2>/dev/null');\n\n  const localHash = exec('git rev-parse HEAD');\n  const remoteHash = exec('git rev-parse @{u} 2>/dev/null');\n  if (!remoteHash || localHash === remoteHash) return null;\n\n  // Vérifier qu'on n'est pas en avance sur le remote (merge sûr)\n  const behind = exec('git rev-list HEAD..@{u} --count');\n  const ahead = exec('git rev-list @{u}..HEAD --count');\n  if (parseInt(behind, 10) === 0) return null;\n\n  if (parseInt(ahead, 10) > 0) {\n    // Divergence — ne pas pull automatiquement\n    return [\n      `## ⚠️  Branche \\`${branch}\\` diverge du remote`,\n      `- ${behind} commit(s) en retard, ${ahead} commit(s) en avance.`,\n      `- Résolvez la divergence avant de continuer (\\`git pull --rebase\\` ou merge manuel).`,\n    ].join('\\n') + '\\n';\n  }\n\n  // Pull sans divergence\n  try {\n    pull();\n  } catch {\n    return `## ⚠️  \\`git pull\\` a échoué sur \\`${branch}\\` — synchronisez manuellement.\\n`;\n  }\n\n  return [\n    `## Dépôt synchronisé`,\n    `- \\`${behind}\\` commit(s) récupéré(s) depuis le remote sur \\`${branch}\\`.`,\n  ].join('\\n') + '\\n';\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) process.stdout.write(result);\n}\n",
       "config": {
@@ -4307,15 +4146,13 @@
       "Shared branch synchronization",
       "CI/CD pre-work sync",
       "Prevent stale-code edits"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Warns you about that WIP stash you forgot",
     "category": "context",
     "description": "At session start, scans the git stash list and injects a warning if any stash is older than 3 days. Prevents the common workflow trap of forgetting work-in-progress left in a stash.",
     "hook_type": "SessionStart",
-    "id": "session-start-stash-warning",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// SessionStart: avertit si des stashs Git non récupérés traînent depuis plusieurs jours\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst DAYS = 3;\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 5_000 }).trim(); } catch { return ''; }\n}\n\nexport function run({ exec = defaultExec, now = () => Date.now() } = {}) {\n  const stashList = exec('git stash list --format=\"%gd|%ci|%gs\"');\n  if (!stashList) return null;\n\n  const currentTime = now();\n  const threshold = DAYS * 24 * 60 * 60 * 1000;\n\n  const stale = stashList\n    .split('\\n')\n    .map((line) => {\n      const [ref, date, ...msgParts] = line.split('|');\n      const age = currentTime - new Date(date).getTime();\n      return { ref, date: date?.trim(), msg: msgParts.join('|').trim(), age };\n    })\n    .filter((s) => s.age > threshold);\n\n  if (stale.length === 0) return null;\n\n  const lines = [\n    `## ⚠️  Stashs Git oubliés (${stale.length})`,\n    `- ${stale.length} stash(s) de plus de ${DAYS} jours détecté(s) :`,\n  ];\n\n  for (const s of stale.slice(0, 5)) {\n    const days = Math.floor(s.age / (24 * 60 * 60 * 1000));\n    lines.push(`  - \\`${s.ref}\\` (${days}j) — ${s.msg}`);\n  }\n\n  lines.push(`- Utilisez \\`git stash list\\` pour les voir, \\`git stash pop\\` ou \\`git stash drop\\` pour les gérer.`);\n\n  return lines.join('\\n') + '\\n';\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) process.stdout.write(result);\n}\n",
       "config": {
@@ -4370,15 +4207,13 @@
       "Stash hygiene",
       "Context resumption",
       "Long-running projects"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Blocks edits on main until you branch",
     "category": "security",
     "description": "Blocks any Write or Edit tool call when the current branch is main/master and the working directory is the principal repo (not a worktree). Forces the agent to create a branch or worktree before making file changes.",
     "hook_type": "PreToolUse",
-    "id": "pre-write-main-guard",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// PreToolUse Write|Edit: bloque la première écriture sur main si aucun worktree n'est actif\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 5_000 }).trim(); } catch { return ''; }\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  const branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');\n  if (!branch || !/^(main|master)$/.test(branch)) return null;\n\n  const worktreeList = exec('git worktree list');\n  const currentRoot = exec('git rev-parse --show-toplevel');\n  const mainRoot = worktreeList.split('\\n')[0]?.split(/\\s+/)[0] ?? '';\n  if (mainRoot !== currentRoot) return null;\n\n  const filePath = input.tool_input?.file_path ?? '(fichier inconnu)';\n\n  // Autoriser les écritures vers des fichiers dans un worktree (hors du repo principal)\n  if (filePath !== '(fichier inconnu)' && !filePath.startsWith(mainRoot + '/')) return null;\n\n  return {\n    decision: 'block',\n    reason: `Écriture sur \\`${branch}\\` bloquée : vous êtes sur la branche principale.\\nCréez un worktree (\\`git worktree add ../mon-fix -b feat/mon-fix\\`) ou changez de branche avant de modifier \\`${filePath}\\`.`,\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -4434,8 +4269,7 @@
       "Branch discipline enforcement",
       "Pair with worktree auto-create hook",
       "Strict repository governance"
-    ],
-    "votes": 0
+    ]
   },
   {
     "slug": "registry-changed-auto-sync",
@@ -4448,7 +4282,6 @@
     ],
     "hook_type": "FileChanged",
     "trigger": "*.mjs|registry.json",
-    "stack": null,
     "tags": [
       "automation",
       "sync",
@@ -4506,7 +4339,6 @@
     ],
     "hook_type": "PreToolUse",
     "trigger": "Bash",
-    "stack": null,
     "tags": [
       "git",
       "github",
@@ -4566,7 +4398,6 @@
     ],
     "hook_type": "PreToolUse",
     "trigger": "WebSearch",
-    "stack": null,
     "tags": [
       "search",
       "context",
@@ -4579,7 +4410,6 @@
       "Ensure changelog and release note searches return latest versions"
     ],
     "is_must": false,
-    "votes": 0,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/websearch-temporal-context.mjs",
@@ -4612,7 +4442,6 @@
     ],
     "hook_type": "SessionStart",
     "trigger": "*",
-    "stack": null,
     "tags": [
       "session",
       "context",
@@ -4625,7 +4454,6 @@
       "Projects with explicit agent coordination rules"
     ],
     "is_must": false,
-    "votes": 0,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/agents-md-loader.mjs",
@@ -4657,7 +4485,6 @@
     ],
     "hook_type": "WorktreeCreate",
     "trigger": "*",
-    "stack": null,
     "tags": [
       "worktree",
       "ghostty",
@@ -4670,7 +4497,6 @@
       "Speed up context-switching between parallel feature branches"
     ],
     "is_must": false,
-    "votes": 0,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/worktree-ghostty.mjs",
@@ -4719,7 +4545,6 @@
       "Enforce next/image and next/link usage"
     ],
     "is_must": false,
-    "votes": 0,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/nextjs-quality-checker.mjs",
@@ -4743,10 +4568,9 @@
   },
   {
     "benefit": "Read any PDF, DOCX or PPTX as clean Markdown — slash token usage on binary files",
-    "category": "context-optimization",
+    "category": "context",
     "description": "Intercepts Read tool calls on binary documents (PDF, DOCX, PPTX, ODT, RTF, XLSX, EPUB, HTML) and converts them to Markdown via pandoc or pdftotext before Claude processes them. Injects the converted content directly, eliminating the need for Claude to parse raw binary data and drastically reducing token consumption. Falls back silently if no conversion tool is available.",
     "hook_type": "PreToolUse",
-    "id": "pre-read-file-to-markdown",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Convertit PDF/DOCX/PPTX et autres fichiers binaires en Markdown avant lecture (PreToolUse Read)\nimport { readFileSync, existsSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\nimport { extname, basename } from 'path';\n\nconst MAX_CHARS = 50_000;\n\nconst SUPPORTED = new Set(['pdf', 'docx', 'pptx', 'odt', 'rtf', 'doc', 'ppt', 'xlsx', 'epub', 'html', 'htm']);\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { encoding: 'utf8', timeout: 30_000 }).trim();\n}\n\nfunction hasBinary(name, exec) {\n  try { exec(`which ${name}`); return true; } catch { return false; }\n}\n\nexport function run(input, { exec = defaultExec, exists = existsSync } = {}) {\n  if (input.tool_name !== 'Read') return null;\n\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath) return null;\n\n  const ext = extname(filePath).toLowerCase().replace('.', '');\n  if (!SUPPORTED.has(ext)) return null;\n\n  if (!exists(filePath)) return null;\n\n  const hasPdftotext = ext === 'pdf' && hasBinary('pdftotext', exec);\n  const hasPandoc = hasBinary('pandoc', exec);\n\n  if (!hasPdftotext && !hasPandoc) return null;\n\n  let markdown;\n  try {\n    if (ext === 'pdf' && hasPdftotext) {\n      markdown = exec(`pdftotext \"${filePath}\" -`);\n    } else if (hasPandoc) {\n      markdown = exec(`pandoc --to markdown --wrap=none \"${filePath}\"`);\n    } else {\n      return null;\n    }\n  } catch {\n    return null;\n  }\n\n  if (!markdown || !markdown.trim()) return null;\n\n  let content = markdown.trim();\n  let truncated = false;\n  if (content.length > MAX_CHARS) {\n    content = content.slice(0, MAX_CHARS);\n    truncated = true;\n  }\n\n  const name = basename(filePath);\n  const suffix = truncated ? ` (truncated to ${MAX_CHARS} chars)` : '';\n  const header = `[file-to-markdown] \\`${name}\\` converted to Markdown${suffix}:\\n\\n`;\n\n  return { decision: 'block', reason: header + content };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -4787,15 +4611,13 @@
       "Reading PDF documentation without wasting tokens on binary encoding",
       "Analysing Word or PowerPoint files in agentic workflows",
       "Reducing context window usage when processing office documents"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Stop Claude from wasting tokens trying to read .exe, .pyc, .pkl or .zip files",
-    "category": "context-optimization",
+    "category": "context",
     "description": "Intercepts Read tool calls on binary files (executables, compiled bytecode, archives, databases, ML model files, WebAssembly) and immediately blocks them with a helpful message. Claude cannot process binary content meaningfully — this hook prevents it from consuming tokens on garbage data and suggests Bash alternatives like `file` or `ls -lh`.",
     "hook_type": "PreToolUse",
-    "id": "pre-read-block-binary",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Bloque les lectures de fichiers binaires inutilisables par Claude (PreToolUse Read)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\nimport { extname, basename } from 'path';\n\nconst BINARY_EXTENSIONS = new Set([\n  // Exécutables et librairies compilées\n  'exe', 'dll', 'so', 'dylib', 'bin',\n  // Bytecode compilé\n  'pyc', 'pyo', 'pyd', 'class', 'o', 'a', 'lib', 'obj',\n  // Archives\n  'zip', 'tar', 'gz', 'bz2', 'xz', '7z', 'rar', 'jar', 'war', 'ear',\n  // Bases de données\n  'db', 'sqlite', 'sqlite3',\n  // Modèles ML / artefacts\n  'pkl', 'pickle', 'pt', 'pth', 'h5', 'pb', 'onnx', 'npy', 'npz',\n  // WebAssembly et autres\n  'wasm', 'node',\n]);\n\nexport function run(input) {\n  if (input.tool_name !== 'Read') return null;\n\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath) return null;\n\n  const ext = extname(filePath).toLowerCase().replace('.', '');\n  if (!BINARY_EXTENSIONS.has(ext)) return null;\n\n  const name = basename(filePath);\n  return {\n    decision: 'block',\n    reason: `[block-binary] \\`${name}\\` is a binary file (.${ext}) — Claude cannot process it meaningfully. Inspect metadata with Bash instead (e.g. \\`file\\`, \\`ls -lh\\`).`,\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -4835,15 +4657,13 @@
       "Preventing token waste on .pyc/.class bytecode files",
       "Blocking reads of ML model weights (.pkl, .pt, .onnx)",
       "Stopping accidental reads of archives or compiled binaries"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Get a schema + row count instead of dumping 10 000 lines of JSON into context",
-    "category": "context-optimization",
+    "category": "context",
     "description": "Intercepts Read calls on large JSON, CSV, JSONL or TSV files (> 50 KB) and replaces the raw content with a compact summary: array length + item schema for JSON, headers + first 5 rows + total row count for CSV, first 3 line schemas for JSONL. Falls back silently for small files or parse errors.",
     "hook_type": "PreToolUse",
-    "id": "pre-read-json-csv-compact",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Résume les grands fichiers JSON/CSV/JSONL avant lecture pour économiser le contexte (PreToolUse Read)\nimport { readFileSync, existsSync, statSync } from 'fs';\nimport { fileURLToPath } from 'url';\nimport { extname, basename } from 'path';\n\nconst BYTE_THRESHOLD = 50_000;\nconst CSV_PREVIEW_ROWS = 5;\nconst JSONL_PREVIEW_LINES = 3;\n\nfunction inferJsonSchema(value, depth = 0) {\n  if (depth > 2) return typeof value;\n  if (value === null) return 'null';\n  if (Array.isArray(value)) {\n    const inner = value.length ? inferJsonSchema(value[0], depth + 1) : 'unknown';\n    return `Array<${inner}> (${value.length} items)`;\n  }\n  if (typeof value === 'object') {\n    const keys = Object.keys(value).slice(0, 12);\n    const fields = keys.map((k) => `${k}: ${inferJsonSchema(value[k], depth + 1)}`);\n    const extra = Object.keys(value).length > 12 ? ` … +${Object.keys(value).length - 12} more` : '';\n    return `{ ${fields.join(', ')}${extra} }`;\n  }\n  return typeof value;\n}\n\nfunction summarizeJson(raw, filePath) {\n  let parsed;\n  try { parsed = JSON.parse(raw); } catch { return null; }\n\n  const lines = raw.split('\\n').length;\n  const bytes = Buffer.byteLength(raw, 'utf8');\n  const name = basename(filePath);\n\n  if (Array.isArray(parsed)) {\n    const schema = parsed.length ? inferJsonSchema(parsed[0]) : 'empty';\n    return `[json-csv-compact] \\`${name}\\` — JSON array (${parsed.length} items, ${lines} lines, ${(bytes / 1024).toFixed(1)} KB)\\nItem schema: ${schema}`;\n  }\n\n  const schema = inferJsonSchema(parsed);\n  return `[json-csv-compact] \\`${name}\\` — JSON object (${lines} lines, ${(bytes / 1024).toFixed(1)} KB)\\nSchema: ${schema}`;\n}\n\nfunction summarizeCsv(raw, filePath) {\n  const lines = raw.split('\\n').filter((l) => l.trim());\n  if (!lines.length) return null;\n\n  const name = basename(filePath);\n  const headers = lines[0];\n  const preview = lines.slice(1, 1 + CSV_PREVIEW_ROWS);\n  const total = lines.length - 1;\n\n  const cols = headers.split(',').length;\n  const rows = [headers, ...preview].join('\\n');\n  return `[json-csv-compact] \\`${name}\\` — CSV (${total} rows, ${cols} columns)\\nFirst ${preview.length} rows:\\n\\`\\`\\`\\n${rows}\\n\\`\\`\\``;\n}\n\nfunction summarizeJsonl(raw, filePath) {\n  const lines = raw.split('\\n').filter((l) => l.trim());\n  if (!lines.length) return null;\n\n  const name = basename(filePath);\n  const preview = lines.slice(0, JSONL_PREVIEW_LINES).map((l) => {\n    try { return inferJsonSchema(JSON.parse(l)); } catch { return l.slice(0, 80); }\n  });\n\n  return `[json-csv-compact] \\`${name}\\` — JSONL (${lines.length} lines)\\nFirst ${preview.length} line schemas:\\n${preview.map((s, i) => `  ${i + 1}. ${s}`).join('\\n')}`;\n}\n\nexport function run(input, { readFile = readFileSync, exists = existsSync, stat = statSync } = {}) {\n  if (input.tool_name !== 'Read') return null;\n\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath) return null;\n\n  const ext = extname(filePath).toLowerCase().replace('.', '');\n  if (!['json', 'csv', 'jsonl', 'tsv', 'ndjson'].includes(ext)) return null;\n\n  if (!exists(filePath)) return null;\n\n  let size;\n  try { size = stat(filePath).size; } catch { return null; }\n  if (size < BYTE_THRESHOLD) return null;\n\n  let raw;\n  try { raw = readFile(filePath, 'utf8'); } catch { return null; }\n\n  let summary;\n  if (ext === 'json') summary = summarizeJson(raw, filePath);\n  else if (ext === 'csv' || ext === 'tsv') summary = summarizeCsv(raw, filePath);\n  else summary = summarizeJsonl(raw, filePath);\n\n  if (!summary) return null;\n\n  return { decision: 'block', reason: summary };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -4883,15 +4703,13 @@
       "Exploring a large data export without flooding context",
       "Understanding package-lock.json or yarn.lock structure",
       "Quickly grasping the schema of a CSV dataset"
-    ],
-    "votes": 0
+    ]
   },
   {
     "benefit": "Fetch any web page as clean Markdown — strip boilerplate HTML before it enters context",
-    "category": "context-optimization",
+    "category": "context",
     "description": "Intercepts WebFetch calls, fetches the URL with curl, detects HTML responses, and converts them to Markdown via pandoc (falling back to a built-in tag stripper). Injects the converted content directly, skipping the raw HTML that Claude would otherwise process. Non-HTML responses (JSON APIs, plain text) pass through unchanged. Truncates to 30 000 chars.",
     "hook_type": "PreToolUse",
-    "id": "pre-webfetch-html-to-markdown",
     "implementation": {
       "code_snippet": "#!/usr/bin/env node\n// Convertit les pages HTML en Markdown avant traitement WebFetch (PreToolUse WebFetch)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst MAX_CHARS = 30_000;\n\nfunction defaultFetchUrl(url) {\n  return execSync('curl -sL --max-time 10 --user-agent \"Mozilla/5.0\" \"$HOOK_URL\"', {\n    encoding: 'utf8',\n    timeout: 15_000,\n    env: { ...process.env, HOOK_URL: url },\n  }).trim();\n}\n\nfunction defaultConvertHtml(html) {\n  return execSync('pandoc -f html -t markdown --wrap=none', {\n    input: html,\n    encoding: 'utf8',\n    timeout: 10_000,\n  }).trim();\n}\n\nfunction defaultHasPandoc() {\n  try { execSync('which pandoc', { encoding: 'utf8', timeout: 2_000 }); return true; } catch { return false; }\n}\n\nfunction stripHtml(html) {\n  return html\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\").replace(/&nbsp;/g, ' ')\n    .replace(/[ \\t]{2,}/g, ' ')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nexport function run(input, {\n  fetchUrl = defaultFetchUrl,\n  convertHtml = defaultConvertHtml,\n  hasPandoc = defaultHasPandoc,\n} = {}) {\n  if (input.tool_name !== 'WebFetch') return null;\n\n  const url = input.tool_input?.url ?? '';\n  if (!url || !/^https?:\\/\\//i.test(url)) return null;\n\n  let html;\n  try { html = fetchUrl(url); } catch { return null; }\n  if (!html?.trim()) return null;\n\n  // Uniquement les pages HTML — laisser passer JSON, binaires, etc.\n  if (!/<html|<!doctype\\s+html/i.test(html.slice(0, 2000))) return null;\n\n  let markdown;\n  try {\n    markdown = hasPandoc() ? convertHtml(html) : stripHtml(html);\n  } catch {\n    try { markdown = stripHtml(html); } catch { return null; }\n  }\n\n  if (!markdown?.trim()) return null;\n\n  let content = markdown.trim();\n  let truncated = false;\n  if (content.length > MAX_CHARS) {\n    content = content.slice(0, MAX_CHARS);\n    truncated = true;\n  }\n\n  let domain;\n  try { domain = new URL(url).hostname; } catch { domain = url; }\n  const suffix = truncated ? ` (truncated to ${MAX_CHARS} chars)` : '';\n\n  return {\n    decision: 'block',\n    reason: `[webfetch-html-to-markdown] \\`${domain}\\` converted to Markdown${suffix}:\\n\\n${content}`,\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
@@ -4932,7 +4750,6 @@
       "Reading documentation pages without loading CSS/JS boilerplate",
       "Extracting article content from blog posts",
       "Reducing token usage during web research sessions"
-    ],
-    "votes": 0
+    ]
   }
 ]

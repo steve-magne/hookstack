@@ -13,7 +13,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "validate:registry": "node registry/validate-registry.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.460.0",
@@ -26,6 +27,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",

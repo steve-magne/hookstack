@@ -4,7 +4,6 @@ import type { Hook } from '@/types/hook'
 
 function makeHook(overrides: Partial<Hook> = {}): Hook {
   return {
-    id: 'test-id',
     slug: 'test-hook',
     name: 'Secret detection',
     category: 'security',
@@ -14,7 +13,6 @@ function makeHook(overrides: Partial<Hook> = {}): Hook {
     description: 'Blocks plaintext secrets.',
     use_cases: ['Credential protection', 'Audit'],
     tags: ['security', 'bash'],
-    votes: 0,
     community_examples: [],
     implementation: { type: 'settings_json', config: {} },
     ...overrides,

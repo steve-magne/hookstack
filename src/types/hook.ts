@@ -45,9 +45,7 @@ export type HookType =
 
 export interface CommunityExample {
   repo: string
-  issue_url?: string
   file_path?: string
-  added_by: string
 }
 
 /** Severity counts from a Snyk Code (SAST) scan of the hook's source. */
@@ -59,8 +57,19 @@ export interface SnykScan {
   scannedAt: string
 }
 
+/** Severity counts from a CodeQL (SAST) scan of the hook's source. */
+export interface CodeqlScan {
+  critical: number
+  high: number
+  medium: number
+  low: number
+  /** ISO timestamp of the scan that produced these counts. */
+  scannedAt: string
+}
+
 export interface HookSecurity {
   snyk?: SnykScan
+  codeql?: CodeqlScan
 }
 
 export interface HookImplementation {
@@ -74,7 +83,6 @@ export interface HookImplementation {
 }
 
 export interface Hook {
-  id: string
   slug: string
   name: string
   /** One-line, outcome-framed payoff shown in the catalogue — the "why install this". */
@@ -86,9 +94,8 @@ export interface Hook {
   description: string
   use_cases: string[]
   implementation: HookImplementation
-  community_examples: CommunityExample[]
+  community_examples?: CommunityExample[]
   tags: string[]
-  votes: number
   is_must?: boolean
   stack?: Stack[]
 }
