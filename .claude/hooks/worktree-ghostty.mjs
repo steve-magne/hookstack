@@ -1,11 +1,19 @@
 #!/usr/bin/env node
 // Ouvre un nouvel onglet Ghostty sur le chemin du worktree créé (WorktreeCreate)
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 function defaultExec(cmd) {
   execSync(cmd, { timeout: 10_000, stdio: 'ignore', shell: true });
+}
+
+/** Trouve le premier chemin disponible : base, base-2, base-3… */
+export function nextAvailablePath(base, { exists = existsSync } = {}) {
+  if (!exists(base)) return base;
+  let n = 2;
+  while (exists(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
 }
 
 export function run(input, { exec = defaultExec, platform = process.platform } = {}) {
@@ -24,9 +32,13 @@ export function run(input, { exec = defaultExec, platform = process.platform } =
   return null;
 }
 
-/* v8 ignore next 5 */
+/* v8 ignore next 9 */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const input = JSON.parse(readFileSync(0, 'utf8'));
-  run(input);
-  process.stdout.write('{}');
+  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const base = `${projectDir}/.claude/worktrees/session-${date}`;
+  const worktreePath = input?.worktree_path ?? nextAvailablePath(base);
+  run({ ...input, worktree_path: worktreePath });
+  process.stdout.write(worktreePath);
 }

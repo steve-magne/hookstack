@@ -5,8 +5,7 @@ import { run } from '../../.claude/hooks/session-start-worktree-if-main.mjs';
 const MAIN = '/repos/hookstack';
 const DATE = '20260602';
 const BRANCH = `work/session-${DATE}`;
-// Le hook construit le chemin avec ../ : /repos/hookstack/../hookstack-work-YYYYMMDD
-const WT_PATH = `${MAIN}/../hookstack-work-${DATE}`;
+const WT_PATH = `${MAIN}/.claude/worktrees/session-${DATE}`;
 
 function makeExec({ branch = 'main', mainRoot = MAIN, currentRoot = MAIN, worktreeList, mergedBranches = '' } = {}) {
   const defaultList = worktreeList ?? `${MAIN}  abc1234 [main]`;
