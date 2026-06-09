@@ -41,4 +41,16 @@ describe('registry-auto-sync', () => {
     const r = run({ tool_input: { file_path: '/proj/.claude/hooks/foo.mjs' } }, deps(exec));
     expect(r?.message).toContain('échec');
   });
+
+  it('résout le projectDir depuis le chemin du fichier (worktree)', () => {
+    const exec = vi.fn(() => 'ok');
+    run({ file_path: '/tmp/some-worktree/.claude/hooks/foo.mjs' }, deps(exec));
+    expect(exec).toHaveBeenCalledWith('/tmp/some-worktree');
+  });
+
+  it('FileChanged: file_path a priorité sur tool_input pour résoudre le répertoire', () => {
+    const exec = vi.fn(() => 'ok');
+    run({ file_path: '/wt/.claude/hooks/bar.mjs', tool_input: { file_path: '/proj/.claude/hooks/bar.mjs' } }, deps(exec));
+    expect(exec).toHaveBeenCalledWith('/wt');
+  });
 });
