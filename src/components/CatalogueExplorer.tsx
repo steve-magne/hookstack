@@ -35,12 +35,10 @@ const CATEGORY_ORDER: Category[] = [
 const STACK_MONOGRAM: Record<Stack, string> = {
   typescript: 'TS',
   python: 'Py',
-  node: 'JS',
 }
 const STACK_MONO_COLOR: Record<Stack, string> = {
   typescript: 'bg-blue-500/25 text-blue-100',
   python: 'bg-yellow-500/25 text-yellow-100',
-  node: 'bg-green-500/25 text-green-100',
 }
 
 interface FilterOption {
