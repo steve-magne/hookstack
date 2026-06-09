@@ -53,6 +53,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/webfetch-allowlist.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-webfetch-html-to-markdown.mjs"
           }
         ],
         "matcher": "WebFetch"
@@ -74,6 +78,23 @@
           }
         ],
         "matcher": "WebSearch"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/file-to-markdown.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-read-block-binary.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-read-json-csv-compact.mjs"
+          }
+        ],
+        "matcher": "Read"
       }
     ],
     "UserPromptSubmit": [
