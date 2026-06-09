@@ -1,11 +1,10 @@
 export type Provider = 'claude-code' | 'copilot-vscode'
 
-export type Stack = 'typescript' | 'python' | 'node'
+export type Stack = 'typescript' | 'python'
 
 export const STACK_LABELS: Record<Stack, string> = {
   typescript: 'TypeScript',
   python:     'Python',
-  node:       'Node.js',
 }
 
 export const STACK_COLORS: Record<Stack, { chip: string; active: string }> = {
@@ -16,10 +15,6 @@ export const STACK_COLORS: Record<Stack, { chip: string; active: string }> = {
   python: {
     chip:   'border-yellow-500/40 bg-yellow-500/10 text-yellow-300',
     active: 'border-yellow-500/60 bg-yellow-500/20 text-yellow-200 ring-1 ring-yellow-500/30',
-  },
-  node: {
-    chip:   'border-green-500/40 bg-green-500/10 text-green-300',
-    active: 'border-green-500/60 bg-green-500/20 text-green-200 ring-1 ring-green-500/30',
   },
 }
 
