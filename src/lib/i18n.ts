@@ -29,6 +29,17 @@ export const T = {
   heroTitle2: 'in 1 minute',
   heroTitleA: 'Ship fast.',
   heroTitleB: 'Break nothing.',
+  // Second hero line — rotates every ~30s. Each slogan keeps the "X nothing."
+  // beat of the original and maps to a real catalogue category (the proof the
+  // stack delivers it). Order = first impression first. See HeroRotatingTitle.
+  heroRotating: [
+    'Break nothing.', // overall safety — the anchor
+    'Leak nothing.', // security · catch a leaked key before it runs
+    'Skip no test.', // validation · no source ships without a test
+    'Forget nothing.', // context · conventions survive a compaction
+    'Miss nothing.', // notification · told the moment work is done
+    'Touch no main.', // workflow · edits blocked on main until you branch
+  ] as const,
   heroSubtitleMain: 'Install a production-ready Claude Code HookStack in one command',
   heroSubtitleSub: 'or fine-tune it hook by hook',
   howItWorksTitle: 'Up and running in 60 seconds',
