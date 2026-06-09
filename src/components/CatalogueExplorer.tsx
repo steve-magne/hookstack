@@ -3,10 +3,9 @@
 import { track } from '@/lib/analytics'
 import { allHooks, filterHooks } from '@/lib/hooks'
 import { useT } from '@/lib/locale-context'
-import { duration, sectionReveal, splitFlap, spring, staggerContainer } from '@/lib/motion'
+import { sectionReveal, splitFlap, spring, staggerContainer } from '@/lib/motion'
 import { useSelection } from '@/store/selection'
 import {
-  HOOK_TYPE_INFO,
   HOOK_TYPES,
   STACK_COLORS,
   STACK_LABELS,
@@ -15,7 +14,7 @@ import {
   type HookType,
   type Stack,
 } from '@/types/hook'
-import { ArrowDownLeft, Check, ChevronDown, EyeOff, Filter, ShieldCheck, Zap } from 'lucide-react'
+import { Check, ChevronDown, EyeOff, Filter } from 'lucide-react'
 import { AnimatePresence, m } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CategoryBadge, HookTypeBadge } from './Badge'
@@ -198,11 +197,6 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   const [selectedStacks, setSelectedStacks] = useState<Stack[]>([])
   const [hideSelected, setHideSelected] = useState(false)
   const [active, setActive] = useState<Hook | null>(null)
-  type Preview =
-    | { kind: 'hook'; hook: Hook; y: number }
-    | { kind: 'event'; eventType: HookType; count: number; y: number }
-  const [preview, setPreview] = useState<Preview | null>(null)
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const selectedSlugs = useSelection((s) => s.selected)
 
@@ -242,20 +236,6 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
       })
       .map(([key, count]) => ({ value: key, label: key, count }))
   }, [eventTypeCounts])
-
-  const handleHover = useCallback((hook: Hook, y: number) => {
-    if (hideTimer.current) clearTimeout(hideTimer.current)
-    setPreview({ kind: 'hook', hook, y })
-  }, [])
-
-  const handleEventHover = useCallback((eventType: HookType, count: number, y: number) => {
-    if (hideTimer.current) clearTimeout(hideTimer.current)
-    setPreview({ kind: 'event', eventType, count, y })
-  }, [])
-
-  const handleLeave = useCallback(() => {
-    hideTimer.current = setTimeout(() => setPreview(null), 90)
-  }, [])
 
   const toggleStack = useCallback(
     (s: Stack) => {
@@ -314,25 +294,11 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
     return map
   }, [groups])
 
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  const previewY = preview
-    ? Math.max(
-        80,
-        Math.min(preview.y, (typeof window !== 'undefined' ? window.innerHeight : 800) - 480)
-      )
-    : 0
-
-  const previewLeft = containerRef.current
-    ? containerRef.current.getBoundingClientRect().left +
-      containerRef.current.getBoundingClientRect().width / 2
-    : undefined
-
   const hasActiveFilters =
     selectedStacks.length > 0 || selectedCategories.length > 0 || selectedEventTypes.length > 0
 
   return (
-    <div ref={containerRef} data-component="CatalogueExplorer">
+    <div data-component="CatalogueExplorer">
       {/* Controls — all filters on one line */}
       <div
         data-component="CatalogueExplorer-controls"
@@ -442,17 +408,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                 transition={spring.smooth}
               >
                 <div className="sticky top-[138px] z-20 mb-1 flex items-center gap-3 bg-[#0a0a0a] px-3 pt-2 pb-1 [box-shadow:0_-8px_0_0_#0a0a0a]">
-                  <h3
-                    onMouseEnter={(e) =>
-                      handleEventHover(
-                        grp.key as HookType,
-                        grp.count,
-                        e.currentTarget.getBoundingClientRect().top
-                      )
-                    }
-                    onMouseLeave={handleLeave}
-                    className="cursor-default font-mono text-sm font-semibold text-zinc-300 transition-colors hover:text-white"
-                  >
+                  <h3 className="cursor-default font-mono text-sm font-semibold text-zinc-300 transition-colors hover:text-white">
                     <SplitFlap
                       text={grp.label}
                       play={intro}
@@ -469,8 +425,6 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                         key={h.slug}
                         hook={h}
                         groupBy="event"
-                        onHover={handleHover}
-                        onLeave={handleLeave}
                         intro={intro}
                         introDelay={introDelays.get(h.slug) ?? 0}
                       />
@@ -493,107 +447,6 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
 
       <AnimatePresence>
         {active && <HookModal key="hook-modal" hook={active} onClose={() => setActive(null)} />}
-      </AnimatePresence>
-
-      {/* Preview card — fixed floating, slides between rows */}
-      <AnimatePresence>
-        {preview && (
-          <m.div
-            data-component="CatalogueExplorer-preview-card"
-            key="preview-card"
-            initial={{ opacity: 0, x: 10, y: previewY }}
-            animate={{ opacity: 1, x: 0, y: previewY }}
-            exit={{ opacity: 0, x: 10, transition: { duration: duration.micro } }}
-            transition={{
-              y: spring.gentle,
-              x: spring.gentle,
-              opacity: { duration: duration.base },
-            }}
-            style={{ position: 'fixed', left: previewLeft, top: 0 }}
-            className="pointer-events-none z-50 hidden w-80 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 shadow-2xl shadow-black/50 backdrop-blur-md xl:block"
-          >
-            {preview.kind === 'hook' ? (
-              <>
-                <div className="flex items-start gap-2.5 border-b border-white/8 bg-indigo-500/[0.07] p-4">
-                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-300 ring-1 ring-inset ring-indigo-500/25">
-                    <Zap className="size-3.5" fill="currentColor" strokeWidth={0} />
-                  </span>
-                  <p className="text-[15px] font-semibold leading-snug text-white">
-                    <SplitFlap text={preview.hook.benefit ?? preview.hook.name} block />
-                  </p>
-                </div>
-
-                <div className="p-4">
-                  <p className="text-[13px] leading-relaxed text-zinc-400">{preview.hook.description}</p>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                    <CategoryBadge category={preview.hook.category} />
-                    <HookTypeBadge type={preview.hook.hook_type} trigger={preview.hook.trigger} />
-                  </div>
-                  {preview.hook.trigger && preview.hook.trigger !== '*' && (
-                    <div className="mt-2.5 font-mono text-[11px] text-zinc-500">
-                      matcher: <span className="text-zinc-400">{preview.hook.trigger}</span>
-                    </div>
-                  )}
-                  {preview.hook.use_cases && preview.hook.use_cases.length > 0 && (
-                    <div className="mt-3.5 border-t border-white/8 pt-3">
-                      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-                        Use cases
-                      </p>
-                      <ul className="space-y-1">
-                        {preview.hook.use_cases.slice(0, 3).map((uc, i) => (
-                          <li
-                            key={i}
-                            className="flex items-start gap-1.5 text-[12px] leading-snug text-zinc-400"
-                          >
-                            <span className="mt-[3px] shrink-0 text-zinc-600">–</span>
-                            {uc}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-1.5 border-t border-white/8 px-4 py-2.5 text-[11px] font-medium text-indigo-300/90">
-                  {preview.hook.is_must ? (
-                    <ShieldCheck className="size-3.5" />
-                  ) : (
-                    <ArrowDownLeft className="size-3.5" />
-                  )}
-                  {preview.hook.is_must ? T.previewMustHint : T.previewClickToAdd}
-                </div>
-              </>
-            ) : (
-              (() => {
-                const info = HOOK_TYPE_INFO[preview.eventType]
-                if (!info) return null
-                return (
-                  <div className="p-4">
-                    <p className="mb-1 font-mono text-sm font-semibold text-white">
-                      <SplitFlap text={preview.eventType} />
-                    </p>
-                    <p className="mb-3 text-[13px] leading-relaxed text-zinc-400">{info.label}</p>
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${
-                          info.blocking
-                            ? 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
-                            : 'bg-zinc-500/10 text-zinc-400 ring-zinc-500/20'
-                        }`}
-                      >
-                        {info.blocking ? '⚡ blocking' : '· non-blocking'}
-                      </span>
-                      <span className="font-mono text-[11px] text-zinc-500">
-                        {preview.count} hook{preview.count > 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })()
-            )}
-          </m.div>
-        )}
       </AnimatePresence>
 
       {/* Configurator */}
