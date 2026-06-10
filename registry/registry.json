@@ -686,7 +686,7 @@
     "description": "When the agent finishes its response, runs the test suite. If tests fail, sends the agent back to work to fix them before handing back control.",
     "hook_type": "Stop",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Exécute la suite de tests à la fin d'une session (Stop)\nimport { spawnSync } from 'child_process';\nimport { existsSync, readFileSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\n// Détecte le runner de tests adapté au projet.\nexport function detect({ exists = existsSync, readFile = readFileSync, projectDir } = {}) {\n  const pkg = join(projectDir, 'package.json');\n  if (exists(pkg)) {\n    try {\n      const scripts = JSON.parse(readFile(pkg, 'utf8')).scripts ?? {};\n      if (scripts.test) {\n        const mgr = exists(join(projectDir, 'pnpm-lock.yaml')) ? 'pnpm'\n          : exists(join(projectDir, 'bun.lockb')) || exists(join(projectDir, 'bun.lock')) ? 'bun'\n          : exists(join(projectDir, 'yarn.lock')) ? 'yarn'\n          : 'npm';\n        // bun test is non-watch by default and doesn't accept --run\n        if (mgr === 'bun') return ['bun', ['test']];\n        return [mgr, ['test', '--', '--run']];\n      }\n    } catch {}\n  }\n  if (exists(join(projectDir, 'pytest.ini')) || exists(join(projectDir, 'pyproject.toml')))\n    return ['python', ['-m', 'pytest', '--tb=short', '-q']];\n  if (exists(join(projectDir, 'go.mod'))) return ['go', ['test', './...']];\n  return null;\n}\n\nexport function run({\n  exists = existsSync,\n  readFile = readFileSync,\n  spawn = spawnSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const runner = detect({ exists, readFile, projectDir });\n  if (!runner) return null;\n\n  const [cmd, args] = runner;\n  const result = spawn(cmd, args, {\n    cwd: projectDir,\n    encoding: 'utf8',\n    timeout: 120_000,\n    stdio: ['ignore', 'pipe', 'pipe'],\n  });\n\n  const out = (result.stdout ?? '') + (result.stderr ?? '');\n  let message = `[run-tests] Exécution : ${cmd} ${args.join(' ')}\\n`;\n  if (result.status !== 0) {\n    message += `[run-tests] ÉCHEC (exit ${result.status})\\n${out.slice(-2000)}\\n`;\n  } else {\n    const last = out.split('\\n').filter(Boolean).slice(-5).join('\\n');\n    message += `[run-tests] ✓ Tests passés\\n${last}\\n`;\n  }\n  return { runner, status: result.status, message };\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) {\n    process.stderr.write(result.message);\n    if (result.status !== 0) process.exit(2);\n  }\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Exécute la suite de tests à la fin d'une session (Stop)\nimport { spawnSync, execSync } from 'child_process';\nimport { existsSync, readFileSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\n/** Résout la racine principale du repo (pas le worktree courant). */\nfunction resolveMainRoot(cwd) {\n  try {\n    const list = execSync('git worktree list', { encoding: 'utf8', cwd, timeout: 5_000 });\n    return list.split('\\n')[0]?.split(/\\s+/)[0] ?? cwd;\n  } catch {\n    return cwd;\n  }\n}\n\n// Détecte le runner de tests adapté au projet.\nexport function detect({ exists = existsSync, readFile = readFileSync, projectDir } = {}) {\n  const pkg = join(projectDir, 'package.json');\n  if (exists(pkg)) {\n    try {\n      const scripts = JSON.parse(readFile(pkg, 'utf8')).scripts ?? {};\n      if (scripts.test) {\n        const mgr = exists(join(projectDir, 'pnpm-lock.yaml')) ? 'pnpm'\n          : exists(join(projectDir, 'bun.lockb')) || exists(join(projectDir, 'bun.lock')) ? 'bun'\n          : exists(join(projectDir, 'yarn.lock')) ? 'yarn'\n          : 'npm';\n        // bun test is non-watch by default and doesn't accept --run\n        if (mgr === 'bun') return ['bun', ['test']];\n        return [mgr, ['test', '--', '--run']];\n      }\n    } catch {}\n  }\n  if (exists(join(projectDir, 'pytest.ini')) || exists(join(projectDir, 'pyproject.toml')))\n    return ['python', ['-m', 'pytest', '--tb=short', '-q']];\n  if (exists(join(projectDir, 'go.mod'))) return ['go', ['test', './...']];\n  return null;\n}\n\nexport function run({\n  exists = existsSync,\n  readFile = readFileSync,\n  spawn = spawnSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n  mainRoot = resolveMainRoot(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),\n} = {}) {\n  // Dans un worktree secondaire, lancer les tests depuis la racine principale\n  // qui contient node_modules.\n  const runDir = exists(join(projectDir, 'node_modules')) ? projectDir : mainRoot;\n  const runner = detect({ exists, readFile, projectDir: runDir });\n  if (!runner) return null;\n\n  const [cmd, args] = runner;\n  const result = spawn(cmd, args, {\n    cwd: runDir,\n    encoding: 'utf8',\n    timeout: 120_000,\n    stdio: ['ignore', 'pipe', 'pipe'],\n    env: { ...process.env, CI: 'true' },\n  });\n\n  const out = (result.stdout ?? '') + (result.stderr ?? '');\n  let message = `[run-tests] Exécution : ${cmd} ${args.join(' ')}\\n`;\n  if (result.status !== 0) {\n    message += `[run-tests] ÉCHEC (exit ${result.status})\\n${out.slice(-2000)}\\n`;\n  } else {\n    const last = out.split('\\n').filter(Boolean).slice(-5).join('\\n');\n    message += `[run-tests] ✓ Tests passés\\n${last}\\n`;\n  }\n  return { runner, status: result.status, message };\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) {\n    process.stderr.write(result.message);\n    if (result.status !== 0) process.exit(2);\n  }\n}\n",
       "config": {
         "hooks": {
           "Stop": [
@@ -4466,50 +4466,6 @@
                 {
                   "type": "command",
                   "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/agents-md-loader.mjs"
-                }
-              ]
-            }
-          ]
-        }
-      }
-    }
-  },
-  {
-    "slug": "worktree-ghostty-tab",
-    "name": "Ghostty tab on worktree create",
-    "benefit": "Opens a Ghostty terminal in the new worktree automatically",
-    "description": "Hooks into WorktreeCreate to open a new Ghostty window pre-cd'd to the worktree path, so you can immediately run dev commands without navigating manually. macOS only. Silently skips if Ghostty is not installed.",
-    "category": "workflow",
-    "provider": [
-      "claude-code"
-    ],
-    "hook_type": "WorktreeCreate",
-    "trigger": "*",
-    "tags": [
-      "worktree",
-      "ghostty",
-      "terminal",
-      "macos",
-      "dx"
-    ],
-    "use_cases": [
-      "Open a dedicated terminal for each new worktree session",
-      "Speed up context-switching between parallel feature branches"
-    ],
-    "is_must": false,
-    "implementation": {
-      "type": "settings_json",
-      "script_path": ".claude/hooks/worktree-ghostty.mjs",
-      "code_snippet": "#!/usr/bin/env node\n// Ouvre un nouvel onglet Ghostty sur le chemin du worktree créé (WorktreeCreate)\nimport { readFileSync, existsSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { timeout: 10_000, stdio: 'ignore', shell: true });\n}\n\n/** Trouve le premier chemin disponible : base, base-2, base-3… */\nexport function nextAvailablePath(base, { exists = existsSync } = {}) {\n  if (!exists(base)) return base;\n  let n = 2;\n  while (exists(`${base}-${n}`)) n++;\n  return `${base}-${n}`;\n}\n\nexport function run(input, { exec = defaultExec, platform = process.platform } = {}) {\n  const worktreePath = input?.worktree_path;\n  if (!worktreePath || platform !== 'darwin') return null;\n\n  // WorktreeRemove n'a pas de champ branch — on n'ouvre rien dans ce cas\n  const isCreate = Boolean(input?.branch);\n  if (!isCreate) return null;\n\n  try {\n    exec(`ghostty --working-directory=\"${worktreePath}\" &`);\n  } catch {\n    // Ghostty absent ou erreur — non bloquant\n  }\n  return null;\n}\n\n/* v8 ignore next 9 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();\n  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');\n  const base = `${projectDir}/.claude/worktrees/session-${date}`;\n  const worktreePath = input?.worktree_path ?? nextAvailablePath(base);\n  run({ ...input, worktree_path: worktreePath });\n  process.stdout.write(worktreePath);\n}\n",
-      "config": {
-        "hooks": {
-          "WorktreeCreate": [
-            {
-              "hooks": [
-                {
-                  "type": "command",
-                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-ghostty.mjs",
-                  "timeout": 10
                 }
               ]
             }
