@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// Bilan qualité complet à la fin d'une session : typecheck + lint + tests (Stop)
+// Bilan qualité à la fin d'une session : typecheck + lint (Stop)
+// Les tests sont volontairement exclus : run-tests.mjs (Stop) les exécute déjà
+// avec un meilleur rapport d'erreur — les relancer ici doublerait la fin de session.
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { join } from 'path';
@@ -32,9 +34,7 @@ export function run({
     checks.push(['TypeScript', 'npx --no-install tsc --noEmit']);
   const eslintConfigs = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml', '.eslintrc'];
   if (hasPkg && eslintConfigs.some((f) => exists(join(projectDir, f))))
-    checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 .']);
-  if (hasPkg)
-    checks.push(['Tests', 'pnpm test --run 2>/dev/null || yarn test --run 2>/dev/null || bun test 2>/dev/null || npm test --if-present 2>/dev/null || npx --no-install vitest run 2>/dev/null']);
+    checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 --cache --cache-location node_modules/.cache/eslint .']);
 
   const results = checks.map(([label, cmd]) => check(label, cmd));
   const failed = results.filter((r) => !r).length;

@@ -60,24 +60,25 @@ describe('quality-check', () => {
     expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('eslint'));
   });
 
+  it('ESLint utilise le cache pour accélérer les runs suivants', () => {
+    const opts = makeOpts({ hasEslintConfig: true });
+    run(opts);
+    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('--cache'));
+  });
+
+  it('ne lance plus les tests — couverts par run-tests.mjs au Stop', () => {
+    const opts = makeOpts({ hasEslintConfig: true });
+    run(opts);
+    for (const call of opts.exec.mock.calls) {
+      expect(call[0]).not.toMatch(/\b(pnpm|yarn|npm|bun) test|vitest/);
+    }
+  });
+
   it('retourne failed=1 quand TypeScript échoue', () => {
     const err = Object.assign(new Error('type error'), { stdout: Buffer.from('Type error in foo.ts') });
     const result = run(makeOpts({ execResults: { tsc: err } }));
     expect(result.failed).toBeGreaterThanOrEqual(1);
     expect(result.message).toContain('✗ TypeScript');
-  });
-
-  it('retourne failed>0 quand les tests échouent', () => {
-    const err = Object.assign(new Error('test failed'), { stdout: Buffer.from('1 test failed') });
-    const result = run(makeOpts({ execResults: { 'pnpm test': err, vitest: err } }));
-    expect(result.failed).toBeGreaterThanOrEqual(1);
-    expect(result.message).toContain('✗ Tests');
-  });
-
-  it('le || true n\'est plus présent — un vrai échec de tests est détecté', () => {
-    const err = Object.assign(new Error('tests failed'), { stdout: Buffer.from('') });
-    const result = run(makeOpts({ execResults: { 'pnpm test': err, vitest: err } }));
-    expect(result.failed).toBeGreaterThanOrEqual(1);
   });
 
   it('retourne failed>0 quand ESLint échoue', () => {
@@ -89,25 +90,7 @@ describe('quality-check', () => {
 
   it('affiche le nombre de vérifications échouées dans le message', () => {
     const err = Object.assign(new Error('fail'), { stdout: Buffer.from('') });
-    const result = run(makeOpts({ hasEslintConfig: true, execResults: { tsc: err, eslint: err, 'pnpm test': err, vitest: err } }));
+    const result = run(makeOpts({ hasEslintConfig: true, execResults: { tsc: err, eslint: err } }));
     expect(result.message).toContain('vérification(s) échouée(s)');
-  });
-
-  it('la commande de test inclut yarn comme fallback', () => {
-    const opts = makeOpts();
-    run(opts);
-    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('yarn test --run'));
-  });
-
-  it('la commande de test inclut bun comme fallback', () => {
-    const opts = makeOpts();
-    run(opts);
-    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('bun test'));
-  });
-
-  it('la commande de test inclut npm test --if-present comme fallback', () => {
-    const opts = makeOpts();
-    run(opts);
-    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('npm test --if-present'));
   });
 });

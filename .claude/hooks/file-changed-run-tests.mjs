@@ -1,22 +1,45 @@
 #!/usr/bin/env node
-// Relance les tests quand un fichier change (FileChanged)
-import { readFileSync } from 'fs';
+// Relance les tests impactés quand un fichier source change (FileChanged)
+// Si vitest est disponible : `vitest related --run <fichier>` ne rejoue que les
+// tests qui importent le fichier modifié (latence et tokens minimaux).
+// Sinon, repli sur le script `test` du gestionnaire de paquets du projet.
+// CI=true force le mode non-watch (évite un hook qui pend jusqu'au timeout).
+import { readFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
+import { join } from 'path';
 import { fileURLToPath } from 'url';
 
 function defaultExec(cmd) {
-  return execSync(cmd, { timeout: 90_000 });
+  return execSync(cmd, { timeout: 90_000, env: { ...process.env, CI: 'true' } });
 }
 
-export function run(input, { exec = defaultExec } = {}) {
+// Détecte le gestionnaire de paquets depuis le lockfile (cohérent avec enforce-package-managers).
+export function detectManager({ exists = existsSync, projectDir = process.cwd() } = {}) {
+  if (exists(join(projectDir, 'pnpm-lock.yaml'))) return 'pnpm';
+  if (exists(join(projectDir, 'bun.lockb')) || exists(join(projectDir, 'bun.lock'))) return 'bun';
+  if (exists(join(projectDir, 'yarn.lock'))) return 'yarn';
+  return 'npm';
+}
+
+export function run(input, {
+  exec = defaultExec,
+  exists = existsSync,
+  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+} = {}) {
   if (input.event === 'unlink') return null;
 
+  const filePath = input.file_path ?? '';
+  const hasVitest = exists(join(projectDir, 'node_modules', '.bin', 'vitest'));
+  const cmd = hasVitest && filePath
+    ? `npx --no-install vitest related --run "${filePath}" 2>&1`
+    : `${detectManager({ exists, projectDir })} test --if-present 2>&1`;
+
   try {
-    const out = exec('npm test --if-present 2>&1').toString();
+    const out = exec(cmd).toString();
     return {
       hookSpecificOutput: {
         hookEventName: 'FileChanged',
-        additionalContext: `Tests passed after ${input.file_path} changed.\n${out.slice(-500)}`,
+        additionalContext: `Tests passed after ${filePath} changed.\n${out.slice(-500)}`,
       },
     };
   } catch (e) {
@@ -24,7 +47,7 @@ export function run(input, { exec = defaultExec } = {}) {
     return {
       hookSpecificOutput: {
         hookEventName: 'FileChanged',
-        additionalContext: `Tests FAILED after ${input.file_path} changed:\n${out}`,
+        additionalContext: `Tests FAILED after ${filePath} changed:\n${out}`,
       },
     };
   }

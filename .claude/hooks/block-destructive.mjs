@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Bloc les commandes Bash destructives irréversibles (PreToolUse)
 import { readFileSync } from 'fs';
+import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const BLOCKED = [
@@ -8,7 +9,7 @@ const BLOCKED = [
   [/rm\s+-rf?\s+[~*]/, 'rm -rf ~ / rm -rf * interdit (suppression de masse)'],
   [/rm\s+-rf?\s+\$HOME\b/, 'rm -rf $HOME interdit'],
   [/git\s+push\s+.*--force(?:-with-lease)?\s+.*(?:main|master)/, 'force-push sur main/master interdit'],
-  [/git\s+reset\s+--hard/, 'git reset --hard interdit — pertes de modifications non commitées ; faites-le manuellement si intentionnel'],
+  // git reset --hard : traité à part dans run() — autorisé si l'arbre de travail est propre.
   [/DROP\s+(?:TABLE|DATABASE)\s+\w+/i, 'DROP TABLE/DATABASE interdit sans confirmation explicite'],
   [/TRUNCATE\s+(?:TABLE\s+)?\w+/i, 'TRUNCATE interdit sans confirmation explicite'],
   [/>\s*\/dev\/(?:sda|nvme|disk)\d*/i, 'Écriture directe sur disque bloquée'],
@@ -23,13 +24,43 @@ function stripQuotedArgs(cmd) {
   return cmd.replace(/"(?:[^"\\]|\\.)*"/g, '""').replace(/'(?:[^'\\]|\\.)*'/g, "''");
 }
 
-export function run(input) {
+function defaultGitStatus() {
+  try {
+    return execSync('git status --porcelain', { encoding: 'utf8', stdio: 'pipe', timeout: 5_000 });
+  } catch {
+    return 'unknown'; // hors repo / erreur git → considérer sale, donc bloquer
+  }
+}
+
+export function run(input, { gitStatus = defaultGitStatus } = {}) {
   const command = input.tool_input?.command ?? '';
   const stripped = stripQuotedArgs(command);
   const blocked = BLOCKED.find(([pattern]) => pattern.test(stripped));
-  return blocked
-    ? { decision: 'block', reason: `Commande destructive bloquée : ${blocked[1]}` }
-    : null;
+  if (blocked) return { decision: 'block', reason: `Commande destructive bloquée : ${blocked[1]}` };
+
+  // git reset --hard : nuance selon la cible et l'état de l'arbre de travail.
+  //   - vers une autre cible que HEAD (HEAD~1, sha, branche) → toujours bloqué (réécrit la branche)
+  //   - vers HEAD (ou sans cible) avec arbre sale → bloqué (modifs non commitées perdues)
+  //   - vers HEAD avec arbre propre → inoffensif, autorisé
+  const reset = stripped.match(/git\s+reset\s+--hard\b\s*(\S*)/);
+  if (reset) {
+    const target = reset[1];
+    if (target && target !== 'HEAD') {
+      return {
+        decision: 'block',
+        reason: `git reset --hard ${target} interdit — réécrit l'historique de la branche ; faites-le manuellement si intentionnel.`,
+      };
+    }
+    if (gitStatus().trim() !== '') {
+      return {
+        decision: 'block',
+        reason:
+          'git reset --hard bloqué : des modifications non commitées seraient perdues. ' +
+          "Commitez ou stashez-les d'abord (git stash), ou faites le reset manuellement si intentionnel.",
+      };
+    }
+  }
+  return null;
 }
 
 /* v8 ignore next 5 */

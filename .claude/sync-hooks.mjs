@@ -40,6 +40,8 @@ const EXCLUDED_STACKS = new Set(['python', 'java']);
 const EXCLUDED_SLUGS = new Set([
   'notification-tts-voice',   // remplacé par notification-sound
   'stop-tts-completion',      // remplacé par stop-sound
+  'post-edit-typecheck',      // doublon : post-tool-batch-typecheck couvre (1 tsc par lot, pas par fichier)
+  'stop-per-file-lint',       // doublon : post-write-eslint (immédiat) + stop-quality-check (bilan) couvrent
 ]);
 
 function isExcluded(stack, slug) {
