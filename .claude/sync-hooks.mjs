@@ -130,14 +130,24 @@ console.log(
 );
 
 // ── Étape 1b : DISQUE -> test_snippet (tests/hooks/<slug>.test.mjs) ─────────
+// Les slugs du registre (ex: pre-bash-secret-detection) peuvent diverger du basename
+// du script_path (ex: detect-secrets.mjs). On cherche d'abord par slug, puis par basename.
 
 const TESTS_DIR = resolve(ROOT, 'tests/hooks');
 let testsUpdated = 0;
 let testsUnchanged = 0;
 
 for (const hook of registry) {
-  const testPath = resolve(TESTS_DIR, `${hook.slug}.test.mjs`);
-  if (!existsSync(testPath)) continue;
+  const scriptBasename = hook.implementation?.script_path
+    ? basename(hook.implementation.script_path, '.mjs')
+    : null;
+  const testPath =
+    existsSync(resolve(TESTS_DIR, `${hook.slug}.test.mjs`))
+      ? resolve(TESTS_DIR, `${hook.slug}.test.mjs`)
+      : scriptBasename
+        ? resolve(TESTS_DIR, `${scriptBasename}.test.mjs`)
+        : null;
+  if (!testPath || !existsSync(testPath)) continue;
 
   const disk = readFileSync(testPath, 'utf8');
   const current = hook.implementation?.test_snippet ?? '';
