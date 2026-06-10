@@ -76,7 +76,7 @@
     "description": "Blocks potentially destructive shell commands before the agent runs them: wiping root, home or CWD, git reset --hard, TRUNCATE, mkfs, dd to a disk, chmod 777 recursively.",
     "hook_type": "PreToolUse",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Bloc les commandes Bash destructives irréversibles (PreToolUse)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst BLOCKED = [\n  [/rm\\s+-rf?\\s+\\/(?:\\s|$)/, 'rm -rf / interdit'],\n  [/rm\\s+-rf?\\s+[~*]/, 'rm -rf ~ / rm -rf * interdit (suppression de masse)'],\n  [/rm\\s+-rf?\\s+\\$HOME\\b/, 'rm -rf $HOME interdit'],\n  [/git\\s+push\\s+.*--force(?:-with-lease)?\\s+.*(?:main|master)/, 'force-push sur main/master interdit'],\n  [/git\\s+reset\\s+--hard/, 'git reset --hard interdit — pertes de modifications non commitées ; faites-le manuellement si intentionnel'],\n  [/DROP\\s+(?:TABLE|DATABASE)\\s+\\w+/i, 'DROP TABLE/DATABASE interdit sans confirmation explicite'],\n  [/TRUNCATE\\s+(?:TABLE\\s+)?\\w+/i, 'TRUNCATE interdit sans confirmation explicite'],\n  [/>\\s*\\/dev\\/(?:sda|nvme|disk)\\d*/i, 'Écriture directe sur disque bloquée'],\n  [/\\bmkfs\\b/i, 'Formatage de système de fichiers interdit'],\n  [/\\bdd\\s+if=/i, 'Opération dd sur disque interdite'],\n  [/chmod\\s+-R\\s+777\\s+\\//i, 'chmod 777 récursif sur / interdit'],\n];\n\n// Retire les chaînes entre guillemets (arguments -m \"...\", --body \"...\", etc.)\n// pour éviter les faux positifs sur des mentions documentaires de patterns dangereux.\nfunction stripQuotedArgs(cmd) {\n  return cmd.replace(/\"(?:[^\"\\\\]|\\\\.)*\"/g, '\"\"').replace(/'(?:[^'\\\\]|\\\\.)*'/g, \"''\");\n}\n\nexport function run(input) {\n  const command = input.tool_input?.command ?? '';\n  const stripped = stripQuotedArgs(command);\n  const blocked = BLOCKED.find(([pattern]) => pattern.test(stripped));\n  return blocked\n    ? { decision: 'block', reason: `Commande destructive bloquée : ${blocked[1]}` }\n    : null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Bloc les commandes Bash destructives irréversibles (PreToolUse)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst BLOCKED = [\n  [/rm\\s+-rf?\\s+\\/(?:\\s|$)/, 'rm -rf / interdit'],\n  [/rm\\s+-rf?\\s+[~*]/, 'rm -rf ~ / rm -rf * interdit (suppression de masse)'],\n  [/rm\\s+-rf?\\s+\\$HOME\\b/, 'rm -rf $HOME interdit'],\n  [/git\\s+push\\s+.*--force(?:-with-lease)?\\s+.*(?:main|master)/, 'force-push sur main/master interdit'],\n  // git reset --hard : traité à part dans run() — autorisé si l'arbre de travail est propre.\n  [/DROP\\s+(?:TABLE|DATABASE)\\s+\\w+/i, 'DROP TABLE/DATABASE interdit sans confirmation explicite'],\n  [/TRUNCATE\\s+(?:TABLE\\s+)?\\w+/i, 'TRUNCATE interdit sans confirmation explicite'],\n  [/>\\s*\\/dev\\/(?:sda|nvme|disk)\\d*/i, 'Écriture directe sur disque bloquée'],\n  [/\\bmkfs\\b/i, 'Formatage de système de fichiers interdit'],\n  [/\\bdd\\s+if=/i, 'Opération dd sur disque interdite'],\n  [/chmod\\s+-R\\s+777\\s+\\//i, 'chmod 777 récursif sur / interdit'],\n];\n\n// Retire les chaînes entre guillemets (arguments -m \"...\", --body \"...\", etc.)\n// pour éviter les faux positifs sur des mentions documentaires de patterns dangereux.\nfunction stripQuotedArgs(cmd) {\n  return cmd.replace(/\"(?:[^\"\\\\]|\\\\.)*\"/g, '\"\"').replace(/'(?:[^'\\\\]|\\\\.)*'/g, \"''\");\n}\n\nfunction defaultGitStatus() {\n  try {\n    return execSync('git status --porcelain', { encoding: 'utf8', stdio: 'pipe', timeout: 5_000 });\n  } catch {\n    return 'unknown'; // hors repo / erreur git → considérer sale, donc bloquer\n  }\n}\n\nexport function run(input, { gitStatus = defaultGitStatus } = {}) {\n  const command = input.tool_input?.command ?? '';\n  const stripped = stripQuotedArgs(command);\n  const blocked = BLOCKED.find(([pattern]) => pattern.test(stripped));\n  if (blocked) return { decision: 'block', reason: `Commande destructive bloquée : ${blocked[1]}` };\n\n  // git reset --hard : nuance selon la cible et l'état de l'arbre de travail.\n  //   - vers une autre cible que HEAD (HEAD~1, sha, branche) → toujours bloqué (réécrit la branche)\n  //   - vers HEAD (ou sans cible) avec arbre sale → bloqué (modifs non commitées perdues)\n  //   - vers HEAD avec arbre propre → inoffensif, autorisé\n  const reset = stripped.match(/git\\s+reset\\s+--hard\\b\\s*(\\S*)/);\n  if (reset) {\n    const target = reset[1];\n    if (target && target !== 'HEAD') {\n      return {\n        decision: 'block',\n        reason: `git reset --hard ${target} interdit — réécrit l'historique de la branche ; faites-le manuellement si intentionnel.`,\n      };\n    }\n    if (gitStatus().trim() !== '') {\n      return {\n        decision: 'block',\n        reason:\n          'git reset --hard bloqué : des modifications non commitées seraient perdues. ' +\n          \"Commitez ou stashez-les d'abord (git stash), ou faites le reset manuellement si intentionnel.\",\n      };\n    }\n  }\n  return null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
         "hooks": {
           "PreToolUse": [
@@ -1170,7 +1170,7 @@
     "is_must": true
   },
   {
-    "benefit": "Types, lint and tests must all pass before Claude hands back control",
+    "benefit": "Types and lint must pass before Claude hands back control",
     "category": "validation",
     "community_examples": [
       {
@@ -1178,10 +1178,10 @@
         "repo": "https://github.com/steve-magne/moving-live"
       }
     ],
-    "description": "Runs a quality check on every stop: type-check (tsc), ESLint (only if an ESLint config file is present), and tests. Blocks the agent from handing back until all checks pass.",
+    "description": "Runs a full quality gate when the session stops: TypeScript typecheck and ESLint (with cache). Tests are intentionally left to the stop-run-tests hook to avoid running the suite twice. Blocks the stop with actionable output if any check fails.",
     "hook_type": "Stop",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Bilan qualité complet à la fin d'une session : typecheck + lint + tests (Stop)\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run({\n  exec,\n  exists = existsSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const doExec =\n    exec ?? ((cmd) => execSync(cmd, { cwd: projectDir, stdio: 'pipe', timeout: 60_000 }));\n\n  const messages = [];\n  function check(label, cmd) {\n    try {\n      doExec(cmd);\n      messages.push(`[quality-check] ✓ ${label}\\n`);\n      return true;\n    } catch (err) {\n      const out = err.stdout?.toString()?.trim() ?? '';\n      messages.push(`[quality-check] ✗ ${label}\\n${out ? out.slice(-500) + '\\n' : ''}`);\n      return false;\n    }\n  }\n\n  const checks = [];\n  const hasPkg = exists(join(projectDir, 'package.json'));\n  if (hasPkg && exists(join(projectDir, 'tsconfig.json')))\n    checks.push(['TypeScript', 'npx --no-install tsc --noEmit']);\n  const eslintConfigs = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml', '.eslintrc'];\n  if (hasPkg && eslintConfigs.some((f) => exists(join(projectDir, f))))\n    checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 .']);\n  if (hasPkg)\n    checks.push(['Tests', 'pnpm test --run 2>/dev/null || yarn test --run 2>/dev/null || bun test 2>/dev/null || npm test --if-present 2>/dev/null || npx --no-install vitest run 2>/dev/null']);\n\n  const results = checks.map(([label, cmd]) => check(label, cmd));\n  const failed = results.filter((r) => !r).length;\n\n  if (failed > 0) messages.push(`[quality-check] ${failed}/${checks.length} vérification(s) échouée(s).\\n`);\n  else if (checks.length > 0) messages.push('[quality-check] ✓ Tous les contrôles qualité passent.\\n');\n\n  return { checks: checks.length, failed, message: messages.join('') };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  process.stderr.write(result.message);\n  if (result.failed > 0) process.exit(2);\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Bilan qualité à la fin d'une session : typecheck + lint (Stop)\n// Les tests sont volontairement exclus : run-tests.mjs (Stop) les exécute déjà\n// avec un meilleur rapport d'erreur — les relancer ici doublerait la fin de session.\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run({\n  exec,\n  exists = existsSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const doExec =\n    exec ?? ((cmd) => execSync(cmd, { cwd: projectDir, stdio: 'pipe', timeout: 60_000 }));\n\n  const messages = [];\n  function check(label, cmd) {\n    try {\n      doExec(cmd);\n      messages.push(`[quality-check] ✓ ${label}\\n`);\n      return true;\n    } catch (err) {\n      const out = err.stdout?.toString()?.trim() ?? '';\n      messages.push(`[quality-check] ✗ ${label}\\n${out ? out.slice(-500) + '\\n' : ''}`);\n      return false;\n    }\n  }\n\n  const checks = [];\n  const hasPkg = exists(join(projectDir, 'package.json'));\n  if (hasPkg && exists(join(projectDir, 'tsconfig.json')))\n    checks.push(['TypeScript', 'npx --no-install tsc --noEmit']);\n  const eslintConfigs = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml', '.eslintrc'];\n  if (hasPkg && eslintConfigs.some((f) => exists(join(projectDir, f))))\n    checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 --cache --cache-location node_modules/.cache/eslint .']);\n\n  const results = checks.map(([label, cmd]) => check(label, cmd));\n  const failed = results.filter((r) => !r).length;\n\n  if (failed > 0) messages.push(`[quality-check] ${failed}/${checks.length} vérification(s) échouée(s).\\n`);\n  else if (checks.length > 0) messages.push('[quality-check] ✓ Tous les contrôles qualité passent.\\n');\n\n  return { checks: checks.length, failed, message: messages.join('') };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  process.stderr.write(result.message);\n  if (result.failed > 0) process.exit(2);\n}\n",
       "config": {
         "hooks": {
           "Stop": [
@@ -1580,7 +1580,7 @@
     "description": "Per-session deduplication mechanism: uses $PPID as a stable session identifier, counts consecutive failures in /tmp, and automatically disables the hook after ≥3 failures without a fix. Shows reactivation instructions. Resets the counter on success. Prevents infinite asyncRewake re-wake loops.",
     "hook_type": "Stop",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Auto-désactive les hooks Stop qui ont échoué ≥ N fois de suite (Stop)\nimport { readFileSync, existsSync, readdirSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nconst MAX_FAILURES = 3;\n\nexport function run({\n  exists = existsSync,\n  readdir = readdirSync,\n  readFile = readFileSync,\n  counterDir = '/tmp/claude-hook-counters',\n} = {}) {\n  if (!exists(counterDir)) return null;\n\n  try {\n    const counters = readdir(counterDir).filter((f) => f.endsWith('.counter'));\n    const toDisable = counters\n      .map((f) => {\n        try {\n          const count = parseInt(readFile(join(counterDir, f), 'utf8').trim(), 10);\n          return count >= MAX_FAILURES ? f.replace('.counter', '') : null;\n        } catch {\n          return null;\n        }\n      })\n      .filter(Boolean);\n\n    if (!toDisable.length) return null;\n\n    const message =\n      `[session-dedup] Hooks à désactiver (${MAX_FAILURES}+ échecs) : ${toDisable.join(', ')}\\n` +\n      '[session-dedup] Supprimez les fichiers /tmp/claude-hook-counters/*.counter pour réactiver.\\n';\n    return { toDisable, message };\n  } catch {\n    // Erreur de lecture — ignorer silencieusement\n    return null;\n  }\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result?.message) process.stderr.write(result.message);\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Auto-désactive les hooks Stop qui ont échoué ≥ N fois de suite (Stop)\n//\n// Contrat partagé : un hook Stop qui veut bénéficier du watchdog incrémente\n// /tmp/claude-hook-counters/<slug>.counter à chaque échec (et le supprime en cas\n// de succès), puis vérifie l'absence de <slug>.disabled avant de s'exécuter.\n// Ce hook pose le marqueur .disabled dès que le compteur atteint MAX_FAILURES.\nimport { readFileSync, existsSync, readdirSync, writeFileSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nconst MAX_FAILURES = 3;\n\nexport function run({\n  exists = existsSync,\n  readdir = readdirSync,\n  readFile = readFileSync,\n  writeFile = writeFileSync,\n  counterDir = '/tmp/claude-hook-counters',\n} = {}) {\n  if (!exists(counterDir)) return null;\n\n  try {\n    const counters = readdir(counterDir).filter((f) => f.endsWith('.counter'));\n    const disabled = [];\n    for (const f of counters) {\n      let count = 0;\n      try {\n        count = parseInt(readFile(join(counterDir, f), 'utf8').trim(), 10) || 0;\n      } catch {\n        continue;\n      }\n      if (count < MAX_FAILURES) continue;\n      const slug = f.replace('.counter', '');\n      const marker = join(counterDir, `${slug}.disabled`);\n      if (!exists(marker)) writeFile(marker, '');\n      disabled.push(slug);\n    }\n\n    if (!disabled.length) return null;\n\n    const message =\n      `[session-dedup] Hooks désactivés (${MAX_FAILURES}+ échecs) : ${disabled.join(', ')}\\n` +\n      `[session-dedup] Supprimez ${counterDir}/<slug>.disabled (et .counter) pour réactiver.\\n`;\n    return { disabled, message };\n  } catch {\n    // Erreur de lecture — ignorer silencieusement\n    return null;\n  }\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
         "hooks": {
           "Stop": [
@@ -2988,7 +2988,7 @@
     "description": "Triggers the project test suite asynchronously whenever a watched source file changes on disk. Results are injected as context for Claude on the next turn, so Claude can react to test failures without being explicitly asked.",
     "hook_type": "FileChanged",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Relance les tests quand un fichier change (FileChanged)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { timeout: 90_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  if (input.event === 'unlink') return null;\n\n  try {\n    const out = exec('npm test --if-present 2>&1').toString();\n    return {\n      hookSpecificOutput: {\n        hookEventName: 'FileChanged',\n        additionalContext: `Tests passed after ${input.file_path} changed.\\n${out.slice(-500)}`,\n      },\n    };\n  } catch (e) {\n    const out = (e.stdout ?? e.stderr ?? e.message).toString().slice(0, 1000);\n    return {\n      hookSpecificOutput: {\n        hookEventName: 'FileChanged',\n        additionalContext: `Tests FAILED after ${input.file_path} changed:\\n${out}`,\n      },\n    };\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Relance les tests impactés quand un fichier source change (FileChanged)\n// Si vitest est disponible : `vitest related --run <fichier>` ne rejoue que les\n// tests qui importent le fichier modifié (latence et tokens minimaux).\n// Sinon, repli sur le script `test` du gestionnaire de paquets du projet.\n// CI=true force le mode non-watch (évite un hook qui pend jusqu'au timeout).\nimport { readFileSync, existsSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { timeout: 90_000, env: { ...process.env, CI: 'true' } });\n}\n\n// Détecte le gestionnaire de paquets depuis le lockfile (cohérent avec enforce-package-managers).\nexport function detectManager({ exists = existsSync, projectDir = process.cwd() } = {}) {\n  if (exists(join(projectDir, 'pnpm-lock.yaml'))) return 'pnpm';\n  if (exists(join(projectDir, 'bun.lockb')) || exists(join(projectDir, 'bun.lock'))) return 'bun';\n  if (exists(join(projectDir, 'yarn.lock'))) return 'yarn';\n  return 'npm';\n}\n\nexport function run(input, {\n  exec = defaultExec,\n  exists = existsSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  if (input.event === 'unlink') return null;\n\n  const filePath = input.file_path ?? '';\n  const hasVitest = exists(join(projectDir, 'node_modules', '.bin', 'vitest'));\n  const cmd = hasVitest && filePath\n    ? `npx --no-install vitest related --run \"${filePath}\" 2>&1`\n    : `${detectManager({ exists, projectDir })} test --if-present 2>&1`;\n\n  try {\n    const out = exec(cmd).toString();\n    return {\n      hookSpecificOutput: {\n        hookEventName: 'FileChanged',\n        additionalContext: `Tests passed after ${filePath} changed.\\n${out.slice(-500)}`,\n      },\n    };\n  } catch (e) {\n    const out = (e.stdout ?? e.stderr ?? e.message).toString().slice(0, 1000);\n    return {\n      hookSpecificOutput: {\n        hookEventName: 'FileChanged',\n        additionalContext: `Tests FAILED after ${filePath} changed:\\n${out}`,\n      },\n    };\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
         "hooks": {
           "FileChanged": [
@@ -3023,7 +3023,7 @@
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
       },
-      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/file-changed-run-tests.mjs';\n\nconst fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };\n\ndescribe('file-changed-run-tests', () => {\n  it('ignore un événement unlink', () => {\n    expect(run({ event: 'unlink' }, { exec: vi.fn() })).toBeNull();\n  });\n  it('rapporte un succès', () => {\n    const r = run({ file_path: 'a.ts' }, { exec: () => Buffer.from('ok') });\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('passed');\n  });\n  it('rapporte un échec', () => {\n    const r = run({ file_path: 'a.ts' }, { exec: fail('test failed') });\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('FAILED');\n  });\n});\n"
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run, detectManager } from '../../.claude/hooks/file-changed-run-tests.mjs';\n\nconst fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };\nconst PROJECT_DIR = '/fake/project';\n\nfunction makeDeps({ hasVitest = true, lockfile = 'pnpm-lock.yaml', exec = () => Buffer.from('ok') } = {}) {\n  return {\n    projectDir: PROJECT_DIR,\n    exec: vi.fn(exec),\n    exists: (p) =>\n      (hasVitest && p.endsWith('/node_modules/.bin/vitest')) || p.endsWith(`/${lockfile}`),\n  };\n}\n\ndescribe('file-changed-run-tests', () => {\n  it('ignore un événement unlink', () => {\n    expect(run({ event: 'unlink' }, makeDeps())).toBeNull();\n  });\n\n  it('utilise vitest related sur le fichier modifié si vitest est présent', () => {\n    const deps = makeDeps();\n    run({ file_path: '/fake/project/src/a.ts' }, deps);\n    expect(deps.exec).toHaveBeenCalledWith(expect.stringContaining('vitest related --run \"/fake/project/src/a.ts\"'));\n  });\n\n  it('replie sur le gestionnaire détecté (pnpm) sans vitest', () => {\n    const deps = makeDeps({ hasVitest: false });\n    run({ file_path: 'src/a.ts' }, deps);\n    expect(deps.exec).toHaveBeenCalledWith(expect.stringContaining('pnpm test --if-present'));\n  });\n\n  it('rapporte un succès', () => {\n    const r = run({ file_path: 'a.ts' }, makeDeps());\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('passed');\n  });\n\n  it('rapporte un échec', () => {\n    const r = run({ file_path: 'a.ts' }, makeDeps({ exec: fail('test failed') }));\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('FAILED');\n  });\n});\n\ndescribe('detectManager', () => {\n  const mk = (lockfile) => ({ projectDir: '/p', exists: (p) => p.endsWith(`/${lockfile}`) });\n  it('détecte pnpm', () => expect(detectManager(mk('pnpm-lock.yaml'))).toBe('pnpm'));\n  it('détecte bun', () => expect(detectManager(mk('bun.lock'))).toBe('bun'));\n  it('détecte yarn', () => expect(detectManager(mk('yarn.lock'))).toBe('yarn'));\n  it('replie sur npm', () => expect(detectManager(mk('nope'))).toBe('npm'));\n});\n"
     },
     "name": "Auto-run tests when source files change",
     "provider": [
@@ -4707,5 +4707,179 @@
       "Extracting article content from blog posts",
       "Reducing token usage during web research sessions"
     ]
+  },
+  {
+    "slug": "registry-validate-on-change",
+    "name": "Registry schema validation on change",
+    "benefit": "Schema errors surface in-session, not in CI",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "FileChanged",
+    "trigger": "registry.json",
+    "tags": [
+      "validation",
+      "schema",
+      "registry",
+      "feedback"
+    ],
+    "description": "Validates registry/registry.json against registry.schema.json the moment the file changes, feeding validation errors back into the session instead of waiting for the CI to reject the push. Silent when the registry is valid.",
+    "use_cases": [
+      "Catch a missing required field right after editing a catalogue entry",
+      "Reject unknown fields before they ever reach a commit"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/registry-validate-on-change.mjs",
+      "config": {
+        "hooks": {
+          "FileChanged": [
+            {
+              "matcher": "registry.json",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/registry-validate-on-change.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Valide registry.json contre son schéma dès qu'il change (FileChanged registry.json)\n// Feedback dans la session au lieu d'attendre l'échec de la CI.\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(projectDir) {\n  return execSync('node registry/validate-registry.mjs', {\n    timeout: 30_000,\n    cwd: projectDir,\n    encoding: 'utf8',\n    stdio: 'pipe',\n  });\n}\n\nexport function run(input, { exec = defaultExec, projectDir = process.env.CLAUDE_PROJECT_DIR } = {}) {\n  const filePath = input.file_path ?? '';\n  if (!filePath.endsWith('registry/registry.json') || !projectDir) return null;\n\n  try {\n    exec(projectDir);\n    return null; // valide → silencieux\n  } catch (e) {\n    const out = `${e.stdout ?? ''}${e.stderr ?? ''}`.toString().trim().slice(0, 1500);\n    return {\n      hookSpecificOutput: {\n        hookEventName: 'FileChanged',\n        additionalContext: `registry.json is INVALID against registry.schema.json:\\n${out}\\nFix the entries above before continuing.`,\n      },\n    };\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/registry-validate-on-change.mjs';\n\nconst fail = (msg) => () => { const e = new Error('invalid'); e.stderr = Buffer.from(msg); throw e; };\n\ndescribe('registry-validate-on-change', () => {\n  it('ignore un fichier autre que registry.json', () => {\n    const exec = vi.fn();\n    expect(run({ file_path: '/p/src/a.ts' }, { exec, projectDir: '/p' })).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('ignore si CLAUDE_PROJECT_DIR absent', () => {\n    expect(run({ file_path: '/p/registry/registry.json' }, { exec: vi.fn(), projectDir: undefined })).toBeNull();\n  });\n\n  it('silencieux quand le registre est valide', () => {\n    const exec = vi.fn(() => '✓ valide');\n    expect(run({ file_path: '/p/registry/registry.json' }, { exec, projectDir: '/p' })).toBeNull();\n    expect(exec).toHaveBeenCalledWith('/p');\n  });\n\n  it('remonte les erreurs de validation en contexte', () => {\n    const r = run(\n      { file_path: '/p/registry/registry.json' },\n      { exec: fail('✗ my-hook\\n  · /benefit must be string'), projectDir: '/p' },\n    );\n    expect(r?.hookSpecificOutput?.hookEventName).toBe('FileChanged');\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('INVALID');\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('my-hook');\n  });\n});\n"
+    }
+  },
+  {
+    "slug": "stop-registry-drift-check",
+    "name": "Registry drift check at stop",
+    "benefit": "Catalogue drift caught before CI rejects the PR",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "Stop",
+    "trigger": "*",
+    "tags": [
+      "validation",
+      "sync",
+      "registry",
+      "safety-net"
+    ],
+    "description": "Safety net for the registry sync: runs sync-hooks --check when the session stops and blocks with a resync instruction if registry.json has drifted from the .mjs files on disk (e.g. the auto-sync hook failed silently mid-session). No-op on projects without sync-hooks.mjs.",
+    "use_cases": [
+      "Catch a silently failed auto-sync before pushing",
+      "Guarantee code_snippet always matches the dogfooded scripts at session end"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/stop-registry-drift-check.mjs",
+      "config": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-registry-drift-check.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Filet de sécurité : vérifie au Stop que registry.json est synchrone avec les\n// .mjs sur disque (sync-hooks --check). Attrape une sync auto qui aurait échoué\n// silencieusement en cours de session, avant que la CI ne rejette la PR. (Stop)\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nfunction makeDefaultExec(projectDir) {\n  return () =>\n    execSync('node .claude/sync-hooks.mjs --check', {\n      timeout: 30_000,\n      cwd: projectDir,\n      encoding: 'utf8',\n      stdio: 'pipe',\n    });\n}\n\nexport function run({\n  exec,\n  exists = existsSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  // Projet sans sync-hooks (hook installé ailleurs que sur Hookstack) → no-op\n  if (!exists(join(projectDir, '.claude/sync-hooks.mjs'))) return null;\n\n  const doExec = exec ?? makeDefaultExec(projectDir);\n  try {\n    doExec();\n    return null; // synchrone → silencieux\n  } catch (e) {\n    const out = `${e.stdout ?? ''}${e.stderr ?? ''}`.toString().trim().slice(-1000);\n    return {\n      exitCode: 2,\n      message:\n        `[registry-drift-check] registry.json a dérivé des .mjs sur disque :\\n${out}\\n` +\n        `→ Lancer 'node .claude/sync-hooks.mjs' pour resynchroniser avant de terminer.\\n`,\n    };\n  }\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result?.message) process.stderr.write(result.message);\n  if (result?.exitCode) process.exit(result.exitCode);\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-registry-drift-check.mjs';\n\nconst fail = (msg) => () => { const e = new Error('drift'); e.stdout = Buffer.from(msg); throw e; };\n\ndescribe('stop-registry-drift-check', () => {\n  it('no-op si le projet n\\'a pas de sync-hooks.mjs', () => {\n    const exec = vi.fn();\n    expect(run({ exec, exists: () => false, projectDir: '/p' })).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('silencieux quand le registre est synchrone', () => {\n    expect(run({ exec: vi.fn(() => '✓ synchrone'), exists: () => true, projectDir: '/p' })).toBeNull();\n  });\n\n  it('bloque le Stop (exit 2) en cas de dérive, avec instruction de resync', () => {\n    const r = run({ exec: fail('✗ dérive : my-hook'), exists: () => true, projectDir: '/p' });\n    expect(r?.exitCode).toBe(2);\n    expect(r?.message).toContain('my-hook');\n    expect(r?.message).toContain('sync-hooks.mjs');\n  });\n});\n"
+    }
+  },
+  {
+    "slug": "motion-rules-guard",
+    "name": "Motion rules guard",
+    "benefit": "Animation rule violations flagged as you write them",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "stack": [
+      "typescript"
+    ],
+    "tags": [
+      "motion",
+      "animation",
+      "react",
+      "conventions"
+    ],
+    "description": "Enforces the project's Motion (ex-Framer Motion) rules after every component write: no 'framer-motion' imports (use 'motion/react'), no motion.* elements under LazyMotion strict (use m.*), no manual prefers-reduced-motion queries, and no raw width/height/top/left animations. Non-blocking: reports each violation with the expected fix.",
+    "use_cases": [
+      "Stop an agent from reintroducing motion.* after a context compaction",
+      "Keep every animation on the shared spring/easing language"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/motion-rules-guard.mjs",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/motion-rules-guard.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Fait respecter les règles motion du projet après écriture d'un composant\n// (PostToolUse Write|Edit). Règles vérifiées (cf. DESIGN.md / CLAUDE.md) :\n//   - import depuis 'framer-motion' interdit → utiliser 'motion/react'\n//   - éléments motion.* interdits (LazyMotion strict) → utiliser m.*\n//   - pas de media query prefers-reduced-motion manuelle (MotionConfig la gère)\n//   - jamais d'animation brute de width/height/top/left (transform/opacity only)\n// Non bloquant : signale les violations avec la correction attendue.\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst RULES = [\n  [/from\\s+['\"]framer-motion['\"]/, \"import 'framer-motion' → use 'motion/react' (paquet `motion`)\"],\n  [/<motion\\.\\w+/, '<motion.*> crashes under LazyMotion strict → use <m.*> (import { m } from \"motion/react\")'],\n  [/prefers-reduced-motion/, 'manual prefers-reduced-motion query → remove it, MotionConfig reducedMotion=\"user\" handles it globally'],\n  [/animate=\\{\\{[^}]*\\b(?:width|height|top|left)\\s*:/s, 'animating width/height/top/left → use transform (x, y, scale) or the `layout` prop'],\n];\n\nexport function run(input, { readFile = readFileSync } = {}) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!/\\/src\\/.*\\.[jt]sx?$/.test(filePath)) return null;\n\n  let content;\n  try {\n    content = readFile(filePath, 'utf8');\n  } catch {\n    return null; // fichier illisible/supprimé → rien à vérifier\n  }\n\n  const violations = RULES.filter(([pattern]) => pattern.test(content)).map(([, fix]) => fix);\n  if (!violations.length) return null;\n\n  return {\n    message:\n      `[motion-rules] ${filePath} violates the project motion rules:\\n` +\n      violations.map((v) => `  - ${v}`).join('\\n') +\n      '\\n→ See CLAUDE.md \"Motion / Animations\" and src/lib/motion.ts.\\n',\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/motion-rules-guard.mjs';\n\nconst input = (file_path) => ({ tool_input: { file_path } });\nconst FILE = '/p/src/components/Hero.tsx';\n\ndescribe('motion-rules-guard', () => {\n  it('ignore les fichiers hors src/', () => {\n    expect(run(input('/p/scripts/build.ts'), { readFile: () => 'motion.div' })).toBeNull();\n  });\n\n  it('ignore les fichiers non JS/TS', () => {\n    expect(run(input('/p/src/app/globals.css'), { readFile: () => 'prefers-reduced-motion' })).toBeNull();\n  });\n\n  it('ignore un fichier illisible', () => {\n    expect(run(input(FILE), { readFile: () => { throw new Error('ENOENT'); } })).toBeNull();\n  });\n\n  it('silencieux sur un composant conforme', () => {\n    const code = \"import { m } from 'motion/react';\\nexport const X = () => <m.div animate={{ x: 10, opacity: 1 }} />;\";\n    expect(run(input(FILE), { readFile: () => code })).toBeNull();\n  });\n\n  it('signale un import framer-motion', () => {\n    const r = run(input(FILE), { readFile: () => \"import { motion } from 'framer-motion';\" });\n    expect(r?.message).toContain(\"motion/react\");\n  });\n\n  it('signale un élément motion.* (LazyMotion strict)', () => {\n    const r = run(input(FILE), { readFile: () => 'return <motion.div animate={{ opacity: 1 }} />;' });\n    expect(r?.message).toContain('<m.*>');\n  });\n\n  it('signale une media query prefers-reduced-motion manuelle', () => {\n    const r = run(input(FILE), { readFile: () => \"const q = window.matchMedia('(prefers-reduced-motion: reduce)');\" });\n    expect(r?.message).toContain('MotionConfig');\n  });\n\n  it('signale une animation de width/height', () => {\n    const r = run(input(FILE), { readFile: () => '<m.div animate={{ width: 300 }} />' });\n    expect(r?.message).toContain('transform');\n  });\n\n  it('cumule plusieurs violations dans un seul message', () => {\n    const code = \"import { motion } from 'framer-motion';\\n<motion.div animate={{ height: 10 }} />\";\n    const r = run(input(FILE), { readFile: () => code });\n    expect(r?.message.match(/^ {2}- /gm)?.length).toBe(3);\n  });\n});\n"
+    }
+  },
+  {
+    "slug": "file-changed-docs-consistency",
+    "name": "Docs consistency reminder",
+    "benefit": "No more READMEs telling two different stories",
+    "category": "documentation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "FileChanged",
+    "trigger": "README.md",
+    "tags": [
+      "documentation",
+      "readme",
+      "consistency",
+      "marketing"
+    ],
+    "description": "When a README changes, injects a reminder listing the sibling READMEs (repo root + packages/*) that carry the same product promise — CLI examples, slugs and wording must stay consistent across them. Pure context injection, never blocks.",
+    "use_cases": [
+      "Propagate a CLI flag rename from the npm README to the GitHub README",
+      "Keep the website pitch and both READMEs telling the same story"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/file-changed-docs-consistency.mjs",
+      "config": {
+        "hooks": {
+          "FileChanged": [
+            {
+              "matcher": "README.md",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/file-changed-docs-consistency.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Rappelle de propager les changements d'un README vers les surfaces sœurs\n// (FileChanged README.md). Quand un README change, liste les autres README du\n// repo (racine + packages/*) qui portent la même promesse produit et doivent\n// rester cohérents (exemples CLI, slugs, wording).\nimport { readFileSync, existsSync, readdirSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\n// Trouve les README \"surfaces produit\" : racine + packages/*/README.md.\nexport function findSiblingReadmes({\n  exists = existsSync,\n  readdir = readdirSync,\n  projectDir,\n} = {}) {\n  const surfaces = [];\n  if (exists(join(projectDir, 'README.md'))) surfaces.push('README.md');\n  const pkgsDir = join(projectDir, 'packages');\n  if (exists(pkgsDir)) {\n    try {\n      for (const pkg of readdir(pkgsDir)) {\n        if (exists(join(pkgsDir, pkg, 'README.md'))) surfaces.push(`packages/${pkg}/README.md`);\n      }\n    } catch {}\n  }\n  return surfaces;\n}\n\nexport function run(input, {\n  exists = existsSync,\n  readdir = readdirSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const filePath = input.file_path ?? '';\n  if (!filePath.endsWith('README.md') || input.event === 'unlink') return null;\n\n  const changed = filePath.startsWith(`${projectDir}/`)\n    ? filePath.slice(projectDir.length + 1)\n    : filePath;\n  const siblings = findSiblingReadmes({ exists, readdir, projectDir }).filter((s) => s !== changed);\n  if (!siblings.length) return null;\n\n  return {\n    hookSpecificOutput: {\n      hookEventName: 'FileChanged',\n      additionalContext:\n        `${changed} changed. These sibling docs share the same product promise and must stay consistent ` +\n        `(CLI examples, slugs, wording): ${siblings.join(', ')}. ` +\n        'Check whether the change needs to be mirrored there (and on the website copy if user-facing).',\n    },\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run, findSiblingReadmes } from '../../.claude/hooks/file-changed-docs-consistency.mjs';\n\nconst PROJECT = '/p';\n\nfunction deps({ readmes = ['README.md', 'packages/cli/README.md'] } = {}) {\n  return {\n    projectDir: PROJECT,\n    exists: (p) =>\n      p === `${PROJECT}/packages` || readmes.some((r) => p === `${PROJECT}/${r}`),\n    readdir: (p) => (p === `${PROJECT}/packages` ? ['cli'] : []),\n  };\n}\n\ndescribe('file-changed-docs-consistency', () => {\n  it('ignore un fichier qui n\\'est pas un README', () => {\n    expect(run({ file_path: '/p/src/a.ts' }, deps())).toBeNull();\n  });\n\n  it('ignore un unlink', () => {\n    expect(run({ file_path: '/p/README.md', event: 'unlink' }, deps())).toBeNull();\n  });\n\n  it('liste les surfaces sœurs quand le README racine change', () => {\n    const r = run({ file_path: '/p/README.md' }, deps());\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('packages/cli/README.md');\n    expect(r?.hookSpecificOutput?.additionalContext).not.toContain('README.md changed. These sibling docs share the same product promise and must stay consistent (CLI examples, slugs, wording): README.md');\n  });\n\n  it('exclut le README modifié de la liste des sœurs', () => {\n    const r = run({ file_path: '/p/packages/cli/README.md' }, deps());\n    const ctx = r?.hookSpecificOutput?.additionalContext ?? '';\n    expect(ctx).toContain('packages/cli/README.md changed');\n    expect(ctx).toMatch(/: README\\.md\\./);\n  });\n\n  it('retourne null sans surface sœur', () => {\n    expect(run({ file_path: '/p/README.md' }, deps({ readmes: ['README.md'] }))).toBeNull();\n  });\n});\n\ndescribe('findSiblingReadmes', () => {\n  it('trouve racine + packages/*', () => {\n    expect(findSiblingReadmes(deps())).toEqual(['README.md', 'packages/cli/README.md']);\n  });\n  it('fonctionne sans dossier packages', () => {\n    const d = { projectDir: PROJECT, exists: (p) => p === `${PROJECT}/README.md`, readdir: () => [] };\n    expect(findSiblingReadmes(d)).toEqual(['README.md']);\n  });\n});\n"
+    }
   }
 ]

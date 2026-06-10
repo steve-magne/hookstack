@@ -30,9 +30,29 @@ describe('block-destructive', () => {
     expect(run({})).toBeNull();
   });
 
-  // Nouveaux patterns
-  it('bloque git reset --hard', () => {
-    expect(run({ tool_input: { command: 'git reset --hard HEAD~1' } })?.decision).toBe('block');
+  // git reset --hard — nuancé selon la cible et l'état de l'arbre
+  it('bloque git reset --hard vers une autre cible que HEAD, même arbre propre', () => {
+    const r = run({ tool_input: { command: 'git reset --hard HEAD~1' } }, { gitStatus: () => '' });
+    expect(r?.decision).toBe('block');
+    expect(r?.reason).toContain('HEAD~1');
+  });
+
+  it('bloque git reset --hard HEAD si arbre sale', () => {
+    const r = run({ tool_input: { command: 'git reset --hard HEAD' } }, { gitStatus: () => ' M src/a.ts\n' });
+    expect(r?.decision).toBe('block');
+    expect(r?.reason).toContain('non commitées');
+  });
+
+  it('laisse passer git reset --hard HEAD si arbre propre', () => {
+    expect(run({ tool_input: { command: 'git reset --hard HEAD' } }, { gitStatus: () => '' })).toBeNull();
+  });
+
+  it('laisse passer git reset --hard sans cible si arbre propre', () => {
+    expect(run({ tool_input: { command: 'git reset --hard' } }, { gitStatus: () => '\n' })).toBeNull();
+  });
+
+  it('bloque git reset --hard si git status échoue (hors repo)', () => {
+    expect(run({ tool_input: { command: 'git reset --hard' } }, { gitStatus: () => 'unknown' })?.decision).toBe('block');
   });
 
   it('bloque TRUNCATE TABLE', () => {
@@ -53,7 +73,7 @@ describe('block-destructive', () => {
   });
 
   it('laisse passer gh pr create --body mentionnant git reset', () => {
-    expect(run({ tool_input: { command: 'gh pr create --body "extension: git reset --hard bloqué"' } })).toBeNull();
+    expect(run({ tool_input: { command: 'gh pr create --body "extension: git reset --hard bloqué"' } }, { gitStatus: () => ' M a' })).toBeNull();
   });
 
   it('laisse passer echo avec pattern dans une string', () => {
