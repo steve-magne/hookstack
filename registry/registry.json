@@ -43,7 +43,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/detect-secrets.mjs';\n\ndescribe('detect-secrets', () => {\n  it('bloque une clé API Anthropic', () => {\n    expect(run({ tool_input: { command: 'export ANTHROPIC_API_KEY=sk-ant-abcdefghijklmnopqrstuvwxyz123456' } })?.decision).toBe('block');\n  });\n\n  it('bloque un token GitHub', () => {\n    expect(run({ tool_input: { command: 'echo ghp_0123456789abcdefghijklmnopqrstuvwxyz0123' } })?.decision).toBe('block');\n  });\n\n  it('bloque une clé privée', () => {\n    expect(run({ tool_input: { command: 'echo \"-----BEGIN RSA PRIVATE KEY-----\"' } })?.decision).toBe('block');\n  });\n\n  it('bloque un password=...', () => {\n    expect(run({ tool_input: { command: 'curl -d \"password=\\'hunter2\\'\"' } })?.decision).toBe('block');\n  });\n\n  it('laisse passer une commande anodine', () => {\n    expect(run({ tool_input: { command: 'ls -la' } })).toBeNull();\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({})).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Secret detection before Bash execution",
@@ -108,7 +109,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/block-destructive.mjs';\n\ndescribe('block-destructive', () => {\n  it('laisse passer une commande anodine', () => {\n    expect(run({ tool_input: { command: 'ls -la' } })).toBeNull();\n  });\n\n  it('bloque rm -rf /', () => {\n    const r = run({ tool_input: { command: 'rm -rf /' } });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('rm -rf /');\n  });\n\n  it('bloque force-push sur main', () => {\n    const r = run({ tool_input: { command: 'git push --force origin main' } });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('bloque DROP TABLE', () => {\n    expect(run({ tool_input: { command: 'DROP TABLE users' } })?.decision).toBe('block');\n  });\n\n  it('bloque chmod 777 récursif sur /', () => {\n    expect(run({ tool_input: { command: 'chmod -R 777 /' } })?.decision).toBe('block');\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({})).toBeNull();\n  });\n\n  // git reset --hard — nuancé selon la cible et l'état de l'arbre\n  it('bloque git reset --hard vers une autre cible que HEAD, même arbre propre', () => {\n    const r = run({ tool_input: { command: 'git reset --hard HEAD~1' } }, { gitStatus: () => '' });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('HEAD~1');\n  });\n\n  it('bloque git reset --hard HEAD si arbre sale', () => {\n    const r = run({ tool_input: { command: 'git reset --hard HEAD' } }, { gitStatus: () => ' M src/a.ts\\n' });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('non commitées');\n  });\n\n  it('laisse passer git reset --hard HEAD si arbre propre', () => {\n    expect(run({ tool_input: { command: 'git reset --hard HEAD' } }, { gitStatus: () => '' })).toBeNull();\n  });\n\n  it('laisse passer git reset --hard sans cible si arbre propre', () => {\n    expect(run({ tool_input: { command: 'git reset --hard' } }, { gitStatus: () => '\\n' })).toBeNull();\n  });\n\n  it('bloque git reset --hard si git status échoue (hors repo)', () => {\n    expect(run({ tool_input: { command: 'git reset --hard' } }, { gitStatus: () => 'unknown' })?.decision).toBe('block');\n  });\n\n  it('bloque TRUNCATE TABLE', () => {\n    expect(run({ tool_input: { command: 'TRUNCATE TABLE users' } })?.decision).toBe('block');\n  });\n\n  it('bloque mkfs', () => {\n    expect(run({ tool_input: { command: 'mkfs.ext4 /dev/sdb1' } })?.decision).toBe('block');\n  });\n\n  it('bloque dd if=', () => {\n    expect(run({ tool_input: { command: 'dd if=/dev/zero of=/dev/sda' } })?.decision).toBe('block');\n  });\n\n  // Faux positifs — mentions documentaires dans des arguments quotés\n  it('laisse passer git commit -m avec mention documentaire', () => {\n    expect(run({ tool_input: { command: 'git commit -m \"docs: rm -rf * est dangereux\"' } })).toBeNull();\n  });\n\n  it('laisse passer gh pr create --body mentionnant git reset', () => {\n    expect(run({ tool_input: { command: 'gh pr create --body \"extension: git reset --hard bloqué\"' } }, { gitStatus: () => ' M a' })).toBeNull();\n  });\n\n  it('laisse passer echo avec pattern dans une string', () => {\n    expect(run({ tool_input: { command: \"echo 'TRUNCATE TABLE est interdit'\" } })).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Destructive command blocking",
@@ -176,7 +178,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/protect-paths.mjs';\n\ndescribe('protect-paths', () => {\n  it('bloque .env', () => {\n    expect(run({ tool_input: { file_path: '/proj/.env' } })?.decision).toBe('block');\n  });\n\n  it('bloque un fichier dans secrets/', () => {\n    expect(run({ tool_input: { file_path: '/proj/secrets/key.txt' } })?.decision).toBe('block');\n  });\n\n  it('bloque une clé .pem', () => {\n    expect(run({ tool_input: { file_path: '/proj/server.pem' } })?.decision).toBe('block');\n  });\n\n  it('laisse passer un fichier source ordinaire', () => {\n    expect(run({ tool_input: { file_path: '/proj/src/index.ts' } })).toBeNull();\n  });\n\n  it('laisse passer si file_path absent', () => {\n    expect(run({})).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Sensitive file write protection",
@@ -229,7 +232,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/protect-lockfiles.mjs';\n\ndescribe('protect-lockfiles', () => {\n  it('bloque pnpm-lock.yaml', () => {\n    expect(run({ tool_input: { file_path: '/project/pnpm-lock.yaml' } })?.decision).toBe('block');\n  });\n\n  it('bloque package-lock.json', () => {\n    expect(run({ tool_input: { file_path: '/project/package-lock.json' } })?.decision).toBe('block');\n  });\n\n  it('bloque yarn.lock', () => {\n    expect(run({ tool_input: { file_path: '/project/yarn.lock' } })?.decision).toBe('block');\n  });\n\n  it('bloque Gemfile.lock', () => {\n    expect(run({ tool_input: { file_path: '/project/Gemfile.lock' } })?.decision).toBe('block');\n  });\n\n  it('bloque poetry.lock', () => {\n    expect(run({ tool_input: { file_path: '/project/poetry.lock' } })?.decision).toBe('block');\n  });\n\n  it('bloque Cargo.lock', () => {\n    expect(run({ tool_input: { file_path: '/project/Cargo.lock' } })?.decision).toBe('block');\n  });\n\n  it('laisse passer package.json', () => {\n    expect(run({ tool_input: { file_path: '/project/package.json' } })).toBeNull();\n  });\n\n  it('laisse passer un fichier .ts', () => {\n    expect(run({ tool_input: { file_path: '/project/src/index.ts' } })).toBeNull();\n  });\n\n  it('laisse passer si file_path absent', () => {\n    expect(run({ tool_input: {} })).toBeNull();\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({})).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Lock file write protection",
@@ -291,7 +295,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/guard-push-main.mjs';\n\ndescribe('guard-push-main', () => {\n  it('bloque git push --force origin main', () => {\n    expect(run({ tool_input: { command: 'git push --force origin main' } })?.decision).toBe('block');\n  });\n\n  it('bloque git push -f vers master', () => {\n    expect(run({ tool_input: { command: 'git push -f origin master' } })?.decision).toBe('block');\n  });\n\n  it('laisse passer un push normal sur main', () => {\n    expect(run({ tool_input: { command: 'git push origin main' } })).toBeNull();\n  });\n\n  it('laisse passer un force-push sur une branche de feature', () => {\n    expect(run({ tool_input: { command: 'git push --force origin feat/x' } })).toBeNull();\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({})).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "git push to main guardrail",
@@ -350,7 +355,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/inject-conventions.mjs';\n\ndescribe('inject-conventions', () => {\n  it('injecte le contenu de agent-rules.md en priorité', () => {\n    const deps = {\n      exists: (p) => p.endsWith('agent-rules.md'),\n      readFile: () => 'Règle A',\n      projectDir: '/proj',\n    };\n    const out = run(deps);\n    expect(out).toContain('Conventions du projet');\n    expect(out).toContain('Règle A');\n  });\n\n  it('retombe sur CONVENTIONS.md si agent-rules.md absent', () => {\n    const deps = {\n      exists: (p) => p.endsWith('CONVENTIONS.md'),\n      readFile: () => 'Règle B',\n      projectDir: '/proj',\n    };\n    expect(run(deps)).toContain('Règle B');\n  });\n\n  it('retourne null si aucun fichier', () => {\n    expect(run({ exists: () => false, projectDir: '/proj' })).toBeNull();\n  });\n\n  it('retourne null si fichier vide', () => {\n    expect(run({ exists: () => true, readFile: () => '   ', projectDir: '/proj' })).toBeNull();\n  });\n});\n"
     },
     "name": "Project conventions injection",
     "provider": [
@@ -414,7 +420,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/load-git-context.mjs';\n\ndescribe('load-git-context', () => {\n  it('compose le contexte git', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('show-current')) return 'main';\n      if (cmd.includes('log')) return 'abc123 fix';\n      if (cmd.includes('status')) return ' M file.ts';\n      return '';\n    };\n    const out = run({ exec });\n    expect(out).toContain('Branche : `main`');\n    expect(out).toContain('abc123 fix');\n    expect(out).toContain('Fichiers modifiés');\n  });\n  it('indique répertoire propre sans statut', () => {\n    const exec = (cmd) => (cmd.includes('show-current') ? 'main' : '');\n    expect(run({ exec })).toContain('propre');\n  });\n  it(\"retourne null hors d'un repo git\", () => {\n    expect(run({ exec: () => '' })).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Load Git context at startup",
@@ -473,7 +480,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/inject-datetime.mjs';\n\ndescribe('inject-datetime', () => {\n  it('retourne une ligne de date formatée', () => {\n    const out = run({ now: new Date('2026-06-02T12:00:00Z') });\n    expect(out).toContain('Date et heure courantes :');\n    expect(out.endsWith('\\n')).toBe(true);\n  });\n\n  it('fonctionne sans argument', () => {\n    expect(run()).toContain('Date et heure courantes :');\n  });\n});\n"
     },
     "is_must": true,
     "name": "Current date and time injection",
@@ -532,7 +540,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/autoformat.mjs';\n\nconst fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };\n\ndescribe('autoformat', () => {\n  it('formate un fichier', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec })?.formatted).toBe('a.ts');\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('prettier --write \"a.ts\"'));\n  });\n  it(\"ignore l'absence de fichier\", () => {\n    expect(run({ tool_input: {} }, { exec: vi.fn() })).toBeNull();\n  });\n  it('avale une erreur prettier', () => {\n    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec: fail('') })).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Automatic formatting after write",
@@ -592,7 +601,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/eslint-check.mjs';\n\nconst fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };\n\ndescribe('eslint-check', () => {\n  it('ignore les fichiers non-JS/TS', () => {\n    expect(run({ tool_input: { file_path: 'a.css' } }, { exec: vi.fn() })).toBeNull();\n  });\n  it('retourne null si eslint passe', () => {\n    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec: vi.fn() })).toBeNull();\n  });\n  it('remonte les erreurs eslint', () => {\n    const r = run({ tool_input: { file_path: 'a.ts' } }, { exec: fail('1:1 error') });\n    expect(r?.message).toContain('ESLint');\n    expect(r?.message).toContain('1:1 error');\n  });\n});\n"
     },
     "is_must": true,
     "name": "ESLint lint after write",
@@ -655,7 +665,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/typecheck.mjs';\n\nconst fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };\n\ndescribe('typecheck', () => {\n  it('ignore les fichiers non-TS', () => {\n    expect(run({ tool_input: { file_path: 'a.js' } }, { exec: vi.fn(), projectDir: '/p' })).toBeNull();\n  });\n  it('remonte les erreurs tsc', () => {\n    const r = run({ tool_input: { file_path: 'a.ts' } }, { exec: fail('TS2322'), projectDir: '/p' });\n    expect(r?.message).toContain('TypeScript');\n  });\n});\n"
     },
     "is_must": true,
     "name": "TypeScript type checking",
@@ -717,7 +728,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { detect, run } from '../../.claude/hooks/run-tests.mjs';\n\nconst PROJECT_DIR = '/fake/project';\n\nconst MAIN_ROOT = '/fake/main';\n\nfunction makeOpts({\n  scripts = { test: 'vitest' },\n  hasPkg = true,\n  hasPnpmLock = false,\n  hasYarnLock = false,\n  hasBunLockb = false,\n  hasBunLock = false,\n  hasPyproject = false,\n  hasGoMod = false,\n  hasNodeModules = true,\n  spawnStatus = 0,\n} = {}) {\n  return {\n    projectDir: PROJECT_DIR,\n    mainRoot: MAIN_ROOT,\n    exists: (p) => {\n      if (p.endsWith('node_modules')) return hasNodeModules;\n      if (p.endsWith('package.json')) return hasPkg;\n      if (p.endsWith('pnpm-lock.yaml')) return hasPnpmLock;\n      if (p.endsWith('yarn.lock')) return hasYarnLock;\n      if (p.endsWith('bun.lockb')) return hasBunLockb;\n      if (p.endsWith('bun.lock')) return hasBunLock;\n      if (p.endsWith('pyproject.toml')) return hasPyproject;\n      if (p.endsWith('go.mod')) return hasGoMod;\n      return false;\n    },\n    readFile: () => JSON.stringify({ scripts }),\n    spawn: () => ({\n      status: spawnStatus,\n      stdout: 'Test output',\n      stderr: spawnStatus !== 0 ? 'Error details' : '',\n    }),\n  };\n}\n\ndescribe('detect', () => {\n  it('retourne pnpm si pnpm-lock.yaml existe', () => {\n    const opts = makeOpts({ hasPnpmLock: true });\n    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });\n    expect(result).toEqual(['pnpm', ['test', '--', '--run']]);\n  });\n\n  it('retourne npm si aucun lockfile spécifique', () => {\n    const opts = makeOpts();\n    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });\n    expect(result).toEqual(['npm', ['test', '--', '--run']]);\n  });\n\n  it('retourne yarn si yarn.lock existe', () => {\n    const opts = makeOpts({ hasYarnLock: true });\n    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });\n    expect(result).toEqual(['yarn', ['test', '--', '--run']]);\n  });\n\n  it('retourne bun si bun.lockb existe (bun <1.2)', () => {\n    const opts = makeOpts({ hasBunLockb: true });\n    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });\n    expect(result).toEqual(['bun', ['test']]);\n  });\n\n  it('retourne bun si bun.lock existe (bun ≥1.2)', () => {\n    const opts = makeOpts({ hasBunLock: true });\n    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });\n    expect(result).toEqual(['bun', ['test']]);\n  });\n\n  it('pnpm est prioritaire sur yarn si les deux lockfiles existent', () => {\n    const opts = makeOpts({ hasPnpmLock: true, hasYarnLock: true });\n    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });\n    expect(result).toEqual(['pnpm', ['test', '--', '--run']]);\n  });\n\n  it('retourne null si pas de package.json ni pytest ni go.mod', () => {\n    const result = detect({\n      exists: () => false,\n      readFile: () => '{}',\n      projectDir: PROJECT_DIR,\n    });\n    expect(result).toBeNull();\n  });\n\n  it('retourne pytest si pyproject.toml existe', () => {\n    const result = detect({\n      exists: (p) => p.endsWith('pyproject.toml'),\n      readFile: () => '{}',\n      projectDir: PROJECT_DIR,\n    });\n    expect(result).toEqual(['python', ['-m', 'pytest', '--tb=short', '-q']]);\n  });\n\n  it('retourne go test si go.mod existe', () => {\n    const result = detect({\n      exists: (p) => p.endsWith('go.mod'),\n      readFile: () => '{}',\n      projectDir: PROJECT_DIR,\n    });\n    expect(result).toEqual(['go', ['test', './...']]);\n  });\n});\n\ndescribe('run', () => {\n  it('retourne null si aucun runner détecté', () => {\n    const result = run(makeOpts({ hasPkg: false }));\n    expect(result).toBeNull();\n  });\n\n  it('retourne status 0 et message succès quand les tests passent', () => {\n    const result = run(makeOpts({ spawnStatus: 0 }));\n    expect(result.status).toBe(0);\n    expect(result.message).toContain('✓ Tests passés');\n  });\n\n  it('retourne status non-0 et message échec quand les tests échouent', () => {\n    const result = run(makeOpts({ spawnStatus: 1 }));\n    expect(result.status).toBe(1);\n    expect(result.message).toContain('ÉCHEC');\n  });\n\n  it('inclut la sortie du processus dans le message en cas d\\'échec', () => {\n    const result = run(makeOpts({ spawnStatus: 1 }));\n    expect(result.message).toContain('Error details');\n  });\n\n  it('utilise mainRoot si node_modules absent dans projectDir (worktree)', () => {\n    const spawnCalls = [];\n    const opts = {\n      ...makeOpts({ hasNodeModules: false }),\n      spawn: (cmd, args, spawnOpts) => {\n        spawnCalls.push(spawnOpts.cwd);\n        return { status: 0, stdout: 'ok', stderr: '' };\n      },\n    };\n    run(opts);\n    expect(spawnCalls[0]).toBe(MAIN_ROOT);\n  });\n\n  it('utilise projectDir si node_modules présent', () => {\n    const spawnCalls = [];\n    const opts = {\n      ...makeOpts({ hasNodeModules: true }),\n      spawn: (cmd, args, spawnOpts) => {\n        spawnCalls.push(spawnOpts.cwd);\n        return { status: 0, stdout: 'ok', stderr: '' };\n      },\n    };\n    run(opts);\n    expect(spawnCalls[0]).toBe(PROJECT_DIR);\n  });\n});\n"
     },
     "is_must": true,
     "name": "Run tests at end of response",
@@ -776,7 +788,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/notify-slack.mjs';\n\ndescribe('notify-slack', () => {\n  it('retourne null sans webhook', () => {\n    expect(run({ message: 'x' }, { exec: vi.fn(), webhook: '' })).toBeNull();\n  });\n  it('retourne null sans message', () => {\n    expect(run({}, { exec: vi.fn(), webhook: 'https://hook' })).toBeNull();\n  });\n  it('poste le payload via curl', () => {\n    const exec = vi.fn();\n    const payload = run({ message: 'hi' }, { exec, webhook: 'https://hook', projectDir: '/x/proj' });\n    expect(payload).toContain('proj');\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('curl'));\n  });\n});\n"
     },
     "name": "Slack notification on agent event",
     "provider": [
@@ -839,7 +852,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/audit-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('audit-log', () => {\n  it('construit et append une entrée de session', () => {\n    const deps = base();\n    const e = run({ session_id: 's1', total_cost_usd: 0.5, num_turns: 3 }, deps);\n    expect(e).toMatchObject({ timestamp: TS, project: 'proj', session_id: 's1', total_cost_usd: 0.5, num_turns: 3 });\n    expect(deps.append).toHaveBeenCalledWith('/home/.claude/audit-log.jsonl', JSON.stringify(e) + '\\n');\n  });\n});\n"
     },
     "name": "End-of-session audit log",
     "provider": [
@@ -899,7 +913,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/webfetch-allowlist.mjs';\n\nconst noFile = { exists: () => false };\n\ndescribe('webfetch-allowlist', () => {\n  it('laisse passer un domaine par défaut', () => {\n    expect(run({ tool_input: { url: 'https://github.com/x' } }, noFile)).toBeNull();\n  });\n\n  it('laisse passer un sous-domaine autorisé', () => {\n    expect(run({ tool_input: { url: 'https://raw.githubusercontent.com/a/b' } }, noFile)).toBeNull();\n  });\n\n  it('bloque un domaine non autorisé', () => {\n    const r = run({ tool_input: { url: 'https://evil.example.com' } }, noFile);\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('evil.example.com');\n  });\n\n  it('respecte une allowlist personnalisée', () => {\n    const deps = { exists: () => true, readFile: () => JSON.stringify(['my.dev']) };\n    expect(run({ tool_input: { url: 'https://my.dev/x' } }, deps)).toBeNull();\n    expect(run({ tool_input: { url: 'https://github.com/x' } }, deps)?.decision).toBe('block');\n  });\n\n  it('laisse passer si url absente', () => {\n    expect(run({ tool_input: {} }, noFile)).toBeNull();\n  });\n\n  it('laisse passer une url invalide', () => {\n    expect(run({ tool_input: { url: 'pas-une-url' } }, noFile)).toBeNull();\n  });\n});\n"
     },
     "name": "Domain allowlist for WebFetch",
     "provider": [
@@ -957,7 +972,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/tool-usage.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('tool-usage', () => {\n  it('journalise une commande (tronquée à 500)', () => {\n    const e = run({ tool_input: { command: 'y'.repeat(800) } }, base());\n    expect(e.cmd.length).toBe(500);\n  });\n  it('ignore une commande vide', () => {\n    expect(run({ tool_input: {} }, base())).toBeNull();\n  });\n});\n"
     },
     "name": "Tool usage tracking",
     "provider": [
@@ -1015,7 +1031,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/session-changelog.mjs';\n\nconst exec = (cmd) => {\n  if (cmd.includes('branch')) return 'main';\n  if (cmd.includes('diff')) return ' file | 2 +-';\n  if (cmd.includes('log')) return '- fix (abc)';\n  return '';\n};\n\ndescribe('session-changelog', () => {\n  it('ajoute une entrée si CHANGELOG existe', () => {\n    const append = vi.fn();\n    const r = run({ exec, append, exists: () => true, projectDir: '/p', now: () => '2026-06-02T00:00:00Z' });\n    expect(r.written).toBe(true);\n    expect(append).toHaveBeenCalled();\n  });\n  it('ignore si CHANGELOG absent', () => {\n    const r = run({ exec, append: vi.fn(), exists: () => false, projectDir: '/p', now: () => '2026-06-02T00:00:00Z' });\n    expect(r.written).toBe(false);\n  });\n  it('retourne null sans diff ni commits', () => {\n    expect(run({ exec: () => '', exists: () => true, projectDir: '/p' })).toBeNull();\n  });\n});\n"
     },
     "name": "Session summary generation",
     "provider": [
@@ -1080,7 +1097,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/enforce-package-managers.mjs';\n\ndescribe('enforce-package-managers', () => {\n  it('laisse passer un outil non-Bash', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: 'x.ts' } })).toBeNull();\n  });\n\n  it('laisse passer pnpm install', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'pnpm install' } })).toBeNull();\n  });\n\n  it('laisse passer une commande sans gestionnaire de paquets', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'echo hello' } })).toBeNull();\n  });\n\n  it('laisse passer si tool_input est absent', () => {\n    expect(run({ tool_name: 'Bash' })).toBeNull();\n  });\n\n  it('bloque npm install', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'npm install' } });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('pnpm');\n  });\n\n  it('bloque npm seul', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'npm' } });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('bloque npm enchaîné après &&', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'cd app && npm install' } });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('bloque yarn add', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'yarn add lodash' } });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('pnpm');\n  });\n\n  it('bloque yarn seul', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'yarn' } });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('ne bloque pas une commande contenant \"npm\" dans un nom de fichier', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'cat package.json' } })).toBeNull();\n  });\n\n  it('laisse passer npm dans un message de commit git (-m \"...\")', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'git commit -m \"support npm and yarn\"' } })).toBeNull();\n  });\n\n  it('laisse passer yarn dans le body d\\'une PR gh (\"...\")', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'gh pr create --body \"yarn is now supported\"' } })).toBeNull();\n  });\n\n  it('laisse passer npm dans un argument entre guillemets simples', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: \"echo 'use npm here'\" } })).toBeNull();\n  });\n\n  it('bloque npm après && même si la commande débute par git', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'git status && npm install' } });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('bloque yarn après && même si la commande débute par gh', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'gh auth status && yarn add lodash' } });\n    expect(r?.decision).toBe('block');\n  });\n});\n"
     },
     "name": "Enforce package managers",
     "provider": [
@@ -1149,7 +1167,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/worktree-guard.mjs';\n\n// Simule un worktree secondaire /wt distinct du repo principal /main.\nfunction makeExec({ toplevel = '/wt', list = '/main  abc [main]\\n/wt  def [feat]' } = {}) {\n  return (cmd) => {\n    if (cmd.includes('show-toplevel')) return toplevel;\n    if (cmd.includes('worktree list')) return list;\n    return '';\n  };\n}\n\ndescribe('worktree-guard', () => {\n  it('bloque une écriture hors du worktree courant', () => {\n    const r = run({ tool_input: { file_path: '/main/src/x.ts' } }, { exec: makeExec() });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('laisse passer une écriture dans le worktree courant', () => {\n    expect(run({ tool_input: { file_path: '/wt/src/x.ts' } }, { exec: makeExec() })).toBeNull();\n  });\n\n  it('ne s\\'applique pas dans le worktree principal', () => {\n    const exec = makeExec({ toplevel: '/main' });\n    expect(run({ tool_input: { file_path: '/elsewhere/x.ts' } }, { exec })).toBeNull();\n  });\n\n  it('laisse passer si file_path absent', () => {\n    expect(run({ tool_input: {} }, { exec: makeExec() })).toBeNull();\n  });\n\n  it('laisse passer si git échoue', () => {\n    const exec = () => { throw new Error('not a git repo'); };\n    expect(run({ tool_input: { file_path: '/x' } }, { exec })).toBeNull();\n  });\n});\n"
     },
     "name": "Worktree guardrail (Edit/Write)",
     "provider": [
@@ -1217,7 +1236,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/quality-check.mjs';\n\nconst PROJECT_DIR = '/fake/project';\n\nfunction makeOpts({ hasPkg = true, hasTsConfig = true, hasEslintConfig = false, execResults = {} } = {}) {\n  return {\n    projectDir: PROJECT_DIR,\n    exists: (p) => {\n      if (p.endsWith('package.json')) return hasPkg;\n      if (p.endsWith('tsconfig.json')) return hasTsConfig;\n      if (p.endsWith('eslint.config.js')) return hasEslintConfig;\n      return false;\n    },\n    exec: vi.fn((cmd) => {\n      const key = Object.keys(execResults).find((k) => cmd.includes(k));\n      if (key !== undefined) {\n        if (execResults[key] instanceof Error) throw execResults[key];\n        return execResults[key];\n      }\n    }),\n  };\n}\n\ndescribe('quality-check', () => {\n  it('retourne 0 checks si pas de package.json', () => {\n    const result = run(makeOpts({ hasPkg: false }));\n    expect(result.checks).toBe(0);\n    expect(result.failed).toBe(0);\n  });\n\n  it('inclut TypeScript seulement si tsconfig.json présent', () => {\n    const opts = makeOpts({ hasTsConfig: true });\n    run(opts);\n    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('tsc'));\n  });\n\n  it('n\\'inclut pas TypeScript sans tsconfig.json', () => {\n    const opts = makeOpts({ hasTsConfig: false });\n    run(opts);\n    expect(opts.exec).not.toHaveBeenCalledWith(expect.stringContaining('tsc'));\n  });\n\n  it('retourne failed=0 si tous les checks passent', () => {\n    const result = run(makeOpts());\n    expect(result.failed).toBe(0);\n    expect(result.message).toContain('Tous les contrôles qualité passent');\n  });\n\n  it('n\\'inclut pas ESLint si pas de fichier de config ESLint', () => {\n    const opts = makeOpts({ hasEslintConfig: false });\n    run(opts);\n    expect(opts.exec).not.toHaveBeenCalledWith(expect.stringContaining('eslint'));\n  });\n\n  it('inclut ESLint si eslint.config.js existe', () => {\n    const opts = makeOpts({ hasEslintConfig: true });\n    run(opts);\n    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('eslint'));\n  });\n\n  it('ESLint utilise le cache pour accélérer les runs suivants', () => {\n    const opts = makeOpts({ hasEslintConfig: true });\n    run(opts);\n    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('--cache'));\n  });\n\n  it('ne lance plus les tests — couverts par run-tests.mjs au Stop', () => {\n    const opts = makeOpts({ hasEslintConfig: true });\n    run(opts);\n    for (const call of opts.exec.mock.calls) {\n      expect(call[0]).not.toMatch(/\\b(pnpm|yarn|npm|bun) test|vitest/);\n    }\n  });\n\n  it('retourne failed=1 quand TypeScript échoue', () => {\n    const err = Object.assign(new Error('type error'), { stdout: Buffer.from('Type error in foo.ts') });\n    const result = run(makeOpts({ execResults: { tsc: err } }));\n    expect(result.failed).toBeGreaterThanOrEqual(1);\n    expect(result.message).toContain('✗ TypeScript');\n  });\n\n  it('retourne failed>0 quand ESLint échoue', () => {\n    const err = Object.assign(new Error('lint error'), { stdout: Buffer.from('2 errors') });\n    const result = run(makeOpts({ hasEslintConfig: true, execResults: { eslint: err } }));\n    expect(result.failed).toBeGreaterThanOrEqual(1);\n    expect(result.message).toContain('✗ ESLint');\n  });\n\n  it('affiche le nombre de vérifications échouées dans le message', () => {\n    const err = Object.assign(new Error('fail'), { stdout: Buffer.from('') });\n    const result = run(makeOpts({ hasEslintConfig: true, execResults: { tsc: err, eslint: err } }));\n    expect(result.message).toContain('vérification(s) échouée(s)');\n  });\n});\n"
     },
     "name": "Automatic quality check (Stop)",
     "provider": [
@@ -1285,7 +1305,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/setup-worktree-env.mjs';\n\nconst MAIN = '/repos/hookstack';\nconst WORKTREE = '/repos/hookstack-wt';\n\nfunction makeExec(main = MAIN, wt = WORKTREE) {\n  return (cmd) => {\n    if (cmd === 'git worktree list') return `${main}  abc1234 [main]\\n${wt}  def5678 [feature]`;\n    if (cmd === 'git rev-parse --show-toplevel') return wt;\n    return '';\n  };\n}\n\nconst noScan = () => [];\n\n// ─── Gardes d'entrée ─────────────────────────────────────────────────────────\n\ndescribe('gardes d entrée', () => {\n  it('ne fait rien si git worktree list est vide', () => {\n    const copy = vi.fn();\n    run({ exec: () => '', exists: () => false, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    expect(copy).not.toHaveBeenCalled();\n  });\n\n  it('ne fait rien si mainDir === worktreeDir (branche principale)', () => {\n    const copy = vi.fn();\n    run({ exec: makeExec(MAIN, MAIN), exists: () => false, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    expect(copy).not.toHaveBeenCalled();\n  });\n});\n\n// ─── Liste statique racine ────────────────────────────────────────────────────\n\ndescribe('liste statique racine', () => {\n  it('copie .env présent dans main et absent du worktree', () => {\n    const copy = vi.fn();\n    const exists = (p) => p === `${MAIN}/.env`;\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    expect(copy).toHaveBeenCalledWith(`${MAIN}/.env`, `${WORKTREE}/.env`);\n    expect(copy).toHaveBeenCalledTimes(1);\n  });\n\n  it('copie .env.local et .env.development.local si présents', () => {\n    const copy = vi.fn();\n    const existing = new Set(['.env.local', '.env.development.local'].map(f => `${MAIN}/${f}`));\n    const exists = (p) => existing.has(p);\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    const copied = copy.mock.calls.map(([src]) => src.replace(MAIN + '/', ''));\n    expect(copied).toContain('.env.local');\n    expect(copied).toContain('.env.development.local');\n    expect(copy).toHaveBeenCalledTimes(2);\n  });\n\n  it('copie .envrc (direnv)', () => {\n    const copy = vi.fn();\n    const exists = (p) => p === `${MAIN}/.envrc`;\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    expect(copy).toHaveBeenCalledWith(`${MAIN}/.envrc`, `${WORKTREE}/.envrc`);\n  });\n\n  it('copie config/master.key (Rails) et crée le dossier intermédiaire manquant', () => {\n    const copy = vi.fn();\n    const mkdir = vi.fn();\n    const exists = (p) => p === `${MAIN}/config/master.key`;\n    run({ exec: makeExec(), exists, copy, mkdir, scanEnvFiles: noScan });\n    expect(mkdir).toHaveBeenCalledWith(`${WORKTREE}/config`, { recursive: true });\n    expect(copy).toHaveBeenCalledWith(`${MAIN}/config/master.key`, `${WORKTREE}/config/master.key`);\n  });\n\n  it('ne copie pas si le fichier existe déjà dans le worktree', () => {\n    const copy = vi.fn();\n    run({ exec: makeExec(), exists: () => true, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    expect(copy).not.toHaveBeenCalled();\n  });\n\n  it('ne copie pas si le fichier source est absent dans main', () => {\n    const copy = vi.fn();\n    run({ exec: makeExec(), exists: () => false, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    expect(copy).not.toHaveBeenCalled();\n  });\n\n  it('couvre les variantes staging et production', () => {\n    const copy = vi.fn();\n    const files = ['.env.staging', '.env.staging.local', '.env.production', '.env.production.local'];\n    const existing = new Set(files.map(f => `${MAIN}/${f}`));\n    const exists = (p) => existing.has(p);\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    const copied = copy.mock.calls.map(([src]) => src.replace(MAIN + '/', ''));\n    for (const f of files) expect(copied).toContain(f);\n  });\n});\n\n// ─── Scan monorepo ────────────────────────────────────────────────────────────\n\ndescribe('scan monorepo (scanEnvFiles)', () => {\n  it('copie les fichiers env trouvés dans les sous-répertoires', () => {\n    const copy = vi.fn();\n    const subFiles = ['apps/web/.env', 'apps/api/.env.local', 'packages/utils/.env'];\n    const scanEnvFiles = () => subFiles;\n    const exists = (p) => p.startsWith(MAIN + '/');\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles });\n    const copied = copy.mock.calls.map(([src]) => src.replace(MAIN + '/', ''));\n    expect(copied).toContain('apps/web/.env');\n    expect(copied).toContain('apps/api/.env.local');\n    expect(copied).toContain('packages/utils/.env');\n  });\n\n  it('ne copie pas un fichier monorepo déjà présent dans le worktree', () => {\n    const copy = vi.fn();\n    const scanEnvFiles = () => ['frontend/.env'];\n    run({ exec: makeExec(), exists: () => true, copy, mkdir: vi.fn(), scanEnvFiles });\n    expect(copy).not.toHaveBeenCalled();\n  });\n\n  it('déduplique si le scan retourne un fichier déjà dans ROOT_FILES', () => {\n    const copy = vi.fn();\n    const scanEnvFiles = () => ['.env', 'frontend/.env'];\n    const exists = (p) => p.startsWith(MAIN + '/');\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles });\n    const copied = copy.mock.calls.map(([src]) => src.replace(MAIN + '/', ''));\n    expect(copied.filter(f => f === '.env')).toHaveLength(1);\n    expect(copied).toContain('frontend/.env');\n  });\n\n  it('crée les répertoires intermédiaires manquants pour les fichiers monorepo', () => {\n    const copy = vi.fn();\n    const mkdir = vi.fn();\n    const scanEnvFiles = () => ['apps/web/.env'];\n    const exists = (p) => p.startsWith(MAIN + '/') && !p.startsWith(WORKTREE + '/');\n    run({ exec: makeExec(), exists, copy, mkdir, scanEnvFiles });\n    expect(mkdir).toHaveBeenCalledWith(`${WORKTREE}/apps/web`, { recursive: true });\n    expect(copy).toHaveBeenCalledWith(`${MAIN}/apps/web/.env`, `${WORKTREE}/apps/web/.env`);\n  });\n\n  it('continue normalement si scanEnvFiles retourne un tableau vide', () => {\n    const copy = vi.fn();\n    const exists = (p) => p === `${MAIN}/.env`;\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles: () => [] });\n    expect(copy).toHaveBeenCalledWith(`${MAIN}/.env`, `${WORKTREE}/.env`);\n    expect(copy).toHaveBeenCalledTimes(1);\n  });\n});\n"
     },
     "name": "Worktree env initialization",
     "provider": [
@@ -1351,7 +1372,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/update-deps.mjs';\n\nconst MAIN = '/repos/hookstack';\nconst WORKTREE = '/repos/hookstack-wt';\n\n// exec stub : git rev-parse → worktree, git worktree list → main en 1re ligne, which pnpm paramétrable\nfunction makeExec(wt = WORKTREE, main = MAIN, pnpm = '/usr/local/bin/pnpm') {\n  return (cmd) => {\n    if (cmd.includes('rev-parse')) return wt;\n    if (cmd.includes('worktree list')) return `${main}  abc1234 [main]\\n${wt}  def5678 [feature]`;\n    if (cmd.includes('which pnpm')) return pnpm;\n    return '';\n  };\n}\n\ndescribe('update-deps', () => {\n  it('ne fait rien si git rev-parse échoue', () => {\n    const detach = vi.fn();\n    run({ exec: () => '', exists: () => true, detach });\n    expect(detach).not.toHaveBeenCalled();\n  });\n\n  it('ne fait rien hors worktree (mainDir === worktreeDir)', () => {\n    const detach = vi.fn();\n    run({ exec: makeExec(MAIN, MAIN), exists: () => false, detach });\n    expect(detach).not.toHaveBeenCalled();\n  });\n\n  it('ne fait rien si package.json absent', () => {\n    const detach = vi.fn();\n    run({ exec: makeExec(), exists: () => false, detach });\n    expect(detach).not.toHaveBeenCalled();\n  });\n\n  it('ne fait rien si node_modules déjà présent', () => {\n    const detach = vi.fn();\n    const exists = () => true; // package.json ET node_modules présents\n    run({ exec: makeExec(), exists, detach });\n    expect(detach).not.toHaveBeenCalled();\n  });\n\n  it('détache pnpm install dans un worktree neuf', () => {\n    const detach = vi.fn();\n    const exists = (p) => p === `${WORKTREE}/package.json`; // pas de node_modules\n    run({ exec: makeExec(), exists, detach });\n    expect(detach).toHaveBeenCalledWith('pnpm', ['install', '--frozen-lockfile', '--ignore-scripts'], WORKTREE);\n  });\n\n  it('détache npm ci si pnpm absent', () => {\n    const detach = vi.fn();\n    const exists = (p) => p === `${WORKTREE}/package.json`;\n    run({ exec: makeExec(WORKTREE, MAIN, ''), exists, detach });\n    expect(detach).toHaveBeenCalledWith('npm', ['ci', '--ignore-scripts'], WORKTREE);\n  });\n\n  it(\"n'utilise jamais exec pour lancer l'install (travail détaché, non bloquant)\", () => {\n    const calls = [];\n    const exec = (cmd) => { calls.push(cmd); return makeExec()(cmd); };\n    const exists = (p) => p === `${WORKTREE}/package.json`;\n    run({ exec, exists, detach: vi.fn() });\n    expect(calls.some((c) => c.includes('install') || c.includes(' ci'))).toBe(false);\n  });\n});\n"
     },
     "name": "Worktree dependency update",
     "provider": [
@@ -1417,7 +1439,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/missing-test-detection.mjs';\n\nconst COUNTER = '/tmp/.test-counter';\nconst DISABLE = '/tmp/.test-disable';\n\nfunction makeOpts(overrides = {}) {\n  return {\n    counterFile: COUNTER,\n    disableFile: DISABLE,\n    // Par défaut : les fichiers source existent, le fichier de désactivation non.\n    exists: (p) => p !== DISABLE,\n    readFile: () => '0',\n    writeFile: vi.fn(),\n    unlink: vi.fn(),\n    exec: () => '',\n    ...overrides,\n  };\n}\n\ndescribe('missing-test-detection', () => {\n  it('retourne exitCode 0 si le fichier disable existe', () => {\n    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);\n    const result = run(makeOpts({ exists: (p) => p === DISABLE }));\n    expect(result.exitCode).toBe(0);\n    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('SUSPENDU'));\n    stderrSpy.mockRestore();\n  });\n\n  it('retourne exitCode 0 si aucun fichier modifié', () => {\n    const opts = makeOpts({ exec: () => '' });\n    const result = run(opts);\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('ignore les fichiers hors src/lib|store|hooks', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return 'src/components/Button.tsx\\nsrc/types/hook.ts';\n      return '';\n    };\n    const result = run(makeOpts({ exec }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('ignore les fichiers de test eux-mêmes (.test.ts / .spec.ts)', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return 'src/lib/i18n.test.ts\\nsrc/lib/mergeConfig.spec.ts';\n      return '';\n    };\n    const result = run(makeOpts({ exec }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('retourne exitCode 0 si les tests existent', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return 'src/lib/hooks.ts';\n      if (cmd.includes('find')) return 'src/lib/hooks.test.ts';\n      return '';\n    };\n    const result = run(makeOpts({ exec }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('retourne exitCode 2 si un test est manquant', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return 'src/lib/mymodule.ts';\n      return '';\n    };\n    const result = run(makeOpts({ exec }));\n    expect(result.exitCode).toBe(2);\n    expect(result.message).toContain('src/lib/mymodule.ts');\n  });\n\n  it('incrémente le compteur à chaque échec', () => {\n    const writeFile = vi.fn();\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return 'src/lib/missing.ts';\n      return '';\n    };\n    run(makeOpts({ exec, readFile: () => '1', writeFile }));\n    expect(writeFile).toHaveBeenCalledWith(COUNTER, '2');\n  });\n\n  it('auto-désactive après 3 échecs', () => {\n    const writeFile = vi.fn();\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return 'src/store/store.ts';\n      return '';\n    };\n    const result = run(makeOpts({ exec, readFile: () => '2', writeFile }));\n    expect(result.exitCode).toBe(2);\n    expect(result.message).toContain('AUTO-DISABLE');\n    expect(writeFile).toHaveBeenCalledWith(DISABLE, '');\n  });\n\n  it('réinitialise le compteur si pas de fichiers manquants', () => {\n    const unlink = vi.fn();\n    const exec = (cmd) => {\n      if (cmd.includes('diff')) return 'src/lib/ok.ts';\n      if (cmd.includes('find')) return 'src/lib/ok.test.ts';\n      return '';\n    };\n    run(makeOpts({ exec, unlink }));\n    expect(unlink).toHaveBeenCalledWith(COUNTER);\n  });\n\n  it('utilise git diff HEAD si pas de base merge', () => {\n    const exec = vi.fn((cmd) => {\n      if (cmd.includes('merge-base')) return '';\n      if (cmd.includes('rev-parse')) return '';\n      return '';\n    });\n    run(makeOpts({ exec }));\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('diff --name-only HEAD'));\n  });\n});\n"
     },
     "is_must": true,
     "name": "Missing test detection (Stop)",
@@ -1481,7 +1504,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/per-file-coverage.mjs';\n\nconst COUNTER = '/tmp/.test-cov-counter';\nconst DISABLE = '/tmp/.test-cov-disable';\nconst COV_JSON = '/tmp/test-coverage.json';\nconst CWD = '/repos/hookstack';\n\nfunction makeCoverage(files = {}) {\n  return JSON.stringify(files);\n}\n\nfunction makeOpts(overrides = {}) {\n  return {\n    counterFile: COUNTER,\n    disableFile: DISABLE,\n    covJson: COV_JSON,\n    cwd: CWD,\n    exists: (p) => p === COV_JSON,\n    readFile: vi.fn(() => '0'),\n    writeFile: vi.fn(),\n    unlink: vi.fn(),\n    exec: () => '',\n    ...overrides,\n  };\n}\n\ndescribe('per-file-coverage', () => {\n  it('retourne exitCode 0 si le fichier disable existe', () => {\n    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);\n    const result = run(makeOpts({ exists: (p) => p === DISABLE }));\n    expect(result.exitCode).toBe(0);\n    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('SUSPENDU'));\n    stderrSpy.mockRestore();\n  });\n\n  it('retourne exitCode 0 si coverage-summary.json absent', () => {\n    const result = run(makeOpts({ exists: () => false }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('retourne exitCode 0 si JSON invalide', () => {\n    const result = run(makeOpts({ readFile: () => 'invalid json' }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('retourne exitCode 0 si aucun fichier modifié', () => {\n    const result = run(makeOpts({ exec: () => '', readFile: () => '{}' }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('ignore les fichiers non-.ts/.tsx', () => {\n    const exec = (cmd) => cmd.includes('diff') ? 'README.md\\nsrc/lib/utils.css' : '';\n    const result = run(makeOpts({ exec, readFile: () => '{}' }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('ignore src/types, src/constants, src/router, src/main', () => {\n    const exec = (cmd) => cmd.includes('diff')\n      ? 'src/types/hook.ts\\nsrc/constants/index.ts\\nsrc/router/index.tsx\\nsrc/main.tsx'\n      : '';\n    const result = run(makeOpts({ exec, readFile: () => '{}' }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('retourne exitCode 0 si coverage ≥ 80%', () => {\n    const file = 'src/lib/hooks.ts';\n    const cov = makeCoverage({ [`${CWD}/${file}`]: { lines: { pct: 85 } } });\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return file;\n      return '';\n    };\n    const result = run(makeOpts({ exec, readFile: () => cov }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('retourne exitCode 2 si coverage < 80%', () => {\n    const file = 'src/lib/hooks.ts';\n    const cov = makeCoverage({ [`${CWD}/${file}`]: { lines: { pct: 60 } } });\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return file;\n      return '';\n    };\n    const result = run(makeOpts({ exec, readFile: () => cov }));\n    expect(result.exitCode).toBe(2);\n    expect(result.message).toContain('60%');\n    expect(result.message).toContain(file);\n  });\n\n  it('incrémente le compteur à chaque échec', () => {\n    const file = 'src/lib/hooks.ts';\n    const cov = makeCoverage({ [`${CWD}/${file}`]: { lines: { pct: 10 } } });\n    const writeFile = vi.fn();\n    const exec = (cmd) => cmd.includes('diff') ? file : 'abc';\n    run(makeOpts({ exec, readFile: (p) => p === COV_JSON ? cov : '1', writeFile }));\n    expect(writeFile).toHaveBeenCalledWith(COUNTER, '2');\n  });\n\n  it('auto-désactive après 3 échecs', () => {\n    const file = 'src/lib/hooks.ts';\n    const cov = makeCoverage({ [`${CWD}/${file}`]: { lines: { pct: 10 } } });\n    const writeFile = vi.fn();\n    const exec = (cmd) => cmd.includes('diff') ? file : 'abc';\n    const result = run(makeOpts({ exec, readFile: (p) => p === COV_JSON ? cov : '2', writeFile }));\n    expect(result.message).toContain('AUTO-DISABLE');\n    expect(writeFile).toHaveBeenCalledWith(DISABLE, '');\n  });\n\n  it('réinitialise le compteur si coverage OK', () => {\n    const file = 'src/lib/hooks.ts';\n    const cov = makeCoverage({ [`${CWD}/${file}`]: { lines: { pct: 95 } } });\n    const unlink = vi.fn();\n    const exec = (cmd) => cmd.includes('diff') ? file : 'abc';\n    run(makeOpts({ exec, readFile: () => cov, unlink }));\n    expect(unlink).toHaveBeenCalledWith(COUNTER);\n  });\n\n  it('ignore les fichiers absents du rapport de coverage', () => {\n    const exec = (cmd) => cmd.includes('diff') ? 'src/lib/untracked.ts' : 'abc';\n    const result = run(makeOpts({ exec, readFile: () => '{}' }));\n    expect(result.exitCode).toBe(0);\n  });\n});\n"
     },
     "is_must": true,
     "name": "Per-modified-file coverage (Stop)",
@@ -1553,7 +1577,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run, isEslintUnavailable } from '../../.claude/hooks/per-file-lint.mjs';\n\nconst COUNTER = '/tmp/.test-lint-counter';\nconst DISABLE = '/tmp/.test-lint-disable';\n\nfunction makeOpts(overrides = {}) {\n  return {\n    counterFile: COUNTER,\n    disableFile: DISABLE,\n    exists: (p) => p !== DISABLE, // fichiers source présents, pas de désactivation\n    readFile: () => '0',\n    writeFile: vi.fn(),\n    unlink: vi.fn(),\n    exec: () => '',\n    lint: () => null, // pass par défaut\n    ...overrides,\n  };\n}\n\nconst diffExec = (file) => (cmd) => {\n  if (cmd.includes('merge-base')) return 'abc';\n  if (cmd.includes('rev-parse')) return 'def';\n  if (cmd.includes('diff')) return file;\n  return '';\n};\n\ndescribe('per-file-lint', () => {\n  it('exitCode 0 si le fichier de désactivation existe', () => {\n    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);\n    const r = run(makeOpts({ exists: (p) => p === DISABLE }));\n    expect(r.exitCode).toBe(0);\n    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('SUSPENDU'));\n    stderrSpy.mockRestore();\n  });\n\n  it('exitCode 0 si aucun fichier modifié', () => {\n    expect(run(makeOpts({ exec: () => '' })).exitCode).toBe(0);\n  });\n\n  it('ignore les fichiers non-JS/TS', () => {\n    const r = run(makeOpts({ exec: diffExec('README.md\\nstyle.css'), lint: vi.fn() }));\n    expect(r.exitCode).toBe(0);\n  });\n\n  it('exitCode 0 si ESLint passe', () => {\n    expect(run(makeOpts({ exec: diffExec('src/a.ts'), lint: () => null })).exitCode).toBe(0);\n  });\n\n  it('exitCode 2 si ESLint échoue', () => {\n    const r = run(makeOpts({ exec: diffExec('src/a.ts'), lint: () => '1:1 error no-unused' }));\n    expect(r.exitCode).toBe(2);\n    expect(r.message).toContain('src/a.ts');\n  });\n\n  it('incrémente le compteur à chaque échec', () => {\n    const writeFile = vi.fn();\n    run(makeOpts({ exec: diffExec('src/a.ts'), lint: () => 'err', readFile: () => '1', writeFile }));\n    expect(writeFile).toHaveBeenCalledWith(COUNTER, '2');\n  });\n\n  it('auto-désactive après 3 échecs', () => {\n    const writeFile = vi.fn();\n    const r = run(makeOpts({ exec: diffExec('src/a.ts'), lint: () => 'err', readFile: () => '2', writeFile }));\n    expect(r.message).toContain('AUTO-DISABLE');\n    expect(writeFile).toHaveBeenCalledWith(DISABLE, '');\n  });\n\n  it('réinitialise le compteur si tout passe', () => {\n    const unlink = vi.fn();\n    run(makeOpts({ exec: diffExec('src/a.ts'), lint: () => null, unlink }));\n    expect(unlink).toHaveBeenCalledWith(COUNTER);\n  });\n\n  it('ignore un fichier supprimé', () => {\n    const lint = vi.fn();\n    const r = run(makeOpts({ exec: diffExec('src/gone.ts'), exists: (p) => p === COUNTER, lint }));\n    expect(r.exitCode).toBe(0);\n    expect(lint).not.toHaveBeenCalled();\n  });\n});\n\ndescribe('isEslintUnavailable', () => {\n  it('détecte une config plate manquante (ESLint ≥ 9)', () => {\n    expect(isEslintUnavailable(\"ESLint couldn't find an eslint.config.(js|mjs|cjs) file.\")).toBe(true);\n  });\n\n  it('détecte le crash générique \"Oops\"', () => {\n    expect(isEslintUnavailable('Oops! Something went wrong! :(')).toBe(true);\n  });\n\n  it('détecte un binaire/module introuvable', () => {\n    expect(isEslintUnavailable('Cannot find module eslint')).toBe(true);\n    expect(isEslintUnavailable('npm error could not determine executable to run')).toBe(true);\n  });\n\n  it('traite une sortie vide comme indisponible (skip prudent)', () => {\n    expect(isEslintUnavailable('')).toBe(true);\n    expect(isEslintUnavailable(undefined)).toBe(true);\n  });\n\n  it(\"ne masque PAS une vraie violation de lint\", () => {\n    expect(isEslintUnavailable(\"/src/a.ts\\n  1:1  error  'x' is assigned but never used  no-unused-vars\")).toBe(false);\n  });\n});\n"
     },
     "community_examples": [],
     "tags": [
@@ -1612,7 +1637,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/session-dedup-autodisable.mjs';\n\ndescribe('session-dedup-autodisable', () => {\n  it('pose le marqueur .disabled pour un hook au seuil', () => {\n    const writeFile = vi.fn();\n    const deps = {\n      exists: (p) => p === '/c', // dossier existe, marqueur absent\n      readdir: () => ['a.counter'],\n      readFile: () => '3',\n      writeFile,\n      counterDir: '/c',\n    };\n    const r = run(deps);\n    expect(r.disabled).toEqual(['a']);\n    expect(writeFile).toHaveBeenCalledWith('/c/a.disabled', '');\n    expect(r.message).toContain('désactivés');\n  });\n\n  it('ne réécrit pas un marqueur déjà posé', () => {\n    const writeFile = vi.fn();\n    const deps = {\n      exists: () => true, // dossier ET marqueur existent\n      readdir: () => ['a.counter'],\n      readFile: () => '5',\n      writeFile,\n      counterDir: '/c',\n    };\n    expect(run(deps).disabled).toEqual(['a']);\n    expect(writeFile).not.toHaveBeenCalled();\n  });\n\n  it('retourne null sous le seuil', () => {\n    const deps = { exists: (p) => p === '/c', readdir: () => ['a.counter'], readFile: () => '1', writeFile: vi.fn(), counterDir: '/c' };\n    expect(run(deps)).toBeNull();\n  });\n\n  it('retourne null si pas de dossier', () => {\n    expect(run({ exists: () => false, counterDir: '/c' })).toBeNull();\n  });\n});\n"
     },
     "name": "Auto-disable Stop hook after N failures",
     "provider": [
@@ -1678,7 +1704,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/i18n-validation.mjs';\n\ndescribe('i18n-validation', () => {\n  it('retourne null si moins de 2 fichiers i18n', () => {\n    expect(run({ exec: () => './locales/fr.json', projectDir: '/p' })).toBeNull();\n  });\n  it('détecte des clés manquantes', () => {\n    const exec = () => './locales/fr.json\\n./locales/en.json';\n    const readFile = (p) => (p.includes('fr.json') ? '{\"a\":1,\"b\":2}' : '{\"a\":1}');\n    const r = run({ exec, readFile, projectDir: '/p' });\n    expect(r.issues.length).toBeGreaterThan(0);\n    expect(r.message).toContain('manque');\n  });\n  it('signale la cohérence', () => {\n    const exec = () => './locales/fr.json\\n./locales/en.json';\n    const readFile = () => '{\"a\":1}';\n    const r = run({ exec, readFile, projectDir: '/p' });\n    expect(r.issues).toHaveLength(0);\n  });\n});\n"
     },
     "name": "Full i18n validation (Stop)",
     "provider": [
@@ -1742,7 +1769,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/notification-tts.mjs';\n\ndescribe('notification-tts', () => {\n  it('vocalise un message via say sur darwin', () => {\n    const exec = vi.fn();\n    const text = run({ message: '# Hello' }, { exec, platform: 'darwin' });\n    expect(text).toBe(' Hello');\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('say \"'));\n  });\n  it('retourne null sans message', () => {\n    expect(run({}, { exec: vi.fn(), platform: 'darwin' })).toBeNull();\n  });\n  it('utilise espeak hors darwin', () => {\n    const exec = vi.fn();\n    run({ message: 'hi' }, { exec, platform: 'linux' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('espeak'));\n  });\n});\n"
     },
     "is_must": true,
     "name": "TTS voice notification",
@@ -1807,7 +1835,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-tts.mjs';\n\ndescribe('stop-tts', () => {\n  it('annonce le projet', () => {\n    const exec = vi.fn();\n    expect(run({ exec, platform: 'darwin', projectDir: '/x/myproj' })).toContain('myproj');\n    expect(exec).toHaveBeenCalled();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Voice task-completion announcement",
@@ -1980,7 +2009,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/subagent-start-tts.mjs';\n\ndescribe('subagent-start-tts', () => {\n  it('annonce le démarrage', () => {\n    const exec = vi.fn();\n    expect(run({ exec, platform: 'darwin' })).toBe('Sous-agent démarré');\n  });\n});\n"
     },
     "name": "Subagent start voice announcement",
     "provider": [
@@ -2044,7 +2074,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/subagent-stop-tts.mjs';\n\ndescribe('subagent-stop-tts', () => {\n  it('inclut le résumé', () => {\n    const exec = vi.fn();\n    expect(run({ summary: 'fini' }, { exec, platform: 'darwin' })).toContain('fini');\n  });\n  it('texte par défaut sans résumé', () => {\n    expect(run({}, { exec: vi.fn(), platform: 'darwin' })).toBe('Sous-agent terminé');\n  });\n});\n"
     },
     "name": "Subagent end voice summary",
     "provider": [
@@ -2108,7 +2139,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/user-prompt-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('user-prompt-log', () => {\n  it('crée une nouvelle session avec le prompt', () => {\n    const deps = { ...base(), exists: () => false, writeFile: vi.fn() };\n    const data = run({ session_id: 's1', prompt: 'hello' }, deps);\n    expect(data.prompts).toHaveLength(1);\n    expect(data.prompts[0]).toMatchObject({ prompt: 'hello', timestamp: TS });\n    expect(deps.writeFile).toHaveBeenCalled();\n  });\n  it('append au tableau existant', () => {\n    const deps = {\n      ...base(),\n      exists: () => true,\n      readFile: () => JSON.stringify({ session_id: 's1', prompts: [{ prompt: 'a' }] }),\n      writeFile: vi.fn(),\n    };\n    const data = run({ session_id: 's1', prompt: 'b' }, deps);\n    expect(data.prompts).toHaveLength(2);\n  });\n});\n"
     },
     "name": "Per-session prompt log",
     "provider": [
@@ -2172,7 +2204,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/user-prompt-name-agent.mjs';\n\nfunction baseDeps(overrides = {}) {\n  return {\n    exists: () => false,\n    readFile: () => '{}',\n    writeFile: vi.fn(),\n    mkdir: vi.fn(),\n    projectDir: '/proj',\n    pickName: () => 'Nexus',\n    ...overrides,\n  };\n}\n\ndescribe('user-prompt-name-agent', () => {\n  it('attribue un nom à une nouvelle session', () => {\n    const writeFile = vi.fn();\n    const out = run({ session_id: 's1' }, baseDeps({ writeFile }));\n    expect(out).toContain('Nexus');\n    expect(writeFile).toHaveBeenCalled();\n  });\n\n  it('ne réattribue pas si un nom existe déjà', () => {\n    const deps = baseDeps({\n      exists: () => true,\n      readFile: () => JSON.stringify({ session_id: 's1', agent_name: 'Atlas' }),\n    });\n    expect(run({ session_id: 's1' }, deps)).toBeNull();\n  });\n\n  it('crée le dossier de sessions', () => {\n    const mkdir = vi.fn();\n    run({ session_id: 's1' }, baseDeps({ mkdir }));\n    expect(mkdir).toHaveBeenCalledWith(expect.stringContaining('sessions'), { recursive: true });\n  });\n});\n"
     },
     "name": "Automatic session naming",
     "provider": [
@@ -2237,7 +2270,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/pre-compact-backup.mjs';\n\ndescribe('pre-compact-backup', () => {\n  it('sauvegarde le résumé', () => {\n    const writeFile = vi.fn();\n    const r = run({ summary: 's', session_id: 's1' }, { writeFile, mkdir: vi.fn(), backupDir: '/bk', now: () => 'T' });\n    expect(r.file).toBe('/bk/s1.json');\n    expect(writeFile).toHaveBeenCalled();\n  });\n  it('ignore sans résumé', () => {\n    expect(run({}, { writeFile: vi.fn(), mkdir: vi.fn() })).toBeNull();\n  });\n});\n"
     },
     "name": "Transcript backup before compaction",
     "provider": [
@@ -2302,7 +2336,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/permission-auto-allow.mjs';\n\nconst allowed = (r) => r?.hookSpecificOutput?.decision?.behavior === 'allow';\n\ndescribe('permission-auto-allow', () => {\n  it('autorise les outils lecture seule', () => {\n    expect(allowed(run({ tool_name: 'Read' }))).toBe(true);\n    expect(allowed(run({ tool_name: 'Glob' }))).toBe(true);\n    expect(allowed(run({ tool_name: 'Grep' }))).toBe(true);\n  });\n\n  it('autorise une commande Bash sûre', () => {\n    expect(allowed(run({ tool_name: 'Bash', tool_input: { command: 'git status' } }))).toBe(true);\n    expect(allowed(run({ tool_name: 'Bash', tool_input: { command: 'ls -la' } }))).toBe(true);\n  });\n\n  it('n\\'autorise pas une commande Bash non listée', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'rm file' } })).toBeNull();\n  });\n\n  it('n\\'autorise pas un cat avec redirection', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'cat x > y' } })).toBeNull();\n  });\n\n  it('n\\'autorise pas Write', () => {\n    expect(run({ tool_name: 'Write' })).toBeNull();\n  });\n});\n"
     },
     "name": "Auto-approve read-only permissions",
     "provider": [
@@ -2433,7 +2468,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/setup-check-deps.mjs';\n\ndescribe('setup-check-deps', () => {\n  it('avertit si node_modules absent', () => {\n    const exists = (p) => p.endsWith('pnpm-lock.yaml');\n    const r = run({ exists, stat: () => ({ mtimeMs: 0 }), projectDir: '/p' });\n    expect(r.warnings.length).toBe(1);\n    expect(r.message).toContain('absent');\n  });\n  it('avertit si lockfile plus récent', () => {\n    const exists = (p) => p.endsWith('pnpm-lock.yaml') || p.endsWith('node_modules');\n    const stat = (p) => ({ mtimeMs: p.endsWith('pnpm-lock.yaml') ? 100 : 50 });\n    expect(run({ exists, stat, projectDir: '/p' }).warnings.length).toBe(1);\n  });\n  it('rien si à jour', () => {\n    const exists = (p) => p.endsWith('pnpm-lock.yaml') || p.endsWith('node_modules');\n    const stat = () => ({ mtimeMs: 100 });\n    expect(run({ exists, stat, projectDir: '/p' }).warnings).toHaveLength(0);\n  });\n});\n"
     },
     "name": "Dependency check and install at startup",
     "provider": [
@@ -2503,7 +2539,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/session-end-cleanup.mjs';\n\ndescribe('session-end-cleanup', () => {\n  it('supprime les fichiers claude- périmés', () => {\n    const unlink = vi.fn();\n    const deps = {\n      readdir: () => ['claude-old', 'other'],\n      stat: () => ({ mtimeMs: 0 }),\n      unlink,\n      tmp: '/tmp',\n      maxAge: 1000,\n      now: () => 10_000_000,\n    };\n    expect(run(deps).cleaned).toBe(1);\n    expect(unlink).toHaveBeenCalledWith('/tmp/claude-old');\n  });\n  it('ne supprime rien si récent', () => {\n    const deps = { readdir: () => ['claude-new'], stat: () => ({ mtimeMs: 9_999_999 }), unlink: vi.fn(), now: () => 10_000_000, maxAge: 1000 };\n    expect(run(deps).cleaned).toBe(0);\n  });\n});\n"
     },
     "name": "Temporary file cleanup at session end",
     "provider": [
@@ -2567,7 +2604,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/reinject-after-compact.mjs';\n\ndescribe('reinject-after-compact', () => {\n  it('réinjecte le backup de la session courante', () => {\n    const deps = {\n      exists: () => true,\n      readFile: () => JSON.stringify({ summary: 'Résumé précédent', saved_at: '2026-06-02' }),\n      readdir: () => [],\n      backupDir: '/bk',\n    };\n    const out = run({ session_id: 's1' }, deps);\n    expect(out).toContain('Résumé précédent');\n    expect(out).toContain('2026-06-02');\n  });\n\n  it('retombe sur le backup le plus récent si pas de session', () => {\n    const deps = {\n      exists: (p) => p === '/bk' || p.endsWith('recent.json'),\n      readdir: () => ['recent.json'],\n      readFile: () => JSON.stringify({ summary: 'Le plus récent', saved_at: 'x' }),\n      backupDir: '/bk',\n    };\n    expect(run({ session_id: '' }, deps)).toContain('Le plus récent');\n  });\n\n  it('retourne null si le dossier de backup est absent', () => {\n    expect(run({ session_id: 's1' }, { exists: () => false, backupDir: '/bk' })).toBeNull();\n  });\n\n  it('retourne null si aucun backup', () => {\n    const deps = { exists: (p) => p === '/bk', readdir: () => [], backupDir: '/bk' };\n    expect(run({ session_id: '' }, deps)).toBeNull();\n  });\n\n  it('ignore un backup corrompu', () => {\n    const deps = { exists: () => true, readFile: () => 'pas du json', readdir: () => [], backupDir: '/bk' };\n    expect(run({ session_id: 's1' }, deps)).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Re-inject context after compaction",
@@ -2632,7 +2670,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/config-audit-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('config-audit-log', () => {\n  it('journalise un changement de config', () => {\n    const deps = base();\n    const { entry, message } = run({ change: { theme: 'dark' } }, deps);\n    expect(entry).toMatchObject({ ts: TS, project: 'proj', change: { theme: 'dark' } });\n    expect(message).toContain('config-audit');\n    expect(deps.append).toHaveBeenCalled();\n  });\n});\n"
     },
     "name": "Configuration change audit log",
     "provider": [
@@ -2708,7 +2747,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/reload-direnv.mjs';\n\ndescribe('reload-direnv', () => {\n  it('recharge si .envrc présent', () => {\n    const exec = vi.fn();\n    const r = run({ cwd: '/p' }, { exec, exists: () => true });\n    expect(exec).toHaveBeenCalledWith('direnv allow .', '/p');\n    expect(r.message).toContain('rechargé');\n  });\n  it('ignore si pas de .envrc', () => {\n    expect(run({ cwd: '/p' }, { exec: vi.fn(), exists: () => false })).toBeNull();\n  });\n});\n"
     },
     "name": "Reload direnv on directory change",
     "provider": [
@@ -2773,7 +2813,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/auto-allow-exit-plan.mjs';\n\ndescribe('auto-allow-exit-plan', () => {\n  it('autorise exit_plan_mode', () => {\n    const r = run({ tool_name: 'exit_plan_mode' });\n    expect(r?.hookSpecificOutput?.decision?.behavior).toBe('allow');\n  });\n\n  it('lit aussi le champ tool', () => {\n    const r = run({ tool: 'exit_plan_mode' });\n    expect(r?.hookSpecificOutput?.decision?.behavior).toBe('allow');\n  });\n\n  it('ignore les autres outils', () => {\n    expect(run({ tool_name: 'Bash' })).toBeNull();\n  });\n});\n"
     },
     "name": "Automatic ExitPlanMode approval",
     "provider": [
@@ -2838,7 +2879,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/bash-command-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('bash-command-log', () => {\n  it('journalise une commande', () => {\n    const deps = { ...base(), cwd: '/proj' };\n    const e = run({ tool_input: { command: 'ls' }, tool_response: { exit_code: 0 } }, deps);\n    expect(e).toMatchObject({ ts: TS, cmd: 'ls', exit: 0, cwd: '/proj' });\n    expect(deps.append).toHaveBeenCalled();\n  });\n  it('ignore une commande vide', () => {\n    const deps = base();\n    expect(run({ tool_input: {} }, deps)).toBeNull();\n    expect(deps.append).not.toHaveBeenCalled();\n  });\n  it('tronque les commandes longues à 1000 car.', () => {\n    const e = run({ tool_input: { command: 'x'.repeat(2000) } }, base());\n    expect(e.cmd.length).toBe(1000);\n  });\n});\n"
     },
     "name": "Bash command log",
     "provider": [
@@ -3712,7 +3754,7 @@
     "description": "After every Python file write or edit, runs ruff format via uv to apply consistent style without any agent intervention.",
     "hook_type": "PostToolUse",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n\nif (!filePath.endsWith('.py')) process.exit(0);\n\ntry {\n  execSync(`uv run ruff format \"${filePath}\"`, { timeout: 15_000, stdio: 'pipe' });\n} catch {\n  // uv/ruff not installed — skip silently\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Formate le fichier Python avec ruff après écriture (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { stdio: 'ignore', timeout: 15_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  const filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n  if (!filePath.endsWith('.py')) return null;\n\n  try {\n    exec(`uv run ruff format \"${filePath}\"`);\n    return null;\n  } catch {\n    // uv/ruff absent — non bloquant\n    return null;\n  }\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
         "hooks": {
           "PostToolUse": [
@@ -3744,7 +3786,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/ruff-format.mjs';\n\ndescribe('ruff-format', () => {\n  it('ignore les fichiers non-.py', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec })).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('appelle ruff format sur un fichier .py', () => {\n    const exec = vi.fn();\n    run({ tool_input: { file_path: 'main.py' } }, { exec });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('ruff format'));\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('main.py'));\n  });\n\n  it('retourne null si ruff format réussit', () => {\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec: vi.fn() })).toBeNull();\n  });\n\n  it('retourne null si ruff est absent (non bloquant)', () => {\n    const exec = vi.fn(() => { throw new Error('uv not found'); });\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec })).toBeNull();\n  });\n\n  it('supporte le champ path en plus de file_path', () => {\n    const exec = vi.fn();\n    run({ tool_input: { path: 'script.py' } }, { exec });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('script.py'));\n  });\n});\n"
     },
     "name": "Ruff format after write",
     "provider": [
@@ -3776,7 +3819,7 @@
     "description": "Runs ruff check --fix on the modified Python file so lint violations are reported to the agent immediately and auto-fixable rules are applied inline.",
     "hook_type": "PostToolUse",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n\nif (!filePath.endsWith('.py')) process.exit(0);\n\ntry {\n  execSync(`uv run ruff check --fix \"${filePath}\"`, {\n    encoding: 'utf8',\n    timeout: 15_000,\n    stdio: 'pipe',\n  });\n} catch (e) {\n  if (e.stdout) process.stderr.write(`[ruff-check] ${e.stdout}\\n`);\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Analyse et auto-corrige le fichier Python avec ruff après écriture (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { encoding: 'utf8', stdio: 'pipe', timeout: 15_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  const filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n  if (!filePath.endsWith('.py')) return null;\n\n  try {\n    exec(`uv run ruff check --fix \"${filePath}\"`);\n    return null;\n  } catch (err) {\n    const output = err.stdout?.toString() ?? '';\n    return output ? { message: `[ruff-check] ${output.trim()}\\n` } : null;\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
         "hooks": {
           "PostToolUse": [
@@ -3808,7 +3851,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/ruff-check.mjs';\n\nconst fail = (stdout) => () => {\n  const e = new Error('cmd failed');\n  e.stdout = Buffer.from(stdout);\n  throw e;\n};\n\ndescribe('ruff-check', () => {\n  it('ignore les fichiers non-.py', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: 'a.js' } }, { exec })).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('appelle ruff check --fix sur un fichier .py', () => {\n    const exec = vi.fn();\n    run({ tool_input: { file_path: 'main.py' } }, { exec });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('ruff check --fix'));\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('main.py'));\n  });\n\n  it('retourne null si ruff check réussit', () => {\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec: vi.fn() })).toBeNull();\n  });\n\n  it('remonte les erreurs ruff dans le message', () => {\n    const result = run({ tool_input: { file_path: 'a.py' } }, { exec: fail('E501 line too long') });\n    expect(result?.message).toContain('[ruff-check]');\n    expect(result?.message).toContain('E501 line too long');\n  });\n\n  it('retourne null si ruff échoue sans stdout', () => {\n    const exec = () => { throw new Error('uv not found'); };\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec })).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Ruff lint after write",
@@ -3840,7 +3884,7 @@
     "description": "Runs pyright via uv on the modified .py file and reports type errors to the agent so they are fixed within the same loop.",
     "hook_type": "PostToolUse",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n\nif (!filePath.endsWith('.py')) process.exit(0);\n\ntry {\n  execSync(`uv run pyright \"${filePath}\"`, {\n    encoding: 'utf8',\n    timeout: 30_000,\n    stdio: 'pipe',\n  });\n} catch (e) {\n  if (e.stdout) process.stderr.write(`[pyright] ${e.stdout}\\n`);\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Vérifie les types Python avec pyright après édition (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { encoding: 'utf8', stdio: 'pipe', timeout: 30_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  const filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n  if (!filePath.endsWith('.py')) return null;\n\n  try {\n    exec(`uv run pyright \"${filePath}\"`);\n    return null;\n  } catch (err) {\n    const output = err.stdout?.toString() ?? '';\n    return output ? { message: `[pyright] ${output.trim()}\\n` } : null;\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
         "hooks": {
           "PostToolUse": [
@@ -3872,7 +3916,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/pyright-check.mjs';\n\nconst fail = (stdout) => () => {\n  const e = new Error('cmd failed');\n  e.stdout = Buffer.from(stdout);\n  throw e;\n};\n\ndescribe('pyright-check', () => {\n  it('ignore les fichiers non-.py', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec })).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('appelle pyright sur un fichier .py', () => {\n    const exec = vi.fn();\n    run({ tool_input: { file_path: 'main.py' } }, { exec });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('pyright'));\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('main.py'));\n  });\n\n  it('retourne null si pyright passe', () => {\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec: vi.fn() })).toBeNull();\n  });\n\n  it('remonte les erreurs pyright dans le message', () => {\n    const result = run({ tool_input: { file_path: 'a.py' } }, { exec: fail('error: Type \"str\" is not assignable') });\n    expect(result?.message).toContain('[pyright]');\n    expect(result?.message).toContain('Type \"str\"');\n  });\n\n  it('retourne null si pyright échoue sans stdout', () => {\n    const exec = () => { throw new Error('uv not found'); };\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec })).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Pyright type checking",
@@ -3904,7 +3949,7 @@
     "description": "Blocks pip install, pip3 install and poetry add/install commands and redirects the agent to the uv equivalent. Prevents virtual environment fragmentation.",
     "hook_type": "PreToolUse",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nif (input.tool_name !== 'Bash') process.exit(0);\n\nconst cmd = input.tool_input?.command ?? '';\n\nconst BLOCKED = [\n  { re: /(^|[;&|\\s`])pip\\s+install\\b/,    fix: 'uv add' },\n  { re: /(^|[;&|\\s`])pip3\\s+install\\b/,   fix: 'uv add' },\n  { re: /(^|[;&|\\s`])poetry\\s+add\\b/,     fix: 'uv add' },\n  { re: /(^|[;&|\\s`])poetry\\s+install\\b/, fix: 'uv sync' },\n];\n\nconst hit = BLOCKED.find(({ re }) => re.test(cmd));\nif (hit) {\n  process.stdout.write(JSON.stringify({\n    decision: 'block',\n    reason: `Use '${hit.fix}' instead — this project manages dependencies with uv.`,\n  }));\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Bloque pip/poetry install et suggère l'équivalent uv (PreToolUse Bash)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst BLOCKED = [\n  { re: /(^|[;&|\\s`])pip\\s+install\\b/,    fix: 'uv add' },\n  { re: /(^|[;&|\\s`])pip3\\s+install\\b/,   fix: 'uv add' },\n  { re: /(^|[;&|\\s`])poetry\\s+add\\b/,     fix: 'uv add' },\n  { re: /(^|[;&|\\s`])poetry\\s+install\\b/, fix: 'uv sync' },\n];\n\nexport function run(input) {\n  if (input.tool_name !== 'Bash') return null;\n  const cmd = input.tool_input?.command ?? '';\n\n  const hit = BLOCKED.find(({ re }) => re.test(cmd));\n  if (!hit) return null;\n\n  return {\n    decision: 'block',\n    reason: `Use '${hit.fix}' instead — this project manages dependencies with uv.`,\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
         "hooks": {
           "PreToolUse": [
@@ -3936,7 +3981,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/enforce-uv.mjs';\n\nconst bash = (command) => ({ tool_name: 'Bash', tool_input: { command } });\n\ndescribe('enforce-uv', () => {\n  it('ignore les outils non-Bash', () => {\n    expect(run({ tool_name: 'Write', tool_input: { command: 'pip install foo' } })).toBeNull();\n  });\n\n  it('bloque pip install', () => {\n    const r = run(bash('pip install requests'));\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('uv add');\n  });\n\n  it('bloque pip3 install', () => {\n    const r = run(bash('pip3 install numpy'));\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('uv add');\n  });\n\n  it('bloque poetry add', () => {\n    const r = run(bash('poetry add fastapi'));\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('uv add');\n  });\n\n  it('bloque poetry install', () => {\n    const r = run(bash('poetry install'));\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('uv sync');\n  });\n\n  it('laisse passer uv add', () => {\n    expect(run(bash('uv add requests'))).toBeNull();\n  });\n\n  it('laisse passer pip show (pas install)', () => {\n    expect(run(bash('pip show requests'))).toBeNull();\n  });\n\n  it('bloque pip install dans une chaîne de commandes', () => {\n    const r = run(bash('cd myproject && pip install -r requirements.txt'));\n    expect(r?.decision).toBe('block');\n  });\n});\n"
     },
     "name": "Enforce uv for Python dependencies",
     "provider": [
@@ -3969,7 +4015,7 @@
     "description": "When the agent finishes, runs the full pytest suite via uv. If tests fail, Claude re-enters and receives the failure output as context to fix the regressions.",
     "hook_type": "Stop",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\n\nconst cwd = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\n\nconst isPython = ['pyproject.toml', 'setup.py', 'pytest.ini', 'setup.cfg']\n  .some(f => existsSync(`${cwd}/${f}`));\nif (!isPython) process.exit(0);\n\ntry {\n  execSync('uv run pytest --tb=short -q', {\n    encoding: 'utf8',\n    timeout: 120_000,\n    cwd,\n    stdio: 'inherit',\n  });\n} catch (e) {\n  process.exit(e.status ?? 1);\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Exécute pytest à la fin d'une session Python (Stop)\nimport { existsSync } from 'fs';\nimport { spawnSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst PYTHON_MARKERS = ['pyproject.toml', 'setup.py', 'pytest.ini', 'setup.cfg'];\n\nexport function run({\n  exists = existsSync,\n  spawn = spawnSync,\n  cwd = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const isPython = PYTHON_MARKERS.some(f => exists(`${cwd}/${f}`));\n  if (!isPython) return null;\n\n  const result = spawn('uv', ['run', 'pytest', '--tb=short', '-q'], {\n    encoding: 'utf8',\n    timeout: 120_000,\n    cwd,\n    stdio: ['ignore', 'pipe', 'pipe'],\n  });\n\n  const out = (result.stdout ?? '') + (result.stderr ?? '');\n  const status = result.status ?? 1;\n  const message = status !== 0\n    ? `[pytest] ÉCHEC (exit ${status})\\n${out.slice(-2000)}\\n`\n    : `[pytest] ✓ Tests passés\\n${out.split('\\n').filter(Boolean).slice(-5).join('\\n')}\\n`;\n\n  return { status, message };\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) {\n    process.stderr.write(result.message);\n    if (result.status !== 0) process.exit(2);\n  }\n}\n",
       "config": {
         "hooks": {
           "Stop": [
@@ -4000,7 +4046,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/pytest.mjs';\n\nconst CWD = '/fake/project';\n\nfunction makeOpts({ marker = 'pyproject.toml', spawnStatus = 0, stdout = '', stderr = '' } = {}) {\n  return {\n    cwd: CWD,\n    exists: (p) => marker ? p.endsWith(marker) : false,\n    spawn: vi.fn(() => ({ status: spawnStatus, stdout, stderr })),\n  };\n}\n\ndescribe('pytest', () => {\n  it('retourne null si projet non-Python', () => {\n    const opts = makeOpts({ marker: null });\n    expect(run(opts)).toBeNull();\n    expect(opts.spawn).not.toHaveBeenCalled();\n  });\n\n  it('détecte pyproject.toml et lance pytest', () => {\n    const opts = makeOpts({ marker: 'pyproject.toml' });\n    run(opts);\n    expect(opts.spawn).toHaveBeenCalledWith(\n      'uv', ['run', 'pytest', '--tb=short', '-q'],\n      expect.objectContaining({ cwd: CWD }),\n    );\n  });\n\n  it('détecte pytest.ini', () => {\n    const opts = makeOpts({ marker: 'pytest.ini' });\n    const result = run(opts);\n    expect(result).not.toBeNull();\n    expect(opts.spawn).toHaveBeenCalled();\n  });\n\n  it('retourne status 0 et message succès', () => {\n    const opts = makeOpts({ spawnStatus: 0, stdout: '5 passed in 0.3s' });\n    const result = run(opts);\n    expect(result.status).toBe(0);\n    expect(result.message).toContain('✓ Tests passés');\n  });\n\n  it('retourne status non-0 et message échec', () => {\n    const opts = makeOpts({ spawnStatus: 1, stderr: 'FAILED test_foo.py' });\n    const result = run(opts);\n    expect(result.status).toBe(1);\n    expect(result.message).toContain('ÉCHEC');\n    expect(result.message).toContain('FAILED test_foo.py');\n  });\n});\n"
     },
     "is_must": true,
     "name": "Run pytest at end of response",
@@ -4325,7 +4372,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/registry-auto-sync.mjs';\n\nconst deps = (exec) => ({ exec, projectDir: '/proj' });\n\ndescribe('registry-auto-sync', () => {\n  it('resync sur édition d\\'un hook .mjs', () => {\n    const exec = vi.fn(() => 'ligne1\\nligne2\\nligne3');\n    const r = run({ tool_input: { file_path: '/proj/.claude/hooks/foo.mjs' } }, deps(exec));\n    expect(exec).toHaveBeenCalledWith('/proj');\n    expect(r?.message).toContain('registry-auto-sync');\n  });\n\n  it('resync sur édition du registre', () => {\n    const exec = vi.fn(() => 'ok');\n    run({ tool_input: { file_path: '/proj/registry/registry.json' } }, deps(exec));\n    expect(exec).toHaveBeenCalled();\n  });\n\n  it('ignore les autres fichiers', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: '/proj/src/x.ts' } }, deps(exec))).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('ne se resync pas lui-même', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: '/proj/.claude/hooks/registry-auto-sync.mjs' } }, deps(exec))).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('ne fait rien sans projectDir', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: '/proj/registry/registry.json' } }, { exec, projectDir: null })).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('capture une erreur de sync', () => {\n    const exec = () => { throw new Error('boom'); };\n    const r = run({ tool_input: { file_path: '/proj/.claude/hooks/foo.mjs' } }, deps(exec));\n    expect(r?.message).toContain('échec');\n  });\n\n  it('résout le projectDir depuis le chemin du fichier (worktree)', () => {\n    const exec = vi.fn(() => 'ok');\n    run({ file_path: '/tmp/some-worktree/.claude/hooks/foo.mjs' }, deps(exec));\n    expect(exec).toHaveBeenCalledWith('/tmp/some-worktree');\n  });\n\n  it('FileChanged: file_path a priorité sur tool_input pour résoudre le répertoire', () => {\n    const exec = vi.fn(() => 'ok');\n    run({ file_path: '/wt/.claude/hooks/bar.mjs', tool_input: { file_path: '/proj/.claude/hooks/bar.mjs' } }, deps(exec));\n    expect(exec).toHaveBeenCalledWith('/wt');\n  });\n});\n"
     }
   },
   {
@@ -4428,7 +4476,8 @@
             }
           ]
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/websearch-temporal-context.mjs';\n\nconst input = (query) => ({ tool_input: { query } });\n\ndescribe('websearch-temporal-context', () => {\n  it('ajoute l\\'année si aucun contexte temporel', () => {\n    const result = run(input('best React state management'), { currentYear: 2026 });\n    expect(result?.hookSpecificOutput?.modifiedToolInput?.query).toBe('best React state management 2026');\n  });\n\n  it('ne modifie pas si une année est déjà présente', () => {\n    expect(run(input('Next.js 15 features 2025'), { currentYear: 2026 })).toBeNull();\n  });\n\n  it('ne modifie pas si \"latest\" est présent', () => {\n    expect(run(input('latest Claude models'), { currentYear: 2026 })).toBeNull();\n  });\n\n  it('ne modifie pas si \"recent\" est présent', () => {\n    expect(run(input('recent AI breakthroughs'), { currentYear: 2026 })).toBeNull();\n  });\n\n  it('ne modifie pas si \"current\" est présent', () => {\n    expect(run(input('current Node.js LTS'), { currentYear: 2026 })).toBeNull();\n  });\n\n  it('retourne null si query vide', () => {\n    expect(run(input(''), { currentYear: 2026 })).toBeNull();\n  });\n\n  it('retourne null si tool_input absent', () => {\n    expect(run({}, { currentYear: 2026 })).toBeNull();\n  });\n\n  it('retourne le bon hookEventName', () => {\n    const result = run(input('TypeScript tips'), { currentYear: 2026 });\n    expect(result?.hookSpecificOutput?.hookEventName).toBe('PreToolUse');\n  });\n});\n"
     }
   },
   {
@@ -4471,7 +4520,8 @@
             }
           ]
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/agents-md-loader.mjs';\n\ndescribe('agents-md-loader', () => {\n  it('charge le contenu d\\'AGENTS.md quand il existe', () => {\n    const readFile = vi.fn().mockReturnValue('# Agents\\n\\nAgent config here.');\n    const fileExists = vi.fn().mockReturnValue(true);\n    const result = run({}, { projectDir: '/project', readFile, fileExists });\n    expect(result?.hookSpecificOutput?.additionalContext).toBe('# Agents\\n\\nAgent config here.');\n  });\n\n  it('retourne le bon hookEventName', () => {\n    const readFile = vi.fn().mockReturnValue('content');\n    const fileExists = vi.fn().mockReturnValue(true);\n    const result = run({}, { projectDir: '/project', readFile, fileExists });\n    expect(result?.hookSpecificOutput?.hookEventName).toBe('SessionStart');\n  });\n\n  it('retourne null si AGENTS.md n\\'existe pas', () => {\n    const fileExists = vi.fn().mockReturnValue(false);\n    expect(run({}, { projectDir: '/project', fileExists })).toBeNull();\n  });\n\n  it('retourne null si AGENTS.md est vide', () => {\n    const readFile = vi.fn().mockReturnValue('   \\n  ');\n    const fileExists = vi.fn().mockReturnValue(true);\n    expect(run({}, { projectDir: '/project', readFile, fileExists })).toBeNull();\n  });\n\n  it('retourne null si projectDir absent', () => {\n    expect(run({}, { projectDir: undefined })).toBeNull();\n  });\n});\n"
     }
   },
   {
@@ -4519,7 +4569,8 @@
             }
           ]
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/nextjs-quality-checker.mjs';\n\nfunction makeInput(filePath) {\n  return { tool_input: { file_path: filePath } };\n}\n\nfunction makeDeps(content) {\n  return {\n    readFile: vi.fn().mockReturnValue(content),\n    fileExists: vi.fn().mockReturnValue(true),\n  };\n}\n\ndescribe('nextjs-quality-checker', () => {\n  it('retourne null pour un fichier non JS/TS', () => {\n    const deps = makeDeps('');\n    expect(run(makeInput('/app/styles.css'), deps)).toBeNull();\n  });\n\n  it('retourne null si le fichier n\\'existe pas', () => {\n    const deps = { readFile: vi.fn(), fileExists: vi.fn().mockReturnValue(false) };\n    expect(run(makeInput('/app/page.tsx'), deps)).toBeNull();\n  });\n\n  it('détecte un Server Component avec useState sans use client', () => {\n    const content = `import { useState } from 'react';\\nexport default function Page() { const [x, setX] = useState(0); }`;\n    const deps = makeDeps(content);\n    const result = run(makeInput('/project/app/page.tsx'), deps);\n    expect(result?.message).toMatch(/'use client'/);\n  });\n\n  it('laisse passer un Server Component sans interactivité', () => {\n    const content = `export default async function Page() { const data = await fetch('/api'); return <div>{data}</div>; }`;\n    const deps = makeDeps(content);\n    expect(run(makeInput('/project/app/page.tsx'), deps)).toBeNull();\n  });\n\n  it('ne bloque pas un Client Component correct', () => {\n    const content = `'use client';\\nimport { useState } from 'react';\\nexport default function Counter() { const [n, setN] = useState(0); }`;\n    const deps = makeDeps(content);\n    expect(run(makeInput('/project/app/counter.tsx'), deps)).toBeNull();\n  });\n\n  it('détecte getServerSideProps dans app/', () => {\n    const content = `export async function getServerSideProps() { return { props: {} }; }`;\n    const deps = makeDeps(content);\n    vi.spyOn(process.stderr, 'write').mockImplementation(() => {});\n    const result = run(makeInput('/project/app/legacy.tsx'), deps);\n    // Warnings only → null (écrit sur stderr)\n    expect(result).toBeNull();\n  });\n\n  it('détecte <img> sans next/image (hors app/)', () => {\n    const content = `export default function Card() { return <img src=\"/logo.png\" alt=\"logo\" />; }`;\n    const deps = makeDeps(content);\n    vi.spyOn(process.stderr, 'write').mockImplementation(() => {});\n    const result = run(makeInput('/project/src/components/card.tsx'), deps);\n    expect(result).toBeNull(); // warning → stderr, non bloquant\n  });\n\n  it('ne signale pas <img> si next/image est déjà importé', () => {\n    const content = `import Image from 'next/image';\\nexport default function Card() { return <img src=\"/logo.png\" />; }`;\n    const deps = makeDeps(content);\n    expect(run(makeInput('/project/app/card.tsx'), deps)).toBeNull();\n  });\n\n  it('retourne null si tool_input vide', () => {\n    expect(run({})).toBeNull();\n  });\n});\n"
     }
   },
   {
@@ -4545,7 +4596,8 @@
         }
       },
       "script_path": ".claude/hooks/file-to-markdown.mjs",
-      "type": "settings_json"
+      "type": "settings_json",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi, beforeEach } from 'vitest';\nimport { run } from '../../.claude/hooks/file-to-markdown.mjs';\n\ndescribe('file-to-markdown', () => {\n  const mockExec = vi.fn();\n  const mockExists = vi.fn();\n\n  beforeEach(() => {\n    mockExec.mockReset();\n    mockExists.mockReset().mockReturnValue(true);\n  });\n\n  it('laisse passer si tool_name != Read', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: 'doc.pdf' } }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it('laisse passer si extension non supportée', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'file.ts' } }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({ tool_name: 'Read' }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it(\"laisse passer si le fichier n'existe pas\", () => {\n    mockExists.mockReturnValue(false);\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'doc.pdf' } }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it('laisse passer si aucun outil disponible', () => {\n    mockExec.mockImplementation(() => { throw new Error('not found'); });\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'doc.pdf' } }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it('convertit un PDF avec pdftotext', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pdftotext') return '/usr/bin/pdftotext';\n      if (cmd.startsWith('pdftotext')) return '# Hello World\\n\\nContenu du PDF.';\n      throw new Error('not found');\n    });\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/doc.pdf' } }, { exec: mockExec, exists: mockExists });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('doc.pdf');\n    expect(result?.reason).toContain('# Hello World');\n  });\n\n  it('convertit un DOCX avec pandoc', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd === 'which pdftotext') throw new Error('not found');\n      if (cmd.startsWith('pandoc')) return '# Titre\\n\\nContenu du document Word.';\n      throw new Error('not found');\n    });\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/rapport.docx' } }, { exec: mockExec, exists: mockExists });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('rapport.docx');\n    expect(result?.reason).toContain('Contenu du document Word');\n  });\n\n  it('convertit un PPTX avec pandoc', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd.startsWith('pandoc')) return '## Slide 1\\n\\nContenu de la présentation.';\n      throw new Error('not found');\n    });\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/slides.pptx' } }, { exec: mockExec, exists: mockExists });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('slides.pptx');\n    expect(result?.reason).toContain('Slide 1');\n  });\n\n  it('utilise pandoc comme fallback PDF si pdftotext absent', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd === 'which pdftotext') throw new Error('not found');\n      if (cmd.startsWith('pandoc')) return '# PDF via pandoc';\n      throw new Error('not found');\n    });\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/doc.pdf' } }, { exec: mockExec, exists: mockExists });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('PDF via pandoc');\n  });\n\n  it('tronque le contenu si trop long', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd.startsWith('pandoc')) return 'a'.repeat(60_000);\n      throw new Error('not found');\n    });\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/gros.docx' } }, { exec: mockExec, exists: mockExists });\n    expect(result?.reason).toContain('truncated');\n    expect(result?.reason.length).toBeLessThan(55_000);\n  });\n\n  it('laisse passer si la conversion échoue', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd.startsWith('pandoc')) throw new Error('pandoc error');\n      throw new Error('not found');\n    });\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '/tmp/bad.docx' } }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it('laisse passer si le résultat est vide', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd.startsWith('pandoc')) return '   ';\n      throw new Error('not found');\n    });\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '/tmp/empty.docx' } }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it('supporte epub', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd.startsWith('pandoc')) return '# Chapitre 1\\n\\nContenu.';\n      throw new Error('not found');\n    });\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/livre.epub' } }, { exec: mockExec, exists: mockExists });\n    expect(result?.decision).toBe('block');\n  });\n});\n"
     },
     "is_must": true,
     "name": "Binary file to Markdown converter",
