@@ -4,6 +4,8 @@ import { detect, run } from '../../.claude/hooks/run-tests.mjs';
 
 const PROJECT_DIR = '/fake/project';
 
+const MAIN_ROOT = '/fake/main';
+
 function makeOpts({
   scripts = { test: 'vitest' },
   hasPkg = true,
@@ -13,11 +15,14 @@ function makeOpts({
   hasBunLock = false,
   hasPyproject = false,
   hasGoMod = false,
+  hasNodeModules = true,
   spawnStatus = 0,
 } = {}) {
   return {
     projectDir: PROJECT_DIR,
+    mainRoot: MAIN_ROOT,
     exists: (p) => {
+      if (p.endsWith('node_modules')) return hasNodeModules;
       if (p.endsWith('package.json')) return hasPkg;
       if (p.endsWith('pnpm-lock.yaml')) return hasPnpmLock;
       if (p.endsWith('yarn.lock')) return hasYarnLock;
@@ -122,5 +127,31 @@ describe('run', () => {
   it('inclut la sortie du processus dans le message en cas d\'échec', () => {
     const result = run(makeOpts({ spawnStatus: 1 }));
     expect(result.message).toContain('Error details');
+  });
+
+  it('utilise mainRoot si node_modules absent dans projectDir (worktree)', () => {
+    const spawnCalls = [];
+    const opts = {
+      ...makeOpts({ hasNodeModules: false }),
+      spawn: (cmd, args, spawnOpts) => {
+        spawnCalls.push(spawnOpts.cwd);
+        return { status: 0, stdout: 'ok', stderr: '' };
+      },
+    };
+    run(opts);
+    expect(spawnCalls[0]).toBe(MAIN_ROOT);
+  });
+
+  it('utilise projectDir si node_modules présent', () => {
+    const spawnCalls = [];
+    const opts = {
+      ...makeOpts({ hasNodeModules: true }),
+      spawn: (cmd, args, spawnOpts) => {
+        spawnCalls.push(spawnOpts.cwd);
+        return { status: 0, stdout: 'ok', stderr: '' };
+      },
+    };
+    run(opts);
+    expect(spawnCalls[0]).toBe(PROJECT_DIR);
   });
 });

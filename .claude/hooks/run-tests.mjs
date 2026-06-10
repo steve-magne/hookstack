@@ -1,9 +1,19 @@
 #!/usr/bin/env node
 // Exécute la suite de tests à la fin d'une session (Stop)
-import { spawnSync } from 'child_process';
+import { spawnSync, execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
+
+/** Résout la racine principale du repo (pas le worktree courant). */
+function resolveMainRoot(cwd) {
+  try {
+    const list = execSync('git worktree list', { encoding: 'utf8', cwd, timeout: 5_000 });
+    return list.split('\n')[0]?.split(/\s+/)[0] ?? cwd;
+  } catch {
+    return cwd;
+  }
+}
 
 // Détecte le runner de tests adapté au projet.
 export function detect({ exists = existsSync, readFile = readFileSync, projectDir } = {}) {
@@ -33,16 +43,21 @@ export function run({
   readFile = readFileSync,
   spawn = spawnSync,
   projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+  mainRoot = resolveMainRoot(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
 } = {}) {
-  const runner = detect({ exists, readFile, projectDir });
+  // Dans un worktree secondaire, lancer les tests depuis la racine principale
+  // qui contient node_modules.
+  const runDir = exists(join(projectDir, 'node_modules')) ? projectDir : mainRoot;
+  const runner = detect({ exists, readFile, projectDir: runDir });
   if (!runner) return null;
 
   const [cmd, args] = runner;
   const result = spawn(cmd, args, {
-    cwd: projectDir,
+    cwd: runDir,
     encoding: 'utf8',
     timeout: 120_000,
     stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, CI: 'true' },
   });
 
   const out = (result.stdout ?? '') + (result.stderr ?? '');
