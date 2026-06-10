@@ -3754,7 +3754,7 @@
     "description": "After every Python file write or edit, runs ruff format via uv to apply consistent style without any agent intervention.",
     "hook_type": "PostToolUse",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n\nif (!filePath.endsWith('.py')) process.exit(0);\n\ntry {\n  execSync(`uv run ruff format \"${filePath}\"`, { timeout: 15_000, stdio: 'pipe' });\n} catch {\n  // uv/ruff not installed — skip silently\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Formate le fichier Python avec ruff après écriture (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  execSync(cmd, { stdio: 'ignore', timeout: 15_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  const filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n  if (!filePath.endsWith('.py')) return null;\n\n  try {\n    exec(`uv run ruff format \"${filePath}\"`);\n    return null;\n  } catch {\n    // uv/ruff absent — non bloquant\n    return null;\n  }\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
       "config": {
         "hooks": {
           "PostToolUse": [
@@ -3786,7 +3786,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/ruff-format.mjs';\n\ndescribe('ruff-format', () => {\n  it('ignore les fichiers non-.py', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec })).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('appelle ruff format sur un fichier .py', () => {\n    const exec = vi.fn();\n    run({ tool_input: { file_path: 'main.py' } }, { exec });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('ruff format'));\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('main.py'));\n  });\n\n  it('retourne null si ruff format réussit', () => {\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec: vi.fn() })).toBeNull();\n  });\n\n  it('retourne null si ruff est absent (non bloquant)', () => {\n    const exec = vi.fn(() => { throw new Error('uv not found'); });\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec })).toBeNull();\n  });\n\n  it('supporte le champ path en plus de file_path', () => {\n    const exec = vi.fn();\n    run({ tool_input: { path: 'script.py' } }, { exec });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('script.py'));\n  });\n});\n"
     },
     "name": "Ruff format after write",
     "provider": [
@@ -3818,7 +3819,7 @@
     "description": "Runs ruff check --fix on the modified Python file so lint violations are reported to the agent immediately and auto-fixable rules are applied inline.",
     "hook_type": "PostToolUse",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n\nif (!filePath.endsWith('.py')) process.exit(0);\n\ntry {\n  execSync(`uv run ruff check --fix \"${filePath}\"`, {\n    encoding: 'utf8',\n    timeout: 15_000,\n    stdio: 'pipe',\n  });\n} catch (e) {\n  if (e.stdout) process.stderr.write(`[ruff-check] ${e.stdout}\\n`);\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Analyse et auto-corrige le fichier Python avec ruff après écriture (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { encoding: 'utf8', stdio: 'pipe', timeout: 15_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  const filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n  if (!filePath.endsWith('.py')) return null;\n\n  try {\n    exec(`uv run ruff check --fix \"${filePath}\"`);\n    return null;\n  } catch (err) {\n    const output = err.stdout?.toString() ?? '';\n    return output ? { message: `[ruff-check] ${output.trim()}\\n` } : null;\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
         "hooks": {
           "PostToolUse": [
@@ -3850,7 +3851,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/ruff-check.mjs';\n\nconst fail = (stdout) => () => {\n  const e = new Error('cmd failed');\n  e.stdout = Buffer.from(stdout);\n  throw e;\n};\n\ndescribe('ruff-check', () => {\n  it('ignore les fichiers non-.py', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: 'a.js' } }, { exec })).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('appelle ruff check --fix sur un fichier .py', () => {\n    const exec = vi.fn();\n    run({ tool_input: { file_path: 'main.py' } }, { exec });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('ruff check --fix'));\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('main.py'));\n  });\n\n  it('retourne null si ruff check réussit', () => {\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec: vi.fn() })).toBeNull();\n  });\n\n  it('remonte les erreurs ruff dans le message', () => {\n    const result = run({ tool_input: { file_path: 'a.py' } }, { exec: fail('E501 line too long') });\n    expect(result?.message).toContain('[ruff-check]');\n    expect(result?.message).toContain('E501 line too long');\n  });\n\n  it('retourne null si ruff échoue sans stdout', () => {\n    const exec = () => { throw new Error('uv not found'); };\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec })).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Ruff lint after write",
@@ -3882,7 +3884,7 @@
     "description": "Runs pyright via uv on the modified .py file and reports type errors to the agent so they are fixed within the same loop.",
     "hook_type": "PostToolUse",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n\nif (!filePath.endsWith('.py')) process.exit(0);\n\ntry {\n  execSync(`uv run pyright \"${filePath}\"`, {\n    encoding: 'utf8',\n    timeout: 30_000,\n    stdio: 'pipe',\n  });\n} catch (e) {\n  if (e.stdout) process.stderr.write(`[pyright] ${e.stdout}\\n`);\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Vérifie les types Python avec pyright après édition (PostToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { encoding: 'utf8', stdio: 'pipe', timeout: 30_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n  const filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? '';\n  if (!filePath.endsWith('.py')) return null;\n\n  try {\n    exec(`uv run pyright \"${filePath}\"`);\n    return null;\n  } catch (err) {\n    const output = err.stdout?.toString() ?? '';\n    return output ? { message: `[pyright] ${output.trim()}\\n` } : null;\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
       "config": {
         "hooks": {
           "PostToolUse": [
@@ -3914,7 +3916,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/pyright-check.mjs';\n\nconst fail = (stdout) => () => {\n  const e = new Error('cmd failed');\n  e.stdout = Buffer.from(stdout);\n  throw e;\n};\n\ndescribe('pyright-check', () => {\n  it('ignore les fichiers non-.py', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec })).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('appelle pyright sur un fichier .py', () => {\n    const exec = vi.fn();\n    run({ tool_input: { file_path: 'main.py' } }, { exec });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('pyright'));\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('main.py'));\n  });\n\n  it('retourne null si pyright passe', () => {\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec: vi.fn() })).toBeNull();\n  });\n\n  it('remonte les erreurs pyright dans le message', () => {\n    const result = run({ tool_input: { file_path: 'a.py' } }, { exec: fail('error: Type \"str\" is not assignable') });\n    expect(result?.message).toContain('[pyright]');\n    expect(result?.message).toContain('Type \"str\"');\n  });\n\n  it('retourne null si pyright échoue sans stdout', () => {\n    const exec = () => { throw new Error('uv not found'); };\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec })).toBeNull();\n  });\n});\n"
     },
     "is_must": true,
     "name": "Pyright type checking",
@@ -3946,7 +3949,7 @@
     "description": "Blocks pip install, pip3 install and poetry add/install commands and redirects the agent to the uv equivalent. Prevents virtual environment fragmentation.",
     "hook_type": "PreToolUse",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\nimport { readFileSync } from 'fs';\n\nconst input = JSON.parse(readFileSync(0, 'utf8'));\nif (input.tool_name !== 'Bash') process.exit(0);\n\nconst cmd = input.tool_input?.command ?? '';\n\nconst BLOCKED = [\n  { re: /(^|[;&|\\s`])pip\\s+install\\b/,    fix: 'uv add' },\n  { re: /(^|[;&|\\s`])pip3\\s+install\\b/,   fix: 'uv add' },\n  { re: /(^|[;&|\\s`])poetry\\s+add\\b/,     fix: 'uv add' },\n  { re: /(^|[;&|\\s`])poetry\\s+install\\b/, fix: 'uv sync' },\n];\n\nconst hit = BLOCKED.find(({ re }) => re.test(cmd));\nif (hit) {\n  process.stdout.write(JSON.stringify({\n    decision: 'block',\n    reason: `Use '${hit.fix}' instead — this project manages dependencies with uv.`,\n  }));\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Bloque pip/poetry install et suggère l'équivalent uv (PreToolUse Bash)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst BLOCKED = [\n  { re: /(^|[;&|\\s`])pip\\s+install\\b/,    fix: 'uv add' },\n  { re: /(^|[;&|\\s`])pip3\\s+install\\b/,   fix: 'uv add' },\n  { re: /(^|[;&|\\s`])poetry\\s+add\\b/,     fix: 'uv add' },\n  { re: /(^|[;&|\\s`])poetry\\s+install\\b/, fix: 'uv sync' },\n];\n\nexport function run(input) {\n  if (input.tool_name !== 'Bash') return null;\n  const cmd = input.tool_input?.command ?? '';\n\n  const hit = BLOCKED.find(({ re }) => re.test(cmd));\n  if (!hit) return null;\n\n  return {\n    decision: 'block',\n    reason: `Use '${hit.fix}' instead — this project manages dependencies with uv.`,\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "config": {
         "hooks": {
           "PreToolUse": [
@@ -3978,7 +3981,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/enforce-uv.mjs';\n\nconst bash = (command) => ({ tool_name: 'Bash', tool_input: { command } });\n\ndescribe('enforce-uv', () => {\n  it('ignore les outils non-Bash', () => {\n    expect(run({ tool_name: 'Write', tool_input: { command: 'pip install foo' } })).toBeNull();\n  });\n\n  it('bloque pip install', () => {\n    const r = run(bash('pip install requests'));\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('uv add');\n  });\n\n  it('bloque pip3 install', () => {\n    const r = run(bash('pip3 install numpy'));\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('uv add');\n  });\n\n  it('bloque poetry add', () => {\n    const r = run(bash('poetry add fastapi'));\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('uv add');\n  });\n\n  it('bloque poetry install', () => {\n    const r = run(bash('poetry install'));\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('uv sync');\n  });\n\n  it('laisse passer uv add', () => {\n    expect(run(bash('uv add requests'))).toBeNull();\n  });\n\n  it('laisse passer pip show (pas install)', () => {\n    expect(run(bash('pip show requests'))).toBeNull();\n  });\n\n  it('bloque pip install dans une chaîne de commandes', () => {\n    const r = run(bash('cd myproject && pip install -r requirements.txt'));\n    expect(r?.decision).toBe('block');\n  });\n});\n"
     },
     "name": "Enforce uv for Python dependencies",
     "provider": [
@@ -4011,7 +4015,7 @@
     "description": "When the agent finishes, runs the full pytest suite via uv. If tests fail, Claude re-enters and receives the failure output as context to fix the regressions.",
     "hook_type": "Stop",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\n\nconst cwd = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();\n\nconst isPython = ['pyproject.toml', 'setup.py', 'pytest.ini', 'setup.cfg']\n  .some(f => existsSync(`${cwd}/${f}`));\nif (!isPython) process.exit(0);\n\ntry {\n  execSync('uv run pytest --tb=short -q', {\n    encoding: 'utf8',\n    timeout: 120_000,\n    cwd,\n    stdio: 'inherit',\n  });\n} catch (e) {\n  process.exit(e.status ?? 1);\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Exécute pytest à la fin d'une session Python (Stop)\nimport { existsSync } from 'fs';\nimport { spawnSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nconst PYTHON_MARKERS = ['pyproject.toml', 'setup.py', 'pytest.ini', 'setup.cfg'];\n\nexport function run({\n  exists = existsSync,\n  spawn = spawnSync,\n  cwd = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const isPython = PYTHON_MARKERS.some(f => exists(`${cwd}/${f}`));\n  if (!isPython) return null;\n\n  const result = spawn('uv', ['run', 'pytest', '--tb=short', '-q'], {\n    encoding: 'utf8',\n    timeout: 120_000,\n    cwd,\n    stdio: ['ignore', 'pipe', 'pipe'],\n  });\n\n  const out = (result.stdout ?? '') + (result.stderr ?? '');\n  const status = result.status ?? 1;\n  const message = status !== 0\n    ? `[pytest] ÉCHEC (exit ${status})\\n${out.slice(-2000)}\\n`\n    : `[pytest] ✓ Tests passés\\n${out.split('\\n').filter(Boolean).slice(-5).join('\\n')}\\n`;\n\n  return { status, message };\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) {\n    process.stderr.write(result.message);\n    if (result.status !== 0) process.exit(2);\n  }\n}\n",
       "config": {
         "hooks": {
           "Stop": [
@@ -4042,7 +4046,8 @@
           "low": 0,
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
-      }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/pytest.mjs';\n\nconst CWD = '/fake/project';\n\nfunction makeOpts({ marker = 'pyproject.toml', spawnStatus = 0, stdout = '', stderr = '' } = {}) {\n  return {\n    cwd: CWD,\n    exists: (p) => marker ? p.endsWith(marker) : false,\n    spawn: vi.fn(() => ({ status: spawnStatus, stdout, stderr })),\n  };\n}\n\ndescribe('pytest', () => {\n  it('retourne null si projet non-Python', () => {\n    const opts = makeOpts({ marker: null });\n    expect(run(opts)).toBeNull();\n    expect(opts.spawn).not.toHaveBeenCalled();\n  });\n\n  it('détecte pyproject.toml et lance pytest', () => {\n    const opts = makeOpts({ marker: 'pyproject.toml' });\n    run(opts);\n    expect(opts.spawn).toHaveBeenCalledWith(\n      'uv', ['run', 'pytest', '--tb=short', '-q'],\n      expect.objectContaining({ cwd: CWD }),\n    );\n  });\n\n  it('détecte pytest.ini', () => {\n    const opts = makeOpts({ marker: 'pytest.ini' });\n    const result = run(opts);\n    expect(result).not.toBeNull();\n    expect(opts.spawn).toHaveBeenCalled();\n  });\n\n  it('retourne status 0 et message succès', () => {\n    const opts = makeOpts({ spawnStatus: 0, stdout: '5 passed in 0.3s' });\n    const result = run(opts);\n    expect(result.status).toBe(0);\n    expect(result.message).toContain('✓ Tests passés');\n  });\n\n  it('retourne status non-0 et message échec', () => {\n    const opts = makeOpts({ spawnStatus: 1, stderr: 'FAILED test_foo.py' });\n    const result = run(opts);\n    expect(result.status).toBe(1);\n    expect(result.message).toContain('ÉCHEC');\n    expect(result.message).toContain('FAILED test_foo.py');\n  });\n});\n"
     },
     "is_must": true,
     "name": "Run pytest at end of response",
