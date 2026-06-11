@@ -13,6 +13,7 @@ import {
   assertSafeTarget,
   collectIncomingHooks,
   buildSecurityRows,
+  buildPostInstallHints,
   doInstallTests,
 } from './core.mjs'
 
@@ -234,6 +235,7 @@ async function interactiveInstall(slugs, args) {
   }
 
   // Result panel
+  const hints = buildPostInstallHints(hooks)
   const resultLines = [
     pc.green(`✓ ${dirs.settingsPath}`),
     result.scriptCount > 0
@@ -242,6 +244,8 @@ async function interactiveInstall(slugs, args) {
     testResult?.testCount > 0
       ? pc.green(`✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} written to tests/hooks/`)
       : null,
+    hints.length > 0 ? '' : null,
+    ...hints.map(h => pc.yellow(`⚠  ${h.slug}: ${h.hint}`)),
     '',
     `Browse more hooks  ${pc.cyan(`${API_BASE}/#catalogue`)}`,
     `⭐  Star us         ${pc.cyan(REPO_URL)}`,
@@ -280,6 +284,10 @@ async function directInstall(slugs, args) {
     } catch (e) {
       console.warn(`  ! Could not write tests: ${e.message}`)
     }
+  }
+  const hints = buildPostInstallHints(hooks)
+  if (hints.length > 0) {
+    for (const h of hints) console.warn(`  ⚠  ${h.slug}: ${h.hint}`)
   }
   console.log(`\n✅ ${plural(result.hookCount, 'hook')} installed · star us → ${REPO_URL}`)
   console.log('   Restart Claude Code to activate.\n')

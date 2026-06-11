@@ -12,6 +12,8 @@ import {
   isBlockingEvent,
   buildSummaryRows,
   buildSecurityRows,
+  buildPostInstallHints,
+  PREREQ_HINTS,
 } from '../../packages/cli/bin/core.mjs'
 
 const argv = (...a) => ['node', 'cli.mjs', ...a]
@@ -205,5 +207,29 @@ describe('buildSecurityRows', () => {
     }])
     expect(rows[0].shell).toBe(true)
     expect(rows[0].snyk.level).toBe('medium')
+  })
+})
+
+describe('buildPostInstallHints', () => {
+  it('retourne vide si aucun hook avec prérequis', () => {
+    expect(buildPostInstallHints([{ slug: 'guard-push-main' }])).toEqual([])
+  })
+
+  it('retourne un hint pour stop-duplication-check', () => {
+    const hints = buildPostInstallHints([{ slug: 'stop-duplication-check' }])
+    expect(hints).toHaveLength(1)
+    expect(hints[0].slug).toBe('stop-duplication-check')
+    expect(hints[0].hint).toContain('jscpd')
+  })
+
+  it('ignore les hooks sans entrée PREREQ_HINTS', () => {
+    const hooks = [{ slug: 'detect-secrets' }, { slug: 'stop-duplication-check' }]
+    const hints = buildPostInstallHints(hooks)
+    expect(hints).toHaveLength(1)
+    expect(hints[0].slug).toBe('stop-duplication-check')
+  })
+
+  it('PREREQ_HINTS contient une commande pnpm ou npm', () => {
+    expect(PREREQ_HINTS['stop-duplication-check']).toMatch(/pnpm|npm/)
   })
 })

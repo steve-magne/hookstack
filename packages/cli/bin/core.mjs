@@ -211,6 +211,20 @@ export function buildSummaryRows(hooks, { root }) {
   })
 }
 
+// Maps hook slugs to post-install hints about required external tools.
+// Keep as a plain object so it's trivially testable without any async/fetch.
+export const PREREQ_HINTS = {
+  'stop-duplication-check': 'Requires jscpd:  pnpm add -D jscpd  (or npm install -g jscpd)',
+}
+
+// Returns one hint entry per installed hook that has an external prerequisite.
+export function buildPostInstallHints(hooks) {
+  return hooks.flatMap(h => {
+    const hint = PREREQ_HINTS[h.slug]
+    return hint ? [{ slug: h.slug, hint }] : []
+  })
+}
+
 // Display rows for the "Installation Summary" panel: description + static capabilities + verdicts.
 export function buildSecurityRows(hooks) {
   return hooks.map(h => ({
