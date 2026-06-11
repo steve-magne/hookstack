@@ -64,13 +64,13 @@ That's it. The CLI walks you through picking hooks, writes `.claude/hooks/*.mjs`
 Want to fine-tune your Hookstack? Go to **[hookstack.vercel.app](https://hookstack.vercel.app)** — browse the full catalogue, select exactly what you need, and copy the generated command:
 
 ```bash
-npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-block-destructive,load-git-context
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-block-destructive,session-start-load-git-context
 ```
 
 **With unit tests** — add `--with-tests` to generate Vitest tests into `tests/hooks/`:
 
 ```bash
-npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,load-git-context --with-tests
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,session-start-load-git-context --with-tests
 ```
 
 ### GitHub Copilot
@@ -78,7 +78,7 @@ npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,load-git-cont
 Add `--copilot` to generate a `settings.json` with relative paths that Copilot can resolve:
 
 ```bash
-npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,load-git-context --copilot
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,session-start-load-git-context --copilot
 ```
 
 Or pick option **3** when the interactive prompt asks "Where to install?".
@@ -116,47 +116,43 @@ Fires when a new worktree is created. Copy `.env`, assign a free port, run `pnpm
 ### Security
 
 - **pre-bash-secret-detection** — Catches API keys, tokens, and passwords before any shell command runs
+- **pre-write-secret-detection** — Blocks the agent from hardcoding a secret into any file it writes
 - **pre-bash-block-destructive** — Blocks `rm -rf /`, `DROP TABLE`, direct disk writes, and other foot-guns
-- **pre-write-protect-dotenv** — `.env` and key files stay untouched by the agent, always
-- **pre-bash-no-push-to-main** — Hard stop on any `git push` targeting `main` or `master`
-- **pre-bash-no-force-push** — Prevents `--force` and `--force-with-lease` on any remote push
+- **pre-edit-protect-paths** — `.env` and key files stay untouched by the agent, always
+- **pre-read-env-guard** — `.env` secrets never enter the model context in the first place
+- **pre-bash-guard-git-push-main** — Hard stop on any `git push` targeting `main` or `master`
 
 ### Context
 
-- **load-git-context** — Injects current branch, status, and last 5 commits at session start
-- **session-summary** — Writes a plain-text summary of what was done at the end of every session
-- **worktree-env-init** — Copies `.env`, assigns a free port, runs install — every worktree, every time
+- **session-start-load-git-context** — Injects current branch, status, and last commit at session start
+- **session-start-github-context** — Open PRs and CI check status loaded before you ask
+- **worktree-create-setup-env** — Copies `.env`, assigns a free port, runs install — every worktree, every time
+- **pre-read-file-to-markdown** — Read any PDF, DOCX or PPTX as clean Markdown — slash token usage
 
 ### Validation
 
 - **stop-per-file-coverage** — After each session, flags any file touched without test coverage ≥ 80 %
 - **stop-per-file-lint** — ESLint runs on every file the agent modified before Stop fires
-- **post-write-format** — Prettier + ESLint auto-format silently after every Write or Edit
-- **enforce-package-managers** — Blocks `npm` or `yarn` commands when the project uses `pnpm`
-- **per-file-type-check** — Runs `tsc --noEmit` on touched TypeScript files before closing
+- **post-write-autoformat** — Prettier auto-formats silently after every Write or Edit
+- **pre-bash-enforce-package-managers** — Blocks `npm` or `yarn` commands when the project uses `pnpm`
+- **post-edit-typecheck** — Runs `tsc --noEmit` on touched TypeScript files right after an edit
+- **post-edit-conflict-marker-check** — Leftover merge conflict markers caught the moment a file is written
 
 ### Notification
 
-- **stop-slack-notify** — Posts a Slack message with the session result and duration
-- **stop-push-notify** — Sends a push notification to your phone when a long task finishes
-- **stop-git-summary** — Creates a `git` commit message draft from the session diff on Stop
+- **notification-slack** — Pings your Slack when the agent needs you mid-session
+- **stop-sound** — A completion chime the moment Claude finishes
+- **stop-tts-completion** — Get told out loud the moment work is done
 
 ### Workflow
 
-- **pre-bash-confirm-migration** — Asks for confirmation before any database migration command runs
-- **post-tool-log** — Appends every tool call and its result to a session log file
-- **registry-auto-sync** — Re-syncs `registry.json` whenever a hook `.mjs` is edited (meta: powers this repo)
+- **session-start-worktree-if-main** — Start a session on `main` and you're moved to a fresh worktree
+- **post-bash-command-log** — A full history of every command Claude ran
+- **registry-changed-auto-sync** — Re-syncs `registry.json` whenever a hook `.mjs` is edited (meta: powers this repo)
 
-### Safety
+### Documentation
 
-- **pre-bash-no-install-global** — Blocks `npm install -g` and `pip install` outside of a virtualenv
-- **pre-bash-no-curl-pipe-sh** — Intercepts `curl … | sh` patterns before they execute
-- **pre-write-no-binary** — Prevents writing binary blobs into source-controlled paths
-
-### DX
-
-- **post-test-notify** — Plays a sound and shows a macOS notification when a test run finishes
-- **session-cost-tracker** — Tracks token usage per session and writes a weekly CSV summary
+- **stop-generate-changelog** — An automatic changelog of what the agent shipped, session by session
 
 ---
 

@@ -1772,7 +1772,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/notification-tts.mjs';\n\ndescribe('notification-tts', () => {\n  it('vocalise un message via say sur darwin', () => {\n    const exec = vi.fn();\n    const text = run({ message: '# Hello' }, { exec, platform: 'darwin' });\n    expect(text).toBe(' Hello');\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('say \"'));\n  });\n  it('retourne null sans message', () => {\n    expect(run({}, { exec: vi.fn(), platform: 'darwin' })).toBeNull();\n  });\n  it('utilise espeak hors darwin', () => {\n    const exec = vi.fn();\n    run({ message: 'hi' }, { exec, platform: 'linux' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('espeak'));\n  });\n});\n"
     },
-    "is_must": true,
+    "is_must": false,
     "name": "TTS voice notification",
     "provider": [
       "claude-code"
@@ -1838,7 +1838,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-tts.mjs';\n\ndescribe('stop-tts', () => {\n  it('annonce le projet', () => {\n    const exec = vi.fn();\n    expect(run({ exec, platform: 'darwin', projectDir: '/x/myproj' })).toContain('myproj');\n    expect(exec).toHaveBeenCalled();\n  });\n});\n"
     },
-    "is_must": true,
+    "is_must": false,
     "name": "Voice task-completion announcement",
     "provider": [
       "claude-code"
@@ -1909,7 +1909,8 @@
       "Alert the user during long autonomous runs",
       "Works in silent environments where TTS is unwanted",
       "Minimal-distraction attention signal"
-    ]
+    ],
+    "is_must": true
   },
   {
     "benefit": "A satisfying chime the moment Claude finishes",
@@ -1963,7 +1964,8 @@
       "Audio feedback when a long task finishes",
       "Minimal-distraction alternative to TTS",
       "Complement stop-tts-completion with a lighter signal"
-    ]
+    ],
+    "is_must": true
   },
   {
     "benefit": "Hear each subagent spin up",
@@ -3560,7 +3562,8 @@
       "Understand which tool calls auto-mode is silently blocking in autonomous sessions",
       "Tune allow/deny rules by reviewing the denial log after a session",
       "Audit autonomous agent actions for compliance in CI/CD environments"
-    ]
+    ],
+    "is_must": true
   },
   {
     "benefit": "Fresh clone opens with node_modules ready",
@@ -4457,7 +4460,7 @@
       "Avoid outdated API documentation in research tasks",
       "Ensure changelog and release note searches return latest versions"
     ],
-    "is_must": false,
+    "is_must": true,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/websearch-temporal-context.mjs",
@@ -4502,7 +4505,7 @@
       "Teams migrating from Codex/OpenAI Codex to Claude Code",
       "Projects with explicit agent coordination rules"
     ],
-    "is_must": false,
+    "is_must": true,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/agents-md-loader.mjs",
@@ -4932,6 +4935,185 @@
       },
       "code_snippet": "#!/usr/bin/env node\n// Rappelle de propager les changements d'un README vers les surfaces sœurs\n// (FileChanged README.md). Quand un README change, liste les autres README du\n// repo (racine + packages/*) qui portent la même promesse produit et doivent\n// rester cohérents (exemples CLI, slugs, wording).\nimport { readFileSync, existsSync, readdirSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\n// Trouve les README \"surfaces produit\" : racine + packages/*/README.md.\nexport function findSiblingReadmes({\n  exists = existsSync,\n  readdir = readdirSync,\n  projectDir,\n} = {}) {\n  const surfaces = [];\n  if (exists(join(projectDir, 'README.md'))) surfaces.push('README.md');\n  const pkgsDir = join(projectDir, 'packages');\n  if (exists(pkgsDir)) {\n    try {\n      for (const pkg of readdir(pkgsDir)) {\n        if (exists(join(pkgsDir, pkg, 'README.md'))) surfaces.push(`packages/${pkg}/README.md`);\n      }\n    } catch {}\n  }\n  return surfaces;\n}\n\nexport function run(input, {\n  exists = existsSync,\n  readdir = readdirSync,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  const filePath = input.file_path ?? '';\n  if (!filePath.endsWith('README.md') || input.event === 'unlink') return null;\n\n  const changed = filePath.startsWith(`${projectDir}/`)\n    ? filePath.slice(projectDir.length + 1)\n    : filePath;\n  const siblings = findSiblingReadmes({ exists, readdir, projectDir }).filter((s) => s !== changed);\n  if (!siblings.length) return null;\n\n  return {\n    hookSpecificOutput: {\n      hookEventName: 'FileChanged',\n      additionalContext:\n        `${changed} changed. These sibling docs share the same product promise and must stay consistent ` +\n        `(CLI examples, slugs, wording): ${siblings.join(', ')}. ` +\n        'Check whether the change needs to be mirrored there (and on the website copy if user-facing).',\n    },\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run, findSiblingReadmes } from '../../.claude/hooks/file-changed-docs-consistency.mjs';\n\nconst PROJECT = '/p';\n\nfunction deps({ readmes = ['README.md', 'packages/cli/README.md'] } = {}) {\n  return {\n    projectDir: PROJECT,\n    exists: (p) =>\n      p === `${PROJECT}/packages` || readmes.some((r) => p === `${PROJECT}/${r}`),\n    readdir: (p) => (p === `${PROJECT}/packages` ? ['cli'] : []),\n  };\n}\n\ndescribe('file-changed-docs-consistency', () => {\n  it('ignore un fichier qui n\\'est pas un README', () => {\n    expect(run({ file_path: '/p/src/a.ts' }, deps())).toBeNull();\n  });\n\n  it('ignore un unlink', () => {\n    expect(run({ file_path: '/p/README.md', event: 'unlink' }, deps())).toBeNull();\n  });\n\n  it('liste les surfaces sœurs quand le README racine change', () => {\n    const r = run({ file_path: '/p/README.md' }, deps());\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('packages/cli/README.md');\n    expect(r?.hookSpecificOutput?.additionalContext).not.toContain('README.md changed. These sibling docs share the same product promise and must stay consistent (CLI examples, slugs, wording): README.md');\n  });\n\n  it('exclut le README modifié de la liste des sœurs', () => {\n    const r = run({ file_path: '/p/packages/cli/README.md' }, deps());\n    const ctx = r?.hookSpecificOutput?.additionalContext ?? '';\n    expect(ctx).toContain('packages/cli/README.md changed');\n    expect(ctx).toMatch(/: README\\.md\\./);\n  });\n\n  it('retourne null sans surface sœur', () => {\n    expect(run({ file_path: '/p/README.md' }, deps({ readmes: ['README.md'] }))).toBeNull();\n  });\n});\n\ndescribe('findSiblingReadmes', () => {\n  it('trouve racine + packages/*', () => {\n    expect(findSiblingReadmes(deps())).toEqual(['README.md', 'packages/cli/README.md']);\n  });\n  it('fonctionne sans dossier packages', () => {\n    const d = { projectDir: PROJECT, exists: (p) => p === `${PROJECT}/README.md`, readdir: () => [] };\n    expect(findSiblingReadmes(d)).toEqual(['README.md']);\n  });\n});\n"
+    }
+  },
+  {
+    "slug": "pre-write-secret-detection",
+    "name": "Write-time secret detection",
+    "benefit": "No API key ever lands in a file",
+    "category": "security",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PreToolUse",
+    "trigger": "Write|Edit",
+    "description": "Scans the content being written (Write) or inserted (Edit new_string) for API keys, GitHub tokens, private keys and password assignments, and blocks the call before the secret ever lands on disk. Closes the file-write gap left by bash-level secret detection: an agent pasting a key into source code or a config file is stopped with a pointer to environment variables instead.",
+    "use_cases": [
+      "Blocking an agent from hardcoding an API key into source code",
+      "Stopping .env values from being copied into committed files",
+      "Preventing private keys from being pasted into the repo"
+    ],
+    "tags": [
+      "security",
+      "secrets",
+      "prevention",
+      "write-guard"
+    ],
+    "is_must": true,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/pre-write-secret-detection.mjs",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-write-secret-detection.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Bloque les écritures de fichiers contenant des secrets potentiels (PreToolUse Write|Edit)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst SECRET_PATTERNS = [\n  /(?:ANTHROPIC|OPENAI|CLAUDE|GEMINI|GROQ)_API_KEY\\s*=\\s*['\"]?\\S{20,}/i,\n  /sk-(?:ant-|proj-)?[a-zA-Z0-9_-]{32,}/,\n  /ghp_[a-zA-Z0-9]{36}/,\n  /-----BEGIN (?:RSA |EC )?PRIVATE KEY/,\n  /(?:password|passwd|secret|token)\\s*=\\s*['\"][^'\"]{6,}/i,\n];\n\nexport function run(input) {\n  const content =\n    input.tool_input?.content ?? input.tool_input?.new_string ?? '';\n  if (!content) return null;\n\n  const match = SECRET_PATTERNS.find((p) => p.test(content));\n  if (!match) return null;\n\n  return {\n    decision: 'block',\n    reason:\n      '[secret-detection] Potential secret in the content being written. Reference it via an environment variable or .env (gitignored) instead of hardcoding it.',\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/pre-write-secret-detection.mjs';\n\n// Fixtures construites par concaténation : le fichier de test lui-même\n// ne doit pas contenir de motif de secret littéral (le hook tourne sur ce repo).\nconst fakeAnthropicKey = 'sk-' + 'ant-' + 'a'.repeat(40);\nconst fakeGithubToken = 'ghp_' + 'A1b2C3d4'.repeat(4) + 'A1b2';\nconst fakePasswordLine = 'pass' + 'word = \"hunter2-super\"';\nconst fakePrivateKey = '-----BEGIN RSA PRIVATE' + ' KEY-----';\n\ndescribe('pre-write-secret-detection', () => {\n  it('laisse passer si tool_input absent', () => {\n    expect(run({ tool_name: 'Write' })).toBeNull();\n  });\n\n  it('laisse passer un contenu sain (Write)', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: 'src/a.ts', content: 'const x = 1;' } })).toBeNull();\n  });\n\n  it('laisse passer un new_string sain (Edit)', () => {\n    expect(run({ tool_name: 'Edit', tool_input: { file_path: 'src/a.ts', new_string: 'return null;' } })).toBeNull();\n  });\n\n  it('bloque une clé API style Anthropic dans content', () => {\n    const r = run({ tool_name: 'Write', tool_input: { file_path: 'config.ts', content: `const k = \"${fakeAnthropicKey}\";` } });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('environment variable');\n  });\n\n  it('bloque un token GitHub dans new_string', () => {\n    const r = run({ tool_name: 'Edit', tool_input: { file_path: 'ci.yml', new_string: `token: ${fakeGithubToken}` } });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('bloque une affectation de mot de passe', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: 'db.py', content: fakePasswordLine } })?.decision).toBe('block');\n  });\n\n  it('bloque une clé privée PEM', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: 'key.pem', content: fakePrivateKey } })?.decision).toBe('block');\n  });\n\n  it('ne bloque pas un placeholder court', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: '.env.example', content: 'API_KEY=xxx' } })).toBeNull();\n  });\n});\n"
+    }
+  },
+  {
+    "slug": "pre-read-env-guard",
+    "name": "Env file read guard",
+    "benefit": "Your .env secrets never enter the model context",
+    "category": "security",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PreToolUse",
+    "trigger": "Read",
+    "description": "Blocks Read calls on .env files (except .env.example, .sample, .template, .dist) so secrets never enter the model context, where they could leak into logs, transcripts or generated code. The block message suggests safe alternatives: read .env.example for variable names, or grep for a key name without exposing its value. Complements write-side protection (protected paths) with read-side coverage.",
+    "use_cases": [
+      "Keeping production credentials out of session transcripts",
+      "Preventing secrets from being echoed into generated code or docs",
+      "Nudging the agent toward .env.example instead of the real file"
+    ],
+    "tags": [
+      "security",
+      "secrets",
+      "env",
+      "context"
+    ],
+    "is_must": true,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/pre-read-env-guard.mjs",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "matcher": "Read",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-read-env-guard.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Bloque la lecture des fichiers .env — les secrets ne doivent pas entrer dans le contexte (PreToolUse Read)\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\nimport { basename } from 'path';\n\nconst SAFE_SUFFIXES = ['.example', '.sample', '.template', '.dist'];\n\nexport function run(input) {\n  if (input.tool_name !== 'Read') return null;\n\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath) return null;\n\n  const name = basename(filePath);\n  if (!/^\\.env(\\..+)?$/.test(name)) return null;\n  if (SAFE_SUFFIXES.some((s) => name.endsWith(s))) return null;\n\n  return {\n    decision: 'block',\n    reason: `[env-guard] \\`${name}\\` likely contains secrets — they must not enter the model context (risk of leaking into logs, transcripts or generated code). Read \\`.env.example\\` for the variable names, or check a key exists without its value: \\`grep -c '^MY_VAR=' ${name}\\`.`,\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/pre-read-env-guard.mjs';\n\ndescribe('pre-read-env-guard', () => {\n  it('laisse passer si tool_name != Read', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: '/app/.env' } })).toBeNull();\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({ tool_name: 'Read' })).toBeNull();\n  });\n\n  it('laisse passer un fichier normal', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'src/env.ts' } })).toBeNull();\n  });\n\n  it(\"laisse passer un fichier dont le nom contient env sans être un .env\", () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'config/environment.ts' } })).toBeNull();\n  });\n\n  it('bloque .env', () => {\n    const r = run({ tool_name: 'Read', tool_input: { file_path: '/app/.env' } });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('.env.example');\n  });\n\n  it('bloque .env.local', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '.env.local' } })?.decision).toBe('block');\n  });\n\n  it('bloque .env.production', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'apps/web/.env.production' } })?.decision).toBe('block');\n  });\n\n  it('laisse passer .env.example', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '/app/.env.example' } })).toBeNull();\n  });\n\n  it('laisse passer .env.sample et .env.template', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '.env.sample' } })).toBeNull();\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '.env.template' } })).toBeNull();\n  });\n\n  it('laisse passer .env.local.example (suffixe sûr en dernier)', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '.env.local.example' } })).toBeNull();\n  });\n});\n"
+    }
+  },
+  {
+    "slug": "post-edit-conflict-marker-check",
+    "name": "Conflict marker detector",
+    "benefit": "Leftover merge conflict markers caught instantly",
+    "category": "validation",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "description": "After every file write or edit, checks the file on disk for leftover git conflict markers. Requires both an opening and a closing marker line to flag, which avoids false positives on markdown setext underlines. Non-blocking: feeds a warning back to the agent so it resolves the conflict before moving on.",
+    "use_cases": [
+      "Catching half-resolved conflicts after an assisted merge or rebase",
+      "Preventing conflict markers from reaching CI or production",
+      "Flagging files pasted from a conflicted state"
+    ],
+    "tags": [
+      "validation",
+      "git",
+      "merge",
+      "quality"
+    ],
+    "is_must": true,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/post-edit-conflict-marker-check.mjs",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-edit-conflict-marker-check.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Signale les marqueurs de conflit git oubliés après une écriture (PostToolUse Write|Edit)\nimport { readFileSync, existsSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst OPEN_MARKER = /^<{7} /m;\nconst CLOSE_MARKER = /^>{7} /m;\n\nexport function run(input, { readFile = readFileSync, fileExists = existsSync } = {}) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!filePath || !fileExists(filePath)) return null;\n\n  let content;\n  try {\n    content = readFile(filePath, 'utf8');\n  } catch {\n    return null;\n  }\n\n  // Les deux bornes sont requises : évite les faux positifs (ex. soulignés markdown)\n  if (!OPEN_MARKER.test(content) || !CLOSE_MARKER.test(content)) return null;\n\n  return {\n    message: `[conflict-marker] ${filePath} contains git conflict markers (<<<<<<< / >>>>>>>). Resolve the conflict and remove the markers before moving on.\\n`,\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/post-edit-conflict-marker-check.mjs';\n\n// Marqueurs construits dynamiquement pour ne pas laisser de vrais marqueurs\n// de conflit dans ce fichier de test.\nconst OPEN = '<'.repeat(7) + ' HEAD';\nconst SEP = '='.repeat(7);\nconst CLOSE = '>'.repeat(7) + ' feature-branch';\nconst conflicted = ['const a = 1;', OPEN, 'const b = 2;', SEP, 'const b = 3;', CLOSE].join('\\n');\n\nconst deps = (content) => ({\n  readFile: vi.fn(() => content),\n  fileExists: vi.fn(() => true),\n});\n\ndescribe('post-edit-conflict-marker-check', () => {\n  it('laisse passer si tool_input absent', () => {\n    expect(run({ tool_name: 'Write' }, deps(''))).toBeNull();\n  });\n\n  it(\"laisse passer si le fichier n'existe pas\", () => {\n    const r = run(\n      { tool_input: { file_path: 'gone.ts' } },\n      { readFile: vi.fn(), fileExists: vi.fn(() => false) },\n    );\n    expect(r).toBeNull();\n  });\n\n  it('laisse passer un fichier sain', () => {\n    expect(run({ tool_input: { file_path: 'a.ts' } }, deps('const x = 1;\\n'))).toBeNull();\n  });\n\n  it('laisse passer un souligné markdown (======= seul)', () => {\n    expect(run({ tool_input: { file_path: 'doc.md' } }, deps(`Titre\\n${SEP}\\ntexte\\n`))).toBeNull();\n  });\n\n  it(\"laisse passer une borne ouvrante sans fermante (faux positif improbable)\", () => {\n    expect(run({ tool_input: { file_path: 'a.ts' } }, deps(`${OPEN}\\ncode\\n`))).toBeNull();\n  });\n\n  it('signale un fichier avec les deux bornes de conflit', () => {\n    const r = run({ tool_input: { file_path: 'src/a.ts' } }, deps(conflicted));\n    expect(r?.message).toContain('src/a.ts');\n    expect(r?.message).toContain('conflict markers');\n  });\n\n  it('reste silencieux si la lecture échoue', () => {\n    const r = run(\n      { tool_input: { file_path: 'a.ts' } },\n      { readFile: vi.fn(() => { throw new Error('EACCES'); }), fileExists: vi.fn(() => true) },\n    );\n    expect(r).toBeNull();\n  });\n});\n"
+    }
+  },
+  {
+    "slug": "session-start-github-context",
+    "name": "GitHub context loader",
+    "benefit": "Open PRs and CI status loaded before you ask",
+    "category": "context",
+    "provider": [
+      "claude-code"
+    ],
+    "hook_type": "SessionStart",
+    "trigger": "*",
+    "description": "At session start, injects the repository GitHub state via the gh CLI: open pull requests (up to 5) and check status for the current branch PR. Local git context tells the agent where the working tree is; this hook covers the blind spot of what is happening on GitHub. Silent no-op when gh is missing, unauthenticated, or the repo has no GitHub remote.",
+    "use_cases": [
+      "Resuming work with awareness of PRs awaiting review",
+      "Reacting to failing CI checks without being asked to look",
+      "Avoiding duplicate work on changes already in an open PR"
+    ],
+    "tags": [
+      "context",
+      "github",
+      "ci",
+      "productivity"
+    ],
+    "is_must": false,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/session-start-github-context.mjs",
+      "config": {
+        "hooks": {
+          "SessionStart": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-github-context.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Injecte l'état GitHub (PRs ouvertes, checks de la branche) au démarrage de session (SessionStart)\nimport { readFileSync } from 'fs';\nimport { execSync } from 'child_process';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  try {\n    return execSync(cmd, { encoding: 'utf8', timeout: 10_000, stdio: 'pipe' }).trim();\n  } catch {\n    return '';\n  }\n}\n\nexport function run(_input, { exec = defaultExec } = {}) {\n  // Silencieux si gh absent, non authentifié ou dépôt sans remote GitHub\n  const prs = exec('gh pr list --state open --limit 5');\n  const checks = exec('gh pr checks 2>/dev/null');\n\n  if (!prs && !checks) return null;\n\n  const lines = ['## GitHub Context'];\n  if (prs) lines.push('### Open PRs', '```', prs, '```');\n  if (checks) lines.push('### Checks on current branch PR', '```', checks, '```');\n\n  return {\n    hookSpecificOutput: {\n      hookEventName: 'SessionStart',\n      additionalContext: lines.join('\\n'),\n    },\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/session-start-github-context.mjs';\n\ndescribe('session-start-github-context', () => {\n  it('reste silencieux si gh ne retourne rien (absent ou non authentifié)', () => {\n    expect(run({}, { exec: vi.fn(() => '') })).toBeNull();\n  });\n\n  it('injecte les PRs ouvertes', () => {\n    const exec = vi.fn((cmd) => (cmd.includes('pr list') ? '42\\tFix the thing\\topen' : ''));\n    const r = run({}, { exec });\n    const ctx = r?.hookSpecificOutput?.additionalContext ?? '';\n    expect(r?.hookSpecificOutput?.hookEventName).toBe('SessionStart');\n    expect(ctx).toContain('Open PRs');\n    expect(ctx).toContain('Fix the thing');\n    expect(ctx).not.toContain('Checks on current branch');\n  });\n\n  it('injecte les checks de la PR courante', () => {\n    const exec = vi.fn((cmd) => (cmd.includes('pr checks') ? 'build\\tpass\\t1m2s' : ''));\n    const ctx = run({}, { exec })?.hookSpecificOutput?.additionalContext ?? '';\n    expect(ctx).toContain('Checks on current branch');\n    expect(ctx).toContain('build');\n  });\n\n  it('combine PRs et checks quand les deux existent', () => {\n    const exec = vi.fn((cmd) => {\n      if (cmd.includes('pr list')) return '7\\tAdd feature\\topen';\n      if (cmd.includes('pr checks')) return 'ci\\tfail\\t30s';\n      return '';\n    });\n    const ctx = run({}, { exec })?.hookSpecificOutput?.additionalContext ?? '';\n    expect(ctx).toContain('Add feature');\n    expect(ctx).toContain('ci');\n  });\n});\n"
     }
   }
 ]
