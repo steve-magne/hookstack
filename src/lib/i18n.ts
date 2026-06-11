@@ -135,7 +135,7 @@ export const T = {
       a: 'Browse the catalogue, select the hooks you want, then run the generated npx hookstack-cli@latest install command in your project root. HookStack writes the scripts to .claude/hooks/ and patches your settings.json — nothing else touched.',
     },
     {
-      q: "I already use Claude Code commands like /init or /compact — aren't hooks the same thing?",
+      q: "I already use Claude Code commands like /gen-test-unit or /create-worktree — aren't hooks the same thing?",
       a: "Commands are interactive: you type them, Claude reads and acts on them inside the conversation. Hooks are the opposite — Node.js scripts that fire unconditionally outside the model, triggered by lifecycle events (PreToolUse, PostToolUse, Stop…). The model never sees them, never decides whether to run them, and can't skip them. Commands steer the AI; hooks constrain it.",
     },
     {
