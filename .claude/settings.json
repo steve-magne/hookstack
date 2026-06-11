@@ -44,6 +44,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-write-main-guard.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-write-secret-detection.mjs"
           }
         ],
         "matcher": "Write|Edit"
@@ -92,6 +96,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-read-json-csv-compact.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-read-env-guard.mjs"
           }
         ],
         "matcher": "Read"
@@ -145,6 +153,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/agents-md-loader.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-github-context.mjs"
           }
         ]
       },
@@ -195,6 +207,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/motion-rules-guard.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-edit-conflict-marker-check.mjs"
           }
         ],
         "matcher": "Write|Edit"

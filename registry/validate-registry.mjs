@@ -27,6 +27,16 @@ const ok = validate(registry)
 
 if (ok) {
   console.log(`✓ registry.json valide — ${registry.length} hook(s) conformes au schéma.`)
+
+  // Lint éditorial (non bloquant) : `benefit` doit viser ≤ ~60 caractères (cap dur : 90, dans le schéma).
+  const BENEFIT_TARGET = 60
+  const longBenefits = registry.filter((h) => (h.benefit ?? '').length > BENEFIT_TARGET)
+  if (longBenefits.length) {
+    console.log(`\n⚠ ${longBenefits.length} benefit(s) au-dessus de la cible éditoriale (${BENEFIT_TARGET} car.) :`)
+    for (const h of longBenefits) {
+      console.log(`  ${h.slug} (${h.benefit.length}) : ${h.benefit}`)
+    }
+  }
   process.exit(0)
 }
 
