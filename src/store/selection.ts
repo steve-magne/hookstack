@@ -68,10 +68,12 @@ export const useSelection = create<SelectionState>()(
       has: (slug) => get().selected.includes(slug),
       initMust: (slugs) =>
         set((s) => {
-          // Slugs jamais vus = ajouts au registre depuis la dernière visite
+          // Garantit que TOUS les hooks is_must sont dans selected (pas seulement les nouveaux).
+          // seenMustSlugs reste pour détecter les ajouts au registre, mais toAdd couvre
+          // aussi les hooks vus dans une session précédente qui auraient été désélectionnés.
           const newSlugs = slugs.filter((sl) => !s.seenMustSlugs.includes(sl))
-          const toAdd = newSlugs.filter((sl) => !s.selected.includes(sl))
-          if (newSlugs.length === 0 && s.mustInitialized) return s
+          const toAdd = slugs.filter((sl) => !s.selected.includes(sl))
+          if (toAdd.length === 0 && newSlugs.length === 0 && s.mustInitialized) return s
           return {
             mustInitialized: true,
             seenMustSlugs: slugs,
