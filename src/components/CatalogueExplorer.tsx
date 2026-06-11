@@ -259,7 +259,6 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
     const filtered = filterHooks(allHooks, {
       query: '',
       categories: initialCategory ? [initialCategory] : selectedCategories,
-      providers: [],
       events: selectedEventTypes as HookType[],
       stacks: selectedStacks,
     })

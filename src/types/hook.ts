@@ -1,5 +1,3 @@
-export type Provider = 'claude-code' | 'copilot-vscode'
-
 export type Stack = 'typescript' | 'python'
 
 export const STACK_LABELS: Record<Stack, string> = {
@@ -43,11 +41,6 @@ export type HookType =
   | 'CwdChanged'
   | 'ConfigChange'
 
-export interface CommunityExample {
-  repo: string
-  file_path?: string
-}
-
 /** Severity counts from a Snyk Code (SAST) scan of the hook's source. */
 export interface SnykScan {
   high: number
@@ -88,13 +81,11 @@ export interface Hook {
   /** One-line, outcome-framed payoff shown in the catalogue — the "why install this". */
   benefit?: string
   category: Category
-  provider: Provider[]
   hook_type: HookType
   trigger: string
   description: string
   use_cases: string[]
   implementation: HookImplementation
-  community_examples?: CommunityExample[]
   tags: string[]
   default_on?: boolean
   stack?: Stack[]
@@ -168,7 +159,3 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   documentation: 'bg-white/6 text-zinc-300 ring-white/12',
 }
 
-export const PROVIDER_LABELS: Record<Provider, string> = {
-  'claude-code': 'Claude Code',
-  'copilot-vscode': 'GitHub Copilot',
-}

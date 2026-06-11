@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { AnimatePresence, m, type PanInfo } from 'motion/react'
 import { ArrowUpRight, Check, Plus, X, Zap } from 'lucide-react'
 import type { Hook } from '@/types/hook'
-import { PROVIDER_LABELS } from '@/types/hook'
 import { useSelection } from '@/store/selection'
 import { useT } from '@/lib/locale-context'
 import { Button } from './Button'
@@ -181,18 +180,8 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
             </div>
             <div>
               <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">
-                {T.providersAndTags}
+                {T.tags}
               </h3>
-              <div className="mb-3 flex flex-wrap gap-2">
-                {hook.provider.map((p) => (
-                  <span
-                    key={p}
-                    className="rounded-md bg-[var(--color-surface-2)] px-2 py-0.5 text-xs text-zinc-200 ring-1 ring-inset ring-zinc-600/60"
-                  >
-                    {PROVIDER_LABELS[p]}
-                  </span>
-                ))}
-              </div>
               <div className="flex flex-wrap gap-1.5">
                 {hook.tags.map((t) => (
                   <span key={t} className="text-xs text-zinc-400">

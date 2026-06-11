@@ -2,12 +2,6 @@
   {
     "benefit": "Catch a leaked API key before it ever runs",
     "category": "security",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/detect-secrets.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Intercepts every shell command and scans it for API keys, tokens or plaintext passwords before execution. Blocks the command if a secret pattern is found.",
     "hook_type": "PreToolUse",
     "implementation": {
@@ -48,9 +42,6 @@
     },
     "default_on": true,
     "name": "Secret detection before Bash execution",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-bash-secret-detection",
     "tags": [
       "security",
@@ -68,12 +59,6 @@
   {
     "benefit": "Stops a disk-wiping shell command before it runs",
     "category": "security",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/block-destructive.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Blocks potentially destructive shell commands before the agent runs them: wiping root, home or CWD, git reset --hard, TRUNCATE, mkfs, dd to a disk, chmod 777 recursively.",
     "hook_type": "PreToolUse",
     "implementation": {
@@ -114,9 +99,6 @@
     },
     "default_on": true,
     "name": "Destructive command blocking",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-bash-block-destructive",
     "tags": [
       "security",
@@ -137,12 +119,6 @@
   {
     "benefit": "Your .env and keys stay untouched by the agent",
     "category": "security",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/protect-paths.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Prevents the agent from modifying sensitive files (.env, secrets, private keys, CI lockfiles) by intercepting the Write and Edit tools and checking the target path.",
     "hook_type": "PreToolUse",
     "implementation": {
@@ -183,9 +159,6 @@
     },
     "default_on": true,
     "name": "Sensitive file write protection",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-edit-protect-paths",
     "tags": [
       "security",
@@ -237,9 +210,6 @@
     },
     "default_on": true,
     "name": "Lock file write protection",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-edit-protect-lockfiles",
     "tags": [
       "security",
@@ -259,7 +229,6 @@
   {
     "benefit": "No accidental push straight to main",
     "category": "security",
-    "community_examples": [],
     "description": "Detects direct git push commands to main/master and blocks them to force going through a branch and a pull request.",
     "hook_type": "PreToolUse",
     "implementation": {
@@ -300,9 +269,6 @@
     },
     "default_on": true,
     "name": "git push to main guardrail",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-bash-guard-git-push-main",
     "tags": [
       "security",
@@ -320,7 +286,6 @@
   {
     "benefit": "The agent follows your conventions, unprompted",
     "category": "context",
-    "community_examples": [],
     "description": "On every user prompt, automatically injects the project conventions (stack, style rules, constraints) by reading a conventions file, so the agent stays aligned without manual reminders.",
     "hook_type": "UserPromptSubmit",
     "implementation": {
@@ -359,9 +324,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/inject-conventions.mjs';\n\ndescribe('inject-conventions', () => {\n  it('injecte le contenu de agent-rules.md en priorité', () => {\n    const deps = {\n      exists: (p) => p.endsWith('agent-rules.md'),\n      readFile: () => 'Règle A',\n      projectDir: '/proj',\n    };\n    const out = run(deps);\n    expect(out).toContain('Conventions du projet');\n    expect(out).toContain('Règle A');\n  });\n\n  it('retombe sur CONVENTIONS.md si agent-rules.md absent', () => {\n    const deps = {\n      exists: (p) => p.endsWith('CONVENTIONS.md'),\n      readFile: () => 'Règle B',\n      projectDir: '/proj',\n    };\n    expect(run(deps)).toContain('Règle B');\n  });\n\n  it('retourne null si aucun fichier', () => {\n    expect(run({ exists: () => false, projectDir: '/proj' })).toBeNull();\n  });\n\n  it('retourne null si fichier vide', () => {\n    expect(run({ exists: () => true, readFile: () => '   ', projectDir: '/proj' })).toBeNull();\n  });\n});\n"
     },
     "name": "Project conventions injection",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "user-prompt-inject-conventions",
     "tags": [
       "context",
@@ -380,12 +342,6 @@
   {
     "benefit": "Starts every session knowing your repo state",
     "category": "context",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/session-start-git.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "At session start, injects the repository state: current branch, git status, latest commits. The agent starts with a clear view of the project state.",
     "hook_type": "SessionStart",
     "implementation": {
@@ -425,9 +381,6 @@
     },
     "default_on": true,
     "name": "Load Git context at startup",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "session-start-load-git-context",
     "tags": [
       "context",
@@ -445,7 +398,6 @@
   {
     "benefit": "No more answers stuck on last year's date",
     "category": "context",
-    "community_examples": [],
     "description": "Adds the current date and time to the context of every prompt, preventing the agent from reasoning with an incorrect cutoff date.",
     "hook_type": "UserPromptSubmit",
     "implementation": {
@@ -485,9 +437,6 @@
     },
     "default_on": true,
     "name": "Current date and time injection",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "user-prompt-inject-datetime",
     "tags": [
       "context",
@@ -504,7 +453,6 @@
   {
     "benefit": "Every file lands already Prettier-clean",
     "category": "validation",
-    "community_examples": [],
     "description": "After every file write or edit, runs Prettier on the modified file to ensure consistent formatting without agent intervention.",
     "hook_type": "PostToolUse",
     "implementation": {
@@ -545,9 +493,6 @@
     },
     "default_on": true,
     "name": "Automatic formatting after write",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "post-write-autoformat",
     "tags": [
       "validation",
@@ -565,7 +510,6 @@
   {
     "benefit": "Lint errors fixed in the same loop, not in CI",
     "category": "validation",
-    "community_examples": [],
     "description": "Runs ESLint on the file just written and returns the errors to the agent so it fixes them immediately within the same loop.",
     "hook_type": "PostToolUse",
     "implementation": {
@@ -606,9 +550,6 @@
     },
     "default_on": true,
     "name": "ESLint lint after write",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "post-write-eslint",
     "stack": [
       "typescript"
@@ -629,7 +570,6 @@
   {
     "benefit": "Type errors caught the moment a file is saved",
     "category": "validation",
-    "community_examples": [],
     "description": "Runs the TypeScript compiler in no-emit mode after a .ts/.tsx file is modified and reports typing errors back to the agent.",
     "hook_type": "PostToolUse",
     "implementation": {
@@ -670,9 +610,6 @@
     },
     "default_on": true,
     "name": "TypeScript type checking",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "post-edit-typecheck",
     "stack": [
       "typescript"
@@ -693,7 +630,6 @@
   {
     "benefit": "Won't hand back until the test suite is green",
     "category": "validation",
-    "community_examples": [],
     "description": "When the agent finishes its response, runs the test suite. If tests fail, sends the agent back to work to fix them before handing back control.",
     "hook_type": "Stop",
     "implementation": {
@@ -733,9 +669,6 @@
     },
     "default_on": true,
     "name": "Run tests at end of response",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "stop-run-tests",
     "tags": [
       "validation",
@@ -753,7 +686,6 @@
   {
     "benefit": "Pings your Slack when the agent needs you",
     "category": "notification",
-    "community_examples": [],
     "description": "Relays agent notifications (permission request, awaiting input) to a Slack channel via webhook, useful for long or unattended sessions.",
     "hook_type": "Notification",
     "implementation": {
@@ -792,9 +724,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/notify-slack.mjs';\n\ndescribe('notify-slack', () => {\n  it('retourne null sans webhook', () => {\n    expect(run({ message: 'x' }, { exec: vi.fn(), webhook: '' })).toBeNull();\n  });\n  it('retourne null sans message', () => {\n    expect(run({}, { exec: vi.fn(), webhook: 'https://hook' })).toBeNull();\n  });\n  it('poste le payload via curl', () => {\n    const exec = vi.fn();\n    const payload = run({ message: 'hi' }, { exec, webhook: 'https://hook', projectDir: '/x/proj' });\n    expect(payload).toContain('proj');\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('curl'));\n  });\n});\n"
     },
     "name": "Slack notification on agent event",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "notification-slack",
     "tags": [
       "notification",
@@ -812,12 +741,6 @@
   {
     "benefit": "Every session leaves an audit trail",
     "category": "notification",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/session-end-log.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "At session end, writes an audit line (timestamp, end reason, directory) to a local log file for DevSecOps traceability.",
     "hook_type": "SessionEnd",
     "implementation": {
@@ -856,9 +779,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/audit-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('audit-log', () => {\n  it('construit et append une entrée de session', () => {\n    const deps = base();\n    const e = run({ session_id: 's1', total_cost_usd: 0.5, num_turns: 3 }, deps);\n    expect(e).toMatchObject({ timestamp: TS, project: 'proj', session_id: 's1', total_cost_usd: 0.5, num_turns: 3 });\n    expect(deps.append).toHaveBeenCalledWith('/home/.claude/audit-log.jsonl', JSON.stringify(e) + '\\n');\n  });\n});\n"
     },
     "name": "End-of-session audit log",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "session-end-audit-log",
     "tags": [
       "notification",
@@ -877,7 +797,6 @@
   {
     "benefit": "The agent only reaches domains you approved",
     "category": "workflow",
-    "community_examples": [],
     "description": "Controls the agent's network access by only allowing WebFetch to a list of approved domains. Any other URL is blocked.",
     "hook_type": "PreToolUse",
     "implementation": {
@@ -917,9 +836,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/webfetch-allowlist.mjs';\n\nconst noFile = { exists: () => false };\n\ndescribe('webfetch-allowlist', () => {\n  it('laisse passer un domaine par défaut', () => {\n    expect(run({ tool_input: { url: 'https://github.com/x' } }, noFile)).toBeNull();\n  });\n\n  it('laisse passer un sous-domaine autorisé', () => {\n    expect(run({ tool_input: { url: 'https://raw.githubusercontent.com/a/b' } }, noFile)).toBeNull();\n  });\n\n  it('bloque un domaine non autorisé', () => {\n    const r = run({ tool_input: { url: 'https://evil.example.com' } }, noFile);\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('evil.example.com');\n  });\n\n  it('respecte une allowlist personnalisée', () => {\n    const deps = { exists: () => true, readFile: () => JSON.stringify(['my.dev']) };\n    expect(run({ tool_input: { url: 'https://my.dev/x' } }, deps)).toBeNull();\n    expect(run({ tool_input: { url: 'https://github.com/x' } }, deps)?.decision).toBe('block');\n  });\n\n  it('laisse passer si url absente', () => {\n    expect(run({ tool_input: {} }, noFile)).toBeNull();\n  });\n\n  it('laisse passer une url invalide', () => {\n    expect(run({ tool_input: { url: 'pas-une-url' } }, noFile)).toBeNull();\n  });\n});\n"
     },
     "name": "Domain allowlist for WebFetch",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-webfetch-domain-allowlist",
     "tags": [
       "workflow",
@@ -937,7 +853,6 @@
   {
     "benefit": "See exactly how hard each session works",
     "category": "notification",
-    "community_examples": [],
     "description": "Increments a counter per tool type after each use and logs the activity, providing a view of the agent's usage intensity per session.",
     "hook_type": "PostToolUse",
     "implementation": {
@@ -976,9 +891,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/tool-usage.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('tool-usage', () => {\n  it('journalise une commande (tronquée à 500)', () => {\n    const e = run({ tool_input: { command: 'y'.repeat(800) } }, base());\n    expect(e.cmd.length).toBe(500);\n  });\n  it('ignore une commande vide', () => {\n    expect(run({ tool_input: {} }, base())).toBeNull();\n  });\n});\n"
     },
     "name": "Tool usage tracking",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "post-bash-cost-tracker",
     "tags": [
       "notification",
@@ -996,7 +908,6 @@
   {
     "benefit": "An automatic changelog of what the agent shipped",
     "category": "documentation",
-    "community_examples": [],
     "description": "At session end, captures the diff of modified files and appends it to a timestamped change log, creating an automatic changelog of what the agent produced.",
     "hook_type": "Stop",
     "implementation": {
@@ -1035,9 +946,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/session-changelog.mjs';\n\nconst exec = (cmd) => {\n  if (cmd.includes('branch')) return 'main';\n  if (cmd.includes('diff')) return ' file | 2 +-';\n  if (cmd.includes('log')) return '- fix (abc)';\n  return '';\n};\n\ndescribe('session-changelog', () => {\n  it('ajoute une entrée si CHANGELOG existe', () => {\n    const append = vi.fn();\n    const r = run({ exec, append, exists: () => true, projectDir: '/p', now: () => '2026-06-02T00:00:00Z' });\n    expect(r.written).toBe(true);\n    expect(append).toHaveBeenCalled();\n  });\n  it('ignore si CHANGELOG absent', () => {\n    const r = run({ exec, append: vi.fn(), exists: () => false, projectDir: '/p', now: () => '2026-06-02T00:00:00Z' });\n    expect(r.written).toBe(false);\n  });\n  it('retourne null sans diff ni commits', () => {\n    expect(run({ exec: () => '', exists: () => true, projectDir: '/p' })).toBeNull();\n  });\n});\n"
     },
     "name": "Session summary generation",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "stop-generate-changelog",
     "tags": [
       "documentation",
@@ -1056,12 +964,6 @@
   {
     "benefit": "Forces uv and pnpm, kills pip/npm drift",
     "category": "validation",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/enforce-package-managers.sh",
-        "repo": "https://github.com/steve-magne/moving-live"
-      }
-    ],
     "description": "Blocks pip, poetry, npm and yarn commands; enforces uv (Python) and pnpm (Node.js). Generates an actionable message with the replacement command.",
     "hook_type": "PreToolUse",
     "implementation": {
@@ -1101,9 +1003,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/enforce-package-managers.mjs';\n\ndescribe('enforce-package-managers', () => {\n  it('laisse passer un outil non-Bash', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: 'x.ts' } })).toBeNull();\n  });\n\n  it('laisse passer pnpm install', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'pnpm install' } })).toBeNull();\n  });\n\n  it('laisse passer une commande sans gestionnaire de paquets', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'echo hello' } })).toBeNull();\n  });\n\n  it('laisse passer si tool_input est absent', () => {\n    expect(run({ tool_name: 'Bash' })).toBeNull();\n  });\n\n  it('bloque npm install', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'npm install' } });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('pnpm');\n  });\n\n  it('bloque npm seul', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'npm' } });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('bloque npm enchaîné après &&', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'cd app && npm install' } });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('bloque yarn add', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'yarn add lodash' } });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('pnpm');\n  });\n\n  it('bloque yarn seul', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'yarn' } });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('ne bloque pas une commande contenant \"npm\" dans un nom de fichier', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'cat package.json' } })).toBeNull();\n  });\n\n  it('laisse passer npm dans un message de commit git (-m \"...\")', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'git commit -m \"support npm and yarn\"' } })).toBeNull();\n  });\n\n  it('laisse passer yarn dans le body d\\'une PR gh (\"...\")', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'gh pr create --body \"yarn is now supported\"' } })).toBeNull();\n  });\n\n  it('laisse passer npm dans un argument entre guillemets simples', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: \"echo 'use npm here'\" } })).toBeNull();\n  });\n\n  it('bloque npm après && même si la commande débute par git', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'git status && npm install' } });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('bloque yarn après && même si la commande débute par gh', () => {\n    const r = run({ tool_name: 'Bash', tool_input: { command: 'gh auth status && yarn add lodash' } });\n    expect(r?.decision).toBe('block');\n  });\n});\n"
     },
     "name": "Enforce package managers",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-bash-enforce-package-managers",
     "stack": [
       "typescript"
@@ -1126,12 +1025,6 @@
   {
     "benefit": "Edits never leak back into your main repo",
     "category": "workflow",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/worktree-guard.sh",
-        "repo": "https://github.com/steve-magne/moving-live"
-      }
-    ],
     "description": "Blocks any Edit/Write whose absolute path targets the main repo instead of the active worktree. Suggests the corrected path. Detects the worktree via .claude/active-worktree or via git rev-parse.",
     "hook_type": "PreToolUse",
     "implementation": {
@@ -1171,9 +1064,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/worktree-guard.mjs';\n\n// Simule un worktree secondaire /wt distinct du repo principal /main.\nfunction makeExec({ toplevel = '/wt', list = '/main  abc [main]\\n/wt  def [feat]' } = {}) {\n  return (cmd) => {\n    if (cmd.includes('show-toplevel')) return toplevel;\n    if (cmd.includes('worktree list')) return list;\n    return '';\n  };\n}\n\ndescribe('worktree-guard', () => {\n  it('bloque une écriture hors du worktree courant', () => {\n    const r = run({ tool_input: { file_path: '/main/src/x.ts' } }, { exec: makeExec() });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('laisse passer une écriture dans le worktree courant', () => {\n    expect(run({ tool_input: { file_path: '/wt/src/x.ts' } }, { exec: makeExec() })).toBeNull();\n  });\n\n  it('ne s\\'applique pas dans le worktree principal', () => {\n    const exec = makeExec({ toplevel: '/main' });\n    expect(run({ tool_input: { file_path: '/elsewhere/x.ts' } }, { exec })).toBeNull();\n  });\n\n  it('laisse passer si file_path absent', () => {\n    expect(run({ tool_input: {} }, { exec: makeExec() })).toBeNull();\n  });\n\n  it('laisse passer si git échoue', () => {\n    const exec = () => { throw new Error('not a git repo'); };\n    expect(run({ tool_input: { file_path: '/x' } }, { exec })).toBeNull();\n  });\n});\n"
     },
     "name": "Worktree guardrail (Edit/Write)",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-edit-worktree-guard",
     "tags": [
       "worktree",
@@ -1191,12 +1081,6 @@
   {
     "benefit": "Types and lint must pass before Claude hands back control",
     "category": "validation",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/quality-check.sh",
-        "repo": "https://github.com/steve-magne/moving-live"
-      }
-    ],
     "description": "Runs a full quality gate when the session stops: TypeScript typecheck and ESLint (with cache). Tests are intentionally left to the stop-run-tests hook to avoid running the suite twice. Blocks the stop with actionable output if any check fails.",
     "hook_type": "Stop",
     "implementation": {
@@ -1240,9 +1124,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/quality-check.mjs';\n\nconst PROJECT_DIR = '/fake/project';\n\nfunction makeOpts({ hasPkg = true, hasTsConfig = true, hasEslintConfig = false, execResults = {} } = {}) {\n  return {\n    projectDir: PROJECT_DIR,\n    exists: (p) => {\n      if (p.endsWith('package.json')) return hasPkg;\n      if (p.endsWith('tsconfig.json')) return hasTsConfig;\n      if (p.endsWith('eslint.config.js')) return hasEslintConfig;\n      return false;\n    },\n    exec: vi.fn((cmd) => {\n      const key = Object.keys(execResults).find((k) => cmd.includes(k));\n      if (key !== undefined) {\n        if (execResults[key] instanceof Error) throw execResults[key];\n        return execResults[key];\n      }\n    }),\n  };\n}\n\ndescribe('quality-check', () => {\n  it('retourne 0 checks si pas de package.json', () => {\n    const result = run(makeOpts({ hasPkg: false }));\n    expect(result.checks).toBe(0);\n    expect(result.failed).toBe(0);\n  });\n\n  it('inclut TypeScript seulement si tsconfig.json présent', () => {\n    const opts = makeOpts({ hasTsConfig: true });\n    run(opts);\n    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('tsc'));\n  });\n\n  it('n\\'inclut pas TypeScript sans tsconfig.json', () => {\n    const opts = makeOpts({ hasTsConfig: false });\n    run(opts);\n    expect(opts.exec).not.toHaveBeenCalledWith(expect.stringContaining('tsc'));\n  });\n\n  it('retourne failed=0 si tous les checks passent', () => {\n    const result = run(makeOpts());\n    expect(result.failed).toBe(0);\n    expect(result.message).toContain('Tous les contrôles qualité passent');\n  });\n\n  it('n\\'inclut pas ESLint si pas de fichier de config ESLint', () => {\n    const opts = makeOpts({ hasEslintConfig: false });\n    run(opts);\n    expect(opts.exec).not.toHaveBeenCalledWith(expect.stringContaining('eslint'));\n  });\n\n  it('inclut ESLint si eslint.config.js existe', () => {\n    const opts = makeOpts({ hasEslintConfig: true });\n    run(opts);\n    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('eslint'));\n  });\n\n  it('ESLint utilise le cache pour accélérer les runs suivants', () => {\n    const opts = makeOpts({ hasEslintConfig: true });\n    run(opts);\n    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('--cache'));\n  });\n\n  it('ne lance plus les tests — couverts par run-tests.mjs au Stop', () => {\n    const opts = makeOpts({ hasEslintConfig: true });\n    run(opts);\n    for (const call of opts.exec.mock.calls) {\n      expect(call[0]).not.toMatch(/\\b(pnpm|yarn|npm|bun) test|vitest/);\n    }\n  });\n\n  it('retourne failed=1 quand TypeScript échoue', () => {\n    const err = Object.assign(new Error('type error'), { stdout: Buffer.from('Type error in foo.ts') });\n    const result = run(makeOpts({ execResults: { tsc: err } }));\n    expect(result.failed).toBeGreaterThanOrEqual(1);\n    expect(result.message).toContain('✗ TypeScript');\n  });\n\n  it('retourne failed>0 quand ESLint échoue', () => {\n    const err = Object.assign(new Error('lint error'), { stdout: Buffer.from('2 errors') });\n    const result = run(makeOpts({ hasEslintConfig: true, execResults: { eslint: err } }));\n    expect(result.failed).toBeGreaterThanOrEqual(1);\n    expect(result.message).toContain('✗ ESLint');\n  });\n\n  it('affiche le nombre de vérifications échouées dans le message', () => {\n    const err = Object.assign(new Error('fail'), { stdout: Buffer.from('') });\n    const result = run(makeOpts({ hasEslintConfig: true, execResults: { tsc: err, eslint: err } }));\n    expect(result.message).toContain('vérification(s) échouée(s)');\n  });\n});\n"
     },
     "name": "Automatic quality check (Stop)",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "stop-quality-check",
     "tags": [
       "quality",
@@ -1263,12 +1144,6 @@
   {
     "benefit": "New worktrees boot with their own env and ports",
     "category": "workflow",
-    "community_examples": [
-      {
-        "file_path": "setup-worktree-env.sh",
-        "repo": "https://github.com/steve-magne/moving-live"
-      }
-    ],
     "description": "On session start inside a freshly created worktree, copies the main repo's .env files into the worktree so it is ready to run.",
     "hook_type": "SessionStart",
     "implementation": {
@@ -1309,9 +1184,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/setup-worktree-env.mjs';\n\nconst MAIN = '/repos/hookstack';\nconst WORKTREE = '/repos/hookstack-wt';\n\nfunction makeExec(main = MAIN, wt = WORKTREE) {\n  return (cmd) => {\n    if (cmd === 'git worktree list') return `${main}  abc1234 [main]\\n${wt}  def5678 [feature]`;\n    if (cmd === 'git rev-parse --show-toplevel') return wt;\n    return '';\n  };\n}\n\nconst noScan = () => [];\n\n// ─── Gardes d'entrée ─────────────────────────────────────────────────────────\n\ndescribe('gardes d entrée', () => {\n  it('ne fait rien si git worktree list est vide', () => {\n    const copy = vi.fn();\n    run({ exec: () => '', exists: () => false, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    expect(copy).not.toHaveBeenCalled();\n  });\n\n  it('ne fait rien si mainDir === worktreeDir (branche principale)', () => {\n    const copy = vi.fn();\n    run({ exec: makeExec(MAIN, MAIN), exists: () => false, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    expect(copy).not.toHaveBeenCalled();\n  });\n});\n\n// ─── Liste statique racine ────────────────────────────────────────────────────\n\ndescribe('liste statique racine', () => {\n  it('copie .env présent dans main et absent du worktree', () => {\n    const copy = vi.fn();\n    const exists = (p) => p === `${MAIN}/.env`;\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    expect(copy).toHaveBeenCalledWith(`${MAIN}/.env`, `${WORKTREE}/.env`);\n    expect(copy).toHaveBeenCalledTimes(1);\n  });\n\n  it('copie .env.local et .env.development.local si présents', () => {\n    const copy = vi.fn();\n    const existing = new Set(['.env.local', '.env.development.local'].map(f => `${MAIN}/${f}`));\n    const exists = (p) => existing.has(p);\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    const copied = copy.mock.calls.map(([src]) => src.replace(MAIN + '/', ''));\n    expect(copied).toContain('.env.local');\n    expect(copied).toContain('.env.development.local');\n    expect(copy).toHaveBeenCalledTimes(2);\n  });\n\n  it('copie .envrc (direnv)', () => {\n    const copy = vi.fn();\n    const exists = (p) => p === `${MAIN}/.envrc`;\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    expect(copy).toHaveBeenCalledWith(`${MAIN}/.envrc`, `${WORKTREE}/.envrc`);\n  });\n\n  it('copie config/master.key (Rails) et crée le dossier intermédiaire manquant', () => {\n    const copy = vi.fn();\n    const mkdir = vi.fn();\n    const exists = (p) => p === `${MAIN}/config/master.key`;\n    run({ exec: makeExec(), exists, copy, mkdir, scanEnvFiles: noScan });\n    expect(mkdir).toHaveBeenCalledWith(`${WORKTREE}/config`, { recursive: true });\n    expect(copy).toHaveBeenCalledWith(`${MAIN}/config/master.key`, `${WORKTREE}/config/master.key`);\n  });\n\n  it('ne copie pas si le fichier existe déjà dans le worktree', () => {\n    const copy = vi.fn();\n    run({ exec: makeExec(), exists: () => true, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    expect(copy).not.toHaveBeenCalled();\n  });\n\n  it('ne copie pas si le fichier source est absent dans main', () => {\n    const copy = vi.fn();\n    run({ exec: makeExec(), exists: () => false, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    expect(copy).not.toHaveBeenCalled();\n  });\n\n  it('couvre les variantes staging et production', () => {\n    const copy = vi.fn();\n    const files = ['.env.staging', '.env.staging.local', '.env.production', '.env.production.local'];\n    const existing = new Set(files.map(f => `${MAIN}/${f}`));\n    const exists = (p) => existing.has(p);\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles: noScan });\n    const copied = copy.mock.calls.map(([src]) => src.replace(MAIN + '/', ''));\n    for (const f of files) expect(copied).toContain(f);\n  });\n});\n\n// ─── Scan monorepo ────────────────────────────────────────────────────────────\n\ndescribe('scan monorepo (scanEnvFiles)', () => {\n  it('copie les fichiers env trouvés dans les sous-répertoires', () => {\n    const copy = vi.fn();\n    const subFiles = ['apps/web/.env', 'apps/api/.env.local', 'packages/utils/.env'];\n    const scanEnvFiles = () => subFiles;\n    const exists = (p) => p.startsWith(MAIN + '/');\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles });\n    const copied = copy.mock.calls.map(([src]) => src.replace(MAIN + '/', ''));\n    expect(copied).toContain('apps/web/.env');\n    expect(copied).toContain('apps/api/.env.local');\n    expect(copied).toContain('packages/utils/.env');\n  });\n\n  it('ne copie pas un fichier monorepo déjà présent dans le worktree', () => {\n    const copy = vi.fn();\n    const scanEnvFiles = () => ['frontend/.env'];\n    run({ exec: makeExec(), exists: () => true, copy, mkdir: vi.fn(), scanEnvFiles });\n    expect(copy).not.toHaveBeenCalled();\n  });\n\n  it('déduplique si le scan retourne un fichier déjà dans ROOT_FILES', () => {\n    const copy = vi.fn();\n    const scanEnvFiles = () => ['.env', 'frontend/.env'];\n    const exists = (p) => p.startsWith(MAIN + '/');\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles });\n    const copied = copy.mock.calls.map(([src]) => src.replace(MAIN + '/', ''));\n    expect(copied.filter(f => f === '.env')).toHaveLength(1);\n    expect(copied).toContain('frontend/.env');\n  });\n\n  it('crée les répertoires intermédiaires manquants pour les fichiers monorepo', () => {\n    const copy = vi.fn();\n    const mkdir = vi.fn();\n    const scanEnvFiles = () => ['apps/web/.env'];\n    const exists = (p) => p.startsWith(MAIN + '/') && !p.startsWith(WORKTREE + '/');\n    run({ exec: makeExec(), exists, copy, mkdir, scanEnvFiles });\n    expect(mkdir).toHaveBeenCalledWith(`${WORKTREE}/apps/web`, { recursive: true });\n    expect(copy).toHaveBeenCalledWith(`${MAIN}/apps/web/.env`, `${WORKTREE}/apps/web/.env`);\n  });\n\n  it('continue normalement si scanEnvFiles retourne un tableau vide', () => {\n    const copy = vi.fn();\n    const exists = (p) => p === `${MAIN}/.env`;\n    run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles: () => [] });\n    expect(copy).toHaveBeenCalledWith(`${MAIN}/.env`, `${WORKTREE}/.env`);\n    expect(copy).toHaveBeenCalledTimes(1);\n  });\n});\n"
     },
     "name": "Worktree env initialization",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "worktree-create-setup-env",
     "tags": [
       "worktree",
@@ -1330,12 +1202,6 @@
   {
     "benefit": "Every worktree starts with fresh dependencies",
     "category": "workflow",
-    "community_examples": [
-      {
-        "file_path": "update-lib.sh",
-        "repo": "https://github.com/steve-magne/moving-live"
-      }
-    ],
     "description": "On session start inside a worktree that has no node_modules yet, spawns the dependency install as a detached background process so the session never blocks.",
     "hook_type": "SessionStart",
     "implementation": {
@@ -1376,9 +1242,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/update-deps.mjs';\n\nconst MAIN = '/repos/hookstack';\nconst WORKTREE = '/repos/hookstack-wt';\n\n// exec stub : git rev-parse → worktree, git worktree list → main en 1re ligne, which pnpm paramétrable\nfunction makeExec(wt = WORKTREE, main = MAIN, pnpm = '/usr/local/bin/pnpm') {\n  return (cmd) => {\n    if (cmd.includes('rev-parse')) return wt;\n    if (cmd.includes('worktree list')) return `${main}  abc1234 [main]\\n${wt}  def5678 [feature]`;\n    if (cmd.includes('which pnpm')) return pnpm;\n    return '';\n  };\n}\n\ndescribe('update-deps', () => {\n  it('ne fait rien si git rev-parse échoue', () => {\n    const detach = vi.fn();\n    run({ exec: () => '', exists: () => true, detach });\n    expect(detach).not.toHaveBeenCalled();\n  });\n\n  it('ne fait rien hors worktree (mainDir === worktreeDir)', () => {\n    const detach = vi.fn();\n    run({ exec: makeExec(MAIN, MAIN), exists: () => false, detach });\n    expect(detach).not.toHaveBeenCalled();\n  });\n\n  it('ne fait rien si package.json absent', () => {\n    const detach = vi.fn();\n    run({ exec: makeExec(), exists: () => false, detach });\n    expect(detach).not.toHaveBeenCalled();\n  });\n\n  it('ne fait rien si node_modules déjà présent', () => {\n    const detach = vi.fn();\n    const exists = () => true; // package.json ET node_modules présents\n    run({ exec: makeExec(), exists, detach });\n    expect(detach).not.toHaveBeenCalled();\n  });\n\n  it('détache pnpm install dans un worktree neuf', () => {\n    const detach = vi.fn();\n    const exists = (p) => p === `${WORKTREE}/package.json`; // pas de node_modules\n    run({ exec: makeExec(), exists, detach });\n    expect(detach).toHaveBeenCalledWith('pnpm', ['install', '--frozen-lockfile', '--ignore-scripts'], WORKTREE);\n  });\n\n  it('détache npm ci si pnpm absent', () => {\n    const detach = vi.fn();\n    const exists = (p) => p === `${WORKTREE}/package.json`;\n    run({ exec: makeExec(WORKTREE, MAIN, ''), exists, detach });\n    expect(detach).toHaveBeenCalledWith('npm', ['ci', '--ignore-scripts'], WORKTREE);\n  });\n\n  it(\"n'utilise jamais exec pour lancer l'install (travail détaché, non bloquant)\", () => {\n    const calls = [];\n    const exec = (cmd) => { calls.push(cmd); return makeExec()(cmd); };\n    const exists = (p) => p === `${WORKTREE}/package.json`;\n    run({ exec, exists, detach: vi.fn() });\n    expect(calls.some((c) => c.includes('install') || c.includes(' ci'))).toBe(false);\n  });\n});\n"
     },
     "name": "Worktree dependency update",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "worktree-create-update-deps",
     "stack": [
       "typescript"
@@ -1399,12 +1262,6 @@
   {
     "benefit": "No source file ships without a test",
     "category": "validation",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/missing-test-detection.sh",
-        "repo": "https://github.com/steve-magne/moving-live"
-      }
-    ],
     "description": "On every session stop, inspects git diff to list modified source files and checks that a matching test file exists. Fails with the list of uncovered files if tests are missing.",
     "hook_type": "Stop",
     "implementation": {
@@ -1444,9 +1301,6 @@
     },
     "default_on": true,
     "name": "Missing test detection (Stop)",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "stop-missing-test-detection",
     "tags": [
       "tests",
@@ -1464,12 +1318,6 @@
   {
     "benefit": "Catches the file that quietly dropped coverage",
     "category": "validation",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/per-file-coverage.sh",
-        "repo": "https://github.com/steve-magne/moving-live"
-      }
-    ],
     "description": "Reads the JSON coverage report (vitest/jest coverage-summary.json or pytest coverage.json) and checks that each file modified since the merge base reaches ≥80% line coverage. Reports files below the threshold with their exact percentage.",
     "hook_type": "Stop",
     "implementation": {
@@ -1509,9 +1357,6 @@
     },
     "default_on": true,
     "name": "Per-modified-file coverage (Stop)",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "stop-per-file-coverage",
     "stack": [
       "typescript"
@@ -1535,9 +1380,6 @@
     "name": "Per-modified-file lint (Stop)",
     "benefit": "Blocks the session on a lint error you introduced",
     "category": "validation",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "Stop",
     "trigger": "*",
     "description": "Runs ESLint (--max-warnings=0) on each .js/.ts/.jsx/.tsx file modified since the merge base. Reports files with lint problems and auto-disables after 3 consecutive failures so it never gets stuck blocking a session.",
@@ -1580,7 +1422,6 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run, isEslintUnavailable } from '../../.claude/hooks/per-file-lint.mjs';\n\nconst COUNTER = '/tmp/.test-lint-counter';\nconst DISABLE = '/tmp/.test-lint-disable';\n\nfunction makeOpts(overrides = {}) {\n  return {\n    counterFile: COUNTER,\n    disableFile: DISABLE,\n    exists: (p) => p !== DISABLE, // fichiers source présents, pas de désactivation\n    readFile: () => '0',\n    writeFile: vi.fn(),\n    unlink: vi.fn(),\n    exec: () => '',\n    lint: () => null, // pass par défaut\n    ...overrides,\n  };\n}\n\nconst diffExec = (file) => (cmd) => {\n  if (cmd.includes('merge-base')) return 'abc';\n  if (cmd.includes('rev-parse')) return 'def';\n  if (cmd.includes('diff')) return file;\n  return '';\n};\n\ndescribe('per-file-lint', () => {\n  it('exitCode 0 si le fichier de désactivation existe', () => {\n    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);\n    const r = run(makeOpts({ exists: (p) => p === DISABLE }));\n    expect(r.exitCode).toBe(0);\n    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('SUSPENDU'));\n    stderrSpy.mockRestore();\n  });\n\n  it('exitCode 0 si aucun fichier modifié', () => {\n    expect(run(makeOpts({ exec: () => '' })).exitCode).toBe(0);\n  });\n\n  it('ignore les fichiers non-JS/TS', () => {\n    const r = run(makeOpts({ exec: diffExec('README.md\\nstyle.css'), lint: vi.fn() }));\n    expect(r.exitCode).toBe(0);\n  });\n\n  it('exitCode 0 si ESLint passe', () => {\n    expect(run(makeOpts({ exec: diffExec('src/a.ts'), lint: () => null })).exitCode).toBe(0);\n  });\n\n  it('exitCode 2 si ESLint échoue', () => {\n    const r = run(makeOpts({ exec: diffExec('src/a.ts'), lint: () => '1:1 error no-unused' }));\n    expect(r.exitCode).toBe(2);\n    expect(r.message).toContain('src/a.ts');\n  });\n\n  it('incrémente le compteur à chaque échec', () => {\n    const writeFile = vi.fn();\n    run(makeOpts({ exec: diffExec('src/a.ts'), lint: () => 'err', readFile: () => '1', writeFile }));\n    expect(writeFile).toHaveBeenCalledWith(COUNTER, '2');\n  });\n\n  it('auto-désactive après 3 échecs', () => {\n    const writeFile = vi.fn();\n    const r = run(makeOpts({ exec: diffExec('src/a.ts'), lint: () => 'err', readFile: () => '2', writeFile }));\n    expect(r.message).toContain('AUTO-DISABLE');\n    expect(writeFile).toHaveBeenCalledWith(DISABLE, '');\n  });\n\n  it('réinitialise le compteur si tout passe', () => {\n    const unlink = vi.fn();\n    run(makeOpts({ exec: diffExec('src/a.ts'), lint: () => null, unlink }));\n    expect(unlink).toHaveBeenCalledWith(COUNTER);\n  });\n\n  it('ignore un fichier supprimé', () => {\n    const lint = vi.fn();\n    const r = run(makeOpts({ exec: diffExec('src/gone.ts'), exists: (p) => p === COUNTER, lint }));\n    expect(r.exitCode).toBe(0);\n    expect(lint).not.toHaveBeenCalled();\n  });\n});\n\ndescribe('isEslintUnavailable', () => {\n  it('détecte une config plate manquante (ESLint ≥ 9)', () => {\n    expect(isEslintUnavailable(\"ESLint couldn't find an eslint.config.(js|mjs|cjs) file.\")).toBe(true);\n  });\n\n  it('détecte le crash générique \"Oops\"', () => {\n    expect(isEslintUnavailable('Oops! Something went wrong! :(')).toBe(true);\n  });\n\n  it('détecte un binaire/module introuvable', () => {\n    expect(isEslintUnavailable('Cannot find module eslint')).toBe(true);\n    expect(isEslintUnavailable('npm error could not determine executable to run')).toBe(true);\n  });\n\n  it('traite une sortie vide comme indisponible (skip prudent)', () => {\n    expect(isEslintUnavailable('')).toBe(true);\n    expect(isEslintUnavailable(undefined)).toBe(true);\n  });\n\n  it(\"ne masque PAS une vraie violation de lint\", () => {\n    expect(isEslintUnavailable(\"/src/a.ts\\n  1:1  error  'x' is assigned but never used  no-unused-vars\")).toBe(false);\n  });\n});\n"
     },
-    "community_examples": [],
     "tags": [
       "lint",
       "eslint",
@@ -1596,12 +1437,6 @@
   {
     "benefit": "A flaky Stop hook can't trap your session",
     "category": "workflow",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/quality-check.sh",
-        "repo": "https://github.com/steve-magne/moving-live"
-      }
-    ],
     "description": "Per-session deduplication mechanism: uses $PPID as a stable session identifier, counts consecutive failures in /tmp, and automatically disables the hook after ≥3 failures without a fix. Shows reactivation instructions. Resets the counter on success. Prevents infinite asyncRewake re-wake loops.",
     "hook_type": "Stop",
     "implementation": {
@@ -1641,9 +1476,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/session-dedup-autodisable.mjs';\n\ndescribe('session-dedup-autodisable', () => {\n  it('pose le marqueur .disabled pour un hook au seuil', () => {\n    const writeFile = vi.fn();\n    const deps = {\n      exists: (p) => p === '/c', // dossier existe, marqueur absent\n      readdir: () => ['a.counter'],\n      readFile: () => '3',\n      writeFile,\n      counterDir: '/c',\n    };\n    const r = run(deps);\n    expect(r.disabled).toEqual(['a']);\n    expect(writeFile).toHaveBeenCalledWith('/c/a.disabled', '');\n    expect(r.message).toContain('désactivés');\n  });\n\n  it('ne réécrit pas un marqueur déjà posé', () => {\n    const writeFile = vi.fn();\n    const deps = {\n      exists: () => true, // dossier ET marqueur existent\n      readdir: () => ['a.counter'],\n      readFile: () => '5',\n      writeFile,\n      counterDir: '/c',\n    };\n    expect(run(deps).disabled).toEqual(['a']);\n    expect(writeFile).not.toHaveBeenCalled();\n  });\n\n  it('retourne null sous le seuil', () => {\n    const deps = { exists: (p) => p === '/c', readdir: () => ['a.counter'], readFile: () => '1', writeFile: vi.fn(), counterDir: '/c' };\n    expect(run(deps)).toBeNull();\n  });\n\n  it('retourne null si pas de dossier', () => {\n    expect(run({ exists: () => false, counterDir: '/c' })).toBeNull();\n  });\n});\n"
     },
     "name": "Auto-disable Stop hook after N failures",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "stop-session-dedup-autodisable",
     "tags": [
       "dedup",
@@ -1664,12 +1496,6 @@
   {
     "benefit": "Ship no untranslated string, no orphan key",
     "category": "validation",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/i18n-validation.sh",
-        "repo": "https://github.com/steve-magne/moving-live"
-      }
-    ],
     "description": "Validates the consistency of translation files on every session stop: every key used in the code exists in the i18n files, and no orphan key lingers. Runs only if frontend files were modified.",
     "hook_type": "Stop",
     "implementation": {
@@ -1708,9 +1534,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/i18n-validation.mjs';\n\ndescribe('i18n-validation', () => {\n  it('retourne null si moins de 2 fichiers i18n', () => {\n    expect(run({ exec: () => './locales/fr.json', projectDir: '/p' })).toBeNull();\n  });\n  it('détecte des clés manquantes', () => {\n    const exec = () => './locales/fr.json\\n./locales/en.json';\n    const readFile = (p) => (p.includes('fr.json') ? '{\"a\":1,\"b\":2}' : '{\"a\":1}');\n    const r = run({ exec, readFile, projectDir: '/p' });\n    expect(r.issues.length).toBeGreaterThan(0);\n    expect(r.message).toContain('manque');\n  });\n  it('signale la cohérence', () => {\n    const exec = () => './locales/fr.json\\n./locales/en.json';\n    const readFile = () => '{\"a\":1}';\n    const r = run({ exec, readFile, projectDir: '/p' });\n    expect(r.issues).toHaveLength(0);\n  });\n});\n"
     },
     "name": "Full i18n validation (Stop)",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "stop-i18n-validation",
     "tags": [
       "i18n",
@@ -1728,12 +1551,6 @@
   {
     "benefit": "Hear it out loud when the agent needs you",
     "category": "notification",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/notification-tts.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Announces out loud via the system text-to-speech (say/espeak) when the agent needs the user's attention.",
     "hook_type": "Notification",
     "implementation": {
@@ -1774,9 +1591,6 @@
     },
     "default_on": false,
     "name": "TTS voice notification",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "notification-tts-voice",
     "tags": [
       "tts",
@@ -1794,12 +1608,6 @@
   {
     "benefit": "Get told out loud the moment work is done",
     "category": "notification",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/stop-tts.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Announces out loud via TTS that the agent has finished its task, with a random completion message.",
     "hook_type": "Stop",
     "implementation": {
@@ -1840,9 +1648,6 @@
     },
     "default_on": false,
     "name": "Voice task-completion announcement",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "stop-tts-completion",
     "tags": [
       "tts",
@@ -1893,9 +1698,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/notification-sound.mjs';\n\ndescribe('notification-sound', () => {\n  it('joue afplay Glass.aiff sur macOS', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'darwin' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('Glass.aiff'));\n  });\n\n  it('affiche une notification macOS quand Claude attend', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'darwin' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('display notification'));\n  });\n\n  it('joue paplay sur Linux', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'linux' });\n    expect(exec).toHaveBeenCalled();\n  });\n\n  it('joue un beep PowerShell sur Windows', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'win32' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('powershell'));\n  });\n\n  it('retourne null (non bloquant)', () => {\n    const exec = vi.fn();\n    expect(run({}, { exec, platform: 'darwin' })).toBeNull();\n  });\n\n  it(\"ne leve pas d'erreur si exec echoue\", () => {\n    const exec = vi.fn(() => { throw new Error('afplay absent'); });\n    expect(() => run({}, { exec, platform: 'darwin' })).not.toThrow();\n  });\n\n  it('ne joue rien sur plateforme inconnue', () => {\n    const exec = vi.fn();\n    run({}, { exec, platform: 'freebsd' });\n    expect(exec).not.toHaveBeenCalled();\n  });\n});\n"
     },
     "name": "System sound notification",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "notification-sound",
     "tags": [
       "notification",
@@ -1948,9 +1750,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-sound.mjs';\n\ndescribe('stop-sound', () => {\n  it('joue Hero.aiff sur macOS', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'darwin' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('Hero.aiff'));\n  });\n\n  it('affiche une notification macOS à la fin', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'darwin' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('display notification'));\n  });\n\n  it('joue paplay sur Linux', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'linux' });\n    expect(exec).toHaveBeenCalled();\n  });\n\n  it('joue un beep PowerShell sur Windows', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'win32' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('powershell'));\n  });\n\n  it('retourne null (non bloquant)', () => {\n    const exec = vi.fn();\n    expect(run({ exec, platform: 'darwin' })).toBeNull();\n  });\n\n  it(\"ne leve pas d'erreur si exec echoue\", () => {\n    const exec = vi.fn(() => { throw new Error('afplay absent'); });\n    expect(() => run({ exec, platform: 'darwin' })).not.toThrow();\n  });\n\n  it('ne joue rien sur plateforme inconnue', () => {\n    const exec = vi.fn();\n    run({ exec, platform: 'freebsd' });\n    expect(exec).not.toHaveBeenCalled();\n  });\n});\n"
     },
     "name": "System sound on task completion",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "stop-sound",
     "tags": [
       "stop",
@@ -1970,12 +1769,6 @@
   {
     "benefit": "Hear each subagent spin up",
     "category": "notification",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/subagent-start-tts.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Announces out loud via TTS when a subagent starts, to track parallel agent activity.",
     "hook_type": "SubagentStart",
     "implementation": {
@@ -2015,9 +1808,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/subagent-start-tts.mjs';\n\ndescribe('subagent-start-tts', () => {\n  it('annonce le démarrage', () => {\n    const exec = vi.fn();\n    expect(run({ exec, platform: 'darwin' })).toBe('Sous-agent démarré');\n  });\n});\n"
     },
     "name": "Subagent start voice announcement",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "subagent-start-tts-announce",
     "tags": [
       "tts",
@@ -2035,12 +1825,6 @@
   {
     "benefit": "Hear each subagent finish, no audio clash",
     "category": "notification",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/subagent-stop-tts.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Announces the end of a subagent with a voice message. Uses a file lock to avoid TTS overlap when several subagents finish in parallel.",
     "hook_type": "SubagentStop",
     "implementation": {
@@ -2080,9 +1864,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/subagent-stop-tts.mjs';\n\ndescribe('subagent-stop-tts', () => {\n  it('inclut le résumé', () => {\n    const exec = vi.fn();\n    expect(run({ summary: 'fini' }, { exec, platform: 'darwin' })).toContain('fini');\n  });\n  it('texte par défaut sans résumé', () => {\n    expect(run({}, { exec: vi.fn(), platform: 'darwin' })).toBe('Sous-agent terminé');\n  });\n});\n"
     },
     "name": "Subagent end voice summary",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "subagent-stop-tts-summary",
     "tags": [
       "tts",
@@ -2101,12 +1882,6 @@
   {
     "benefit": "Every prompt saved, replayable later",
     "category": "context",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/user-prompt-log.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Persists every user prompt into a per-session JSON file, allowing the exchange history to be retrieved.",
     "hook_type": "UserPromptSubmit",
     "implementation": {
@@ -2145,9 +1920,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/user-prompt-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('user-prompt-log', () => {\n  it('crée une nouvelle session avec le prompt', () => {\n    const deps = { ...base(), exists: () => false, writeFile: vi.fn() };\n    const data = run({ session_id: 's1', prompt: 'hello' }, deps);\n    expect(data.prompts).toHaveLength(1);\n    expect(data.prompts[0]).toMatchObject({ prompt: 'hello', timestamp: TS });\n    expect(deps.writeFile).toHaveBeenCalled();\n  });\n  it('append au tableau existant', () => {\n    const deps = {\n      ...base(),\n      exists: () => true,\n      readFile: () => JSON.stringify({ session_id: 's1', prompts: [{ prompt: 'a' }] }),\n      writeFile: vi.fn(),\n    };\n    const data = run({ session_id: 's1', prompt: 'b' }, deps);\n    expect(data.prompts).toHaveLength(2);\n  });\n});\n"
     },
     "name": "Per-session prompt log",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "user-prompt-log-session",
     "tags": [
       "logging",
@@ -2166,12 +1938,6 @@
   {
     "benefit": "Each session gets a name, not a hash",
     "category": "context",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/user-prompt-name-agent.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Automatically generates a creative one-word name for each session (e.g. Phoenix, Sage, Nova) on the first prompt, for more human-friendly session tracking.",
     "hook_type": "UserPromptSubmit",
     "implementation": {
@@ -2210,9 +1976,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/user-prompt-name-agent.mjs';\n\nfunction baseDeps(overrides = {}) {\n  return {\n    exists: () => false,\n    readFile: () => '{}',\n    writeFile: vi.fn(),\n    mkdir: vi.fn(),\n    projectDir: '/proj',\n    pickName: () => 'Nexus',\n    ...overrides,\n  };\n}\n\ndescribe('user-prompt-name-agent', () => {\n  it('attribue un nom à une nouvelle session', () => {\n    const writeFile = vi.fn();\n    const out = run({ session_id: 's1' }, baseDeps({ writeFile }));\n    expect(out).toContain('Nexus');\n    expect(writeFile).toHaveBeenCalled();\n  });\n\n  it('ne réattribue pas si un nom existe déjà', () => {\n    const deps = baseDeps({\n      exists: () => true,\n      readFile: () => JSON.stringify({ session_id: 's1', agent_name: 'Atlas' }),\n    });\n    expect(run({ session_id: 's1' }, deps)).toBeNull();\n  });\n\n  it('crée le dossier de sessions', () => {\n    const mkdir = vi.fn();\n    run({ session_id: 's1' }, baseDeps({ mkdir }));\n    expect(mkdir).toHaveBeenCalledWith(expect.stringContaining('sessions'), { recursive: true });\n  });\n});\n"
     },
     "name": "Automatic session naming",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "user-prompt-llm-agent-name",
     "tags": [
       "session",
@@ -2231,12 +1994,6 @@
   {
     "benefit": "Your full transcript survives every compaction",
     "category": "workflow",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/pre-compact-backup.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Automatically backs up the JSONL transcript file before every context compaction, to allow auditing or restoration.",
     "hook_type": "PreCompact",
     "implementation": {
@@ -2276,9 +2033,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/pre-compact-backup.mjs';\n\ndescribe('pre-compact-backup', () => {\n  it('sauvegarde le résumé', () => {\n    const writeFile = vi.fn();\n    const r = run({ summary: 's', session_id: 's1' }, { writeFile, mkdir: vi.fn(), backupDir: '/bk', now: () => 'T' });\n    expect(r.file).toBe('/bk/s1.json');\n    expect(writeFile).toHaveBeenCalled();\n  });\n  it('ignore sans résumé', () => {\n    expect(run({}, { writeFile: vi.fn(), mkdir: vi.fn() })).toBeNull();\n  });\n});\n"
     },
     "name": "Transcript backup before compaction",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-compact-transcript-backup",
     "tags": [
       "backup",
@@ -2297,12 +2051,6 @@
   {
     "benefit": "Stop clicking approve on harmless reads",
     "category": "security",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/permission-auto-allow.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Automatically approves permission requests for read-only operations (Read, Glob, Grep, safe Bash commands) without manual intervention.",
     "hook_type": "PermissionRequest",
     "implementation": {
@@ -2342,9 +2090,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/permission-auto-allow.mjs';\n\nconst allowed = (r) => r?.hookSpecificOutput?.decision?.behavior === 'allow';\n\ndescribe('permission-auto-allow', () => {\n  it('autorise les outils lecture seule', () => {\n    expect(allowed(run({ tool_name: 'Read' }))).toBe(true);\n    expect(allowed(run({ tool_name: 'Glob' }))).toBe(true);\n    expect(allowed(run({ tool_name: 'Grep' }))).toBe(true);\n  });\n\n  it('autorise une commande Bash sûre', () => {\n    expect(allowed(run({ tool_name: 'Bash', tool_input: { command: 'git status' } }))).toBe(true);\n    expect(allowed(run({ tool_name: 'Bash', tool_input: { command: 'ls -la' } }))).toBe(true);\n  });\n\n  it('n\\'autorise pas une commande Bash non listée', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'rm file' } })).toBeNull();\n  });\n\n  it('n\\'autorise pas un cat avec redirection', () => {\n    expect(run({ tool_name: 'Bash', tool_input: { command: 'cat x > y' } })).toBeNull();\n  });\n\n  it('n\\'autorise pas Write', () => {\n    expect(run({ tool_name: 'Write' })).toBeNull();\n  });\n});\n"
     },
     "name": "Auto-approve read-only permissions",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "permission-request-auto-allow-readonly",
     "tags": [
       "permission",
@@ -2363,12 +2108,6 @@
   {
     "benefit": "Every tool failure logged for the post-mortem",
     "category": "context",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/post-tool-failure-log.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Records every tool failure into a structured JSON file with timestamp, tool name, input and error, for debugging and auditing.",
     "hook_type": "PostToolUseFailure",
     "implementation": {
@@ -2408,9 +2147,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/post-tool-failure-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('post-tool-failure-log', () => {\n  it(\"journalise un échec d'outil\", () => {\n    const deps = base();\n    const { entry } = run({ tool_name: 'Bash', tool_input: { command: 'x' }, error: 'boom' }, deps);\n    expect(entry).toMatchObject({ ts: TS, tool: 'Bash', error: 'boom' });\n    expect(deps.append).toHaveBeenCalled();\n  });\n});\n"
     },
     "name": "Structured tool failure log",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "post-tool-failure-log",
     "tags": [
       "logging",
@@ -2429,12 +2165,6 @@
   {
     "benefit": "Open a session, environment's already ready",
     "category": "workflow",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/setup-check-deps.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Checks for the required system tools and automatically installs the project dependencies (npm ci, uv sync) at session startup.",
     "hook_type": "SessionStart",
     "implementation": {
@@ -2474,9 +2204,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/setup-check-deps.mjs';\n\ndescribe('setup-check-deps', () => {\n  it('avertit si node_modules absent', () => {\n    const exists = (p) => p.endsWith('pnpm-lock.yaml');\n    const r = run({ exists, stat: () => ({ mtimeMs: 0 }), projectDir: '/p' });\n    expect(r.warnings.length).toBe(1);\n    expect(r.message).toContain('absent');\n  });\n  it('avertit si lockfile plus récent', () => {\n    const exists = (p) => p.endsWith('pnpm-lock.yaml') || p.endsWith('node_modules');\n    const stat = (p) => ({ mtimeMs: p.endsWith('pnpm-lock.yaml') ? 100 : 50 });\n    expect(run({ exists, stat, projectDir: '/p' }).warnings.length).toBe(1);\n  });\n  it('rien si à jour', () => {\n    const exists = (p) => p.endsWith('pnpm-lock.yaml') || p.endsWith('node_modules');\n    const stat = () => ({ mtimeMs: 100 });\n    expect(run({ exists, stat, projectDir: '/p' }).warnings).toHaveLength(0);\n  });\n});\n"
     },
     "name": "Dependency check and install at startup",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "setup-check-install-deps",
     "stack": [
       "typescript",
@@ -2500,12 +2227,6 @@
   {
     "benefit": "Sessions end with a clean logs directory",
     "category": "workflow",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/session-end-cleanup.mjs",
-        "repo": "https://github.com/disler/claude-code-hooks-mastery"
-      }
-    ],
     "description": "Automatically removes temporary files (.tmp) and stale artifacts from the logs directory at session end.",
     "hook_type": "SessionEnd",
     "implementation": {
@@ -2545,9 +2266,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/session-end-cleanup.mjs';\n\ndescribe('session-end-cleanup', () => {\n  it('supprime les fichiers claude- périmés', () => {\n    const unlink = vi.fn();\n    const deps = {\n      readdir: () => ['claude-old', 'other'],\n      stat: () => ({ mtimeMs: 0 }),\n      unlink,\n      tmp: '/tmp',\n      maxAge: 1000,\n      now: () => 10_000_000,\n    };\n    expect(run(deps).cleaned).toBe(1);\n    expect(unlink).toHaveBeenCalledWith('/tmp/claude-old');\n  });\n  it('ne supprime rien si récent', () => {\n    const deps = { readdir: () => ['claude-new'], stat: () => ({ mtimeMs: 9_999_999 }), unlink: vi.fn(), now: () => 10_000_000, maxAge: 1000 };\n    expect(run(deps).cleaned).toBe(0);\n  });\n});\n"
     },
     "name": "Temporary file cleanup at session end",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "session-end-cleanup-temp",
     "tags": [
       "cleanup",
@@ -2565,12 +2283,6 @@
   {
     "benefit": "Conventions survive a context compaction",
     "category": "context",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/reinject-after-compact.mjs",
-        "repo": "https://code.claude.com/docs/fr/hooks-guide#ce-que-vous-pouvez-automatiser"
-      }
-    ],
     "description": "Re-injects the project conventions and critical context into the session after Claude Code compacts the context window, preventing the loss of important information.",
     "hook_type": "SessionStart",
     "implementation": {
@@ -2611,9 +2323,6 @@
     },
     "default_on": true,
     "name": "Re-inject context after compaction",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "session-start-reinject-after-compact",
     "tags": [
       "context",
@@ -2631,12 +2340,6 @@
   {
     "benefit": "Every settings.json change is on the record",
     "category": "workflow",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/config-audit-log.mjs",
-        "repo": "https://code.claude.com/docs/fr/hooks-guide#ce-que-vous-pouvez-automatiser"
-      }
-    ],
     "description": "Records every change to a Claude Code configuration file (settings.json, skills, etc.) into a timestamped audit log for traceability and compliance.",
     "hook_type": "ConfigChange",
     "implementation": {
@@ -2676,9 +2379,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/config-audit-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('config-audit-log', () => {\n  it('journalise un changement de config', () => {\n    const deps = base();\n    const { entry, message } = run({ change: { theme: 'dark' } }, deps);\n    expect(entry).toMatchObject({ ts: TS, project: 'proj', change: { theme: 'dark' } });\n    expect(message).toContain('config-audit');\n    expect(deps.append).toHaveBeenCalled();\n  });\n});\n"
     },
     "name": "Configuration change audit log",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "config-change-audit-log",
     "tags": [
       "audit",
@@ -2697,12 +2397,6 @@
   {
     "benefit": "Bash always runs in the right env per folder",
     "category": "workflow",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/reload-direnv.mjs",
-        "repo": "https://code.claude.com/docs/fr/hooks-guide#ce-que-vous-pouvez-automatiser"
-      }
-    ],
     "description": "Automatically reloads environment variables via direnv when Claude changes its working directory, ensuring Bash commands use the right environment for the current directory.",
     "hook_type": "CwdChanged",
     "implementation": {
@@ -2753,9 +2447,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/reload-direnv.mjs';\n\ndescribe('reload-direnv', () => {\n  it('recharge si .envrc présent', () => {\n    const exec = vi.fn();\n    const r = run({ cwd: '/p' }, { exec, exists: () => true });\n    expect(exec).toHaveBeenCalledWith('direnv allow .', '/p');\n    expect(r.message).toContain('rechargé');\n  });\n  it('ignore si pas de .envrc', () => {\n    expect(run({ cwd: '/p' }, { exec: vi.fn(), exists: () => false })).toBeNull();\n  });\n});\n"
     },
     "name": "Reload direnv on directory change",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "cwd-changed-reload-direnv",
     "tags": [
       "direnv",
@@ -2774,12 +2465,6 @@
   {
     "benefit": "Plans proceed without the extra approval click",
     "category": "workflow",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/auto-allow-exit-plan.mjs",
-        "repo": "https://code.claude.com/docs/fr/hooks-guide#ce-que-vous-pouvez-automatiser"
-      }
-    ],
     "description": "Automatically approves the ExitPlanMode permission request, removing the interactive dialog every time Claude finishes presenting a plan and asks to proceed.",
     "hook_type": "PermissionRequest",
     "implementation": {
@@ -2819,9 +2504,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/auto-allow-exit-plan.mjs';\n\ndescribe('auto-allow-exit-plan', () => {\n  it('autorise exit_plan_mode', () => {\n    const r = run({ tool_name: 'exit_plan_mode' });\n    expect(r?.hookSpecificOutput?.decision?.behavior).toBe('allow');\n  });\n\n  it('lit aussi le champ tool', () => {\n    const r = run({ tool: 'exit_plan_mode' });\n    expect(r?.hookSpecificOutput?.decision?.behavior).toBe('allow');\n  });\n\n  it('ignore les autres outils', () => {\n    expect(run({ tool_name: 'Bash' })).toBeNull();\n  });\n});\n"
     },
     "name": "Automatic ExitPlanMode approval",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "permission-request-auto-allow-exit-plan",
     "tags": [
       "permission",
@@ -2840,12 +2522,6 @@
   {
     "benefit": "A full history of every command Claude ran",
     "category": "workflow",
-    "community_examples": [
-      {
-        "file_path": ".claude/hooks/bash-command-log.mjs",
-        "repo": "https://code.claude.com/docs/fr/hooks-guide#ce-que-vous-pouvez-automatiser"
-      }
-    ],
     "description": "Records every Bash command executed by Claude into a timestamped log file for audit, debugging and a history of the session's actions.",
     "hook_type": "PostToolUse",
     "implementation": {
@@ -2885,9 +2561,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/bash-command-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('bash-command-log', () => {\n  it('journalise une commande', () => {\n    const deps = { ...base(), cwd: '/proj' };\n    const e = run({ tool_input: { command: 'ls' }, tool_response: { exit_code: 0 } }, deps);\n    expect(e).toMatchObject({ ts: TS, cmd: 'ls', exit: 0, cwd: '/proj' });\n    expect(deps.append).toHaveBeenCalled();\n  });\n  it('ignore une commande vide', () => {\n    const deps = base();\n    expect(run({ tool_input: {} }, deps)).toBeNull();\n    expect(deps.append).not.toHaveBeenCalled();\n  });\n  it('tronque les commandes longues à 1000 car.', () => {\n    const e = run({ tool_input: { command: 'x'.repeat(2000) } }, base());\n    expect(e.cmd.length).toBe(1000);\n  });\n});\n"
     },
     "name": "Bash command log",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "post-bash-command-log",
     "tags": [
       "logging",
@@ -2945,9 +2618,6 @@
     },
     "default_on": true,
     "name": "Typecheck after parallel file edits",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "post-tool-batch-typecheck",
     "stack": [
       "typescript"
@@ -3007,9 +2677,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/file-changed-reload-env.mjs';\n\ndescribe('file-changed-reload-env', () => {\n  it('recharge les variables valides', () => {\n    const append = vi.fn();\n    const r = run(\n      { file_path: '.env', event: 'change' },\n      { readFile: () => 'FOO=1\\n# comment\\nBAR=2', append, envFile: '/tmp/env' },\n    );\n    expect(r.count).toBe(2);\n    expect(append).toHaveBeenCalledWith('/tmp/env', 'export FOO=1\\n');\n  });\n  it('ignore unlink', () => {\n    expect(run({ event: 'unlink' }, { envFile: '/tmp/env' })).toBeNull();\n  });\n  it('ignore sans CLAUDE_ENV_FILE', () => {\n    expect(run({ file_path: '.env' }, { envFile: undefined })).toBeNull();\n  });\n});\n"
     },
     "name": "Reload .env on file change",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "file-changed-reload-env",
     "tags": [
       "env",
@@ -3070,9 +2737,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run, detectManager } from '../../.claude/hooks/file-changed-run-tests.mjs';\n\nconst fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };\nconst PROJECT_DIR = '/fake/project';\n\nfunction makeDeps({ hasVitest = true, lockfile = 'pnpm-lock.yaml', exec = () => Buffer.from('ok') } = {}) {\n  return {\n    projectDir: PROJECT_DIR,\n    exec: vi.fn(exec),\n    exists: (p) =>\n      (hasVitest && p.endsWith('/node_modules/.bin/vitest')) || p.endsWith(`/${lockfile}`),\n  };\n}\n\ndescribe('file-changed-run-tests', () => {\n  it('ignore un événement unlink', () => {\n    expect(run({ event: 'unlink' }, makeDeps())).toBeNull();\n  });\n\n  it('utilise vitest related sur le fichier modifié si vitest est présent', () => {\n    const deps = makeDeps();\n    run({ file_path: '/fake/project/src/a.ts' }, deps);\n    expect(deps.exec).toHaveBeenCalledWith(expect.stringContaining('vitest related --run \"/fake/project/src/a.ts\"'));\n  });\n\n  it('replie sur le gestionnaire détecté (pnpm) sans vitest', () => {\n    const deps = makeDeps({ hasVitest: false });\n    run({ file_path: 'src/a.ts' }, deps);\n    expect(deps.exec).toHaveBeenCalledWith(expect.stringContaining('pnpm test --if-present'));\n  });\n\n  it('rapporte un succès', () => {\n    const r = run({ file_path: 'a.ts' }, makeDeps());\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('passed');\n  });\n\n  it('rapporte un échec', () => {\n    const r = run({ file_path: 'a.ts' }, makeDeps({ exec: fail('test failed') }));\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('FAILED');\n  });\n});\n\ndescribe('detectManager', () => {\n  const mk = (lockfile) => ({ projectDir: '/p', exists: (p) => p.endsWith(`/${lockfile}`) });\n  it('détecte pnpm', () => expect(detectManager(mk('pnpm-lock.yaml'))).toBe('pnpm'));\n  it('détecte bun', () => expect(detectManager(mk('bun.lock'))).toBe('bun'));\n  it('détecte yarn', () => expect(detectManager(mk('yarn.lock'))).toBe('yarn'));\n  it('replie sur npm', () => expect(detectManager(mk('nope'))).toBe('npm'));\n});\n"
     },
     "name": "Auto-run tests when source files change",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "file-changed-run-tests",
     "tags": [
       "tests",
@@ -3129,9 +2793,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/worktree-remove-cleanup.mjs';\n\ndescribe('worktree-remove-cleanup', () => {\n  it('retourne null sans worktree_path', () => {\n    expect(run({}, { exec: vi.fn(), exists: () => true, rm: vi.fn() })).toBeNull();\n  });\n\n  it('lance docker compose down si compose présent', () => {\n    const exec = vi.fn();\n    const r = run({ worktree_path: '/wt' }, { exec, exists: (p) => p.includes('docker-compose.yml'), rm: vi.fn() });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('docker compose'));\n    expect(r.actions).toContain('docker-down');\n  });\n\n  it('supprime node_modules si présent', () => {\n    const rm = vi.fn();\n    const r = run({ worktree_path: '/wt' }, { exec: vi.fn(), exists: (p) => p.endsWith('node_modules'), rm });\n    expect(rm).toHaveBeenCalledWith('/wt/node_modules', { recursive: true, force: true });\n    expect(r.actions).toContain('rm-node-modules');\n  });\n\n  it('ne fait rien si rien à nettoyer', () => {\n    const r = run({ worktree_path: '/wt' }, { exec: vi.fn(), exists: () => false, rm: vi.fn() });\n    expect(r.actions).toHaveLength(0);\n  });\n});\n"
     },
     "name": "Clean up artifacts on worktree removal",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "worktree-remove-cleanup",
     "tags": [
       "worktree",
@@ -3189,9 +2850,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/post-compact-save-summary.mjs';\n\ndescribe('post-compact-save-summary', () => {\n  it('journalise un résumé', () => {\n    const append = vi.fn();\n    const e = run({ compact_summary: 'résumé', trigger: 'manual' }, { append, mkdir: vi.fn(), projectDir: '/p', now: () => 'T' });\n    expect(e).toContain('résumé');\n    expect(append).toHaveBeenCalled();\n  });\n  it('ignore un résumé vide', () => {\n    expect(run({ compact_summary: '  ' }, { append: vi.fn(), mkdir: vi.fn() })).toBeNull();\n  });\n});\n"
     },
     "name": "Save compaction summary to log",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "post-compact-save-summary",
     "tags": [
       "compaction",
@@ -3249,9 +2907,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-failure-rate-limit-alert.mjs';\n\ndescribe('stop-failure-rate-limit-alert', () => {\n  it('retourne une séquence terminale', () => {\n    expect(run().terminalSequence).toContain('rate limit');\n  });\n});\n"
     },
     "name": "Desktop notification on rate limit",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "stop-failure-rate-limit-alert",
     "tags": [
       "rate-limit",
@@ -3309,9 +2964,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-failure-log-api-errors.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('stop-failure-log-api-errors', () => {\n  it(\"construit une ligne d'erreur API\", () => {\n    const line = run({ error: 'rate_limit', error_details: '429', session_id: 's1' }, base());\n    expect(line).toContain('rate_limit');\n    expect(line).toContain('session:s1');\n  });\n});\n"
     },
     "name": "Log API errors to file",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "stop-failure-log-api-errors",
     "tags": [
       "api-errors",
@@ -3369,9 +3021,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/task-created-naming-convention.mjs';\n\ndescribe('task-created-naming-convention', () => {\n  it('accepte un sujet avec ticket', () => {\n    expect(run({ task_subject: '[PROJ-123] faire X' })).toBeNull();\n  });\n  it('rejette un sujet sans ticket', () => {\n    const r = run({ task_subject: 'faire X' });\n    expect(r.exitCode).toBe(2);\n    expect(r.message).toContain('ticket reference');\n  });\n});\n"
     },
     "name": "Enforce task naming conventions",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "task-created-naming-convention",
     "tags": [
       "tasks",
@@ -3429,9 +3078,6 @@
     },
     "default_on": true,
     "name": "Test suite gate before task completion",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "task-completed-test-gate",
     "tags": [
       "tasks",
@@ -3488,9 +3134,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/user-prompt-expansion-skill-context.mjs';\n\ndescribe('user-prompt-expansion-skill-context', () => {\n  it('injecte le contexte pour code-review', () => {\n    const r = run({ command_name: 'code-review' });\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('SOLID');\n  });\n\n  it('injecte le contexte pour security-review', () => {\n    const r = run({ command_name: 'security-review' });\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('OWASP');\n  });\n\n  it('retourne null pour un skill inconnu', () => {\n    expect(run({ command_name: 'other' })).toBeNull();\n  });\n\n  it('retourne null sans command_name', () => {\n    expect(run({})).toBeNull();\n  });\n});\n"
     },
     "name": "Inject context on skill invocation",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "user-prompt-expansion-skill-context",
     "tags": [
       "skills",
@@ -3546,9 +3189,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/permission-denied-auto-mode-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('permission-denied-auto-mode-log', () => {\n  it('construit une ligne avec outil et raison', () => {\n    const deps = base();\n    const line = run({ tool_name: 'Bash', tool_input: { command: 'rm' }, reason: 'denied' }, deps);\n    expect(line).toContain('Bash');\n    expect(line).toContain('denied');\n    expect(deps.append).toHaveBeenCalledWith('/proj/.claude/permission-denied.log', line);\n  });\n});\n"
     },
     "name": "Log auto-mode permission denials",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "permission-denied-auto-mode-log",
     "tags": [
       "auto-mode",
@@ -3607,9 +3247,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/setup-install-deps.mjs';\n\ndescribe('setup-install-deps', () => {\n  it('installe via pnpm si lockfile présent', () => {\n    const exec = vi.fn();\n    const exists = (p) => p.endsWith('pnpm-lock.yaml');\n    const r = run({ cwd: '/p' }, { exec, exists });\n    expect(r.cmd).toBe('pnpm install --frozen-lockfile');\n  });\n  it('ignore si node_modules présent', () => {\n    expect(run({ cwd: '/p' }, { exec: vi.fn(), exists: (p) => p.endsWith('node_modules') })).toBeNull();\n  });\n  it('retourne null sans manifeste', () => {\n    expect(run({ cwd: '/p' }, { exec: vi.fn(), exists: () => false })).toBeNull();\n  });\n});\n"
     },
     "name": "Install project dependencies on init",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "setup-install-deps",
     "stack": [
       "typescript"
@@ -3671,9 +3308,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/message-display-redact-secrets.mjs';\n\ndescribe('message-display-redact-secrets', () => {\n  it('caviarde une clé Anthropic', () => {\n    const r = run({ delta: 'key sk-ant-api03-abcdefghijklmnopqrstuvwxyz' });\n    expect(r?.hookSpecificOutput?.displayContent).toContain('[REDACTED-ANTHROPIC-KEY]');\n  });\n  it('caviarde un Bearer token', () => {\n    const r = run({ delta: 'Authorization: Bearer abcdefghijklmnopqrstuvwxyz123' });\n    expect(r?.hookSpecificOutput?.displayContent).toContain('Bearer [REDACTED]');\n  });\n  it('retourne null si rien à caviarder', () => {\n    expect(run({ delta: 'texte normal' })).toBeNull();\n  });\n});\n"
     },
     "name": "Redact secrets from displayed output",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "message-display-redact-secrets",
     "tags": [
       "security",
@@ -3731,9 +3365,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/instructions-loaded-audit-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('instructions-loaded-audit-log', () => {\n  it(\"construit une ligne d'audit\", () => {\n    const line = run({ memory_type: 'project', load_reason: 'startup', file_path: 'CLAUDE.md' }, base());\n    expect(line).toContain('project');\n    expect(line).toContain('CLAUDE.md');\n  });\n});\n"
     },
     "name": "Audit log for CLAUDE.md file loads",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "instructions-loaded-audit-log",
     "tags": [
       "audit",
@@ -3753,7 +3384,6 @@
   {
     "benefit": "Python lands PEP 8-clean on every save",
     "category": "validation",
-    "community_examples": [],
     "description": "After every Python file write or edit, runs ruff format via uv to apply consistent style without any agent intervention.",
     "hook_type": "PostToolUse",
     "implementation": {
@@ -3793,9 +3423,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/ruff-format.mjs';\n\ndescribe('ruff-format', () => {\n  it('ignore les fichiers non-.py', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec })).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('appelle ruff format sur un fichier .py', () => {\n    const exec = vi.fn();\n    run({ tool_input: { file_path: 'main.py' } }, { exec });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('ruff format'));\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('main.py'));\n  });\n\n  it('retourne null si ruff format réussit', () => {\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec: vi.fn() })).toBeNull();\n  });\n\n  it('retourne null si ruff est absent (non bloquant)', () => {\n    const exec = vi.fn(() => { throw new Error('uv not found'); });\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec })).toBeNull();\n  });\n\n  it('supporte le champ path en plus de file_path', () => {\n    const exec = vi.fn();\n    run({ tool_input: { path: 'script.py' } }, { exec });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('script.py'));\n  });\n});\n"
     },
     "name": "Ruff format after write",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "post-write-ruff-format",
     "stack": [
       "python"
@@ -3818,7 +3445,6 @@
   {
     "benefit": "Unused imports caught before they pile up",
     "category": "validation",
-    "community_examples": [],
     "description": "Runs ruff check --fix on the modified Python file so lint violations are reported to the agent immediately and auto-fixable rules are applied inline.",
     "hook_type": "PostToolUse",
     "implementation": {
@@ -3859,9 +3485,6 @@
     },
     "default_on": true,
     "name": "Ruff lint after write",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "post-write-ruff-check",
     "stack": [
       "python"
@@ -3883,7 +3506,6 @@
   {
     "benefit": "Python type errors caught right after an edit",
     "category": "validation",
-    "community_examples": [],
     "description": "Runs pyright via uv on the modified .py file and reports type errors to the agent so they are fixed within the same loop.",
     "hook_type": "PostToolUse",
     "implementation": {
@@ -3924,9 +3546,6 @@
     },
     "default_on": true,
     "name": "Pyright type checking",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "post-edit-pyright",
     "stack": [
       "python"
@@ -3948,7 +3567,6 @@
   {
     "benefit": "Forces uv, ends pip/poetry drift",
     "category": "validation",
-    "community_examples": [],
     "description": "Blocks pip install, pip3 install and poetry add/install commands and redirects the agent to the uv equivalent. Prevents virtual environment fragmentation.",
     "hook_type": "PreToolUse",
     "implementation": {
@@ -3988,9 +3606,6 @@
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/enforce-uv.mjs';\n\nconst bash = (command) => ({ tool_name: 'Bash', tool_input: { command } });\n\ndescribe('enforce-uv', () => {\n  it('ignore les outils non-Bash', () => {\n    expect(run({ tool_name: 'Write', tool_input: { command: 'pip install foo' } })).toBeNull();\n  });\n\n  it('bloque pip install', () => {\n    const r = run(bash('pip install requests'));\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('uv add');\n  });\n\n  it('bloque pip3 install', () => {\n    const r = run(bash('pip3 install numpy'));\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('uv add');\n  });\n\n  it('bloque poetry add', () => {\n    const r = run(bash('poetry add fastapi'));\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('uv add');\n  });\n\n  it('bloque poetry install', () => {\n    const r = run(bash('poetry install'));\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('uv sync');\n  });\n\n  it('laisse passer uv add', () => {\n    expect(run(bash('uv add requests'))).toBeNull();\n  });\n\n  it('laisse passer pip show (pas install)', () => {\n    expect(run(bash('pip show requests'))).toBeNull();\n  });\n\n  it('bloque pip install dans une chaîne de commandes', () => {\n    const r = run(bash('cd myproject && pip install -r requirements.txt'));\n    expect(r?.decision).toBe('block');\n  });\n});\n"
     },
     "name": "Enforce uv for Python dependencies",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-bash-enforce-uv",
     "stack": [
       "python"
@@ -4014,7 +3629,6 @@
   {
     "benefit": "Won't hand back until pytest is green",
     "category": "validation",
-    "community_examples": [],
     "description": "When the agent finishes, runs the full pytest suite via uv. If tests fail, Claude re-enters and receives the failure output as context to fix the regressions.",
     "hook_type": "Stop",
     "implementation": {
@@ -4054,9 +3668,6 @@
     },
     "default_on": true,
     "name": "Run pytest at end of response",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "stop-pytest",
     "stack": [
       "python"
@@ -4118,9 +3729,6 @@
     },
     "default_on": true,
     "name": "Auto-create worktree when starting on main",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "session-start-worktree-if-main",
     "tags": [
       "git",
@@ -4179,9 +3787,6 @@
     },
     "default_on": true,
     "name": "Auto-pull on main at session start",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "session-start-pull-if-main",
     "tags": [
       "git",
@@ -4240,9 +3845,6 @@
     },
     "default_on": true,
     "name": "Stale stash warning at session start",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "session-start-stash-warning",
     "tags": [
       "git",
@@ -4302,9 +3904,6 @@
     },
     "default_on": true,
     "name": "Block file writes on main branch",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-write-main-guard",
     "tags": [
       "git",
@@ -4327,9 +3926,6 @@
     "benefit": "hooks sync automatically whenever the catalogue changes",
     "description": "Triggers sync-hooks.mjs automatically after any .mjs hook file or registry.json change, keeping code_snippet, .claude/settings.json and .claude/hooks/ up to date without manual intervention.",
     "category": "workflow",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "FileChanged",
     "trigger": "*.mjs|registry.json",
     "tags": [
@@ -4385,9 +3981,6 @@
     "benefit": "prevents accidentally pushing to a merged or closed PR branch",
     "description": "Intercepts git push commands and checks via gh CLI if the current branch has a closed or merged PR. Blocks the push with a message pointing to create a new branch from main.",
     "category": "workflow",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "PreToolUse",
     "trigger": "Bash",
     "tags": [
@@ -4444,9 +4037,6 @@
     "benefit": "Prevents stale search results by silently adding the current year",
     "description": "Intercepts every WebSearch call and appends the current year to queries that lack temporal context (no year, no 'latest', 'recent', 'current', etc.). Ensures the agent retrieves up-to-date documentation, changelogs and release notes instead of outdated results.",
     "category": "context",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "PreToolUse",
     "trigger": "WebSearch",
     "tags": [
@@ -4489,9 +4079,6 @@
     "benefit": "Auto-loads your AGENTS.md so every session starts with full agent context",
     "description": "Reads AGENTS.md from the project root at session start and injects it as additional context. Works seamlessly alongside CLAUDE.md — useful for projects that use the OpenAI Codex / multi-agent AGENTS.md convention to document agent roles, capabilities and coordination rules.",
     "category": "context",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "SessionStart",
     "trigger": "*",
     "tags": [
@@ -4533,9 +4120,6 @@
     "benefit": "Catches missing 'use client' and legacy Pages Router patterns before they silently break",
     "description": "After each file write or edit, scans JS/TS files for common Next.js App Router mistakes: Server Components using React hooks without 'use client', Pages Router data-fetching methods (getServerSideProps/getStaticProps) inside app/, and plain <img>/<a> tags where next/image and next/link should be used. Blocks on critical errors, warns on best-practice issues.",
     "category": "validation",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "PostToolUse",
     "trigger": "Write|Edit",
     "stack": [
@@ -4604,9 +4188,6 @@
     },
     "default_on": true,
     "name": "Binary file to Markdown converter",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-read-file-to-markdown",
     "tags": [
       "context-optimization",
@@ -4652,9 +4233,6 @@
     },
     "default_on": true,
     "name": "Binary file read blocker",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-read-block-binary",
     "tags": [
       "context-optimization",
@@ -4698,9 +4276,6 @@
     },
     "default_on": true,
     "name": "Large JSON/CSV compactor",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-read-json-csv-compact",
     "tags": [
       "context-optimization",
@@ -4744,9 +4319,6 @@
     },
     "default_on": true,
     "name": "WebFetch HTML-to-Markdown converter",
-    "provider": [
-      "claude-code"
-    ],
     "slug": "pre-webfetch-html-to-markdown",
     "tags": [
       "context-optimization",
@@ -4768,9 +4340,6 @@
     "name": "Registry schema validation on change",
     "benefit": "Schema errors surface in-session, not in CI",
     "category": "validation",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "FileChanged",
     "trigger": "registry.json",
     "tags": [
@@ -4811,9 +4380,6 @@
     "name": "Registry drift check at stop",
     "benefit": "Catalogue drift caught before CI rejects the PR",
     "category": "validation",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "Stop",
     "trigger": "*",
     "tags": [
@@ -4853,9 +4419,6 @@
     "name": "Motion rules guard",
     "benefit": "Animation rule violations flagged as you write them",
     "category": "validation",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "PostToolUse",
     "trigger": "Write|Edit",
     "stack": [
@@ -4899,9 +4462,6 @@
     "name": "Docs consistency reminder",
     "benefit": "No more READMEs telling two different stories",
     "category": "documentation",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "FileChanged",
     "trigger": "README.md",
     "tags": [
@@ -4942,9 +4502,6 @@
     "name": "Write-time secret detection",
     "benefit": "No API key ever lands in a file",
     "category": "security",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "PreToolUse",
     "trigger": "Write|Edit",
     "description": "Scans the content being written (Write) or inserted (Edit new_string) for API keys, GitHub tokens, private keys and password assignments, and blocks the call before the secret ever lands on disk. Closes the file-write gap left by bash-level secret detection: an agent pasting a key into source code or a config file is stopped with a pointer to environment variables instead.",
@@ -4987,9 +4544,6 @@
     "name": "Env file read guard",
     "benefit": "Your .env secrets never enter the model context",
     "category": "security",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "PreToolUse",
     "trigger": "Read",
     "description": "Blocks Read calls on .env files (except .env.example, .sample, .template, .dist) so secrets never enter the model context, where they could leak into logs, transcripts or generated code. The block message suggests safe alternatives: read .env.example for variable names, or grep for a key name without exposing its value. Complements write-side protection (protected paths) with read-side coverage.",
@@ -5032,9 +4586,6 @@
     "name": "Conflict marker detector",
     "benefit": "Leftover merge conflict markers caught instantly",
     "category": "validation",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "PostToolUse",
     "trigger": "Write|Edit",
     "description": "After every file write or edit, checks the file on disk for leftover git conflict markers. Requires both an opening and a closing marker line to flag, which avoids false positives on markdown setext underlines. Non-blocking: feeds a warning back to the agent so it resolves the conflict before moving on.",
@@ -5077,9 +4628,6 @@
     "name": "GitHub context loader",
     "benefit": "Open PRs and CI status loaded before you ask",
     "category": "context",
-    "provider": [
-      "claude-code"
-    ],
     "hook_type": "SessionStart",
     "trigger": "*",
     "description": "At session start, injects the repository GitHub state via the gh CLI: open pull requests (up to 5) and check status for the current branch PR. Local git context tells the agent where the working tree is; this hook covers the blind spot of what is happening on GitHub. Silent no-op when gh is missing, unauthenticated, or the repo has no GitHub remote.",
