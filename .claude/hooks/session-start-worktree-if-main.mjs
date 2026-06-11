@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // SessionStart: crée un worktree isolé si la session démarre sur main/master.
-// Nettoie automatiquement les worktrees dont la branche a été mergée dans main.
+// Ne supprime JAMAIS de worktree : un worktree mergé peut encore héberger une session
+// active/référencée — le supprimer ferait « disparaître » cette session. Le nettoyage
+// des worktrees mergés reste une opération manuelle (`git worktree prune`).
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -17,15 +19,9 @@ function defaultAddWorktree(path, branchName) {
   });
 }
 
-function defaultRemoveWorktree(mainRoot, wtPath, branchName) {
-  try { execSync(`git -C "${mainRoot}" worktree remove --force "${wtPath}"`, { timeout: 10_000 }); } catch { /* ignore */ }
-  try { execSync(`git -C "${mainRoot}" branch -D "${branchName}"`, { timeout: 5_000 }); } catch { /* ignore */ }
-}
-
 export function run({
   exec = defaultExec,
   addWorktree = defaultAddWorktree,
-  removeWorktree = defaultRemoveWorktree,
   exists = existsSync,
   now = () => new Date(),
 } = {}) {
@@ -43,27 +39,6 @@ export function run({
   // Synchroniser main avec le remote avant de créer le worktree
   exec('git fetch --quiet origin main');
   exec('git merge --ff-only origin/main');
-
-  // Nettoyer uniquement les worktrees créés par ce hook (work/session-*) dont la
-  // branche est fusionnée dans origin/main. Les worktrees gérés par d'autres outils
-  // (ex. branches claude/* de l'app Claude Code) ont leur propre cycle de vie.
-  const mergedBranches = new Set(
-    exec('git branch --merged origin/main')
-      .split('\n')
-      .map((b) => b.trim().replace(/^\*\s*/, ''))
-      .filter(Boolean),
-  );
-
-  const secondaryLines = exec('git worktree list').split('\n').slice(1);
-  for (const line of secondaryLines) {
-    if (!line.trim()) continue;
-    const parts = line.split(/\s+/);
-    const wtPath = parts[0];
-    const wtBranch = (parts[2] ?? '').replace(/^\[|\]$/g, '');
-    if (wtBranch && wtBranch.startsWith('work/session-') && mergedBranches.has(wtBranch)) {
-      removeWorktree(mainRoot, wtPath, wtBranch);
-    }
-  }
 
   const date = now().toISOString().slice(0, 10).replace(/-/g, '');
   const branchName = `work/session-${date}`;
