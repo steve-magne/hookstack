@@ -83,6 +83,19 @@ describe('session-start-worktree-if-main', () => {
     expect(result).toContain('Worktree isolé créé automatiquement');
   });
 
+  it("ne supprime pas un worktree mergé géré par un autre outil (ex. claude/*)", () => {
+    const appBranch = 'claude/pensive-sutherland-f4a20f';
+    const appPath = `${MAIN}/.claude/worktrees/pensive-sutherland-f4a20f`;
+    const list = `${MAIN}  abc [main]\n${appPath}  def [${appBranch}]`;
+    const exec = makeExec({ worktreeList: list, mergedBranches: `  main\n  ${appBranch}` });
+    const removeWorktree = vi.fn();
+    const addWorktree = vi.fn();
+    const exists = vi.fn(() => true);
+    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);
+    run({ exec, addWorktree, removeWorktree, exists, now });
+    expect(removeWorktree).not.toHaveBeenCalled();
+  });
+
   it('synchronise main avec le remote avant de créer le worktree', () => {
     const calls = [];
     const exec = vi.fn((cmd) => {

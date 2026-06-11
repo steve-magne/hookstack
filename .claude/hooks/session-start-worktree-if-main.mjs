@@ -44,7 +44,9 @@ export function run({
   exec('git fetch --quiet origin main');
   exec('git merge --ff-only origin/main');
 
-  // Nettoyer les worktrees dont la branche est fusionnée dans origin/main
+  // Nettoyer uniquement les worktrees créés par ce hook (work/session-*) dont la
+  // branche est fusionnée dans origin/main. Les worktrees gérés par d'autres outils
+  // (ex. branches claude/* de l'app Claude Code) ont leur propre cycle de vie.
   const mergedBranches = new Set(
     exec('git branch --merged origin/main')
       .split('\n')
@@ -58,7 +60,7 @@ export function run({
     const parts = line.split(/\s+/);
     const wtPath = parts[0];
     const wtBranch = (parts[2] ?? '').replace(/^\[|\]$/g, '');
-    if (wtBranch && mergedBranches.has(wtBranch)) {
+    if (wtBranch && wtBranch.startsWith('work/session-') && mergedBranches.has(wtBranch)) {
       removeWorktree(mainRoot, wtPath, wtBranch);
     }
   }
