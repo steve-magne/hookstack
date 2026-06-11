@@ -134,6 +134,14 @@ export const T = {
       q: 'How do I install Claude Code hooks with HookStack?',
       a: 'Browse the catalogue, select the hooks you want, then run the generated npx hookstack-cli@latest install command in your project root. HookStack writes the scripts to .claude/hooks/ and patches your settings.json — nothing else touched.',
     },
+    {
+      q: "I already use Claude Code commands like /gen-test-unit or /create-worktree — aren't hooks the same thing?",
+      a: "Commands are interactive: you type them, Claude reads and acts on them inside the conversation. Hooks are the opposite — Node.js scripts that fire unconditionally outside the model, triggered by lifecycle events (PreToolUse, PostToolUse, Stop…). The model never sees them, never decides whether to run them, and can't skip them. Commands steer the AI; hooks constrain it.",
+    },
+    {
+      q: 'Do hooks consume tokens from my context window?',
+      a: 'No. Hooks run in a separate process, outside the model entirely. They can inject context back into the session via stdout, but the hook scripts themselves — and whatever they compute — are never sent to the model unless you explicitly return a message. Commands, on the other hand, are part of the conversation and consume context. Hooks are a zero-cost enforcement layer.',
+    },
   ] as const,
 }
 
