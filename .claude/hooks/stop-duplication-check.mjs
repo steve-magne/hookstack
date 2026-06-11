@@ -10,7 +10,13 @@ const MIN_TOKENS = 50;   // blocs < 50 tokens ignorés (évite les faux positifs
 const THRESHOLD = 5;     // % de duplication max avant avertissement
 
 function defaultExec(cmd) {
-  return execSync(cmd, { encoding: 'utf8', timeout: 30_000, stdio: 'pipe' });
+  return execSync(cmd, { encoding: 'utf8', timeout: 30_000, stdio: 'pipe', shell: true });
+}
+
+function jscpdBin({ exists = existsSync } = {}) {
+  // Préfère la version locale (devDependency), replie sur le PATH
+  const local = 'node_modules/.bin/jscpd';
+  return exists(local) ? local : 'jscpd';
 }
 
 function findSrcDirs({ exists = existsSync } = {}) {
@@ -21,22 +27,18 @@ export function run(_input, { exec = defaultExec, exists = existsSync } = {}) {
   const dirs = findSrcDirs({ exists });
   if (!dirs.length) return null;
 
+  const bin = jscpdBin({ exists });
   try {
-    const output = exec(
-      `jscpd --min-tokens ${MIN_TOKENS} --threshold ${THRESHOLD} --reporters console ${dirs.join(' ')} 2>&1`,
+    exec(
+      `${bin} --min-tokens ${MIN_TOKENS} --threshold ${THRESHOLD} --reporters console ${dirs.join(' ')} 2>&1`,
     );
-    // jscpd sort "Found X clones..." quand des duplications sont détectées
-    if (output && /found \d+ clone/i.test(output)) {
-      return { message: `[duplication-check] Code duplication detected:\n${output}` };
-    }
-    return null;
+    return null; // exit 0 → duplication en-dessous du seuil
   } catch (e) {
-    // Duplication détectée et seuil dépassé → jscpd exit 1 avec stdout utile
+    // exit 1 → seuil dépassé (stdout contient le rapport) ; ou jscpd absent (pas de stdout)
     const out = e.stdout ?? '';
     if (out && /found \d+ clone/i.test(out)) {
-      return { message: `[duplication-check] Code duplication detected:\n${out}` };
+      return { message: `[duplication-check] Code duplication above ${THRESHOLD}% threshold:\n${out}` };
     }
-    // jscpd absent ou autre erreur → silence
     return null;
   }
 }

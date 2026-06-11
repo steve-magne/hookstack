@@ -18,14 +18,10 @@ describe('stop-duplication-check', () => {
     expect(run({}, deps(exec))).toBeNull();
   });
 
-  it('retourne null si jscpd passe sans clone', () => {
+  it('retourne null si jscpd passe (exit 0) — duplication sous le seuil', () => {
+    // exit 0 = seuil non dépassé, même s'il y a des clones mineurs → silence
     expect(run({}, deps(noClones))).toBeNull();
-  });
-
-  it('retourne un message si des clones sont détectés (exit 0 avec stdout)', () => {
-    const r = run({}, deps(withClones));
-    expect(r?.message).toContain('[duplication-check]');
-    expect(r?.message).toContain('Found 3 clones');
+    expect(run({}, deps(withClones))).toBeNull();
   });
 
   it('retourne un message si jscpd exit 1 avec stdout de clones', () => {
