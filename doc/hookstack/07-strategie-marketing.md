@@ -85,7 +85,7 @@ L'utilisateur dev voit d'abord **l'action** (la commande à copier), pas le cata
 
 Ensuite, pour les puristes qui veulent choisir leurs hooks : le séparateur "or fine-tune it hook by hook" est un pivot clair vers le parcours customisation → catalogue.
 
-**Règle à ne pas casser** : l'`InstallCommand` du hero est statique (`npx hookstack-cli@latest install` sans `--hooks=`). C'est volontaire — cette commande installe les hooks recommandés (`is_must`), cohérent avec l'init automatique de `CatalogueExplorer`. La bannière sticky du catalogue, elle, reflète la sélection live.
+**Règle à ne pas casser** : l'`InstallCommand` du hero est statique (`npx hookstack-cli@latest install` sans `--hooks=`). C'est volontaire — cette commande installe les hooks recommandés (`default_on`), cohérent avec l'init automatique de `CatalogueExplorer`. La bannière sticky du catalogue, elle, reflète la sélection live.
 
 ## Positionnement dans l'écosystème Claude Code
 

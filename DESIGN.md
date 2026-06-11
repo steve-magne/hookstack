@@ -29,7 +29,7 @@ Conséquences directes :
 - **Thème** : dark sobre. `--color-bg #0a0a0a`, surfaces `#141414` / `#1c1c1c`,
   bordures `#2e2e2e`. Texte `#f0f0f0` / muted `#909090`.
 - **Accent** : dégradé indigo→violet (réservé au highlight du hero et aux
-  signaux `is_must`). Le reste du site est neutre (blanc/zinc) — l'accent garde
+  signaux `default_on`). Le reste du site est neutre (blanc/zinc) — l'accent garde
   sa valeur parce qu'il est rare.
 - **Halo** : un radial-gradient blanc très faible en haut de page (`body::before`).
 - **Formes** : coins arrondis généreux (`rounded-xl` / `rounded-2xl`),

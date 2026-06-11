@@ -12,19 +12,19 @@ const DEFAULT_MOBILE_PROMPT =
 
 export function StickyInstallBanner() {
   const T = useT()
-  const initMust = useSelection((s) => s.initMust)
+  const initDefaults = useSelection((s) => s.initDefaults)
   const selectedSlugs = useSelection((s) => s.selected)
   const sessionTouched = useSelection((s) => s.sessionTouched)
   const selectedCount = selectedSlugs.length
 
-  const mustSlugs = useMemo(
-    () => allHooks.filter((h) => h.is_must).map((h) => h.slug),
+  const defaultSlugs = useMemo(
+    () => allHooks.filter((h) => h.default_on).map((h) => h.slug),
     []
   )
 
   useEffect(() => {
-    initMust(mustSlugs)
-  }, [initMust, mustSlugs])
+    initDefaults(defaultSlugs)
+  }, [initDefaults, defaultSlugs])
 
   // Court tant que l'utilisateur n'a pas touché la sélection dans cette session.
   const installCmd = useMemo(() => {

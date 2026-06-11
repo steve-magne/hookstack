@@ -5,7 +5,7 @@ export async function GET(req: NextRequest) {
   const slugs = req.nextUrl.searchParams.get('slugs')?.split(',').filter(Boolean) ?? []
 
   const source = slugs.length === 0
-    ? allHooks.filter(h => h.is_must)
+    ? allHooks.filter(h => h.default_on)
     : allHooks.filter(h => slugs.includes(h.slug))
 
   const hooks = source

@@ -44,15 +44,15 @@ describe('useSelection — remove', () => {
 })
 
 describe('useSelection — clear', () => {
-  it('vide la sélection et réinitialise mustInitialized + seenMustSlugs', () => {
+  it('vide la sélection et réinitialise defaultInitialized + seenDefaultSlugs', () => {
     useSelection.getState().add('a')
     useSelection.getState().add('b')
-    useSelection.getState().initMust(['a', 'b'])
+    useSelection.getState().initDefaults(['a', 'b'])
     useSelection.getState().clear()
     const s = useSelection.getState()
     expect(s.selected).toHaveLength(0)
-    expect(s.mustInitialized).toBe(false)
-    expect(s.seenMustSlugs).toHaveLength(0)
+    expect(s.defaultInitialized).toBe(false)
+    expect(s.seenDefaultSlugs).toHaveLength(0)
   })
 })
 
@@ -67,37 +67,37 @@ describe('useSelection — has', () => {
   })
 })
 
-describe('useSelection — initMust', () => {
-  it('première visite : sélectionne tous les must-slugs', () => {
-    useSelection.getState().initMust(['a', 'b', 'c'])
+describe('useSelection — initDefaults', () => {
+  it('première visite : sélectionne tous les default-slugs', () => {
+    useSelection.getState().initDefaults(['a', 'b', 'c'])
     const s = useSelection.getState()
     expect(s.selected).toEqual(expect.arrayContaining(['a', 'b', 'c']))
-    expect(s.mustInitialized).toBe(true)
-    expect(s.seenMustSlugs).toEqual(expect.arrayContaining(['a', 'b', 'c']))
+    expect(s.defaultInitialized).toBe(true)
+    expect(s.seenDefaultSlugs).toEqual(expect.arrayContaining(['a', 'b', 'c']))
   })
 
-  it('deuxième visite : re-sélectionne les must-slugs décrochés (is_must = toujours présent)', () => {
-    useSelection.getState().initMust(['a', 'b'])
+  it('deuxième visite : re-sélectionne les default-slugs décrochés (default_on = toujours présent)', () => {
+    useSelection.getState().initDefaults(['a', 'b'])
     useSelection.getState().toggle('a') // l'utilisateur décoche 'a' en session
-    useSelection.getState().initMust(['a', 'b']) // rechargement / nouvelle visite
-    // is_must = "Essential" → re-sélectionné même après déselection manuelle
+    useSelection.getState().initDefaults(['a', 'b']) // rechargement / nouvelle visite
+    // default_on = "Essential" → re-sélectionné même après déselection manuelle
     expect(useSelection.getState().selected).toContain('a')
     expect(useSelection.getState().selected).toContain('b')
   })
 
-  it('migration : ajoute les nouveaux must-slugs à un utilisateur déjà initialisé', () => {
-    // Simule l'ancien état : initialisé avec 2 slugs, sans seenMustSlugs (migration localStorage)
-    useSelection.setState({ selected: ['a', 'b'], mustInitialized: true, seenMustSlugs: [] })
+  it('migration : ajoute les nouveaux default-slugs à un utilisateur déjà initialisé', () => {
+    // Simule l'ancien état : initialisé avec 2 slugs, sans seenDefaultSlugs (migration localStorage)
+    useSelection.setState({ selected: ['a', 'b'], defaultInitialized: true, seenDefaultSlugs: [] })
     // Le registre ajoute 'c' comme nouveau must
-    useSelection.getState().initMust(['a', 'b', 'c'])
+    useSelection.getState().initDefaults(['a', 'b', 'c'])
     expect(useSelection.getState().selected).toContain('c')
     expect(useSelection.getState().selected).toContain('a')
     expect(useSelection.getState().selected).toContain('b')
   })
 
-  it('ne duplique pas un must-slug déjà dans selected', () => {
+  it('ne duplique pas un default-slug déjà dans selected', () => {
     useSelection.getState().add('a')
-    useSelection.getState().initMust(['a', 'b'])
+    useSelection.getState().initDefaults(['a', 'b'])
     const occurrences = useSelection.getState().selected.filter((s) => s === 'a')
     expect(occurrences).toHaveLength(1)
   })

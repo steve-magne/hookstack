@@ -78,7 +78,7 @@ export function HookRow({ hook, groupBy, intro = false, introDelay = 0 }: Props)
             <h4 className="truncate font-medium text-zinc-200 group-hover:text-white">
               <SplitFlap text={hook.name} play={intro} delay={introDelay} />
             </h4>
-            {hook.is_must && (
+            {hook.default_on && (
               <ShieldCheck className="size-3 shrink-0 text-indigo-400" aria-label={T.mustPreselected} />
             )}
           </div>
@@ -182,7 +182,7 @@ export function HookRow({ hook, groupBy, intro = false, introDelay = 0 }: Props)
 
               {/* Hint sélection */}
               <div className="mt-3 flex items-center gap-1.5 border-t border-white/[0.06] pt-3 text-[11px] text-zinc-500">
-                {hook.is_must ? (
+                {hook.default_on ? (
                   <>
                     <ShieldCheck className="size-3.5 text-indigo-400" />
                     <span className="text-indigo-300">{T.previewMustHint}</span>

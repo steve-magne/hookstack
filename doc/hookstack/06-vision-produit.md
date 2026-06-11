@@ -36,7 +36,7 @@ Ce profil permettrait des **recommandations personnalisées** (écran 2 du produ
 
 ### Priorité 2 — Hooks "must-have" marqués
 
-Introduire un flag `is_must` dans le registre pour les hooks considérés comme fondamentaux quelle que soit la stack. Le site les met en avant visuellement (accent indigo). Aide les nouveaux utilisateurs à démarrer sans se perdre dans 68 hooks.
+Introduire un flag `default_on` dans le registre pour les hooks considérés comme fondamentaux quelle que soit la stack. Le site les met en avant visuellement (accent indigo). Aide les nouveaux utilisateurs à démarrer sans se perdre dans 68 hooks.
 
 ### Priorité 3 — Page détail enrichie (`/hook/[slug]`)
 
