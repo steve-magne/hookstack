@@ -9,7 +9,7 @@
 ## Quick start
 
 ```bash
-npx hookstack-cli@latest install --hooks=secret-detection,destructive-command-guard
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-block-destructive
 ```
 
 That's it. The CLI fetches the hooks, shows you what will be installed, and patches your `.claude/settings.json`.
@@ -47,10 +47,10 @@ Skips all prompts — useful in CI or dotfile bootstrap scripts.
 
 ```bash
 # CI bootstrap
-npx hookstack-cli@latest install --hooks=secret-detection,git-push-guard --yes --scope=project
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guard-git-push-main --yes --scope=project
 
 # CI bootstrap with unit tests (avoids SonarQube gating on new files without tests)
-npx hookstack-cli@latest install --hooks=secret-detection,git-push-guard --yes --with-tests
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guard-git-push-main --yes --with-tests
 ```
 
 ---
@@ -79,13 +79,13 @@ Browse and filter the full catalogue at **[hookstack.vercel.app](https://hooksta
 
 | Slug | Event | What it does |
 |---|---|---|
-| `secret-detection` | `PreToolUse / Bash` | Blocks commands that would leak API keys |
-| `destructive-command-guard` | `PreToolUse / Bash` | Stops `rm -rf /`, `DROP TABLE`, and similar |
-| `sensitive-file-protection` | `PreToolUse / Write` | Keeps `.env` and key files untouched |
-| `git-push-guard` | `PreToolUse / Bash` | No accidental push straight to `main` |
-| `git-context-on-startup` | `SessionStart` | Every session opens with branch + status |
-| `auto-format-on-save` | `PostToolUse / Write` | ESLint + Prettier run after every file write |
-| `slack-notify-on-stop` | `Stop` | Pings you when the long task finishes |
+| `pre-bash-secret-detection` | `PreToolUse / Bash` | Blocks commands that would leak API keys |
+| `pre-bash-block-destructive` | `PreToolUse / Bash` | Stops `rm -rf /`, `DROP TABLE`, and similar |
+| `pre-edit-protect-paths` | `PreToolUse / Write\|Edit` | Keeps `.env` and key files untouched |
+| `pre-bash-guard-git-push-main` | `PreToolUse / Bash` | No accidental push straight to `main` |
+| `session-start-load-git-context` | `SessionStart` | Every session opens with branch + status |
+| `post-write-autoformat` | `PostToolUse / Write\|Edit` | Prettier runs after every file write |
+| `notification-slack` | `Notification` | Pings you when the agent needs you |
 
 ---
 
