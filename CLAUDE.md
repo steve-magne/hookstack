@@ -212,6 +212,7 @@ Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/re
 2. Écrire son test `tests/hooks/<slug>.test.mjs`, vérifier `pnpm test`
 3. Ajouter l'entrée métadonnées dans `registry/registry.json` (type `Hook`) : `name`, `benefit`, `description`, `use_cases` (anglais, champs racine, pas d'overlay `i18n`), `implementation.config` (fragment `{ hooks: { [EventName]: [...] } }` fusionnable) et `implementation.script_path` pointant vers le `.mjs`. Laisser `code_snippet` vide ou approximatif : il sera rempli par le sync.
 4. Lancer `node .claude/sync-hooks.mjs` — il recopie le `.mjs` dans `code_snippet`. Toujours fournir un `benefit` (ligne courte, orientée résultat).
+5. **Si le hook requiert un outil externe** (ex. `jscpd`, `gh`, `uv`) → ajouter une entrée dans `PREREQ_HINTS` dans [`packages/cli/bin/core.mjs`](packages/cli/bin/core.mjs). Le CLI affichera automatiquement la commande d'installation après l'install du hook.
 
 **Champ `stack`** : ne l'ajouter que si le hook est réellement spécifique à un écosystème technique. Vérifier le `code_snippet` — si le script filtre par extension (`.py`, `.tsx?`) ou appelle un outil non universel (`tsc`, `ruff`, `eslint`), annoter le `stack`. Ne jamais déduire le `stack` depuis les `tags` seuls : les tags ajoutés par l'agent d'analyse peuvent être inexacts. Lire le code.
 
