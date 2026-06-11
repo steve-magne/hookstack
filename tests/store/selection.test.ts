@@ -76,11 +76,12 @@ describe('useSelection — initMust', () => {
     expect(s.seenMustSlugs).toEqual(expect.arrayContaining(['a', 'b', 'c']))
   })
 
-  it('deuxième visite même slugs : ne modifie pas la sélection', () => {
+  it('deuxième visite : re-sélectionne les must-slugs décrochés (is_must = toujours présent)', () => {
     useSelection.getState().initMust(['a', 'b'])
-    useSelection.getState().toggle('a') // l'utilisateur décoche 'a'
-    useSelection.getState().initMust(['a', 'b']) // rechargement
-    expect(useSelection.getState().selected).not.toContain('a') // son choix est respecté
+    useSelection.getState().toggle('a') // l'utilisateur décoche 'a' en session
+    useSelection.getState().initMust(['a', 'b']) // rechargement / nouvelle visite
+    // is_must = "Essential" → re-sélectionné même après déselection manuelle
+    expect(useSelection.getState().selected).toContain('a')
     expect(useSelection.getState().selected).toContain('b')
   })
 
