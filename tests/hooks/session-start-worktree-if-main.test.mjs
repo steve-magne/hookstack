@@ -56,44 +56,23 @@ describe('session-start-worktree-if-main', () => {
     expect(result).toContain(WT_PATH);
   });
 
-  it('supprime le worktree mergé et en crée un nouveau', () => {
-    // La liste initiale contient un worktree avec une branche mergée
-    const listWithMerged = `${MAIN}  abc [main]\n${WT_PATH}  def [${BRANCH}]`;
-    // Après suppression, la liste ne contient plus le worktree
-    let callCount = 0;
-    const exec = vi.fn((cmd) => {
-      if (cmd.includes('branch --show-current')) return 'main';
-      if (cmd.includes('rev-parse --show-toplevel')) return MAIN;
-      if (cmd.includes('git worktree list')) {
-        // Premier appel = avant nettoyage, appels suivants = après nettoyage
-        callCount++;
-        return callCount <= 2 ? listWithMerged : `${MAIN}  abc [main]`;
-      }
-      if (cmd.includes('fetch')) return '';
-      if (cmd.includes('branch --merged')) return `  main\n  ${BRANCH}`;
-      return '';
-    });
-    const removeWorktree = vi.fn();
+  it('ne supprime jamais un worktree mergé (préserve les sessions actives)', () => {
+    // Un worktree mergé d'un autre jour est présent : il ne doit pas être touché.
+    const oldPath = `${MAIN}/.claude/worktrees/session-20260101`;
+    const oldBranch = 'work/session-20260101';
+    const list = `${MAIN}  abc [main]\n${oldPath}  def [${oldBranch}]`;
+    const exec = makeExec({ worktreeList: list, mergedBranches: `  main\n  ${oldBranch}` });
     const addWorktree = vi.fn();
     const exists = vi.fn(() => true);
     const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);
-    const result = run({ exec, addWorktree, removeWorktree, exists, now });
-    expect(removeWorktree).toHaveBeenCalledWith(MAIN, WT_PATH, BRANCH);
+    const result = run({ exec, addWorktree, exists, now });
+    // Aucune commande destructive ne doit être émise
+    const calls = exec.mock.calls.map((c) => c[0]);
+    expect(calls.some((c) => c.includes('worktree remove'))).toBe(false);
+    expect(calls.some((c) => c.includes('branch -D'))).toBe(false);
+    // Le worktree du jour est tout de même créé
     expect(addWorktree).toHaveBeenCalledWith(WT_PATH, BRANCH);
     expect(result).toContain('Worktree isolé créé automatiquement');
-  });
-
-  it("ne supprime pas un worktree mergé géré par un autre outil (ex. claude/*)", () => {
-    const appBranch = 'claude/pensive-sutherland-f4a20f';
-    const appPath = `${MAIN}/.claude/worktrees/pensive-sutherland-f4a20f`;
-    const list = `${MAIN}  abc [main]\n${appPath}  def [${appBranch}]`;
-    const exec = makeExec({ worktreeList: list, mergedBranches: `  main\n  ${appBranch}` });
-    const removeWorktree = vi.fn();
-    const addWorktree = vi.fn();
-    const exists = vi.fn(() => true);
-    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);
-    run({ exec, addWorktree, removeWorktree, exists, now });
-    expect(removeWorktree).not.toHaveBeenCalled();
   });
 
   it('synchronise main avec le remote avant de créer le worktree', () => {
