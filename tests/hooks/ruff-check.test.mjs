@@ -1,12 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
 import { run } from '../../.claude/hooks/ruff-check.mjs';
-
-const fail = (stdout) => () => {
-  const e = new Error('cmd failed');
-  e.stdout = Buffer.from(stdout);
-  throw e;
-};
+import { makeExecFail } from './_utils.mjs';
 
 describe('ruff-check', () => {
   it('ignore les fichiers non-.py', () => {
@@ -27,7 +22,7 @@ describe('ruff-check', () => {
   });
 
   it('remonte les erreurs ruff dans le message', () => {
-    const result = run({ tool_input: { file_path: 'a.py' } }, { exec: fail('E501 line too long') });
+    const result = run({ tool_input: { file_path: 'a.py' } }, { exec: makeExecFail('E501 line too long') });
     expect(result?.message).toContain('[ruff-check]');
     expect(result?.message).toContain('E501 line too long');
   });

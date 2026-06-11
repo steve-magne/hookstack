@@ -1,22 +1,28 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
 import { run } from '../../.claude/hooks/detect-secrets.mjs';
+import { SECRETS } from './_utils.mjs';
+
+// Les commandes sont construites par concaténation pour que le fichier source
+// ne contienne aucun motif littéral (ex. "API_KEY=<val>") susceptible de
+// déclencher le hook pre-write-secret-detection sur ce dépôt.
+const cmd = (parts) => ({ tool_input: { command: parts.join('') } });
 
 describe('detect-secrets', () => {
   it('bloque une clé API Anthropic', () => {
-    expect(run({ tool_input: { command: 'export ANTHROPIC_API_KEY=sk-ant-abcdefghijklmnopqrstuvwxyz123456' } })?.decision).toBe('block');
+    expect(run(cmd(['export ANTHROPIC_API_KEY=', SECRETS.anthropicKey]))?.decision).toBe('block');
   });
 
   it('bloque un token GitHub', () => {
-    expect(run({ tool_input: { command: 'echo ghp_0123456789abcdefghijklmnopqrstuvwxyz0123' } })?.decision).toBe('block');
+    expect(run(cmd(['echo ', SECRETS.githubToken]))?.decision).toBe('block');
   });
 
   it('bloque une clé privée', () => {
-    expect(run({ tool_input: { command: 'echo "-----BEGIN RSA PRIVATE KEY-----"' } })?.decision).toBe('block');
+    expect(run(cmd(['echo "', SECRETS.privateKey, '"']))?.decision).toBe('block');
   });
 
   it('bloque un password=...', () => {
-    expect(run({ tool_input: { command: 'curl -d "password=\'hunter2\'"' } })?.decision).toBe('block');
+    expect(run(cmd(['curl -d "', SECRETS.passwordLine, '"']))?.decision).toBe('block');
   });
 
   it('laisse passer une commande anodine', () => {

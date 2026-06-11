@@ -1,8 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
 import { run } from '../../.claude/hooks/autoformat.mjs';
-
-const fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };
+import { makeExecFail } from './_utils.mjs';
 
 describe('autoformat', () => {
   it('formate un fichier', () => {
@@ -14,6 +13,6 @@ describe('autoformat', () => {
     expect(run({ tool_input: {} }, { exec: vi.fn() })).toBeNull();
   });
   it('avale une erreur prettier', () => {
-    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec: fail('') })).toBeNull();
+    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec: makeExecFail('') })).toBeNull();
   });
 });

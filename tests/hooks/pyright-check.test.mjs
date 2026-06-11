@@ -1,12 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
 import { run } from '../../.claude/hooks/pyright-check.mjs';
-
-const fail = (stdout) => () => {
-  const e = new Error('cmd failed');
-  e.stdout = Buffer.from(stdout);
-  throw e;
-};
+import { makeExecFail } from './_utils.mjs';
 
 describe('pyright-check', () => {
   it('ignore les fichiers non-.py', () => {
@@ -27,7 +22,7 @@ describe('pyright-check', () => {
   });
 
   it('remonte les erreurs pyright dans le message', () => {
-    const result = run({ tool_input: { file_path: 'a.py' } }, { exec: fail('error: Type "str" is not assignable') });
+    const result = run({ tool_input: { file_path: 'a.py' } }, { exec: makeExecFail('error: Type "str" is not assignable') });
     expect(result?.message).toContain('[pyright]');
     expect(result?.message).toContain('Type "str"');
   });
