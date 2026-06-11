@@ -16,13 +16,33 @@ Browse, select, install with one command — your agent gets guardrails in under
 
 ### **[→ hookstack.vercel.app](https://hookstack.vercel.app)**
 
+<img src="public/demo-hookstack.gif" alt="HookStack Mode Demo" width="600"/>
+
 </div>
 
 ---
 
-## Quickstart
+## Promise
 
-Give your agent guardrails in 60 seconds: [Claude Code](#claude-code), [GitHub Copilot](#github-copilot).
+Install a production-ready Claude Code HookStack in one command - Up and running in 60 seconds.
+
+---
+
+## Installation
+
+Installation takes under a minute.
+
+```bash
+npx hookstack-cli@latest install
+```
+
+That's it. The CLI walks you through picking hooks, writes `.claude/hooks/*.mjs`, and patches `.claude/settings.json`, `tests/*` associated if needed — no manual copy-paste, no JSON editing.
+
+Want to fine-tune your Hookstack? Go to **[hookstack.vercel.app](https://hookstack.vercel.app)** — browse the full catalogue, select exactly what you need, and copy the generated command:
+
+```bash
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-block-destructive,session-start-load-git-context
+```
 
 ---
 
@@ -46,42 +66,6 @@ If Hookstack has saved your production secrets or stopped a runaway `rm -rf`, I'
 
 Thanks!
 — Steve
-
----
-
-## Installation
-
-Installation takes under a minute. If you use more than one agent harness, install separately for each.
-
-### Claude Code
-
-```bash
-npx hookstack-cli@latest install
-```
-
-That's it. The CLI walks you through picking hooks, writes `.claude/hooks/*.mjs`, and patches `.claude/settings.json` — no manual copy-paste, no JSON editing.
-
-Want to fine-tune your Hookstack? Go to **[hookstack.vercel.app](https://hookstack.vercel.app)** — browse the full catalogue, select exactly what you need, and copy the generated command:
-
-```bash
-npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-block-destructive,session-start-load-git-context
-```
-
-**With unit tests** — add `--with-tests` to generate Vitest tests into `tests/hooks/`:
-
-```bash
-npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,session-start-load-git-context --with-tests
-```
-
-### GitHub Copilot
-
-Add `--copilot` to generate a `settings.json` with relative paths that Copilot can resolve:
-
-```bash
-npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,session-start-load-git-context --copilot
-```
-
-Or pick option **3** when the interactive prompt asks "Where to install?".
 
 ---
 
