@@ -7,13 +7,11 @@ function makeHook(overrides: Partial<Hook> & { config: Record<string, unknown> }
     slug: 'test-hook',
     name: 'Test Hook',
     category: 'security',
-    provider: ['claude-code'],
     hook_type: 'PreToolUse',
     trigger: 'Bash',
     description: '',
     use_cases: [],
     tags: [],
-    community_examples: [],
     implementation: {
       type: 'settings_json',
       config: overrides.config,

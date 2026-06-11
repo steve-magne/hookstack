@@ -1,5 +1,5 @@
 import registry from '../../registry/registry.json'
-import type { Category, Hook, HookType, Provider, Stack } from '@/types/hook'
+import type { Category, Hook, HookType, Stack } from '@/types/hook'
 
 export const allHooks = registry as Hook[]
 
@@ -10,7 +10,6 @@ export function getHookBySlug(slug: string): Hook | undefined {
 export interface HookFilters {
   query: string
   categories: Category[]
-  providers: Provider[]
   events: HookType[]
   stacks: Stack[]
 }
@@ -18,7 +17,6 @@ export interface HookFilters {
 export const emptyFilters: HookFilters = {
   query: '',
   categories: [],
-  providers: [],
   events: [],
   stacks: [],
 }
@@ -27,7 +25,6 @@ export function filterHooks(hooks: Hook[], filters: HookFilters): Hook[] {
   const q = filters.query.trim().toLowerCase()
   return hooks.filter((h) => {
     if (filters.categories.length && !filters.categories.includes(h.category)) return false
-    if (filters.providers.length && !filters.providers.some((p) => h.provider.includes(p))) return false
     if (filters.events.length && !filters.events.includes(h.hook_type)) return false
     // Stack filter: universal hooks (no stack) always pass; tech-specific hooks
     // are only shown when their stack overlaps with the selection.

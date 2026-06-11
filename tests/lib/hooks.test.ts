@@ -7,13 +7,11 @@ function makeHook(overrides: Partial<Hook> = {}): Hook {
     slug: 'test-hook',
     name: 'Secret detection',
     category: 'security',
-    provider: ['claude-code'],
     hook_type: 'PreToolUse',
     trigger: 'Bash',
     description: 'Blocks plaintext secrets.',
     use_cases: ['Credential protection', 'Audit'],
     tags: ['security', 'bash'],
-    community_examples: [],
     implementation: { type: 'settings_json', config: {} },
     ...overrides,
   }
@@ -35,7 +33,7 @@ describe('filterHooks', () => {
     makeHook({ slug: 'a', name: 'Prettier formatter', category: 'workflow', tags: ['format'] }),
     makeHook({ slug: 'b', name: 'Destructive block', category: 'security', tags: ['danger'] }),
   ]
-  const empty = { query: '', categories: [] as Hook['category'][], providers: [] as Hook['provider'][number][], events: [] as Hook['hook_type'][], stacks: [] as import('@/types/hook').Stack[] }
+  const empty = { query: '', categories: [] as Hook['category'][], events: [] as Hook['hook_type'][], stacks: [] as import('@/types/hook').Stack[] }
 
   it('returns everything with no active filter', () => {
     expect(filterHooks(hooks, empty)).toHaveLength(2)

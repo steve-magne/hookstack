@@ -17,7 +17,6 @@
         "name",
         "benefit",
         "category",
-        "provider",
         "hook_type",
         "trigger",
         "description",
@@ -51,18 +50,6 @@
             "workflow",
             "documentation"
           ]
-        },
-        "provider": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "enum": [
-              "claude-code",
-              "copilot-vscode"
-            ]
-          }
         },
         "hook_type": {
           "type": "string",
@@ -141,30 +128,8 @@
           },
           "description": "Ecosystem gate. Omit for universal hooks; present only for stack-specific ones."
         },
-        "community_examples": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/communityExample"
-          }
-        },
         "implementation": {
           "$ref": "#/$defs/implementation"
-        }
-      }
-    },
-    "communityExample": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "repo"
-      ],
-      "properties": {
-        "repo": {
-          "type": "string",
-          "format": "uri"
-        },
-        "file_path": {
-          "type": "string"
         }
       }
     },

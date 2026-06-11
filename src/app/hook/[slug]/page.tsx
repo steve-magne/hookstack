@@ -3,7 +3,6 @@ import { HookSelectButton } from '@/components/HookSelectButton'
 import { HookDetailTracker } from '@/components/HookDetailTracker'
 import { allHooks, getHookBySlug } from '@/lib/hooks'
 import { T, SEO_KEYWORDS } from '@/lib/i18n'
-import { PROVIDER_LABELS } from '@/types/hook'
 import { ArrowLeft } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -143,18 +142,8 @@ export default async function HookDetailPage({
           </div>
           <div>
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-              {T.providersAndTags}
+              {T.tags}
             </h2>
-            <div className="mb-3 flex flex-wrap gap-2">
-              {hook.provider.map((p) => (
-                <span
-                  key={p}
-                  className="rounded-md bg-[var(--color-surface-2)] px-2 py-0.5 text-xs text-zinc-300 ring-1 ring-inset ring-[var(--color-border)]"
-                >
-                  {PROVIDER_LABELS[p]}
-                </span>
-              ))}
-            </div>
             <div className="flex flex-wrap gap-1.5">
               {hook.tags.map((t) => (
                 <span key={t} className="text-xs text-zinc-500">

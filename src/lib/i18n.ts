@@ -88,7 +88,7 @@ export const T = {
   hookNotFound: 'Hook not found.',
   backToCatalogue: 'Back to catalogue',
   useCases: 'Use cases',
-  providersAndTags: 'Providers & tags',
+  tags: 'Tags',
   settingsFragment: 'settings.json fragment',
   addedToSelection: 'Added to selection',
   addToMyConfig: 'Add to my config',
