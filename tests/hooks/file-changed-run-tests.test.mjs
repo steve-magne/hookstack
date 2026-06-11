@@ -1,8 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
 import { run, detectManager } from '../../.claude/hooks/file-changed-run-tests.mjs';
-
-const fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };
+import { makeExecFail } from './_utils.mjs';
 const PROJECT_DIR = '/fake/project';
 
 function makeDeps({ hasVitest = true, lockfile = 'pnpm-lock.yaml', exec = () => Buffer.from('ok') } = {}) {
@@ -37,7 +36,7 @@ describe('file-changed-run-tests', () => {
   });
 
   it('rapporte un échec', () => {
-    const r = run({ file_path: 'a.ts' }, makeDeps({ exec: fail('test failed') }));
+    const r = run({ file_path: 'a.ts' }, makeDeps({ exec: makeExecFail('test failed') }));
     expect(r?.hookSpecificOutput?.additionalContext).toContain('FAILED');
   });
 });
