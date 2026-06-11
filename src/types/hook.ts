@@ -96,7 +96,7 @@ export interface Hook {
   implementation: HookImplementation
   community_examples?: CommunityExample[]
   tags: string[]
-  is_must?: boolean
+  default_on?: boolean
   stack?: Stack[]
 }
 

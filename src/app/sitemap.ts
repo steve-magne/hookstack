@@ -23,7 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${BASE}/hook/${hook.slug}`,
     lastModified: new Date(),
     changeFrequency: 'monthly',
-    priority: hook.is_must ? 0.9 : 0.7,
+    priority: hook.default_on ? 0.9 : 0.7,
   }))
 
   return [...staticPages, ...hookPages]

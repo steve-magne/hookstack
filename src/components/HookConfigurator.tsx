@@ -18,7 +18,7 @@ export function HookConfigurator() {
   )
 
   const defaultSlugs = useMemo(
-    () => new Set(allHooks.filter((h) => h.is_must).map((h) => h.slug)),
+    () => new Set(allHooks.filter((h) => h.default_on).map((h) => h.slug)),
     []
   )
 

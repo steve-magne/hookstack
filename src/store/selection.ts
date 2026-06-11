@@ -22,8 +22,8 @@ function trackSelection(slug: string, action: 'select_hook' | 'deselect_hook') {
 
 interface SelectionState {
   selected: string[]
-  mustInitialized: boolean
-  seenMustSlugs: string[]
+  defaultInitialized: boolean
+  seenDefaultSlugs: string[]
   // Non-persisté — repart à false à chaque nouvelle session
   sessionTouched: boolean
   toggle: (slug: string) => void
@@ -31,15 +31,15 @@ interface SelectionState {
   remove: (slug: string) => void
   clear: () => void
   has: (slug: string) => boolean
-  initMust: (slugs: string[]) => void
+  initDefaults: (slugs: string[]) => void
 }
 
 export const useSelection = create<SelectionState>()(
   persist(
     (set, get) => ({
       selected: [],
-      mustInitialized: false,
-      seenMustSlugs: [],
+      defaultInitialized: false,
+      seenDefaultSlugs: [],
       sessionTouched: false,
       toggle: (slug) =>
         set((s) => {
@@ -64,21 +64,21 @@ export const useSelection = create<SelectionState>()(
           trackSelection(slug, 'deselect_hook')
           return { sessionTouched: true, selected: s.selected.filter((x) => x !== slug) }
         }),
-      clear: () => set({ selected: [], mustInitialized: false, seenMustSlugs: [], sessionTouched: false }),
+      clear: () => set({ selected: [], defaultInitialized: false, seenDefaultSlugs: [], sessionTouched: false }),
       has: (slug) => get().selected.includes(slug),
-      initMust: (slugs) =>
+      initDefaults: (slugs) =>
         set((s) => {
-          // Garantit que TOUS les hooks is_must sont dans selected (pas seulement les nouveaux).
-          // seenMustSlugs reste pour détecter les ajouts au registre, mais toAdd couvre
+          // Garantit que TOUS les hooks default_on sont dans selected (pas seulement les nouveaux).
+          // seenDefaultSlugs reste pour détecter les ajouts au registre, mais toAdd couvre
           // aussi les hooks vus dans une session précédente qui auraient été désélectionnés.
-          const newSlugs = slugs.filter((sl) => !s.seenMustSlugs.includes(sl))
+          const newSlugs = slugs.filter((sl) => !s.seenDefaultSlugs.includes(sl))
           const toAdd = slugs.filter((sl) => !s.selected.includes(sl))
-          if (toAdd.length === 0 && newSlugs.length === 0 && s.mustInitialized) return s
+          if (toAdd.length === 0 && newSlugs.length === 0 && s.defaultInitialized) return s
           return {
-            mustInitialized: true,
-            seenMustSlugs: slugs,
+            defaultInitialized: true,
+            seenDefaultSlugs: slugs,
             selected: [...s.selected, ...toAdd],
-            // sessionTouched inchangé — initMust n'est pas une action utilisateur
+            // sessionTouched inchangé — initDefaults n'est pas une action utilisateur
           }
         }),
     }),
@@ -90,8 +90,8 @@ export const useSelection = create<SelectionState>()(
       // sessionTouched exclu de la persistance → repart toujours à false au chargement
       partialize: (state) => ({
         selected: state.selected,
-        mustInitialized: state.mustInitialized,
-        seenMustSlugs: state.seenMustSlugs,
+        defaultInitialized: state.defaultInitialized,
+        seenDefaultSlugs: state.seenDefaultSlugs,
       }),
     }
   )

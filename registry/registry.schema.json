@@ -124,7 +124,7 @@
             "minLength": 1
           }
         },
-        "is_must": {
+        "default_on": {
           "type": "boolean",
           "description": "Part of the recommended default stack (fast path)."
         },

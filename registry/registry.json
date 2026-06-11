@@ -46,7 +46,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/detect-secrets.mjs';\n\ndescribe('detect-secrets', () => {\n  it('bloque une clé API Anthropic', () => {\n    expect(run({ tool_input: { command: 'export ANTHROPIC_API_KEY=sk-ant-abcdefghijklmnopqrstuvwxyz123456' } })?.decision).toBe('block');\n  });\n\n  it('bloque un token GitHub', () => {\n    expect(run({ tool_input: { command: 'echo ghp_0123456789abcdefghijklmnopqrstuvwxyz0123' } })?.decision).toBe('block');\n  });\n\n  it('bloque une clé privée', () => {\n    expect(run({ tool_input: { command: 'echo \"-----BEGIN RSA PRIVATE KEY-----\"' } })?.decision).toBe('block');\n  });\n\n  it('bloque un password=...', () => {\n    expect(run({ tool_input: { command: 'curl -d \"password=\\'hunter2\\'\"' } })?.decision).toBe('block');\n  });\n\n  it('laisse passer une commande anodine', () => {\n    expect(run({ tool_input: { command: 'ls -la' } })).toBeNull();\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({})).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Secret detection before Bash execution",
     "provider": [
       "claude-code"
@@ -112,7 +112,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/block-destructive.mjs';\n\ndescribe('block-destructive', () => {\n  it('laisse passer une commande anodine', () => {\n    expect(run({ tool_input: { command: 'ls -la' } })).toBeNull();\n  });\n\n  it('bloque rm -rf /', () => {\n    const r = run({ tool_input: { command: 'rm -rf /' } });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('rm -rf /');\n  });\n\n  it('bloque force-push sur main', () => {\n    const r = run({ tool_input: { command: 'git push --force origin main' } });\n    expect(r?.decision).toBe('block');\n  });\n\n  it('bloque DROP TABLE', () => {\n    expect(run({ tool_input: { command: 'DROP TABLE users' } })?.decision).toBe('block');\n  });\n\n  it('bloque chmod 777 récursif sur /', () => {\n    expect(run({ tool_input: { command: 'chmod -R 777 /' } })?.decision).toBe('block');\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({})).toBeNull();\n  });\n\n  // git reset --hard — nuancé selon la cible et l'état de l'arbre\n  it('bloque git reset --hard vers une autre cible que HEAD, même arbre propre', () => {\n    const r = run({ tool_input: { command: 'git reset --hard HEAD~1' } }, { gitStatus: () => '' });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('HEAD~1');\n  });\n\n  it('bloque git reset --hard HEAD si arbre sale', () => {\n    const r = run({ tool_input: { command: 'git reset --hard HEAD' } }, { gitStatus: () => ' M src/a.ts\\n' });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('non commitées');\n  });\n\n  it('laisse passer git reset --hard HEAD si arbre propre', () => {\n    expect(run({ tool_input: { command: 'git reset --hard HEAD' } }, { gitStatus: () => '' })).toBeNull();\n  });\n\n  it('laisse passer git reset --hard sans cible si arbre propre', () => {\n    expect(run({ tool_input: { command: 'git reset --hard' } }, { gitStatus: () => '\\n' })).toBeNull();\n  });\n\n  it('bloque git reset --hard si git status échoue (hors repo)', () => {\n    expect(run({ tool_input: { command: 'git reset --hard' } }, { gitStatus: () => 'unknown' })?.decision).toBe('block');\n  });\n\n  it('bloque TRUNCATE TABLE', () => {\n    expect(run({ tool_input: { command: 'TRUNCATE TABLE users' } })?.decision).toBe('block');\n  });\n\n  it('bloque mkfs', () => {\n    expect(run({ tool_input: { command: 'mkfs.ext4 /dev/sdb1' } })?.decision).toBe('block');\n  });\n\n  it('bloque dd if=', () => {\n    expect(run({ tool_input: { command: 'dd if=/dev/zero of=/dev/sda' } })?.decision).toBe('block');\n  });\n\n  // Faux positifs — mentions documentaires dans des arguments quotés\n  it('laisse passer git commit -m avec mention documentaire', () => {\n    expect(run({ tool_input: { command: 'git commit -m \"docs: rm -rf * est dangereux\"' } })).toBeNull();\n  });\n\n  it('laisse passer gh pr create --body mentionnant git reset', () => {\n    expect(run({ tool_input: { command: 'gh pr create --body \"extension: git reset --hard bloqué\"' } }, { gitStatus: () => ' M a' })).toBeNull();\n  });\n\n  it('laisse passer echo avec pattern dans une string', () => {\n    expect(run({ tool_input: { command: \"echo 'TRUNCATE TABLE est interdit'\" } })).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Destructive command blocking",
     "provider": [
       "claude-code"
@@ -181,7 +181,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/protect-paths.mjs';\n\ndescribe('protect-paths', () => {\n  it('bloque .env', () => {\n    expect(run({ tool_input: { file_path: '/proj/.env' } })?.decision).toBe('block');\n  });\n\n  it('bloque un fichier dans secrets/', () => {\n    expect(run({ tool_input: { file_path: '/proj/secrets/key.txt' } })?.decision).toBe('block');\n  });\n\n  it('bloque une clé .pem', () => {\n    expect(run({ tool_input: { file_path: '/proj/server.pem' } })?.decision).toBe('block');\n  });\n\n  it('laisse passer un fichier source ordinaire', () => {\n    expect(run({ tool_input: { file_path: '/proj/src/index.ts' } })).toBeNull();\n  });\n\n  it('laisse passer si file_path absent', () => {\n    expect(run({})).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Sensitive file write protection",
     "provider": [
       "claude-code"
@@ -235,7 +235,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/protect-lockfiles.mjs';\n\ndescribe('protect-lockfiles', () => {\n  it('bloque pnpm-lock.yaml', () => {\n    expect(run({ tool_input: { file_path: '/project/pnpm-lock.yaml' } })?.decision).toBe('block');\n  });\n\n  it('bloque package-lock.json', () => {\n    expect(run({ tool_input: { file_path: '/project/package-lock.json' } })?.decision).toBe('block');\n  });\n\n  it('bloque yarn.lock', () => {\n    expect(run({ tool_input: { file_path: '/project/yarn.lock' } })?.decision).toBe('block');\n  });\n\n  it('bloque Gemfile.lock', () => {\n    expect(run({ tool_input: { file_path: '/project/Gemfile.lock' } })?.decision).toBe('block');\n  });\n\n  it('bloque poetry.lock', () => {\n    expect(run({ tool_input: { file_path: '/project/poetry.lock' } })?.decision).toBe('block');\n  });\n\n  it('bloque Cargo.lock', () => {\n    expect(run({ tool_input: { file_path: '/project/Cargo.lock' } })?.decision).toBe('block');\n  });\n\n  it('laisse passer package.json', () => {\n    expect(run({ tool_input: { file_path: '/project/package.json' } })).toBeNull();\n  });\n\n  it('laisse passer un fichier .ts', () => {\n    expect(run({ tool_input: { file_path: '/project/src/index.ts' } })).toBeNull();\n  });\n\n  it('laisse passer si file_path absent', () => {\n    expect(run({ tool_input: {} })).toBeNull();\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({})).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Lock file write protection",
     "provider": [
       "claude-code"
@@ -298,7 +298,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/guard-push-main.mjs';\n\ndescribe('guard-push-main', () => {\n  it('bloque git push --force origin main', () => {\n    expect(run({ tool_input: { command: 'git push --force origin main' } })?.decision).toBe('block');\n  });\n\n  it('bloque git push -f vers master', () => {\n    expect(run({ tool_input: { command: 'git push -f origin master' } })?.decision).toBe('block');\n  });\n\n  it('laisse passer un push normal sur main', () => {\n    expect(run({ tool_input: { command: 'git push origin main' } })).toBeNull();\n  });\n\n  it('laisse passer un force-push sur une branche de feature', () => {\n    expect(run({ tool_input: { command: 'git push --force origin feat/x' } })).toBeNull();\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({})).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "git push to main guardrail",
     "provider": [
       "claude-code"
@@ -375,7 +375,7 @@
       "Agent onboarding",
       "Team standards"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Starts every session knowing your repo state",
@@ -423,7 +423,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/load-git-context.mjs';\n\ndescribe('load-git-context', () => {\n  it('compose le contexte git', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('show-current')) return 'main';\n      if (cmd.includes('log')) return 'abc123 fix';\n      if (cmd.includes('status')) return ' M file.ts';\n      return '';\n    };\n    const out = run({ exec });\n    expect(out).toContain('Branche : `main`');\n    expect(out).toContain('abc123 fix');\n    expect(out).toContain('Fichiers modifiés');\n  });\n  it('indique répertoire propre sans statut', () => {\n    const exec = (cmd) => (cmd.includes('show-current') ? 'main' : '');\n    expect(run({ exec })).toContain('propre');\n  });\n  it(\"retourne null hors d'un repo git\", () => {\n    expect(run({ exec: () => '' })).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Load Git context at startup",
     "provider": [
       "claude-code"
@@ -483,7 +483,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/inject-datetime.mjs';\n\ndescribe('inject-datetime', () => {\n  it('retourne une ligne de date formatée', () => {\n    const out = run({ now: new Date('2026-06-02T12:00:00Z') });\n    expect(out).toContain('Date et heure courantes :');\n    expect(out.endsWith('\\n')).toBe(true);\n  });\n\n  it('fonctionne sans argument', () => {\n    expect(run()).toContain('Date et heure courantes :');\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Current date and time injection",
     "provider": [
       "claude-code"
@@ -543,7 +543,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/autoformat.mjs';\n\nconst fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };\n\ndescribe('autoformat', () => {\n  it('formate un fichier', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec })?.formatted).toBe('a.ts');\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('prettier --write \"a.ts\"'));\n  });\n  it(\"ignore l'absence de fichier\", () => {\n    expect(run({ tool_input: {} }, { exec: vi.fn() })).toBeNull();\n  });\n  it('avale une erreur prettier', () => {\n    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec: fail('') })).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Automatic formatting after write",
     "provider": [
       "claude-code"
@@ -604,7 +604,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/eslint-check.mjs';\n\nconst fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };\n\ndescribe('eslint-check', () => {\n  it('ignore les fichiers non-JS/TS', () => {\n    expect(run({ tool_input: { file_path: 'a.css' } }, { exec: vi.fn() })).toBeNull();\n  });\n  it('retourne null si eslint passe', () => {\n    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec: vi.fn() })).toBeNull();\n  });\n  it('remonte les erreurs eslint', () => {\n    const r = run({ tool_input: { file_path: 'a.ts' } }, { exec: fail('1:1 error') });\n    expect(r?.message).toContain('ESLint');\n    expect(r?.message).toContain('1:1 error');\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "ESLint lint after write",
     "provider": [
       "claude-code"
@@ -668,7 +668,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/typecheck.mjs';\n\nconst fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };\n\ndescribe('typecheck', () => {\n  it('ignore les fichiers non-TS', () => {\n    expect(run({ tool_input: { file_path: 'a.js' } }, { exec: vi.fn(), projectDir: '/p' })).toBeNull();\n  });\n  it('remonte les erreurs tsc', () => {\n    const r = run({ tool_input: { file_path: 'a.ts' } }, { exec: fail('TS2322'), projectDir: '/p' });\n    expect(r?.message).toContain('TypeScript');\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "TypeScript type checking",
     "provider": [
       "claude-code"
@@ -731,7 +731,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { detect, run } from '../../.claude/hooks/run-tests.mjs';\n\nconst PROJECT_DIR = '/fake/project';\n\nconst MAIN_ROOT = '/fake/main';\n\nfunction makeOpts({\n  scripts = { test: 'vitest' },\n  hasPkg = true,\n  hasPnpmLock = false,\n  hasYarnLock = false,\n  hasBunLockb = false,\n  hasBunLock = false,\n  hasPyproject = false,\n  hasGoMod = false,\n  hasNodeModules = true,\n  spawnStatus = 0,\n} = {}) {\n  return {\n    projectDir: PROJECT_DIR,\n    mainRoot: MAIN_ROOT,\n    exists: (p) => {\n      if (p.endsWith('node_modules')) return hasNodeModules;\n      if (p.endsWith('package.json')) return hasPkg;\n      if (p.endsWith('pnpm-lock.yaml')) return hasPnpmLock;\n      if (p.endsWith('yarn.lock')) return hasYarnLock;\n      if (p.endsWith('bun.lockb')) return hasBunLockb;\n      if (p.endsWith('bun.lock')) return hasBunLock;\n      if (p.endsWith('pyproject.toml')) return hasPyproject;\n      if (p.endsWith('go.mod')) return hasGoMod;\n      return false;\n    },\n    readFile: () => JSON.stringify({ scripts }),\n    spawn: () => ({\n      status: spawnStatus,\n      stdout: 'Test output',\n      stderr: spawnStatus !== 0 ? 'Error details' : '',\n    }),\n  };\n}\n\ndescribe('detect', () => {\n  it('retourne pnpm si pnpm-lock.yaml existe', () => {\n    const opts = makeOpts({ hasPnpmLock: true });\n    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });\n    expect(result).toEqual(['pnpm', ['test', '--', '--run']]);\n  });\n\n  it('retourne npm si aucun lockfile spécifique', () => {\n    const opts = makeOpts();\n    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });\n    expect(result).toEqual(['npm', ['test', '--', '--run']]);\n  });\n\n  it('retourne yarn si yarn.lock existe', () => {\n    const opts = makeOpts({ hasYarnLock: true });\n    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });\n    expect(result).toEqual(['yarn', ['test', '--', '--run']]);\n  });\n\n  it('retourne bun si bun.lockb existe (bun <1.2)', () => {\n    const opts = makeOpts({ hasBunLockb: true });\n    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });\n    expect(result).toEqual(['bun', ['test']]);\n  });\n\n  it('retourne bun si bun.lock existe (bun ≥1.2)', () => {\n    const opts = makeOpts({ hasBunLock: true });\n    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });\n    expect(result).toEqual(['bun', ['test']]);\n  });\n\n  it('pnpm est prioritaire sur yarn si les deux lockfiles existent', () => {\n    const opts = makeOpts({ hasPnpmLock: true, hasYarnLock: true });\n    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR });\n    expect(result).toEqual(['pnpm', ['test', '--', '--run']]);\n  });\n\n  it('retourne null si pas de package.json ni pytest ni go.mod', () => {\n    const result = detect({\n      exists: () => false,\n      readFile: () => '{}',\n      projectDir: PROJECT_DIR,\n    });\n    expect(result).toBeNull();\n  });\n\n  it('retourne pytest si pyproject.toml existe', () => {\n    const result = detect({\n      exists: (p) => p.endsWith('pyproject.toml'),\n      readFile: () => '{}',\n      projectDir: PROJECT_DIR,\n    });\n    expect(result).toEqual(['python', ['-m', 'pytest', '--tb=short', '-q']]);\n  });\n\n  it('retourne go test si go.mod existe', () => {\n    const result = detect({\n      exists: (p) => p.endsWith('go.mod'),\n      readFile: () => '{}',\n      projectDir: PROJECT_DIR,\n    });\n    expect(result).toEqual(['go', ['test', './...']]);\n  });\n});\n\ndescribe('run', () => {\n  it('retourne null si aucun runner détecté', () => {\n    const result = run(makeOpts({ hasPkg: false }));\n    expect(result).toBeNull();\n  });\n\n  it('retourne status 0 et message succès quand les tests passent', () => {\n    const result = run(makeOpts({ spawnStatus: 0 }));\n    expect(result.status).toBe(0);\n    expect(result.message).toContain('✓ Tests passés');\n  });\n\n  it('retourne status non-0 et message échec quand les tests échouent', () => {\n    const result = run(makeOpts({ spawnStatus: 1 }));\n    expect(result.status).toBe(1);\n    expect(result.message).toContain('ÉCHEC');\n  });\n\n  it('inclut la sortie du processus dans le message en cas d\\'échec', () => {\n    const result = run(makeOpts({ spawnStatus: 1 }));\n    expect(result.message).toContain('Error details');\n  });\n\n  it('utilise mainRoot si node_modules absent dans projectDir (worktree)', () => {\n    const spawnCalls = [];\n    const opts = {\n      ...makeOpts({ hasNodeModules: false }),\n      spawn: (cmd, args, spawnOpts) => {\n        spawnCalls.push(spawnOpts.cwd);\n        return { status: 0, stdout: 'ok', stderr: '' };\n      },\n    };\n    run(opts);\n    expect(spawnCalls[0]).toBe(MAIN_ROOT);\n  });\n\n  it('utilise projectDir si node_modules présent', () => {\n    const spawnCalls = [];\n    const opts = {\n      ...makeOpts({ hasNodeModules: true }),\n      spawn: (cmd, args, spawnOpts) => {\n        spawnCalls.push(spawnOpts.cwd);\n        return { status: 0, stdout: 'ok', stderr: '' };\n      },\n    };\n    run(opts);\n    expect(spawnCalls[0]).toBe(PROJECT_DIR);\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Run tests at end of response",
     "provider": [
       "claude-code"
@@ -872,7 +872,7 @@
       "DevSecOps audit",
       "Usage reporting"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "The agent only reaches domains you approved",
@@ -1051,7 +1051,7 @@
       "Change traceability",
       "Post-hoc review"
     ],
-    "is_must": false
+    "default_on": false
   },
   {
     "benefit": "Forces uv and pnpm, kills pip/npm drift",
@@ -1121,7 +1121,7 @@
       "Standardize package management tooling across a Python+Node monorepo",
       "Avoid virtual environment conflicts between pip and uv"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Edits never leak back into your main repo",
@@ -1186,7 +1186,7 @@
       "Prevent accidental changes to the main repo in worktree mode",
       "Parallel multi-agent workflows with per-worktree isolation"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Types and lint must pass before Claude hands back control",
@@ -1258,7 +1258,7 @@
       "Block sessions that leave lint errors or insufficient coverage",
       "Parallelize build + tests to minimize wait time"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "New worktrees boot with their own env and ports",
@@ -1325,7 +1325,7 @@
       "Isolate environment variables (ports, secrets) per worktree",
       "Start multiple agents in parallel without port collisions"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Every worktree starts with fresh dependencies",
@@ -1394,7 +1394,7 @@
       "Ensure every worktree starts with up-to-date dependencies",
       "Automate bootstrapping of a new isolated agent environment"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "No source file ships without a test",
@@ -1442,7 +1442,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/missing-test-detection.mjs';\n\nconst COUNTER = '/tmp/.test-counter';\nconst DISABLE = '/tmp/.test-disable';\n\nfunction makeOpts(overrides = {}) {\n  return {\n    counterFile: COUNTER,\n    disableFile: DISABLE,\n    // Par défaut : les fichiers source existent, le fichier de désactivation non.\n    exists: (p) => p !== DISABLE,\n    readFile: () => '0',\n    writeFile: vi.fn(),\n    unlink: vi.fn(),\n    exec: () => '',\n    ...overrides,\n  };\n}\n\ndescribe('missing-test-detection', () => {\n  it('retourne exitCode 0 si le fichier disable existe', () => {\n    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);\n    const result = run(makeOpts({ exists: (p) => p === DISABLE }));\n    expect(result.exitCode).toBe(0);\n    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('SUSPENDU'));\n    stderrSpy.mockRestore();\n  });\n\n  it('retourne exitCode 0 si aucun fichier modifié', () => {\n    const opts = makeOpts({ exec: () => '' });\n    const result = run(opts);\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('ignore les fichiers hors src/lib|store|hooks', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return 'src/components/Button.tsx\\nsrc/types/hook.ts';\n      return '';\n    };\n    const result = run(makeOpts({ exec }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('ignore les fichiers de test eux-mêmes (.test.ts / .spec.ts)', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return 'src/lib/i18n.test.ts\\nsrc/lib/mergeConfig.spec.ts';\n      return '';\n    };\n    const result = run(makeOpts({ exec }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('retourne exitCode 0 si les tests existent', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return 'src/lib/hooks.ts';\n      if (cmd.includes('find')) return 'src/lib/hooks.test.ts';\n      return '';\n    };\n    const result = run(makeOpts({ exec }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('retourne exitCode 2 si un test est manquant', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return 'src/lib/mymodule.ts';\n      return '';\n    };\n    const result = run(makeOpts({ exec }));\n    expect(result.exitCode).toBe(2);\n    expect(result.message).toContain('src/lib/mymodule.ts');\n  });\n\n  it('incrémente le compteur à chaque échec', () => {\n    const writeFile = vi.fn();\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return 'src/lib/missing.ts';\n      return '';\n    };\n    run(makeOpts({ exec, readFile: () => '1', writeFile }));\n    expect(writeFile).toHaveBeenCalledWith(COUNTER, '2');\n  });\n\n  it('auto-désactive après 3 échecs', () => {\n    const writeFile = vi.fn();\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return 'src/store/store.ts';\n      return '';\n    };\n    const result = run(makeOpts({ exec, readFile: () => '2', writeFile }));\n    expect(result.exitCode).toBe(2);\n    expect(result.message).toContain('AUTO-DISABLE');\n    expect(writeFile).toHaveBeenCalledWith(DISABLE, '');\n  });\n\n  it('réinitialise le compteur si pas de fichiers manquants', () => {\n    const unlink = vi.fn();\n    const exec = (cmd) => {\n      if (cmd.includes('diff')) return 'src/lib/ok.ts';\n      if (cmd.includes('find')) return 'src/lib/ok.test.ts';\n      return '';\n    };\n    run(makeOpts({ exec, unlink }));\n    expect(unlink).toHaveBeenCalledWith(COUNTER);\n  });\n\n  it('utilise git diff HEAD si pas de base merge', () => {\n    const exec = vi.fn((cmd) => {\n      if (cmd.includes('merge-base')) return '';\n      if (cmd.includes('rev-parse')) return '';\n      return '';\n    });\n    run(makeOpts({ exec }));\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('diff --name-only HEAD'));\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Missing test detection (Stop)",
     "provider": [
       "claude-code"
@@ -1507,7 +1507,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/per-file-coverage.mjs';\n\nconst COUNTER = '/tmp/.test-cov-counter';\nconst DISABLE = '/tmp/.test-cov-disable';\nconst COV_JSON = '/tmp/test-coverage.json';\nconst CWD = '/repos/hookstack';\n\nfunction makeCoverage(files = {}) {\n  return JSON.stringify(files);\n}\n\nfunction makeOpts(overrides = {}) {\n  return {\n    counterFile: COUNTER,\n    disableFile: DISABLE,\n    covJson: COV_JSON,\n    cwd: CWD,\n    exists: (p) => p === COV_JSON,\n    readFile: vi.fn(() => '0'),\n    writeFile: vi.fn(),\n    unlink: vi.fn(),\n    exec: () => '',\n    ...overrides,\n  };\n}\n\ndescribe('per-file-coverage', () => {\n  it('retourne exitCode 0 si le fichier disable existe', () => {\n    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);\n    const result = run(makeOpts({ exists: (p) => p === DISABLE }));\n    expect(result.exitCode).toBe(0);\n    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('SUSPENDU'));\n    stderrSpy.mockRestore();\n  });\n\n  it('retourne exitCode 0 si coverage-summary.json absent', () => {\n    const result = run(makeOpts({ exists: () => false }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('retourne exitCode 0 si JSON invalide', () => {\n    const result = run(makeOpts({ readFile: () => 'invalid json' }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('retourne exitCode 0 si aucun fichier modifié', () => {\n    const result = run(makeOpts({ exec: () => '', readFile: () => '{}' }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('ignore les fichiers non-.ts/.tsx', () => {\n    const exec = (cmd) => cmd.includes('diff') ? 'README.md\\nsrc/lib/utils.css' : '';\n    const result = run(makeOpts({ exec, readFile: () => '{}' }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('ignore src/types, src/constants, src/router, src/main', () => {\n    const exec = (cmd) => cmd.includes('diff')\n      ? 'src/types/hook.ts\\nsrc/constants/index.ts\\nsrc/router/index.tsx\\nsrc/main.tsx'\n      : '';\n    const result = run(makeOpts({ exec, readFile: () => '{}' }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('retourne exitCode 0 si coverage ≥ 80%', () => {\n    const file = 'src/lib/hooks.ts';\n    const cov = makeCoverage({ [`${CWD}/${file}`]: { lines: { pct: 85 } } });\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return file;\n      return '';\n    };\n    const result = run(makeOpts({ exec, readFile: () => cov }));\n    expect(result.exitCode).toBe(0);\n  });\n\n  it('retourne exitCode 2 si coverage < 80%', () => {\n    const file = 'src/lib/hooks.ts';\n    const cov = makeCoverage({ [`${CWD}/${file}`]: { lines: { pct: 60 } } });\n    const exec = (cmd) => {\n      if (cmd.includes('merge-base')) return 'abc';\n      if (cmd.includes('rev-parse')) return 'def';\n      if (cmd.includes('diff')) return file;\n      return '';\n    };\n    const result = run(makeOpts({ exec, readFile: () => cov }));\n    expect(result.exitCode).toBe(2);\n    expect(result.message).toContain('60%');\n    expect(result.message).toContain(file);\n  });\n\n  it('incrémente le compteur à chaque échec', () => {\n    const file = 'src/lib/hooks.ts';\n    const cov = makeCoverage({ [`${CWD}/${file}`]: { lines: { pct: 10 } } });\n    const writeFile = vi.fn();\n    const exec = (cmd) => cmd.includes('diff') ? file : 'abc';\n    run(makeOpts({ exec, readFile: (p) => p === COV_JSON ? cov : '1', writeFile }));\n    expect(writeFile).toHaveBeenCalledWith(COUNTER, '2');\n  });\n\n  it('auto-désactive après 3 échecs', () => {\n    const file = 'src/lib/hooks.ts';\n    const cov = makeCoverage({ [`${CWD}/${file}`]: { lines: { pct: 10 } } });\n    const writeFile = vi.fn();\n    const exec = (cmd) => cmd.includes('diff') ? file : 'abc';\n    const result = run(makeOpts({ exec, readFile: (p) => p === COV_JSON ? cov : '2', writeFile }));\n    expect(result.message).toContain('AUTO-DISABLE');\n    expect(writeFile).toHaveBeenCalledWith(DISABLE, '');\n  });\n\n  it('réinitialise le compteur si coverage OK', () => {\n    const file = 'src/lib/hooks.ts';\n    const cov = makeCoverage({ [`${CWD}/${file}`]: { lines: { pct: 95 } } });\n    const unlink = vi.fn();\n    const exec = (cmd) => cmd.includes('diff') ? file : 'abc';\n    run(makeOpts({ exec, readFile: () => cov, unlink }));\n    expect(unlink).toHaveBeenCalledWith(COUNTER);\n  });\n\n  it('ignore les fichiers absents du rapport de coverage', () => {\n    const exec = (cmd) => cmd.includes('diff') ? 'src/lib/untracked.ts' : 'abc';\n    const result = run(makeOpts({ exec, readFile: () => '{}' }));\n    expect(result.exitCode).toBe(0);\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Per-modified-file coverage (Stop)",
     "provider": [
       "claude-code"
@@ -1588,7 +1588,7 @@
       "git-diff",
       "definition-of-done"
     ],
-    "is_must": true,
+    "default_on": true,
     "stack": [
       "typescript"
     ]
@@ -1659,7 +1659,7 @@
       "Automatically suspend quality checks when errors are known and being fixed",
       "Protect any potentially unstable Stop hook without changing its core logic"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Ship no untranslated string, no orphan key",
@@ -1772,7 +1772,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/notification-tts.mjs';\n\ndescribe('notification-tts', () => {\n  it('vocalise un message via say sur darwin', () => {\n    const exec = vi.fn();\n    const text = run({ message: '# Hello' }, { exec, platform: 'darwin' });\n    expect(text).toBe(' Hello');\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('say \"'));\n  });\n  it('retourne null sans message', () => {\n    expect(run({}, { exec: vi.fn(), platform: 'darwin' })).toBeNull();\n  });\n  it('utilise espeak hors darwin', () => {\n    const exec = vi.fn();\n    run({ message: 'hi' }, { exec, platform: 'linux' });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('espeak'));\n  });\n});\n"
     },
-    "is_must": false,
+    "default_on": false,
     "name": "TTS voice notification",
     "provider": [
       "claude-code"
@@ -1838,7 +1838,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-tts.mjs';\n\ndescribe('stop-tts', () => {\n  it('annonce le projet', () => {\n    const exec = vi.fn();\n    expect(run({ exec, platform: 'darwin', projectDir: '/x/myproj' })).toContain('myproj');\n    expect(exec).toHaveBeenCalled();\n  });\n});\n"
     },
-    "is_must": false,
+    "default_on": false,
     "name": "Voice task-completion announcement",
     "provider": [
       "claude-code"
@@ -1910,7 +1910,7 @@
       "Works in silent environments where TTS is unwanted",
       "Minimal-distraction attention signal"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "A satisfying chime the moment Claude finishes",
@@ -1965,7 +1965,7 @@
       "Minimal-distraction alternative to TTS",
       "Complement stop-tts-completion with a lighter signal"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Hear each subagent spin up",
@@ -2161,7 +2161,7 @@
       "Audit prompts submitted per session",
       "Replay or analyze a past session"
     ],
-    "is_must": false
+    "default_on": false
   },
   {
     "benefit": "Each session gets a name, not a hash",
@@ -2226,7 +2226,7 @@
       "Identify sessions in logs by a memorable name",
       "Personalize subagent TTS announcements"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Your full transcript survives every compaction",
@@ -2292,7 +2292,7 @@
       "Keep a full history before compaction",
       "Audit long sessions"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Stop clicking approve on harmless reads",
@@ -2358,7 +2358,7 @@
       "Reduce interruptions for non-destructive operations",
       "Automated security policy based on command safety"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Every tool failure logged for the post-mortem",
@@ -2424,7 +2424,7 @@
       "Debug tools that fail during autonomous sessions",
       "Detect recurring failure patterns"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Open a session, environment's already ready",
@@ -2495,7 +2495,7 @@
       "Environment always ready as soon as a session opens",
       "Automatic onboarding on a new project"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Sessions end with a clean logs directory",
@@ -2560,7 +2560,7 @@
       "Keep a clean logs directory without manual intervention",
       "Free disk space at the end of a long session"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Conventions survive a context compaction",
@@ -2609,7 +2609,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/reinject-after-compact.mjs';\n\ndescribe('reinject-after-compact', () => {\n  it('réinjecte le backup de la session courante', () => {\n    const deps = {\n      exists: () => true,\n      readFile: () => JSON.stringify({ summary: 'Résumé précédent', saved_at: '2026-06-02' }),\n      readdir: () => [],\n      backupDir: '/bk',\n    };\n    const out = run({ session_id: 's1' }, deps);\n    expect(out).toContain('Résumé précédent');\n    expect(out).toContain('2026-06-02');\n  });\n\n  it('retombe sur le backup le plus récent si pas de session', () => {\n    const deps = {\n      exists: (p) => p === '/bk' || p.endsWith('recent.json'),\n      readdir: () => ['recent.json'],\n      readFile: () => JSON.stringify({ summary: 'Le plus récent', saved_at: 'x' }),\n      backupDir: '/bk',\n    };\n    expect(run({ session_id: '' }, deps)).toContain('Le plus récent');\n  });\n\n  it('retourne null si le dossier de backup est absent', () => {\n    expect(run({ session_id: 's1' }, { exists: () => false, backupDir: '/bk' })).toBeNull();\n  });\n\n  it('retourne null si aucun backup', () => {\n    const deps = { exists: (p) => p === '/bk', readdir: () => [], backupDir: '/bk' };\n    expect(run({ session_id: '' }, deps)).toBeNull();\n  });\n\n  it('ignore un backup corrompu', () => {\n    const deps = { exists: () => true, readFile: () => 'pas du json', readdir: () => [], backupDir: '/bk' };\n    expect(run({ session_id: 's1' }, deps)).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Re-inject context after compaction",
     "provider": [
       "claude-code"
@@ -2692,7 +2692,7 @@
       "Compliance audit on settings.json changes",
       "Detect unauthorized configuration changes"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Bash always runs in the right env per folder",
@@ -2769,7 +2769,7 @@
       "Automatic .envrc management with direnv",
       "Sync CLAUDE_ENV_FILE with the current directory's environment"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Plans proceed without the extra approval click",
@@ -2835,7 +2835,7 @@
       "CI/CD automation with plan mode enabled",
       "Reduce interruptions during intensive interactive sessions"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "A full history of every command Claude ran",
@@ -2901,7 +2901,7 @@
       "Debug Claude Code sessions after the fact",
       "Action history for compliance or documentation"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "One tsc pass after a batch, not one per file",
@@ -2943,7 +2943,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/post-tool-batch-typecheck.mjs';\n\nconst fail = (stdout) => () => { const e = new Error('cmd failed'); e.stdout = Buffer.from(stdout); throw e; };\n\ndescribe('post-tool-batch-typecheck', () => {\n  it('ignore un batch sans .ts', () => {\n    expect(run({ tool_calls: [{ tool_name: 'Read', tool_input: {} }] }, { exec: vi.fn() })).toBeNull();\n  });\n  it('injecte les erreurs tsc en contexte', () => {\n    const input = { tool_calls: [{ tool_name: 'Edit', tool_input: { file_path: 'a.ts' } }] };\n    const r = run(input, { exec: fail('TS errors') });\n    expect(r?.hookSpecificOutput?.additionalContext).toContain('TypeScript errors');\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Typecheck after parallel file edits",
     "provider": [
       "claude-code"
@@ -3024,7 +3024,7 @@
       "Sync .env.local overrides into Claude's Bash environment on the fly",
       "Keep API keys and feature flags up to date during active development"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Tests rerun the moment a source file changes",
@@ -3146,7 +3146,7 @@
       "Reclaim disk space by removing node_modules after worktree cleanup",
       "Prevent orphaned containers when parallel subagents each run their own stack"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Keep a readable trail of every compaction",
@@ -3205,7 +3205,7 @@
       "Review what Claude summarized at context boundaries for debugging or audit",
       "Reconstruct the timeline of a long session from compaction summaries"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Get pinged when a rate limit pauses Claude",
@@ -3266,7 +3266,7 @@
       "Avoid missing rate-limit pauses during long autonomous sessions",
       "Works in iTerm2, WezTerm, Windows Terminal and other OSC-9 compatible terminals"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Every API error logged for the post-mortem",
@@ -3326,7 +3326,7 @@
       "Diagnose billing or authentication issues in CI/CD pipelines",
       "Correlate API failures with specific session IDs for debugging"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Every task ties back to a [TICKET-123]",
@@ -3427,7 +3427,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/task-completed-test-gate.mjs';\n\ndescribe('task-completed-test-gate', () => {\n  it('passe si les tests réussissent', () => {\n    expect(run({ task_subject: 'x' }, { exec: vi.fn() })).toBeNull();\n  });\n  it('bloque si les tests échouent', () => {\n    const exec = () => { const e = new Error('fail'); e.stdout = Buffer.from('1 failed'); throw e; };\n    const r = run({ task_subject: 'Ma tâche' }, { exec });\n    expect(r.exitCode).toBe(2);\n    expect(r.message).toContain('Ma tâche');\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Test suite gate before task completion",
     "provider": [
       "claude-code"
@@ -3563,7 +3563,7 @@
       "Tune allow/deny rules by reviewing the denial log after a session",
       "Audit autonomous agent actions for compliance in CI/CD environments"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Fresh clone opens with node_modules ready",
@@ -3628,7 +3628,7 @@
       "Guarantee node_modules is present before any tool calls run in a new project",
       "Unify the dev environment setup across team members via a shared hook"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Secrets never show on screen during a share",
@@ -3688,7 +3688,7 @@
       "Sanitize assistant output that echoes back tool results containing credentials",
       "Compliance screen recording: ensure no secrets appear in recorded sessions"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Know exactly which CLAUDE.md governed a session",
@@ -3748,7 +3748,7 @@
       "Debug unexpected model behaviour by reviewing which instruction files were loaded",
       "Track lazy-loaded nested CLAUDE.md files in monorepos for instruction coverage"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Python lands PEP 8-clean on every save",
@@ -3813,7 +3813,7 @@
       "Consistent formatting across a team",
       "Reduced review noise on style changes"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Unused imports caught before they pile up",
@@ -3857,7 +3857,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/ruff-check.mjs';\n\nconst fail = (stdout) => () => {\n  const e = new Error('cmd failed');\n  e.stdout = Buffer.from(stdout);\n  throw e;\n};\n\ndescribe('ruff-check', () => {\n  it('ignore les fichiers non-.py', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: 'a.js' } }, { exec })).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('appelle ruff check --fix sur un fichier .py', () => {\n    const exec = vi.fn();\n    run({ tool_input: { file_path: 'main.py' } }, { exec });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('ruff check --fix'));\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('main.py'));\n  });\n\n  it('retourne null si ruff check réussit', () => {\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec: vi.fn() })).toBeNull();\n  });\n\n  it('remonte les erreurs ruff dans le message', () => {\n    const result = run({ tool_input: { file_path: 'a.py' } }, { exec: fail('E501 line too long') });\n    expect(result?.message).toContain('[ruff-check]');\n    expect(result?.message).toContain('E501 line too long');\n  });\n\n  it('retourne null si ruff échoue sans stdout', () => {\n    const exec = () => { throw new Error('uv not found'); };\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec })).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Ruff lint after write",
     "provider": [
       "claude-code"
@@ -3922,7 +3922,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/pyright-check.mjs';\n\nconst fail = (stdout) => () => {\n  const e = new Error('cmd failed');\n  e.stdout = Buffer.from(stdout);\n  throw e;\n};\n\ndescribe('pyright-check', () => {\n  it('ignore les fichiers non-.py', () => {\n    const exec = vi.fn();\n    expect(run({ tool_input: { file_path: 'a.ts' } }, { exec })).toBeNull();\n    expect(exec).not.toHaveBeenCalled();\n  });\n\n  it('appelle pyright sur un fichier .py', () => {\n    const exec = vi.fn();\n    run({ tool_input: { file_path: 'main.py' } }, { exec });\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('pyright'));\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('main.py'));\n  });\n\n  it('retourne null si pyright passe', () => {\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec: vi.fn() })).toBeNull();\n  });\n\n  it('remonte les erreurs pyright dans le message', () => {\n    const result = run({ tool_input: { file_path: 'a.py' } }, { exec: fail('error: Type \"str\" is not assignable') });\n    expect(result?.message).toContain('[pyright]');\n    expect(result?.message).toContain('Type \"str\"');\n  });\n\n  it('retourne null si pyright échoue sans stdout', () => {\n    const exec = () => { throw new Error('uv not found'); };\n    expect(run({ tool_input: { file_path: 'a.py' } }, { exec })).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Pyright type checking",
     "provider": [
       "claude-code"
@@ -4009,7 +4009,7 @@
       "Avoid pip/uv conflicts in the same virtualenv",
       "Enforce team tooling conventions without having to remind the agent"
     ],
-    "is_must": true
+    "default_on": true
   },
   {
     "benefit": "Won't hand back until pytest is green",
@@ -4052,7 +4052,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/pytest.mjs';\n\nconst CWD = '/fake/project';\n\nfunction makeOpts({ marker = 'pyproject.toml', spawnStatus = 0, stdout = '', stderr = '' } = {}) {\n  return {\n    cwd: CWD,\n    exists: (p) => marker ? p.endsWith(marker) : false,\n    spawn: vi.fn(() => ({ status: spawnStatus, stdout, stderr })),\n  };\n}\n\ndescribe('pytest', () => {\n  it('retourne null si projet non-Python', () => {\n    const opts = makeOpts({ marker: null });\n    expect(run(opts)).toBeNull();\n    expect(opts.spawn).not.toHaveBeenCalled();\n  });\n\n  it('détecte pyproject.toml et lance pytest', () => {\n    const opts = makeOpts({ marker: 'pyproject.toml' });\n    run(opts);\n    expect(opts.spawn).toHaveBeenCalledWith(\n      'uv', ['run', 'pytest', '--tb=short', '-q'],\n      expect.objectContaining({ cwd: CWD }),\n    );\n  });\n\n  it('détecte pytest.ini', () => {\n    const opts = makeOpts({ marker: 'pytest.ini' });\n    const result = run(opts);\n    expect(result).not.toBeNull();\n    expect(opts.spawn).toHaveBeenCalled();\n  });\n\n  it('retourne status 0 et message succès', () => {\n    const opts = makeOpts({ spawnStatus: 0, stdout: '5 passed in 0.3s' });\n    const result = run(opts);\n    expect(result.status).toBe(0);\n    expect(result.message).toContain('✓ Tests passés');\n  });\n\n  it('retourne status non-0 et message échec', () => {\n    const opts = makeOpts({ spawnStatus: 1, stderr: 'FAILED test_foo.py' });\n    const result = run(opts);\n    expect(result.status).toBe(1);\n    expect(result.message).toContain('ÉCHEC');\n    expect(result.message).toContain('FAILED test_foo.py');\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Run pytest at end of response",
     "provider": [
       "claude-code"
@@ -4116,7 +4116,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/session-start-worktree-if-main.mjs';\n\nconst MAIN = '/repos/hookstack';\nconst DATE = '20260602';\nconst BRANCH = `work/session-${DATE}`;\nconst WT_PATH = `${MAIN}/.claude/worktrees/session-${DATE}`;\n\nfunction makeExec({ branch = 'main', mainRoot = MAIN, currentRoot = MAIN, worktreeList, mergedBranches = '' } = {}) {\n  const defaultList = worktreeList ?? `${MAIN}  abc1234 [main]`;\n  return vi.fn((cmd) => {\n    if (cmd.includes('branch --show-current')) return branch;\n    if (cmd.includes('rev-parse --show-toplevel')) return currentRoot;\n    if (cmd.includes('git worktree list')) return defaultList;\n    if (cmd.includes('fetch')) return '';\n    if (cmd.includes('branch --merged')) return mergedBranches;\n    return '';\n  });\n}\n\ndescribe('session-start-worktree-if-main', () => {\n  it(\"ne fait rien si la branche courante n'est pas main\", () => {\n    const exec = makeExec({ branch: 'feature/foo' });\n    const result = run({ exec });\n    expect(result).toBeNull();\n  });\n\n  it('ne fait rien si on est déjà dans un worktree secondaire', () => {\n    const exec = makeExec({\n      currentRoot: WT_PATH,\n      worktreeList: `${MAIN}  abc [main]\\n${WT_PATH}  def [${BRANCH}]`,\n    });\n    const result = run({ exec });\n    expect(result).toBeNull();\n  });\n\n  it(\"cree un worktree s'il n'en existe pas pour aujourd'hui\", () => {\n    const exec = makeExec();\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => true);\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    const result = run({ exec, addWorktree, exists, now });\n    expect(addWorktree).toHaveBeenCalledWith(WT_PATH, BRANCH);\n    expect(result).toContain('Worktree isolé créé automatiquement');\n  });\n\n  it(\"reutilise le worktree du jour s'il existe et n'est pas merge\", () => {\n    const list = `${MAIN}  abc [main]\\n${WT_PATH}  def [${BRANCH}]`;\n    const exec = makeExec({ worktreeList: list, mergedBranches: '' });\n    const addWorktree = vi.fn();\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    const result = run({ exec, addWorktree, now });\n    expect(addWorktree).not.toHaveBeenCalled();\n    expect(result).toContain('Worktree session existant');\n    expect(result).toContain(WT_PATH);\n  });\n\n  it('supprime le worktree mergé et en crée un nouveau', () => {\n    // La liste initiale contient un worktree avec une branche mergée\n    const listWithMerged = `${MAIN}  abc [main]\\n${WT_PATH}  def [${BRANCH}]`;\n    // Après suppression, la liste ne contient plus le worktree\n    let callCount = 0;\n    const exec = vi.fn((cmd) => {\n      if (cmd.includes('branch --show-current')) return 'main';\n      if (cmd.includes('rev-parse --show-toplevel')) return MAIN;\n      if (cmd.includes('git worktree list')) {\n        // Premier appel = avant nettoyage, appels suivants = après nettoyage\n        callCount++;\n        return callCount <= 2 ? listWithMerged : `${MAIN}  abc [main]`;\n      }\n      if (cmd.includes('fetch')) return '';\n      if (cmd.includes('branch --merged')) return `  main\\n  ${BRANCH}`;\n      return '';\n    });\n    const removeWorktree = vi.fn();\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => true);\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    const result = run({ exec, addWorktree, removeWorktree, exists, now });\n    expect(removeWorktree).toHaveBeenCalledWith(MAIN, WT_PATH, BRANCH);\n    expect(addWorktree).toHaveBeenCalledWith(WT_PATH, BRANCH);\n    expect(result).toContain('Worktree isolé créé automatiquement');\n  });\n\n  it(\"ne supprime pas un worktree mergé géré par un autre outil (ex. claude/*)\", () => {\n    const appBranch = 'claude/pensive-sutherland-f4a20f';\n    const appPath = `${MAIN}/.claude/worktrees/pensive-sutherland-f4a20f`;\n    const list = `${MAIN}  abc [main]\\n${appPath}  def [${appBranch}]`;\n    const exec = makeExec({ worktreeList: list, mergedBranches: `  main\\n  ${appBranch}` });\n    const removeWorktree = vi.fn();\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => true);\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    run({ exec, addWorktree, removeWorktree, exists, now });\n    expect(removeWorktree).not.toHaveBeenCalled();\n  });\n\n  it('synchronise main avec le remote avant de créer le worktree', () => {\n    const calls = [];\n    const exec = vi.fn((cmd) => {\n      calls.push(cmd);\n      if (cmd.includes('branch --show-current')) return 'main';\n      if (cmd.includes('rev-parse --show-toplevel')) return MAIN;\n      if (cmd.includes('git worktree list')) return `${MAIN}  abc [main]`;\n      return '';\n    });\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => true);\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    run({ exec, addWorktree, exists, now });\n    const fetchIdx = calls.findIndex((c) => c.includes('fetch'));\n    const mergeIdx = calls.findIndex((c) => c.includes('merge --ff-only'));\n    const addIdx = calls.findIndex((c) => c.includes('worktree list') && calls.indexOf(c) > mergeIdx);\n    expect(mergeIdx).toBeGreaterThan(fetchIdx);\n    expect(addWorktree).toHaveBeenCalled();\n    // le merge doit avoir eu lieu avant la création du worktree\n    expect(mergeIdx).toBeLessThan(calls.length);\n  });\n\n  it('retourne un avertissement si addWorktree échoue', () => {\n    const exec = makeExec();\n    const addWorktree = vi.fn(() => { throw new Error('branch exists'); });\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    const result = run({ exec, addWorktree, now });\n    expect(result).toContain('⚠️');\n  });\n\n  it(\"retourne null si le repertoire worktree n'existe pas apres creation\", () => {\n    const exec = makeExec();\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => false);\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    const result = run({ exec, addWorktree, exists, now });\n    expect(result).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Auto-create worktree when starting on main",
     "provider": [
       "claude-code"
@@ -4177,7 +4177,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/session-start-pull-if-main.mjs';\n\ndescribe('session-start-pull-if-main', () => {\n  it('retourne null hors de main', () => {\n    expect(run({ exec: () => 'feature' })).toBeNull();\n  });\n  it('signale une divergence', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('show-current')) return 'main';\n      if (cmd.includes('remote')) return 'origin';\n      if (cmd === 'git rev-parse HEAD') return 'aaa';\n      if (cmd.includes('@{u}') && cmd.includes('rev-parse')) return 'bbb';\n      if (cmd.includes('HEAD..@{u}')) return '2';\n      if (cmd.includes('@{u}..HEAD')) return '1';\n      return '';\n    };\n    expect(run({ exec, pull: vi.fn() })).toContain('diverge');\n  });\n  it('pull en avance pure', () => {\n    const exec = (cmd) => {\n      if (cmd.includes('show-current')) return 'main';\n      if (cmd.includes('remote')) return 'origin';\n      if (cmd === 'git rev-parse HEAD') return 'aaa';\n      if (cmd.includes('@{u}') && cmd.includes('rev-parse')) return 'bbb';\n      if (cmd.includes('HEAD..@{u}')) return '3';\n      if (cmd.includes('@{u}..HEAD')) return '0';\n      return '';\n    };\n    const pull = vi.fn();\n    const out = run({ exec, pull });\n    expect(pull).toHaveBeenCalled();\n    expect(out).toContain('synchronisé');\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Auto-pull on main at session start",
     "provider": [
       "claude-code"
@@ -4238,7 +4238,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/session-start-stash-warning.mjs';\n\ndescribe('session-start-stash-warning', () => {\n  it('avertit pour un stash ancien', () => {\n    const old = new Date(Date.now() - 10 * 86400000).toISOString();\n    const exec = () => `stash@{0}|${old}|WIP`;\n    expect(run({ exec })).toContain('Stashs Git oubliés');\n  });\n  it('retourne null sans stash', () => {\n    expect(run({ exec: () => '' })).toBeNull();\n  });\n  it('retourne null si stash récent', () => {\n    const recent = new Date().toISOString();\n    expect(run({ exec: () => `stash@{0}|${recent}|WIP` })).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Stale stash warning at session start",
     "provider": [
       "claude-code"
@@ -4300,7 +4300,7 @@
       },
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/pre-write-main-guard.mjs';\n\nfunction makeExec({ branch = 'main', toplevel = '/main', list = '/main  abc [main]' } = {}) {\n  return (cmd) => {\n    if (cmd.includes('branch --show-current')) return branch;\n    if (cmd.includes('abbrev-ref')) return branch;\n    if (cmd.includes('worktree list')) return list;\n    if (cmd.includes('show-toplevel')) return toplevel;\n    return '';\n  };\n}\n\ndescribe('pre-write-main-guard', () => {\n  it('bloque une écriture sur main dans le repo principal', () => {\n    const r = run({ tool_input: { file_path: '/main/src/x.ts' } }, { exec: makeExec() });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('main');\n  });\n\n  it('laisse passer sur une branche de feature', () => {\n    expect(run({ tool_input: { file_path: '/main/src/x.ts' } }, { exec: makeExec({ branch: 'feat/x' }) })).toBeNull();\n  });\n\n  it('laisse passer si on est dans un worktree secondaire', () => {\n    const exec = makeExec({ toplevel: '/wt' });\n    expect(run({ tool_input: { file_path: '/wt/src/x.ts' } }, { exec })).toBeNull();\n  });\n\n  it('laisse passer une écriture ciblant un autre worktree', () => {\n    expect(run({ tool_input: { file_path: '/wt/src/x.ts' } }, { exec: makeExec() })).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Block file writes on main branch",
     "provider": [
       "claude-code"
@@ -4436,7 +4436,7 @@
       },
       "test_snippet": "import { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/block-push-closed-pr.mjs';\n\nconst makeInput = (command) => ({ tool_input: { command } });\n\ndescribe('block-push-closed-pr', () => {\n  it('laisse passer les commandes non-push', () => {\n    expect(run(makeInput('git status'))).toBeNull();\n    expect(run(makeInput('git commit -m \"foo\"'))).toBeNull();\n  });\n\n  it('ignore main et master', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('main\\n')\n      .mockReturnValueOnce('master\\n');\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n  });\n\n  it('bloque si la PR est mergée', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('fix/my-feature\\n')\n      .mockReturnValueOnce('MERGED\\n');\n    const result = run(makeInput('git push'), { exec });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toMatch(/mergée/);\n    expect(result?.reason).toMatch(/fix\\/my-feature/);\n  });\n\n  it('bloque si la PR est fermée', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('fix/closed-branch\\n')\n      .mockReturnValueOnce('CLOSED\\n');\n    const result = run(makeInput('git push'), { exec });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toMatch(/fermée/);\n  });\n\n  it('laisse passer si la PR est ouverte', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('fix/open-pr\\n')\n      .mockReturnValueOnce('OPEN\\n');\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n  });\n\n  it('laisse passer si gh échoue (pas de PR)', () => {\n    const exec = vi.fn()\n      .mockReturnValueOnce('fix/no-pr\\n')\n      .mockImplementationOnce(() => { throw new Error('no PR'); });\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n  });\n\n  it('laisse passer si git rev-parse échoue', () => {\n    const exec = vi.fn().mockImplementationOnce(() => { throw new Error(); });\n    expect(run(makeInput('git push'), { exec })).toBeNull();\n  });\n});\n"
     },
-    "is_must": true
+    "default_on": true
   },
   {
     "slug": "pre-websearch-temporal-context",
@@ -4460,7 +4460,7 @@
       "Avoid outdated API documentation in research tasks",
       "Ensure changelog and release note searches return latest versions"
     ],
-    "is_must": true,
+    "default_on": true,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/websearch-temporal-context.mjs",
@@ -4505,7 +4505,7 @@
       "Teams migrating from Codex/OpenAI Codex to Claude Code",
       "Projects with explicit agent coordination rules"
     ],
-    "is_must": true,
+    "default_on": true,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/agents-md-loader.mjs",
@@ -4553,7 +4553,7 @@
       "Detect Pages Router patterns during App Router migrations",
       "Enforce next/image and next/link usage"
     ],
-    "is_must": false,
+    "default_on": false,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/nextjs-quality-checker.mjs",
@@ -4602,7 +4602,7 @@
       "type": "settings_json",
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi, beforeEach } from 'vitest';\nimport { run } from '../../.claude/hooks/file-to-markdown.mjs';\n\ndescribe('file-to-markdown', () => {\n  const mockExec = vi.fn();\n  const mockExists = vi.fn();\n\n  beforeEach(() => {\n    mockExec.mockReset();\n    mockExists.mockReset().mockReturnValue(true);\n  });\n\n  it('laisse passer si tool_name != Read', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: 'doc.pdf' } }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it('laisse passer si extension non supportée', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'file.ts' } }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({ tool_name: 'Read' }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it(\"laisse passer si le fichier n'existe pas\", () => {\n    mockExists.mockReturnValue(false);\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'doc.pdf' } }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it('laisse passer si aucun outil disponible', () => {\n    mockExec.mockImplementation(() => { throw new Error('not found'); });\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'doc.pdf' } }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it('convertit un PDF avec pdftotext', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pdftotext') return '/usr/bin/pdftotext';\n      if (cmd.startsWith('pdftotext')) return '# Hello World\\n\\nContenu du PDF.';\n      throw new Error('not found');\n    });\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/doc.pdf' } }, { exec: mockExec, exists: mockExists });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('doc.pdf');\n    expect(result?.reason).toContain('# Hello World');\n  });\n\n  it('convertit un DOCX avec pandoc', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd === 'which pdftotext') throw new Error('not found');\n      if (cmd.startsWith('pandoc')) return '# Titre\\n\\nContenu du document Word.';\n      throw new Error('not found');\n    });\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/rapport.docx' } }, { exec: mockExec, exists: mockExists });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('rapport.docx');\n    expect(result?.reason).toContain('Contenu du document Word');\n  });\n\n  it('convertit un PPTX avec pandoc', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd.startsWith('pandoc')) return '## Slide 1\\n\\nContenu de la présentation.';\n      throw new Error('not found');\n    });\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/slides.pptx' } }, { exec: mockExec, exists: mockExists });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('slides.pptx');\n    expect(result?.reason).toContain('Slide 1');\n  });\n\n  it('utilise pandoc comme fallback PDF si pdftotext absent', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd === 'which pdftotext') throw new Error('not found');\n      if (cmd.startsWith('pandoc')) return '# PDF via pandoc';\n      throw new Error('not found');\n    });\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/doc.pdf' } }, { exec: mockExec, exists: mockExists });\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('PDF via pandoc');\n  });\n\n  it('tronque le contenu si trop long', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd.startsWith('pandoc')) return 'a'.repeat(60_000);\n      throw new Error('not found');\n    });\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/gros.docx' } }, { exec: mockExec, exists: mockExists });\n    expect(result?.reason).toContain('truncated');\n    expect(result?.reason.length).toBeLessThan(55_000);\n  });\n\n  it('laisse passer si la conversion échoue', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd.startsWith('pandoc')) throw new Error('pandoc error');\n      throw new Error('not found');\n    });\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '/tmp/bad.docx' } }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it('laisse passer si le résultat est vide', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd.startsWith('pandoc')) return '   ';\n      throw new Error('not found');\n    });\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '/tmp/empty.docx' } }, { exec: mockExec, exists: mockExists })).toBeNull();\n  });\n\n  it('supporte epub', () => {\n    mockExec.mockImplementation((cmd) => {\n      if (cmd === 'which pandoc') return '/usr/bin/pandoc';\n      if (cmd.startsWith('pandoc')) return '# Chapitre 1\\n\\nContenu.';\n      throw new Error('not found');\n    });\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/livre.epub' } }, { exec: mockExec, exists: mockExists });\n    expect(result?.decision).toBe('block');\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Binary file to Markdown converter",
     "provider": [
       "claude-code"
@@ -4650,7 +4650,7 @@
       "type": "settings_json",
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/pre-read-block-binary.mjs';\n\ndescribe('pre-read-block-binary', () => {\n  it('laisse passer si tool_name != Read', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: 'app.exe' } })).toBeNull();\n  });\n\n  it('laisse passer si tool_input absent', () => {\n    expect(run({ tool_name: 'Read' })).toBeNull();\n  });\n\n  it('laisse passer une extension supportée (.ts)', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'src/index.ts' } })).toBeNull();\n  });\n\n  it('laisse passer un .json', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'data.json' } })).toBeNull();\n  });\n\n  it('bloque un .exe', () => {\n    const r = run({ tool_name: 'Read', tool_input: { file_path: '/usr/bin/app.exe' } });\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('app.exe');\n    expect(r?.reason).toContain('.exe');\n  });\n\n  it('bloque un .pyc', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '__pycache__/foo.pyc' } })?.decision).toBe('block');\n  });\n\n  it('bloque un .jar', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'lib/spring.jar' } })?.decision).toBe('block');\n  });\n\n  it('bloque un .zip', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'dist/bundle.zip' } })?.decision).toBe('block');\n  });\n\n  it('bloque un .pkl', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'model.pkl' } })?.decision).toBe('block');\n  });\n\n  it('bloque un .sqlite3', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'db/dev.sqlite3' } })?.decision).toBe('block');\n  });\n\n  it('bloque un .wasm', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'lib/module.wasm' } })?.decision).toBe('block');\n  });\n\n  it('bloque un .so (extension majuscule)', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'lib/native.SO' } })?.decision).toBe('block');\n  });\n\n  it('la reason mentionne de consulter Bash', () => {\n    const r = run({ tool_name: 'Read', tool_input: { file_path: 'app.dll' } });\n    expect(r?.reason).toContain('Bash');\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Binary file read blocker",
     "provider": [
       "claude-code"
@@ -4696,7 +4696,7 @@
       "type": "settings_json",
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/pre-read-json-csv-compact.mjs';\n\nconst bigJson = (n) => JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: i, name: `user_${i}`, email: `u${i}@x.com` })));\nconst bigCsv = (n) => ['id,name,email', ...Array.from({ length: n }, (_, i) => `${i},user_${i},u${i}@x.com`)].join('\\n');\nconst bigJsonl = (n) => Array.from({ length: n }, (_, i) => JSON.stringify({ id: i, val: i * 2 })).join('\\n');\n\nfunction makeDeps(content, size = 100_000) {\n  return {\n    readFile: vi.fn(() => content),\n    exists: vi.fn(() => true),\n    stat: vi.fn(() => ({ size })),\n  };\n}\n\ndescribe('pre-read-json-csv-compact', () => {\n  it('laisse passer si tool_name != Read', () => {\n    expect(run({ tool_name: 'Write', tool_input: { file_path: 'data.json' } })).toBeNull();\n  });\n\n  it('laisse passer si extension non supportée', () => {\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'file.ts' } })).toBeNull();\n  });\n\n  it(\"laisse passer si le fichier n'existe pas\", () => {\n    const deps = { readFile: vi.fn(), exists: vi.fn(() => false), stat: vi.fn(() => ({ size: 100_000 })) };\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'big.json' } }, deps)).toBeNull();\n  });\n\n  it('laisse passer si fichier petit (< seuil)', () => {\n    const content = JSON.stringify([{ id: 1 }]);\n    const deps = makeDeps(content, 100);\n    expect(run({ tool_name: 'Read', tool_input: { file_path: 'small.json' } }, deps)).toBeNull();\n  });\n\n  it('résume un grand tableau JSON', () => {\n    const content = bigJson(300);\n    const deps = makeDeps(content);\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/users.json' } }, deps);\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('users.json');\n    expect(result?.reason).toContain('300 items');\n    expect(result?.reason).toContain('id');\n  });\n\n  it('résume un grand objet JSON', () => {\n    const obj = Object.fromEntries(Array.from({ length: 300 }, (_, i) => [`key${i}`, i]));\n    const content = JSON.stringify(obj, null, 2);\n    const deps = makeDeps(content);\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/config.json' } }, deps);\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('config.json');\n  });\n\n  it('résume un grand CSV', () => {\n    const content = bigCsv(300);\n    const deps = makeDeps(content);\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/data.csv' } }, deps);\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('data.csv');\n    expect(result?.reason).toContain('300 rows');\n    expect(result?.reason).toContain('id,name,email');\n  });\n\n  it('résume un grand JSONL', () => {\n    const content = bigJsonl(300);\n    const deps = makeDeps(content);\n    const result = run({ tool_name: 'Read', tool_input: { file_path: '/tmp/events.jsonl' } }, deps);\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('events.jsonl');\n    expect(result?.reason).toContain('300 lines');\n  });\n\n  it('laisse passer si JSON invalide', () => {\n    const content = 'not json\\n'.repeat(300);\n    const deps = makeDeps(content);\n    expect(run({ tool_name: 'Read', tool_input: { file_path: '/tmp/bad.json' } }, deps)).toBeNull();\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "Large JSON/CSV compactor",
     "provider": [
       "claude-code"
@@ -4742,7 +4742,7 @@
       "type": "settings_json",
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/pre-webfetch-html-to-markdown.mjs';\n\nconst HTML = `<!DOCTYPE html><html><head><style>body{color:red}</style></head><body><h1>Hello</h1><p>World</p><script>alert(1)</script></body></html>`;\nconst MARKDOWN = '# Hello\\n\\nWorld';\n\nfunction makeDeps({ fetchResult = HTML, convertResult = MARKDOWN, pandoc = true } = {}) {\n  return {\n    fetchUrl: vi.fn(() => fetchResult),\n    convertHtml: vi.fn(() => convertResult),\n    hasPandoc: vi.fn(() => pandoc),\n  };\n}\n\ndescribe('pre-webfetch-html-to-markdown', () => {\n  it('laisse passer si tool_name != WebFetch', () => {\n    expect(run({ tool_name: 'Read', tool_input: { url: 'https://example.com' } }, makeDeps())).toBeNull();\n  });\n\n  it('laisse passer si url absente', () => {\n    expect(run({ tool_name: 'WebFetch', tool_input: {} }, makeDeps())).toBeNull();\n  });\n\n  it('laisse passer si url non http', () => {\n    expect(run({ tool_name: 'WebFetch', tool_input: { url: 'ftp://example.com' } }, makeDeps())).toBeNull();\n  });\n\n  it('laisse passer si fetch échoue', () => {\n    const deps = makeDeps();\n    deps.fetchUrl = vi.fn(() => { throw new Error('network'); });\n    expect(run({ tool_name: 'WebFetch', tool_input: { url: 'https://example.com' } }, deps)).toBeNull();\n  });\n\n  it('laisse passer si la réponse n\\'est pas du HTML (JSON API)', () => {\n    const deps = makeDeps({ fetchResult: '{\"ok\":true}' });\n    expect(run({ tool_name: 'WebFetch', tool_input: { url: 'https://api.example.com/v1' } }, deps)).toBeNull();\n  });\n\n  it('convertit une page HTML avec pandoc', () => {\n    const result = run({ tool_name: 'WebFetch', tool_input: { url: 'https://docs.example.com/guide' } }, makeDeps());\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('docs.example.com');\n    expect(result?.reason).toContain('# Hello');\n  });\n\n  it('utilise le stripHtml si pandoc absent', () => {\n    const deps = makeDeps({ pandoc: false });\n    const result = run({ tool_name: 'WebFetch', tool_input: { url: 'https://example.com' } }, deps);\n    expect(result?.decision).toBe('block');\n    expect(deps.convertHtml).not.toHaveBeenCalled();\n    expect(result?.reason).toContain('Hello');\n  });\n\n  it('fallback stripHtml si pandoc échoue', () => {\n    const deps = makeDeps();\n    deps.convertHtml = vi.fn(() => { throw new Error('pandoc error'); });\n    const result = run({ tool_name: 'WebFetch', tool_input: { url: 'https://example.com' } }, deps);\n    expect(result?.decision).toBe('block');\n    expect(result?.reason).toContain('Hello');\n  });\n\n  it('tronque le contenu si trop long', () => {\n    const deps = makeDeps({ convertResult: 'a'.repeat(40_000) });\n    const result = run({ tool_name: 'WebFetch', tool_input: { url: 'https://example.com' } }, deps);\n    expect(result?.reason).toContain('truncated');\n    expect(result?.reason.length).toBeLessThan(35_000);\n  });\n\n  it('laisse passer si le résultat converti est vide', () => {\n    const deps = makeDeps({ convertResult: '   ', pandoc: false, fetchResult: '<!DOCTYPE html><html><body></body></html>' });\n    expect(run({ tool_name: 'WebFetch', tool_input: { url: 'https://example.com' } }, deps)).toBeNull();\n  });\n\n  it('inclut le domaine dans la reason', () => {\n    const result = run({ tool_name: 'WebFetch', tool_input: { url: 'https://nextjs.org/docs' } }, makeDeps());\n    expect(result?.reason).toContain('nextjs.org');\n  });\n});\n"
     },
-    "is_must": true,
+    "default_on": true,
     "name": "WebFetch HTML-to-Markdown converter",
     "provider": [
       "claude-code"
@@ -4959,7 +4959,7 @@
       "prevention",
       "write-guard"
     ],
-    "is_must": true,
+    "default_on": true,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/pre-write-secret-detection.mjs",
@@ -5004,7 +5004,7 @@
       "env",
       "context"
     ],
-    "is_must": true,
+    "default_on": true,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/pre-read-env-guard.mjs",
@@ -5049,7 +5049,7 @@
       "merge",
       "quality"
     ],
-    "is_must": true,
+    "default_on": true,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/post-edit-conflict-marker-check.mjs",
@@ -5094,7 +5094,7 @@
       "ci",
       "productivity"
     ],
-    "is_must": false,
+    "default_on": false,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/session-start-github-context.mjs",
