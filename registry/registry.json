@@ -3560,7 +3560,8 @@
       "Understand which tool calls auto-mode is silently blocking in autonomous sessions",
       "Tune allow/deny rules by reviewing the denial log after a session",
       "Audit autonomous agent actions for compliance in CI/CD environments"
-    ]
+    ],
+    "is_must": true
   },
   {
     "benefit": "Fresh clone opens with node_modules ready",
@@ -4457,7 +4458,7 @@
       "Avoid outdated API documentation in research tasks",
       "Ensure changelog and release note searches return latest versions"
     ],
-    "is_must": false,
+    "is_must": true,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/websearch-temporal-context.mjs",
@@ -4502,7 +4503,7 @@
       "Teams migrating from Codex/OpenAI Codex to Claude Code",
       "Projects with explicit agent coordination rules"
     ],
-    "is_must": false,
+    "is_must": true,
     "implementation": {
       "type": "settings_json",
       "script_path": ".claude/hooks/agents-md-loader.mjs",
