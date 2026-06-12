@@ -5,7 +5,7 @@ import { allHooks } from '@/lib/hooks'
 import { T, SEO_KEYWORDS } from '@/lib/i18n'
 import type { Metadata } from 'next'
 
-const BASE = 'https://www.hookstack.app/'
+const BASE = 'https://www.hookstack.app'
 
 export const metadata: Metadata = {
   title: T.metaTitle,

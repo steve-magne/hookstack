@@ -10,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: 'Googlebot', allow: '/' },
     ],
     sitemap: 'https://www.hookstack.app/sitemap.xml',
-    host: 'https://www.hookstack.app/',
+    host: 'https://www.hookstack.app',
   }
 }

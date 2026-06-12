@@ -7,7 +7,7 @@ import { ArrowLeft } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-const BASE = 'https://www.hookstack.app/'
+const BASE = 'https://www.hookstack.app'
 
 export async function generateStaticParams() {
   return allHooks.map((hook) => ({ slug: hook.slug }))

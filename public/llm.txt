@@ -2,13 +2,13 @@
 
 ## What is Hookstack?
 
-Hookstack (https://www.hookstack.app/) is an open-source community catalogue of production-ready agentic hooks for Claude Code. It lets developers browse, select, and install hooks in under one minute via a single `npx` command.
+Hookstack (https://www.hookstack.app) is an open-source community catalogue of production-ready agentic hooks for Claude Code. It lets developers browse, select, and install hooks in under one minute via a single `npx` command.
 
 Hooks are Node.js scripts (.mjs) that plug into Claude Code's lifecycle events — they give the AI agent reflexes: block secrets, enforce tests, inject context, notify on completion, and more.
 
 ## How to use this site
 
-1. Browse the catalogue at https://www.hookstack.app/
+1. Browse the catalogue at https://www.hookstack.app
 2. Select hooks using the + button (selection persists in localStorage)
 3. Copy the generated install command from the HookConfigurator panel:
    `npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...`
@@ -52,7 +52,7 @@ Anyone can contribute hooks by submitting a public GitHub repository at https://
 - **Data**: `registry/registry.json` is the single source of truth; hook code lives in `.claude/hooks/*.mjs`
 - **CLI**: `hookstack-cli` (npm package) writes hooks and patches `settings.json`
 - **Source**: https://github.com/steve-magne/hookit
-- **Production URL**: https://www.hookstack.app/
+- **Production URL**: https://www.hookstack.app
 
 ## Sitemap
 
