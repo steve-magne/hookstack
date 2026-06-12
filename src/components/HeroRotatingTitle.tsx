@@ -42,7 +42,6 @@ export function HeroRotatingTitle() {
         text={T.heroRotating[index]}
         delay={(T.heroTitleA.length + 1) * splitFlapHero.perChar}
         eager
-        innerClassName="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent"
         {...splitFlapHero}
       />
     </h1>

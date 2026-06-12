@@ -15,7 +15,7 @@ export function HookSelectButton({ slug }: { slug: string }) {
       className={`mb-8 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ${
         selected
           ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
-          : 'bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-2)]'
+          : 'bg-[var(--color-brand)] text-[var(--color-bg)] hover:bg-[var(--color-brand-2)]'
       }`}
     >
       {selected ? <Check className="size-4" /> : <Plus className="size-4" />}

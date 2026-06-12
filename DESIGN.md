@@ -28,9 +28,10 @@ Conséquences directes :
 
 - **Thème** : dark sobre. `--color-bg #0a0a0a`, surfaces `#141414` / `#1c1c1c`,
   bordures `#2e2e2e`. Texte `#f0f0f0` / muted `#909090`.
-- **Accent** : dégradé indigo→violet (réservé au highlight du hero et aux
-  signaux `default_on`). Le reste du site est neutre (blanc/zinc) — l'accent garde
-  sa valeur parce qu'il est rare.
+- **Accent** : monochrome blanc pur — `--color-brand #ffffff`, `--color-brand-2 #d4d4d4`.
+  Pas de teinte chromatique. Le blanc contraste avec le fond near-black sans couleur ;
+  la hiérarchie vient du niveau de luminosité (white → zinc-200 → zinc-400 → zinc-600),
+  à l'image de Vercel. Le logo `HookStack` est entièrement blanc.
 - **Halo** : un radial-gradient blanc très faible en haut de page (`body::before`).
 - **Formes** : coins arrondis généreux (`rounded-xl` / `rounded-2xl`),
   `ring-1 ring-inset` pour les surfaces, `divide-y` pour les listes.

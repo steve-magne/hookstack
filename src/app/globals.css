@@ -8,6 +8,8 @@
   --color-border-subtle: #222222;
   --color-text: #f0f0f0;
   --color-text-muted: #909090;
+  --color-brand: #ffffff;
+  --color-brand-2: #d4d4d4;
 }
 
 body {

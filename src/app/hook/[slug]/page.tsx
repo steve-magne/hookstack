@@ -58,7 +58,7 @@ export default async function HookDetailPage({
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center text-zinc-400">
         <p>{T.hookNotFound}</p>
-        <Link href="/" className="mt-4 inline-block text-indigo-300 underline">
+        <Link href="/" className="mt-4 inline-block text-[var(--color-brand)] underline">
           {T.backToCatalogue}
         </Link>
       </div>

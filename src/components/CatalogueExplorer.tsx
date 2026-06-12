@@ -81,13 +81,13 @@ function FilterDropdown({
         aria-expanded={open}
         className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
           hasSelection
-            ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-300 hover:border-indigo-400/60'
+            ? 'border-white/30 bg-white/10 text-white hover:border-white/50'
             : 'border-zinc-700/70 bg-zinc-800/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
         }`}
       >
         <span>{label}</span>
         {hasSelection && (
-          <span className="grid size-[18px] place-items-center rounded-full bg-indigo-500/30 font-mono text-[9px] font-bold text-indigo-200 ring-1 ring-inset ring-indigo-400/20">
+          <span className="grid size-[18px] place-items-center rounded-full bg-white/20 font-mono text-[9px] font-bold text-white ring-1 ring-inset ring-white/15">
             {selected.length}
           </span>
         )}
@@ -117,10 +117,10 @@ function FilterDropdown({
                   >
                     <div
                       className={`grid size-3.5 shrink-0 place-items-center rounded-[3px] border transition-colors ${
-                        isSelected ? 'border-indigo-500 bg-indigo-500' : 'border-zinc-600'
+                        isSelected ? 'border-white bg-white' : 'border-zinc-600'
                       }`}
                     >
-                      {isSelected && <Check className="size-2.5 text-white" strokeWidth={3} />}
+                      {isSelected && <Check className="size-2.5 text-zinc-900" strokeWidth={3} />}
                     </div>
                     <span className={`text-xs transition-colors ${isSelected ? 'text-white' : 'text-zinc-400'}`}>
                       {opt.label}

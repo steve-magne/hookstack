@@ -64,7 +64,7 @@ export function StickyInstallBanner() {
           aria-hidden
           initial={{ opacity: 0 }}
           animate={ringControls}
-          className="pointer-events-none absolute inset-0 z-10 rounded-xl ring-2 ring-indigo-400/70"
+          className="pointer-events-none absolute inset-0 z-10 rounded-xl ring-2 ring-white/50"
         />
         <InstallCommand
           command={installCmd}
@@ -72,7 +72,7 @@ export function StickyInstallBanner() {
           meta={
             <m.span
               animate={countControls}
-              className="inline-flex origin-center items-center rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-medium tabular-nums text-indigo-300 ring-1 ring-inset ring-indigo-500/25"
+              className="inline-flex origin-center items-center rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium tabular-nums text-zinc-200 ring-1 ring-inset ring-white/15"
             >
               {selectedCount} / {allHooks.length} selected
             </m.span>

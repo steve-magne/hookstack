@@ -66,7 +66,7 @@ export function InstallCommand({ command, meta, mobileCopyPrompt, source = 'stic
       <div data-component="InstallCommand-body" className="flex items-center gap-3 px-4 py-3">
         <code className="min-w-0 flex-1 truncate font-mono text-[13px] sm:text-sm">
           <span className="select-none text-zinc-600">$ </span>
-          <span className="text-violet-300">npx</span>{' '}
+          <span className="text-zinc-300">npx</span>{' '}
           <span className="text-zinc-200">hookstack-cli@latest</span>{' '}
           <span className="text-zinc-200">install</span>{' '}
           {hasHooksOption && (
@@ -75,7 +75,7 @@ export function InstallCommand({ command, meta, mobileCopyPrompt, source = 'stic
               {slugs.length > 0 ? (
                 slugs.map((s, i) => (
                   <span key={`${s}-${i}`}>
-                    <span className="text-indigo-300">{s}</span>
+                    <span className="text-zinc-300">{s}</span>
                     {i < slugs.length - 1 && <span className="text-zinc-600">,</span>}
                   </span>
                 ))
