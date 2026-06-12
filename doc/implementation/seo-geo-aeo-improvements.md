@@ -90,8 +90,14 @@ Le build a révélé que `registry.json` contient des `hook_type` absents du typ
 
 ---
 
-## Points à valider avant déploiement
+## Contact & identité (confirmés)
 
-- **Identité publique** : `/about` et les schémas affichent « Steve Magné » comme mainteneur (déjà semi-public via le repo). Adapter le nom/contact si besoin.
-- **Compte X** : à ajouter dans `SAME_AS` (`src/lib/site.ts`) + `twitter.site` si un handle réel existe.
+- **Mainteneur** : Steve Magné (assumé publiquement).
+- **Feedback / idées / bugs** : ouverture d'une **GitHub issue** (`ISSUES_URL`) — mis en avant sur `/about`, dans `llms.txt` et la carte mainteneur.
+- **Contact direct** : **LinkedIn** (`https://www.linkedin.com/in/steve-magne/`) — ajouté à `MAINTAINER.linkedin`, propagé dans `SAME_AS` (entité Organization) et `PERSON_SAME_AS` (entité Person : founder + author des pages hook/guide), et lié dans le footer + la page About.
+- *Pas de compte X* : `twitter:site` reste volontairement omis.
+
+## Points restants
+
 - **★ GitHub** : masqué si le fetch échoue (build hors-ligne) ; s'affiche en production.
+- **Dette de type** : resynchroniser `HookType` / `HOOK_TYPE_INFO` avec les `hook_type` réellement présents dans le registre.

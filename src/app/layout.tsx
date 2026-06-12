@@ -61,6 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/about" className="hover:text-zinc-300">About</Link>
               <a href="https://github.com/steve-magne/hookstack" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300">GitHub</a>
               <a href="https://www.npmjs.com/package/hookstack-cli" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300">npm</a>
+              <a href={MAINTAINER.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300">LinkedIn</a>
             </nav>
             <p>{T.footerText}</p>
             <p className="mt-1 text-zinc-600">Built &amp; maintained by {MAINTAINER.name} · MIT licensed</p>

@@ -1,6 +1,6 @@
 import { getGuideBySlug, guides, type GuideBlock } from '@/lib/guides'
 import { getHookBySlug } from '@/lib/hooks'
-import { SITE, MAINTAINER } from '@/lib/site'
+import { SITE, MAINTAINER, PERSON_SAME_AS } from '@/lib/site'
 import { ArrowLeft } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -103,7 +103,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
     dateModified: guide.dateModified,
     url: `${SITE.base}/guides/${guide.slug}`,
     mainEntityOfPage: `${SITE.base}/guides/${guide.slug}`,
-    author: { '@type': 'Person', name: MAINTAINER.name, url: MAINTAINER.url },
+    author: { '@type': 'Person', name: MAINTAINER.name, url: MAINTAINER.url, sameAs: PERSON_SAME_AS },
     publisher: {
       '@type': 'Organization',
       name: 'HookStack',

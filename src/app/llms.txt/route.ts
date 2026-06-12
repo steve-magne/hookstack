@@ -1,6 +1,6 @@
 import { allHooks } from '@/lib/hooks'
 import { guides } from '@/lib/guides'
-import { MAINTAINER, SITE } from '@/lib/site'
+import { MAINTAINER, SITE, ISSUES_URL } from '@/lib/site'
 import type { Category } from '@/types/hook'
 import { NextResponse } from 'next/server'
 
@@ -83,7 +83,11 @@ ${guidesSection}
 
 ## About
 
-HookStack is created and maintained by ${MAINTAINER.name} (${MAINTAINER.github}). It is open-source under the MIT licence and dogfooded on its own repository. Official Claude Code hooks documentation: ${SITE.claudeCodeHooksDocs}
+HookStack is created and maintained by ${MAINTAINER.name} (${MAINTAINER.github}). It is open-source under the MIT licence and dogfooded on its own repository.
+
+- Feedback, bug reports, and hook ideas: open a GitHub issue at ${ISSUES_URL}
+- Reach the maintainer directly: ${MAINTAINER.linkedin}
+- Official Claude Code hooks documentation: ${SITE.claudeCodeHooksDocs}
 
 ## Links
 

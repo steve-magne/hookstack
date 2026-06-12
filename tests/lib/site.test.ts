@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { SITE, MAINTAINER, SAME_AS, hookSourceUrl } from '@/lib/site'
+import { SITE, MAINTAINER, SAME_AS, PERSON_SAME_AS, ISSUES_URL, hookSourceUrl } from '@/lib/site'
 
 describe('hookSourceUrl', () => {
   it('returns null when no script path is given', () => {
@@ -36,6 +36,16 @@ describe('site constants', () => {
   it('names a maintainer with a profile URL (E-E-A-T)', () => {
     expect(MAINTAINER.name.length).toBeGreaterThan(0)
     expect(MAINTAINER.url).toMatch(/^https:\/\//)
+    expect(MAINTAINER.linkedin).toMatch(/^https:\/\/www\.linkedin\.com\//)
+  })
+
+  it('includes the maintainer LinkedIn in both entity graphs', () => {
+    expect(SAME_AS).toContain(MAINTAINER.linkedin)
+    expect(PERSON_SAME_AS).toEqual(expect.arrayContaining([MAINTAINER.github, MAINTAINER.linkedin]))
+  })
+
+  it('points feedback to the repo issues', () => {
+    expect(ISSUES_URL).toBe(`${SITE.github}/issues`)
   })
 
   it('uses a stable ISO content date, not a build timestamp', () => {

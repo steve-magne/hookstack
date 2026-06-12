@@ -3,7 +3,7 @@ import { HookSelectButton } from '@/components/HookSelectButton'
 import { HookDetailTracker } from '@/components/HookDetailTracker'
 import { allHooks, getHookBySlug } from '@/lib/hooks'
 import { T, SEO_KEYWORDS } from '@/lib/i18n'
-import { SITE, MAINTAINER, hookSourceUrl } from '@/lib/site'
+import { SITE, MAINTAINER, PERSON_SAME_AS, hookSourceUrl } from '@/lib/site'
 import { HOOK_TYPE_INFO, type HookTypeInfo } from '@/types/hook'
 import { ArrowLeft } from 'lucide-react'
 import type { Metadata } from 'next'
@@ -92,7 +92,7 @@ export default async function HookDetailPage({
     isAccessibleForFree: true,
     datePublished: SITE.contentUpdated,
     dateModified: SITE.contentUpdated,
-    author: { '@type': 'Person', name: MAINTAINER.name, url: MAINTAINER.url },
+    author: { '@type': 'Person', name: MAINTAINER.name, url: MAINTAINER.url, sameAs: PERSON_SAME_AS },
     maintainer: { '@type': 'Organization', name: 'HookStack', url: BASE },
     isPartOf: {
       '@type': 'WebSite',

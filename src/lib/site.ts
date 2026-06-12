@@ -22,12 +22,20 @@ export const MAINTAINER = {
   name: 'Steve Magné',
   role: 'Creator & maintainer',
   github: 'https://github.com/steve-magne',
+  linkedin: 'https://www.linkedin.com/in/steve-magne/',
   url: 'https://github.com/steve-magne',
 } as const
 
-// `sameAs` links for Organization / Person schema — strengthens the entity graph
-// that AI engines use to recognise and attribute the brand.
-export const SAME_AS: string[] = [SITE.github, SITE.npm, MAINTAINER.github]
+// Where to send people. Feedback / ideas → a GitHub issue; reach the maintainer
+// directly → LinkedIn.
+export const ISSUES_URL = `${SITE.github}/issues`
+
+// `sameAs` links for the Organization entity — strengthens the entity graph that
+// AI engines use to recognise and attribute the brand.
+export const SAME_AS: string[] = [SITE.github, SITE.npm, MAINTAINER.github, MAINTAINER.linkedin]
+
+// `sameAs` links for the maintainer (Person) entity — used by founder/author schema.
+export const PERSON_SAME_AS: string[] = [MAINTAINER.github, MAINTAINER.linkedin]
 
 // Build a GitHub source URL for a hook script path (e.g. ".claude/hooks/x.mjs").
 export function hookSourceUrl(scriptPath?: string): string | null {

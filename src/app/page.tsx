@@ -3,7 +3,7 @@ import { StickyInstallBanner } from '@/components/StickyInstallBanner'
 import { HeroRotatingTitle } from '@/components/HeroRotatingTitle'
 import { allHooks } from '@/lib/hooks'
 import { T, SEO_KEYWORDS } from '@/lib/i18n'
-import { SITE, MAINTAINER, SAME_AS } from '@/lib/site'
+import { SITE, MAINTAINER, SAME_AS, PERSON_SAME_AS } from '@/lib/site'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
@@ -107,7 +107,7 @@ export default async function HomePage() {
     logo: `${BASE}/web-app-manifest-512x512.png`,
     description: T.metaDescription,
     foundingDate: SITE.foundingDate,
-    founder: { '@type': 'Person', name: MAINTAINER.name, url: MAINTAINER.url },
+    founder: { '@type': 'Person', name: MAINTAINER.name, url: MAINTAINER.url, sameAs: PERSON_SAME_AS },
     sameAs: SAME_AS,
   }
 

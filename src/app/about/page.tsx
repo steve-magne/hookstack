@@ -1,5 +1,5 @@
 import { allHooks } from '@/lib/hooks'
-import { SITE, MAINTAINER, SAME_AS } from '@/lib/site'
+import { SITE, MAINTAINER, SAME_AS, PERSON_SAME_AS, ISSUES_URL } from '@/lib/site'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
@@ -45,7 +45,8 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: 'How can I get in touch or contribute?',
     body: [
-      'The fastest way to reach the project is GitHub: open an issue, submit a hook, or star the repository to follow along. The CLI is published on npm as hookstack-cli.',
+      'For feedback, bug reports, or hook ideas, the best channel is a GitHub issue on the repository — it keeps the discussion public and trackable. You can also submit a hook by pull request, or star the project to follow along.',
+      'To reach the maintainer directly, Steve Magné is on LinkedIn. The CLI is published on npm as hookstack-cli.',
     ],
   },
 ]
@@ -64,7 +65,7 @@ export default function AboutPage() {
       logo: `${SITE.base}/web-app-manifest-512x512.png`,
       foundingDate: SITE.foundingDate,
       sameAs: SAME_AS,
-      founder: { '@type': 'Person', name: MAINTAINER.name, url: MAINTAINER.url },
+      founder: { '@type': 'Person', name: MAINTAINER.name, url: MAINTAINER.url, sameAs: PERSON_SAME_AS },
     },
   }
 
@@ -107,11 +108,14 @@ export default function AboutPage() {
           <p className="text-lg font-semibold text-white">{MAINTAINER.name}</p>
           <p className="mb-3 text-sm text-zinc-400">{MAINTAINER.role}</p>
           <div className="flex flex-wrap gap-4 text-sm">
+            <a href={MAINTAINER.linkedin} target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
+              LinkedIn
+            </a>
             <a href={MAINTAINER.github} target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
               GitHub profile
             </a>
-            <a href={SITE.github} target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
-              Project repository
+            <a href={ISSUES_URL} target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
+              Report an issue
             </a>
             <a href={SITE.npm} target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
               npm package
