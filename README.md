@@ -8,13 +8,13 @@ A growing catalogue of production-ready lifecycle hooks for Claude Code.
 Browse, select, install with one command — your agent gets guardrails in under a minute.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![Hooks](https://img.shields.io/badge/hooks-catalogue-6366f1?style=flat-square)](https://hookstack.app)
+[![Hooks](https://img.shields.io/badge/hooks-catalogue-6366f1?style=flat-square)](https://www.hookstack.app/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![CodeQL](https://img.shields.io/badge/CodeQL-security-passing?style=flat-square&logo=github&logoColor=white)](https://github.com/steve-magne/hookstack/actions/workflows/codeql.yml)
 [![Known Vulnerabilities](https://snyk.io/test/github/steve-magne/hookstack/badge.svg?style=flat-square)](https://snyk.io/test/github/steve-magne/hookstack)
 
-### **[→ hookstack.app](https://hookstack.app)**
+### **[→ hookstack.app](https://www.hookstack.app/)**
 
 <img src="public/demo-hookstack.gif" alt="HookStack Mode Demo" width="600"/>
 
@@ -38,7 +38,7 @@ npx hookstack-cli@latest install
 
 That's it. The CLI walks you through picking hooks, writes `.claude/hooks/*.mjs`, and patches `.claude/settings.json`, `tests/*` associated if needed — no manual copy-paste, no JSON editing.
 
-Want to fine-tune your Hookstack? Go to **[hookstack.app](https://hookstack.app)** — browse the full catalogue, select exactly what you need, and copy the generated command:
+Want to fine-tune your Hookstack? Go to **[hookstack.app](https://www.hookstack.app/)** — browse the full catalogue, select exactly what you need, and copy the generated command:
 
 ```bash
 npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-block-destructive,session-start-load-git-context
@@ -221,9 +221,9 @@ The CLI re-fetches each installed hook from the registry and overwrites the loca
 
 Hookstack is built by [Steve Magne](https://github.com/steve-magne) with contributions from the Claude Code community.
 
-- **Catalogue**: [hookstack.app](https://hookstack.app)
+- **Catalogue**: [hookstack.app](https://www.hookstack.app/)
 - **Issues**: [github.com/steve-magne/hookstack/issues](https://github.com/steve-magne/hookstack/issues)
-- **Contribute a hook**: [hookstack.app/contribute](https://hookstack.app/contribute)
+- **Contribute a hook**: [hookstack.app/contribute](https://www.hookstack.app/contribute)
 - **npm**: [npmjs.com/package/hookstack-cli](https://www.npmjs.com/package/hookstack-cli)
 
 ---

@@ -15,7 +15,7 @@ Chaque commande `npx hookstack-cli@latest install` contient l'URL du produit. Qu
 
 Amplifier : ajouter un message post-install du CLI :
 ```
-✅ 3 hooks installed. Share your stack: https://hookstack.app
+✅ 3 hooks installed. Share your stack: https://www.hookstack.app/
 ```
 
 ### Canal 2 — GitHub visibility

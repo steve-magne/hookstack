@@ -6,7 +6,7 @@
 
 **Tagline officielle** : *"Get your HookStack in 1 minute"*
 
-**Production** : https://hookstack.app
+**Production** : https://www.hookstack.app/
 
 **Catalogue (juin 2026)** : hooks répartis en 6 catégories (security, context, validation, notification, workflow, documentation).
 

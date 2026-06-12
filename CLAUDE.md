@@ -23,7 +23,7 @@ Les utilisateurs découvrent le projet par trois canaux. Le message, le flow et 
 | Canal | Fichier / URL |
 |---|---|
 | Dépôt GitHub | [`README.md`](README.md) — tagline, exemples CLI, tableau des hooks phares |
-| Site web | `https://hookstack.app` — catalogue filtrable + `HookConfigurator` |
+| Site web | `https://www.hookstack.app/` — catalogue filtrable + `HookConfigurator` |
 | Package npm | [`packages/cli/README.md`](packages/cli/README.md) — référence CLI (`npx hookstack-cli@latest`) |
 
 > Règle : toute évolution du flow utilisateur, des slugs d'exemple ou du wording CLI doit être répercutée dans les trois. Le README GitHub et le README npm sont les deux faces d'une même promesse — une divergence brouille le message.
