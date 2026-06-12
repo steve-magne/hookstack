@@ -17,11 +17,11 @@ export default function NotFoundPage() {
       <section className="relative min-w-0">
         <div
           aria-hidden
-          className="pointer-events-none absolute -left-8 top-4 -z-10 h-72 w-72 rounded-full bg-indigo-500/10 blur-[120px]"
+          className="pointer-events-none absolute -left-8 top-4 -z-10 h-72 w-72 rounded-full bg-white/5 blur-[120px]"
         />
 
         <p className="mb-5 inline-flex items-center gap-2 rounded-lg border border-zinc-700/70 bg-zinc-900/70 px-3 py-1.5 font-mono text-xs text-zinc-400">
-          <Terminal className="size-3.5 text-indigo-300" />
+          <Terminal className="size-3.5 text-zinc-400" />
           route.check --strict
         </p>
 
@@ -33,7 +33,6 @@ export default function NotFoundPage() {
             delay={('Lost route.'.length + 1) * splitFlapHero.perChar}
             eager
             block
-            innerClassName="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent"
             {...splitFlapHero}
           />
         </h1>
@@ -98,7 +97,7 @@ export default function NotFoundPage() {
             ['03', 'Recover', 'Catalogue fallback is one click away.'],
           ].map(([step, title, desc]) => (
             <div key={step} className="bg-zinc-950 px-4 py-4">
-              <span className="font-mono text-xs font-semibold text-indigo-400">{step}</span>
+              <span className="font-mono text-xs font-semibold text-zinc-400">{step}</span>
               <p className="mt-2 text-sm font-semibold text-white">{title}</p>
               <p className="mt-1 text-xs leading-relaxed text-zinc-500">{desc}</p>
             </div>

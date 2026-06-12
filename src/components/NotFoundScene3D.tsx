@@ -206,10 +206,10 @@ export function NotFoundScene3D() {
     >
       <div ref={mountRef} className="absolute inset-0" aria-hidden />
       <div className="pointer-events-none absolute inset-x-4 top-4 flex items-center justify-between gap-3">
-        <span className="rounded-lg border border-indigo-400/20 bg-indigo-400/10 px-2.5 py-1 font-mono text-[11px] text-indigo-200">
+        <span className="rounded-lg border border-zinc-700 bg-zinc-800/60 px-2.5 py-1 font-mono text-[11px] text-zinc-300">
           pipeline-node / route-miss
         </span>
-        <span className="rounded-lg border border-violet-400/20 bg-violet-400/10 px-2.5 py-1 font-mono text-[11px] text-violet-200">
+        <span className="rounded-lg border border-zinc-700 bg-zinc-800/60 px-2.5 py-1 font-mono text-[11px] text-zinc-400">
           Command rejected
         </span>
       </div>
@@ -219,7 +219,7 @@ export function NotFoundScene3D() {
             key={label}
             className={`truncate rounded-md border px-2 py-1 text-center font-mono text-[10px] ${
               index === 3
-                ? 'border-violet-400/30 bg-violet-400/10 text-violet-200'
+                ? 'border-white/20 bg-white/[0.06] text-zinc-200'
                 : 'border-white/10 bg-white/[0.03] text-zinc-400'
             }`}
           >

@@ -7,7 +7,7 @@ export function Header() {
       <div data-component="HeaderInner" className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Link data-component="HeaderLogo" href="/" className="inline-flex items-center" aria-label="HookStack — home">
           <span className="text-base font-semibold tracking-tight text-white">
-            Hook<span className="text-indigo-400">Stack</span>
+            Hook<span className="text-white">Stack</span>
           </span>
         </Link>
         <nav data-component="HeaderNav" className="flex items-center gap-3 text-sm sm:gap-4">

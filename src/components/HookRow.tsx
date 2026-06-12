@@ -79,7 +79,7 @@ export function HookRow({ hook, groupBy, intro = false, introDelay = 0 }: Props)
               <SplitFlap text={hook.name} play={intro} delay={introDelay} />
             </h4>
             {hook.default_on && (
-              <ShieldCheck className="size-3 shrink-0 text-indigo-400" aria-label={T.mustPreselected} />
+              <ShieldCheck className="size-3 shrink-0 text-zinc-300" aria-label={T.mustPreselected} />
             )}
           </div>
           <div className="mt-1 sm:hidden">
@@ -137,7 +137,7 @@ export function HookRow({ hook, groupBy, intro = false, introDelay = 0 }: Props)
               {/* Benefit */}
               {hook.benefit && (
                 <div className="mb-3 flex items-start gap-2.5">
-                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-300 ring-1 ring-inset ring-indigo-500/25">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-white/10 text-zinc-200 ring-1 ring-inset ring-white/15">
                     <Zap className="size-3.5" fill="currentColor" strokeWidth={0} />
                   </span>
                   <p className="text-[14px] font-semibold leading-snug text-white">{hook.benefit}</p>
@@ -184,8 +184,8 @@ export function HookRow({ hook, groupBy, intro = false, introDelay = 0 }: Props)
               <div className="mt-3 flex items-center gap-1.5 border-t border-white/[0.06] pt-3 text-[11px] text-zinc-500">
                 {hook.default_on ? (
                   <>
-                    <ShieldCheck className="size-3.5 text-indigo-400" />
-                    <span className="text-indigo-300">{T.previewMustHint}</span>
+                    <ShieldCheck className="size-3.5 text-zinc-300" />
+                    <span className="text-zinc-300">{T.previewMustHint}</span>
                   </>
                 ) : (
                   <span>
