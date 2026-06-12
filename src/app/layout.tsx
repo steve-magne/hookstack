@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
 import './globals.css'
+import Link from 'next/link'
 import { MotionProvider } from '@/components/MotionProvider'
 import { Header } from '@/components/Header'
 import { T, SEO_KEYWORDS } from '@/lib/i18n'
+import { MAINTAINER } from '@/lib/site'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.hookstack.app'),
@@ -13,6 +15,9 @@ export const metadata: Metadata = {
   },
   description: T.metaDescription,
   keywords: SEO_KEYWORDS,
+  authors: [{ name: MAINTAINER.name, url: MAINTAINER.url }],
+  creator: MAINTAINER.name,
+  publisher: 'HookStack',
   robots: { index: true, follow: true },
   openGraph: {
     siteName: 'HookStack',
@@ -49,8 +54,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* PageContent */}
           <main data-component="PageContent" className="flex-1">{children}</main>
           {/* Footer */}
-          <footer data-component="Footer" className="border-t border-[var(--color-border)] py-6 text-center text-sm text-zinc-500">
-            <span>{T.footerText}</span>
+          <footer data-component="Footer" className="border-t border-[var(--color-border)] py-8 text-center text-sm text-zinc-500">
+            <nav data-component="FooterNav" className="mb-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+              <Link href="/#catalogue" className="hover:text-zinc-300">Catalogue</Link>
+              <Link href="/guides" className="hover:text-zinc-300">Guides</Link>
+              <Link href="/about" className="hover:text-zinc-300">About</Link>
+              <a href="https://github.com/steve-magne/hookstack" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300">GitHub</a>
+              <a href="https://www.npmjs.com/package/hookstack-cli" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300">npm</a>
+              <a href={MAINTAINER.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300">LinkedIn</a>
+            </nav>
+            <p>{T.footerText}</p>
+            <p className="mt-1 text-zinc-600">Built &amp; maintained by {MAINTAINER.name} · MIT licensed</p>
           </footer>
           {/* GitHubFab */}
           <a

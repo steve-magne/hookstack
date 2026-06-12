@@ -1,4 +1,6 @@
 import { allHooks } from '@/lib/hooks'
+import { guides } from '@/lib/guides'
+import { MAINTAINER, SITE, ISSUES_URL } from '@/lib/site'
 import type { Category } from '@/types/hook'
 import { NextResponse } from 'next/server'
 
@@ -28,6 +30,10 @@ export async function GET() {
       return `### ${label} (${hooks.length})\n\n${lines}`
     })
     .join('\n\n')
+
+  const guidesSection = guides
+    .map((g) => `- [${g.title}](${BASE}/guides/${g.slug}): ${g.description}`)
+    .join('\n')
 
   const content = `# HookStack
 
@@ -69,11 +75,27 @@ A hook is a script executed by Claude Code at specific events:
 
 ${hookSections}
 
+## Guides
+
+In-depth articles on Claude Code hooks:
+
+${guidesSection}
+
+## About
+
+HookStack is created and maintained by ${MAINTAINER.name} (${MAINTAINER.github}). It is open-source under the MIT licence and dogfooded on its own repository.
+
+- Feedback, bug reports, and hook ideas: open a GitHub issue at ${ISSUES_URL}
+- Reach the maintainer directly: ${MAINTAINER.linkedin}
+- Official Claude Code hooks documentation: ${SITE.claudeCodeHooksDocs}
+
 ## Links
 
 - Catalogue: ${BASE}
-- Source (GitHub): https://github.com/steve-magne/hookstack
-- CLI (npm): https://www.npmjs.com/package/hookstack-cli
+- Guides: ${BASE}/guides
+- About: ${BASE}/about
+- Source (GitHub): ${SITE.github}
+- CLI (npm): ${SITE.npm}
 - Sitemap: ${BASE}/sitemap.xml
 
 ## Permissions for AI agents
