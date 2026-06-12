@@ -6,7 +6,7 @@ import { Header } from '@/components/Header'
 import { T, SEO_KEYWORDS } from '@/lib/i18n'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://hookstack.vercel.app'),
+  metadataBase: new URL('https://www.hookstack.app'),
   title: {
     template: '%s | HookStack',
     default: 'HookStack',

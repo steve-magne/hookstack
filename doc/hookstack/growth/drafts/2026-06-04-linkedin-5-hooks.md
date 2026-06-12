@@ -36,7 +36,7 @@ What's the first guardrail you'd want every agent on your team to have?
 
 ## 1er commentaire (à coller juste après publication)
 
-The catalogue is here → hookstack.vercel.app · code's open at github.com/steve-magne/hookstack
+The catalogue is here → hookstack.app · code's open at github.com/steve-magne/hookstack
 
 ---
 

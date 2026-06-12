@@ -49,7 +49,7 @@ Première ligne = 80 % du job. Rotation d'angles qui marchent sur cette audience
 
 Un par post, jamais deux. Par ordre de « demande » croissante :
 1. Le plus doux : *« Code's open if you want it: github.com/steve-magne/hookstack »*
-2. Moyen : *« Browse the catalogue → hookstack.vercel.app »*
+2. Moyen : *« Browse the catalogue → hookstack.app »*
 3. Direct (réserve aux audiences chaudes) : *« ⭐ if it's useful — it genuinely helps. »*
 
 ## Templates rapides

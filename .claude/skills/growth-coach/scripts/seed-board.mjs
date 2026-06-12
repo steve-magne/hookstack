@@ -32,7 +32,7 @@ const ISSUES = [
   ['[Foundation] Social preview image du repo (Settings → Social preview)', ['growth', 'seo'],
     "Image affichée quand le repo est partagé sur X/LinkedIn/Slack. Sans elle, les partages sont fades. Réutiliser l'OG image du site.\n\nRéf : Phase 0."],
   ['[Foundation] OG image + meta description du site', ['growth', 'seo'],
-    'hookstack.vercel.app doit avoir une OG image et une meta description soignées pour le partage social. Vérifier aussi que les events GA4 marketing tournent.\n\nRéf : Phase 0.'],
+    'hookstack.app doit avoir une OG image et une meta description soignées pour le partage social. Vérifier aussi que les events GA4 marketing tournent.\n\nRéf : Phase 0.'],
   ['[Foundation] Message post-install du CLI avec lien repo + CTA star', ['growth', 'content'],
     "Le CLI (`packages/cli`) doit afficher après install : `✅ hooks installed · star us → github.com/steve-magne/hookstack`. C'est le moteur de la boucle virale (chaque install = un partage potentiel).\n\nRéf : Phase 0 + 07-strategie-marketing.md, Canal 1."],
   ['[Seed] Cornerstone : article « The 5 Claude Code hooks I run on every project »', ['growth', 'content'],

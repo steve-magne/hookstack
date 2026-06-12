@@ -1,7 +1,7 @@
 # DRAFT — Cornerstone article (dev.to + blog)
 
 > **Statut** : à relire et publier (draft-and-review). Canal : dev.to (canonical) + blog perso.
-> **Visuel maître** : 1 GIF de démo (~15s) en tête — sélection de hooks sur hookstack.vercel.app → la commande `npx` se construit → install dans un terminal → `✓ Installed`.
+> **Visuel maître** : 1 GIF de démo (~15s) en tête — sélection de hooks sur hookstack.app → la commande `npx` se construit → install dans un terminal → `✓ Installed`.
 > **CTA unique** : lien repo en fin d'article (« code's open »).
 > **Atomise vers** : `2026-06-04-x-thread-5-hooks.md`, `2026-06-04-linkedin-5-hooks.md`.
 
@@ -101,7 +101,7 @@ npx hookstack-cli@latest install
 
 These five are a slice of a larger catalogue — 60+ hooks for Claude Code & GitHub Copilot, each with the real code and the use case. It's open-source, and it grows as people submit the hooks from their own repos.
 
-Browse them: **hookstack.vercel.app**
+Browse them: **hookstack.app**
 
 If you build your own hook worth sharing, the catalogue takes submissions. The repo's open: **github.com/steve-magne/hookstack** — a star helps other people find it.
 

@@ -2,7 +2,7 @@
 
 **Install Claude Code hooks in one command.**
 
-[hookstack.vercel.app](https://hookstack.vercel.app) — browse a growing catalogue of Claude Code hooks, then run this CLI to wire them into your project.
+[hookstack.app](https://www.hookstack.app) — browse a growing catalogue of Claude Code hooks, then run this CLI to wire them into your project.
 
 ---
 
@@ -69,7 +69,7 @@ No new dependencies are added to your project. Hooks are plain Node.js scripts �
 
 ## Finding hooks
 
-Browse and filter the full catalogue at **[hookstack.vercel.app](https://hookstack.vercel.app)**:
+Browse and filter the full catalogue at **[hookstack.app](https://www.hookstack.app)**:
 
 - Filter by category (`security`, `workflow`, `context`, `validation`…)
 - Select the hooks you want — your basket persists in the browser

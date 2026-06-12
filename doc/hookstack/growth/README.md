@@ -2,7 +2,7 @@
 
 Ce dossier est le **cerveau de growth** de Hookstack. La stratégie marketing « quoi/pourquoi » vit dans [`../07-strategie-marketing.md`](../07-strategie-marketing.md). Ici on couvre le **« comment on exécute, semaine après semaine »** : la machine qui transforme la stratégie en stars et en trafic.
 
-**Objectif** : `github.com/steve-magne/hookstack` → **5 000 ⭐** (repo trending) + trafic sur `hookstack.vercel.app`.
+**Objectif** : `github.com/steve-magne/hookstack` → **5 000 ⭐** (repo trending) + trafic sur `hookstack.app`.
 
 ## Le système en une image
 
