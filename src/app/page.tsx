@@ -137,6 +137,9 @@ export default function HomePage() {
 
         {/* CatalogueSection */}
         <section data-component="CatalogueSection" id="catalogue" className="scroll-mt-20 pb-24">
+          <h2 className="mb-8 text-center text-2xl font-bold text-white">
+            Browse the Claude Code hooks catalogue
+          </h2>
           <CatalogueExplorer />
         </section>
       </div>
