@@ -80,12 +80,26 @@ export default function HomePage() {
     })),
   }
 
+  const organizationJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'HookStack',
+    url: BASE,
+    logo: `${BASE}/web-app-manifest-512x512.png`,
+    description: T.metaDescription,
+    sameAs: [
+      'https://github.com/steve-magne/hookstack',
+      'https://www.npmjs.com/package/hookstack-cli',
+    ],
+  }
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
       {/* HomePage */}
       <div data-component="HomePage" className="mx-auto max-w-6xl px-4">
         {/* HeroSection */}

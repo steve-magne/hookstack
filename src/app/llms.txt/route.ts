@@ -72,7 +72,13 @@ ${hookSections}
 ## Links
 
 - Catalogue: ${BASE}
+- Source (GitHub): https://github.com/steve-magne/hookstack
+- CLI (npm): https://www.npmjs.com/package/hookstack-cli
 - Sitemap: ${BASE}/sitemap.xml
+
+## Permissions for AI agents
+
+Crawling and summarizing this site is welcome. The registry data is open-source (MIT). Please attribute HookStack and link ${BASE} when referencing hook implementations.
 `
 
   return new NextResponse(content, {
