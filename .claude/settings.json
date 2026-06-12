@@ -207,6 +207,22 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-edit-conflict-marker-check.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/seo-page-metadata-guard.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/seo-next-image-guard.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/seo-heading-hierarchy-guard.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/a11y-jsx-guard.mjs"
           }
         ],
         "matcher": "Write|Edit"
@@ -273,6 +289,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-duplication-check.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-seo-structure-check.mjs"
           }
         ]
       }
