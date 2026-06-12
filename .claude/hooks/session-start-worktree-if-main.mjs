@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// SessionStart: crée un worktree isolé si la session démarre sur main/master.
-// Ne supprime JAMAIS de worktree : un worktree mergé peut encore héberger une session
-// active/référencée — le supprimer ferait « disparaître » cette session. Le nettoyage
-// des worktrees mergés reste une opération manuelle (`git worktree prune`).
+// SessionStart: crée un worktree isolé unique si la session démarre sur main/master.
+// Chaque session obtient un worktree frais avec un suffixe aléatoire — jamais de
+// réutilisation d'un worktree existant (un worktree désynchronisé provoquerait des conflits).
+// Le nettoyage reste manuel (`git worktree prune`).
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
+import { randomBytes } from 'crypto';
 import { fileURLToPath } from 'url';
 
 function defaultExec(cmd) {
@@ -19,11 +20,16 @@ function defaultAddWorktree(path, branchName) {
   });
 }
 
+function defaultRandom(len = 6) {
+  return randomBytes(Math.ceil(len / 2)).toString('hex').slice(0, len);
+}
+
 export function run({
   exec = defaultExec,
   addWorktree = defaultAddWorktree,
   exists = existsSync,
   now = () => new Date(),
+  random = defaultRandom,
 } = {}) {
   const branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');
   if (!branch || !/^(main|master)$/.test(branch)) return null;
@@ -40,31 +46,18 @@ export function run({
   exec('git fetch --quiet origin main');
   exec('git merge --ff-only origin/main');
 
+  // Nom unique par session : date + suffixe hex aléatoire (même format que Claude Code App)
   const date = now().toISOString().slice(0, 10).replace(/-/g, '');
-  const branchName = `work/session-${date}`;
-  const worktreePath = `${currentRoot}/.claude/worktrees/session-${date}`;
+  const suffix = random(6);
+  const branchName = `claude/session-${date}-${suffix}`;
+  const worktreePath = `${currentRoot}/.claude/worktrees/session-${date}-${suffix}`;
 
-  // Vérifier si un worktree pour aujourd'hui existe encore (non mergé)
-  const freshList = exec('git worktree list');
-  const todayLine = freshList.split('\n').slice(1).find((l) => l.includes(branchName));
-  if (todayLine) {
-    const wtPath = todayLine.split(/\s+/)[0];
-    return [
-      `## Worktree session existant`,
-      `- Session démarrée sur \`main\`. Le worktree du jour est déjà actif.`,
-      `- **Chemin** : \`${wtPath}\``,
-      `- **Branche** : \`${branchName}\``,
-      `- Effectuez vos modifications dans ce worktree, pas dans le dépôt principal.`,
-    ].join('\n') + '\n';
-  }
-
-  // Créer un worktree frais depuis main
   try {
     addWorktree(worktreePath, branchName);
   } catch {
     return [
       `## ⚠️  Session démarrée sur \`main\``,
-      `- Impossible de créer un worktree automatiquement (branche \`${branchName}\` peut-être déjà existante).`,
+      `- Impossible de créer un worktree automatiquement.`,
       `- Créez manuellement un worktree ou une branche avant de modifier des fichiers.`,
     ].join('\n') + '\n';
   }
@@ -73,7 +66,7 @@ export function run({
 
   return [
     `## Worktree isolé créé automatiquement`,
-    `- Session démarrée sur \`main\` : un worktree a été créé pour isoler les modifications.`,
+    `- Session démarrée sur \`main\` : un worktree unique a été créé pour cette session.`,
     `- **Chemin** : \`${worktreePath}\``,
     `- **Branche** : \`${branchName}\``,
     `- Travaillez dans ce worktree — évitez de modifier des fichiers dans le dépôt principal.`,

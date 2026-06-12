@@ -795,62 +795,6 @@
     "default_on": true
   },
   {
-    "benefit": "The agent only reaches domains you approved",
-    "category": "workflow",
-    "description": "Controls the agent's network access by only allowing WebFetch to a list of approved domains. Any other URL is blocked.",
-    "hook_type": "PreToolUse",
-    "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Vérifie que l'URL est dans la liste des domaines autorisés (PreToolUse WebFetch)\nimport { readFileSync, existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nconst DEFAULT_DOMAINS = [\n  'github.com', 'raw.githubusercontent.com', 'npmjs.com',\n  'docs.anthropic.com', 'developer.mozilla.org', 'nodejs.org',\n  'www.typescriptlang.org', 'nextjs.org', 'tailwindcss.com',\n  'supabase.com', 'vercel.com',\n];\n\nexport function run(\n  input,\n  {\n    exists = existsSync,\n    readFile = readFileSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n  } = {},\n) {\n  const url = input.tool_input?.url ?? '';\n  if (!url) return null;\n\n  const allowlistFile = join(projectDir, '.claude', 'webfetch-allowlist.json');\n  const allowed = exists(allowlistFile)\n    ? JSON.parse(readFile(allowlistFile, 'utf8'))\n    : DEFAULT_DOMAINS;\n\n  try {\n    const hostname = new URL(url).hostname;\n    const ok = allowed.some((d) => hostname === d || hostname.endsWith('.' + d));\n    if (!ok) {\n      return {\n        decision: 'block',\n        reason: `Domaine non autorisé : ${hostname}. Ajoutez-le à .claude/webfetch-allowlist.json si nécessaire.`,\n      };\n    }\n  } catch {\n    // URL invalide — laisser passer\n  }\n  return null;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
-      "config": {
-        "hooks": {
-          "PreToolUse": [
-            {
-              "hooks": [
-                {
-                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/webfetch-allowlist.mjs",
-                  "type": "command"
-                }
-              ],
-              "matcher": "WebFetch"
-            }
-          ]
-        }
-      },
-      "script_path": ".claude/hooks/webfetch-allowlist.mjs",
-      "type": "settings_json",
-      "security": {
-        "snyk": {
-          "high": 0,
-          "medium": 0,
-          "low": 0,
-          "scannedAt": "2026-06-03T12:35:39.440Z"
-        },
-        "codeql": {
-          "critical": 0,
-          "high": 0,
-          "medium": 0,
-          "low": 0,
-          "scannedAt": "2026-06-05T02:10:00.374Z"
-        }
-      },
-      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/webfetch-allowlist.mjs';\n\nconst noFile = { exists: () => false };\n\ndescribe('webfetch-allowlist', () => {\n  it('laisse passer un domaine par défaut', () => {\n    expect(run({ tool_input: { url: 'https://github.com/x' } }, noFile)).toBeNull();\n  });\n\n  it('laisse passer un sous-domaine autorisé', () => {\n    expect(run({ tool_input: { url: 'https://raw.githubusercontent.com/a/b' } }, noFile)).toBeNull();\n  });\n\n  it('bloque un domaine non autorisé', () => {\n    const r = run({ tool_input: { url: 'https://evil.example.com' } }, noFile);\n    expect(r?.decision).toBe('block');\n    expect(r?.reason).toContain('evil.example.com');\n  });\n\n  it('respecte une allowlist personnalisée', () => {\n    const deps = { exists: () => true, readFile: () => JSON.stringify(['my.dev']) };\n    expect(run({ tool_input: { url: 'https://my.dev/x' } }, deps)).toBeNull();\n    expect(run({ tool_input: { url: 'https://github.com/x' } }, deps)?.decision).toBe('block');\n  });\n\n  it('laisse passer si url absente', () => {\n    expect(run({ tool_input: {} }, noFile)).toBeNull();\n  });\n\n  it('laisse passer une url invalide', () => {\n    expect(run({ tool_input: { url: 'pas-une-url' } }, noFile)).toBeNull();\n  });\n});\n"
-    },
-    "name": "Domain allowlist for WebFetch",
-    "slug": "pre-webfetch-domain-allowlist",
-    "tags": [
-      "workflow",
-      "network",
-      "webfetch",
-      "allowlist"
-    ],
-    "trigger": "WebFetch",
-    "use_cases": [
-      "Network control",
-      "Data compliance",
-      "Restricted environments"
-    ]
-  },
-  {
     "benefit": "See exactly how hard each session works",
     "category": "notification",
     "description": "Increments a counter per tool type after each use and logs the activity, providing a view of the agent's usage intensity per session.",
@@ -3688,64 +3632,6 @@
     ]
   },
   {
-    "benefit": "Start on main and you're moved to a worktree",
-    "category": "workflow",
-    "description": "At session start, detects if the current branch is main/master and automatically creates a dated git worktree (work/session-YYYYMMDD). The agent is informed of the new path and instructed to work there instead of the main repo.",
-    "hook_type": "SessionStart",
-    "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// SessionStart: crée un worktree isolé si la session démarre sur main/master.\n// Ne supprime JAMAIS de worktree : un worktree mergé peut encore héberger une session\n// active/référencée — le supprimer ferait « disparaître » cette session. Le nettoyage\n// des worktrees mergés reste une opération manuelle (`git worktree prune`).\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nfunction defaultAddWorktree(path, branchName) {\n  execSync(`git worktree add \"${path}\" -b \"${branchName}\"`, {\n    encoding: 'utf8',\n    timeout: 15_000,\n    stdio: ['ignore', 'ignore', 'ignore'],\n  });\n}\n\nexport function run({\n  exec = defaultExec,\n  addWorktree = defaultAddWorktree,\n  exists = existsSync,\n  now = () => new Date(),\n} = {}) {\n  const branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');\n  if (!branch || !/^(main|master)$/.test(branch)) return null;\n\n  const currentRoot = exec('git rev-parse --show-toplevel');\n  if (!currentRoot) return null;\n\n  // Ne pas agir si on est déjà dans un worktree secondaire\n  const worktreeList = exec('git worktree list');\n  const mainRoot = worktreeList.split('\\n')[0]?.split(/\\s+/)[0] ?? '';\n  if (mainRoot !== currentRoot) return null;\n\n  // Synchroniser main avec le remote avant de créer le worktree\n  exec('git fetch --quiet origin main');\n  exec('git merge --ff-only origin/main');\n\n  const date = now().toISOString().slice(0, 10).replace(/-/g, '');\n  const branchName = `work/session-${date}`;\n  const worktreePath = `${currentRoot}/.claude/worktrees/session-${date}`;\n\n  // Vérifier si un worktree pour aujourd'hui existe encore (non mergé)\n  const freshList = exec('git worktree list');\n  const todayLine = freshList.split('\\n').slice(1).find((l) => l.includes(branchName));\n  if (todayLine) {\n    const wtPath = todayLine.split(/\\s+/)[0];\n    return [\n      `## Worktree session existant`,\n      `- Session démarrée sur \\`main\\`. Le worktree du jour est déjà actif.`,\n      `- **Chemin** : \\`${wtPath}\\``,\n      `- **Branche** : \\`${branchName}\\``,\n      `- Effectuez vos modifications dans ce worktree, pas dans le dépôt principal.`,\n    ].join('\\n') + '\\n';\n  }\n\n  // Créer un worktree frais depuis main\n  try {\n    addWorktree(worktreePath, branchName);\n  } catch {\n    return [\n      `## ⚠️  Session démarrée sur \\`main\\``,\n      `- Impossible de créer un worktree automatiquement (branche \\`${branchName}\\` peut-être déjà existante).`,\n      `- Créez manuellement un worktree ou une branche avant de modifier des fichiers.`,\n    ].join('\\n') + '\\n';\n  }\n\n  if (!exists(worktreePath)) return null;\n\n  return [\n    `## Worktree isolé créé automatiquement`,\n    `- Session démarrée sur \\`main\\` : un worktree a été créé pour isoler les modifications.`,\n    `- **Chemin** : \\`${worktreePath}\\``,\n    `- **Branche** : \\`${branchName}\\``,\n    `- Travaillez dans ce worktree — évitez de modifier des fichiers dans le dépôt principal.`,\n  ].join('\\n') + '\\n';\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) process.stdout.write(result);\n}\n",
-      "config": {
-        "hooks": {
-          "SessionStart": [
-            {
-              "hooks": [
-                {
-                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-worktree-if-main.mjs",
-                  "type": "command"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "script_path": ".claude/hooks/session-start-worktree-if-main.mjs",
-      "type": "settings_json",
-      "security": {
-        "snyk": {
-          "high": 0,
-          "medium": 0,
-          "low": 0,
-          "scannedAt": "2026-06-03T12:35:39.440Z"
-        },
-        "codeql": {
-          "critical": 0,
-          "high": 0,
-          "medium": 0,
-          "low": 0,
-          "scannedAt": "2026-06-05T02:10:00.374Z"
-        }
-      },
-      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/session-start-worktree-if-main.mjs';\n\nconst MAIN = '/repos/hookstack';\nconst DATE = '20260602';\nconst BRANCH = `work/session-${DATE}`;\nconst WT_PATH = `${MAIN}/.claude/worktrees/session-${DATE}`;\n\nfunction makeExec({ branch = 'main', mainRoot = MAIN, currentRoot = MAIN, worktreeList, mergedBranches = '' } = {}) {\n  const defaultList = worktreeList ?? `${MAIN}  abc1234 [main]`;\n  return vi.fn((cmd) => {\n    if (cmd.includes('branch --show-current')) return branch;\n    if (cmd.includes('rev-parse --show-toplevel')) return currentRoot;\n    if (cmd.includes('git worktree list')) return defaultList;\n    if (cmd.includes('fetch')) return '';\n    if (cmd.includes('branch --merged')) return mergedBranches;\n    return '';\n  });\n}\n\ndescribe('session-start-worktree-if-main', () => {\n  it(\"ne fait rien si la branche courante n'est pas main\", () => {\n    const exec = makeExec({ branch: 'feature/foo' });\n    const result = run({ exec });\n    expect(result).toBeNull();\n  });\n\n  it('ne fait rien si on est déjà dans un worktree secondaire', () => {\n    const exec = makeExec({\n      currentRoot: WT_PATH,\n      worktreeList: `${MAIN}  abc [main]\\n${WT_PATH}  def [${BRANCH}]`,\n    });\n    const result = run({ exec });\n    expect(result).toBeNull();\n  });\n\n  it(\"cree un worktree s'il n'en existe pas pour aujourd'hui\", () => {\n    const exec = makeExec();\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => true);\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    const result = run({ exec, addWorktree, exists, now });\n    expect(addWorktree).toHaveBeenCalledWith(WT_PATH, BRANCH);\n    expect(result).toContain('Worktree isolé créé automatiquement');\n  });\n\n  it(\"reutilise le worktree du jour s'il existe et n'est pas merge\", () => {\n    const list = `${MAIN}  abc [main]\\n${WT_PATH}  def [${BRANCH}]`;\n    const exec = makeExec({ worktreeList: list, mergedBranches: '' });\n    const addWorktree = vi.fn();\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    const result = run({ exec, addWorktree, now });\n    expect(addWorktree).not.toHaveBeenCalled();\n    expect(result).toContain('Worktree session existant');\n    expect(result).toContain(WT_PATH);\n  });\n\n  it('ne supprime jamais un worktree mergé (préserve les sessions actives)', () => {\n    // Un worktree mergé d'un autre jour est présent : il ne doit pas être touché.\n    const oldPath = `${MAIN}/.claude/worktrees/session-20260101`;\n    const oldBranch = 'work/session-20260101';\n    const list = `${MAIN}  abc [main]\\n${oldPath}  def [${oldBranch}]`;\n    const exec = makeExec({ worktreeList: list, mergedBranches: `  main\\n  ${oldBranch}` });\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => true);\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    const result = run({ exec, addWorktree, exists, now });\n    // Aucune commande destructive ne doit être émise\n    const calls = exec.mock.calls.map((c) => c[0]);\n    expect(calls.some((c) => c.includes('worktree remove'))).toBe(false);\n    expect(calls.some((c) => c.includes('branch -D'))).toBe(false);\n    // Le worktree du jour est tout de même créé\n    expect(addWorktree).toHaveBeenCalledWith(WT_PATH, BRANCH);\n    expect(result).toContain('Worktree isolé créé automatiquement');\n  });\n\n  it('synchronise main avec le remote avant de créer le worktree', () => {\n    const calls = [];\n    const exec = vi.fn((cmd) => {\n      calls.push(cmd);\n      if (cmd.includes('branch --show-current')) return 'main';\n      if (cmd.includes('rev-parse --show-toplevel')) return MAIN;\n      if (cmd.includes('git worktree list')) return `${MAIN}  abc [main]`;\n      return '';\n    });\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => true);\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    run({ exec, addWorktree, exists, now });\n    const fetchIdx = calls.findIndex((c) => c.includes('fetch'));\n    const mergeIdx = calls.findIndex((c) => c.includes('merge --ff-only'));\n    const addIdx = calls.findIndex((c) => c.includes('worktree list') && calls.indexOf(c) > mergeIdx);\n    expect(mergeIdx).toBeGreaterThan(fetchIdx);\n    expect(addWorktree).toHaveBeenCalled();\n    // le merge doit avoir eu lieu avant la création du worktree\n    expect(mergeIdx).toBeLessThan(calls.length);\n  });\n\n  it('retourne un avertissement si addWorktree échoue', () => {\n    const exec = makeExec();\n    const addWorktree = vi.fn(() => { throw new Error('branch exists'); });\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    const result = run({ exec, addWorktree, now });\n    expect(result).toContain('⚠️');\n  });\n\n  it(\"retourne null si le repertoire worktree n'existe pas apres creation\", () => {\n    const exec = makeExec();\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => false);\n    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n    const result = run({ exec, addWorktree, exists, now });\n    expect(result).toBeNull();\n  });\n});\n"
-    },
-    "default_on": true,
-    "name": "Auto-create worktree when starting on main",
-    "slug": "session-start-worktree-if-main",
-    "tags": [
-      "git",
-      "worktree",
-      "safety",
-      "session",
-      "main-branch"
-    ],
-    "trigger": "*",
-    "use_cases": [
-      "Branch discipline",
-      "Isolated sessions",
-      "Accidental main commits prevention",
-      "Multi-session workflows"
-    ]
-  },
-  {
     "benefit": "Always start from a fresh, up-to-date main",
     "category": "context",
     "description": "At session start on main/master, silently fetches the remote and fast-forward pulls if the branch is behind. If the branch diverges, injects a warning instead of pulling. Ensures the agent always works from a fresh baseline.",
@@ -3801,6 +3687,64 @@
       "Shared branch synchronization",
       "CI/CD pre-work sync",
       "Prevent stale-code edits"
+    ]
+  },
+  {
+    "benefit": "Start on main and you're moved to a worktree",
+    "category": "workflow",
+    "description": "At session start, detects if the current branch is main/master and automatically creates a dated git worktree (work/session-YYYYMMDD). The agent is informed of the new path and instructed to work there instead of the main repo.",
+    "hook_type": "SessionStart",
+    "implementation": {
+      "code_snippet": "#!/usr/bin/env node\n// SessionStart: crée un worktree isolé unique si la session démarre sur main/master.\n// Chaque session obtient un worktree frais avec un suffixe aléatoire — jamais de\n// réutilisation d'un worktree existant (un worktree désynchronisé provoquerait des conflits).\n// Le nettoyage reste manuel (`git worktree prune`).\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\nimport { randomBytes } from 'crypto';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd) {\n  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }\n}\n\nfunction defaultAddWorktree(path, branchName) {\n  execSync(`git worktree add \"${path}\" -b \"${branchName}\"`, {\n    encoding: 'utf8',\n    timeout: 15_000,\n    stdio: ['ignore', 'ignore', 'ignore'],\n  });\n}\n\nfunction defaultRandom(len = 6) {\n  return randomBytes(Math.ceil(len / 2)).toString('hex').slice(0, len);\n}\n\nexport function run({\n  exec = defaultExec,\n  addWorktree = defaultAddWorktree,\n  exists = existsSync,\n  now = () => new Date(),\n  random = defaultRandom,\n} = {}) {\n  const branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD');\n  if (!branch || !/^(main|master)$/.test(branch)) return null;\n\n  const currentRoot = exec('git rev-parse --show-toplevel');\n  if (!currentRoot) return null;\n\n  // Ne pas agir si on est déjà dans un worktree secondaire\n  const worktreeList = exec('git worktree list');\n  const mainRoot = worktreeList.split('\\n')[0]?.split(/\\s+/)[0] ?? '';\n  if (mainRoot !== currentRoot) return null;\n\n  // Synchroniser main avec le remote avant de créer le worktree\n  exec('git fetch --quiet origin main');\n  exec('git merge --ff-only origin/main');\n\n  // Nom unique par session : date + suffixe hex aléatoire (même format que Claude Code App)\n  const date = now().toISOString().slice(0, 10).replace(/-/g, '');\n  const suffix = random(6);\n  const branchName = `claude/session-${date}-${suffix}`;\n  const worktreePath = `${currentRoot}/.claude/worktrees/session-${date}-${suffix}`;\n\n  try {\n    addWorktree(worktreePath, branchName);\n  } catch {\n    return [\n      `## ⚠️  Session démarrée sur \\`main\\``,\n      `- Impossible de créer un worktree automatiquement.`,\n      `- Créez manuellement un worktree ou une branche avant de modifier des fichiers.`,\n    ].join('\\n') + '\\n';\n  }\n\n  if (!exists(worktreePath)) return null;\n\n  return [\n    `## Worktree isolé créé automatiquement`,\n    `- Session démarrée sur \\`main\\` : un worktree unique a été créé pour cette session.`,\n    `- **Chemin** : \\`${worktreePath}\\``,\n    `- **Branche** : \\`${branchName}\\``,\n    `- Travaillez dans ce worktree — évitez de modifier des fichiers dans le dépôt principal.`,\n  ].join('\\n') + '\\n';\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result) process.stdout.write(result);\n}\n",
+      "config": {
+        "hooks": {
+          "SessionStart": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-worktree-if-main.mjs",
+                  "type": "command"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/session-start-worktree-if-main.mjs",
+      "type": "settings_json",
+      "security": {
+        "snyk": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-03T12:35:39.440Z"
+        },
+        "codeql": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "scannedAt": "2026-06-05T02:10:00.374Z"
+        }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/session-start-worktree-if-main.mjs';\n\nconst MAIN = '/repos/hookstack';\nconst DATE = '20260602';\nconst SUFFIX = 'abc123';\nconst BRANCH = `claude/session-${DATE}-${SUFFIX}`;\nconst WT_PATH = `${MAIN}/.claude/worktrees/session-${DATE}-${SUFFIX}`;\n\nfunction makeExec({ branch = 'main', currentRoot = MAIN, worktreeList } = {}) {\n  const defaultList = worktreeList ?? `${MAIN}  abc1234 [main]`;\n  return vi.fn((cmd) => {\n    if (cmd.includes('branch --show-current')) return branch;\n    if (cmd.includes('rev-parse --show-toplevel')) return currentRoot;\n    if (cmd.includes('git worktree list')) return defaultList;\n    if (cmd.includes('fetch')) return '';\n    if (cmd.includes('merge')) return '';\n    return '';\n  });\n}\n\nconst fixedRandom = () => SUFFIX;\nconst fixedNow = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);\n\ndescribe('session-start-worktree-if-main', () => {\n  it(\"ne fait rien si la branche courante n'est pas main\", () => {\n    const exec = makeExec({ branch: 'feature/foo' });\n    expect(run({ exec, random: fixedRandom })).toBeNull();\n  });\n\n  it('ne fait rien si on est déjà dans un worktree secondaire', () => {\n    const exec = makeExec({\n      currentRoot: WT_PATH,\n      worktreeList: `${MAIN}  abc [main]\\n${WT_PATH}  def [${BRANCH}]`,\n    });\n    expect(run({ exec, random: fixedRandom })).toBeNull();\n  });\n\n  it('crée un worktree frais avec un nom unique par session', () => {\n    const exec = makeExec();\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => true);\n    const result = run({ exec, addWorktree, exists, now: fixedNow, random: fixedRandom });\n    expect(addWorktree).toHaveBeenCalledWith(WT_PATH, BRANCH);\n    expect(result).toContain('Worktree isolé créé automatiquement');\n    expect(result).toContain(WT_PATH);\n    expect(result).toContain(BRANCH);\n  });\n\n  it('crée toujours un nouveau worktree même si un worktree du même jour existe déjà', () => {\n    // Un worktree d'une session précédente du même jour est présent — on ne le réutilise JAMAIS.\n    const oldSuffix = 'fff000';\n    const oldPath = `${MAIN}/.claude/worktrees/session-${DATE}-${oldSuffix}`;\n    const oldBranch = `claude/session-${DATE}-${oldSuffix}`;\n    const list = `${MAIN}  abc [main]\\n${oldPath}  def [${oldBranch}]`;\n    const exec = makeExec({ worktreeList: list });\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => true);\n    const result = run({ exec, addWorktree, exists, now: fixedNow, random: fixedRandom });\n    expect(addWorktree).toHaveBeenCalledWith(WT_PATH, BRANCH);\n    expect(result).toContain('Worktree isolé créé automatiquement');\n  });\n\n  it('ne supprime jamais un worktree existant (préserve les sessions actives)', () => {\n    const oldPath = `${MAIN}/.claude/worktrees/session-20260101-aaa111`;\n    const oldBranch = 'claude/session-20260101-aaa111';\n    const list = `${MAIN}  abc [main]\\n${oldPath}  def [${oldBranch}]`;\n    const exec = makeExec({ worktreeList: list });\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => true);\n    run({ exec, addWorktree, exists, now: fixedNow, random: fixedRandom });\n    const calls = exec.mock.calls.map((c) => c[0]);\n    expect(calls.some((c) => c.includes('worktree remove'))).toBe(false);\n    expect(calls.some((c) => c.includes('branch -D'))).toBe(false);\n    expect(addWorktree).toHaveBeenCalledWith(WT_PATH, BRANCH);\n  });\n\n  it('synchronise main avec le remote avant de créer le worktree', () => {\n    const calls = [];\n    const exec = vi.fn((cmd) => {\n      calls.push(cmd);\n      if (cmd.includes('branch --show-current')) return 'main';\n      if (cmd.includes('rev-parse --show-toplevel')) return MAIN;\n      if (cmd.includes('git worktree list')) return `${MAIN}  abc [main]`;\n      return '';\n    });\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => true);\n    run({ exec, addWorktree, exists, now: fixedNow, random: fixedRandom });\n    const fetchIdx = calls.findIndex((c) => c.includes('fetch'));\n    const mergeIdx = calls.findIndex((c) => c.includes('merge --ff-only'));\n    expect(fetchIdx).toBeGreaterThanOrEqual(0);\n    expect(mergeIdx).toBeGreaterThan(fetchIdx);\n    expect(addWorktree).toHaveBeenCalled();\n  });\n\n  it('retourne un avertissement si addWorktree échoue', () => {\n    const exec = makeExec();\n    const addWorktree = vi.fn(() => { throw new Error('branch exists'); });\n    const result = run({ exec, addWorktree, now: fixedNow, random: fixedRandom });\n    expect(result).toContain('⚠️');\n  });\n\n  it(\"retourne null si le répertoire worktree n'existe pas après création\", () => {\n    const exec = makeExec();\n    const addWorktree = vi.fn();\n    const exists = vi.fn(() => false);\n    const result = run({ exec, addWorktree, exists, now: fixedNow, random: fixedRandom });\n    expect(result).toBeNull();\n  });\n});\n"
+    },
+    "default_on": true,
+    "name": "Auto-create worktree when starting on main",
+    "slug": "session-start-worktree-if-main",
+    "tags": [
+      "git",
+      "worktree",
+      "safety",
+      "session",
+      "main-branch"
+    ],
+    "trigger": "*",
+    "use_cases": [
+      "Branch discipline",
+      "Isolated sessions",
+      "Accidental main commits prevention",
+      "Multi-session workflows"
     ]
   },
   {

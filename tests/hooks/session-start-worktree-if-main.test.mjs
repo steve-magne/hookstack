@@ -4,26 +4,29 @@ import { run } from '../../.claude/hooks/session-start-worktree-if-main.mjs';
 
 const MAIN = '/repos/hookstack';
 const DATE = '20260602';
-const BRANCH = `work/session-${DATE}`;
-const WT_PATH = `${MAIN}/.claude/worktrees/session-${DATE}`;
+const SUFFIX = 'abc123';
+const BRANCH = `claude/session-${DATE}-${SUFFIX}`;
+const WT_PATH = `${MAIN}/.claude/worktrees/session-${DATE}-${SUFFIX}`;
 
-function makeExec({ branch = 'main', mainRoot = MAIN, currentRoot = MAIN, worktreeList, mergedBranches = '' } = {}) {
+function makeExec({ branch = 'main', currentRoot = MAIN, worktreeList } = {}) {
   const defaultList = worktreeList ?? `${MAIN}  abc1234 [main]`;
   return vi.fn((cmd) => {
     if (cmd.includes('branch --show-current')) return branch;
     if (cmd.includes('rev-parse --show-toplevel')) return currentRoot;
     if (cmd.includes('git worktree list')) return defaultList;
     if (cmd.includes('fetch')) return '';
-    if (cmd.includes('branch --merged')) return mergedBranches;
+    if (cmd.includes('merge')) return '';
     return '';
   });
 }
 
+const fixedRandom = () => SUFFIX;
+const fixedNow = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);
+
 describe('session-start-worktree-if-main', () => {
   it("ne fait rien si la branche courante n'est pas main", () => {
     const exec = makeExec({ branch: 'feature/foo' });
-    const result = run({ exec });
-    expect(result).toBeNull();
+    expect(run({ exec, random: fixedRandom })).toBeNull();
   });
 
   it('ne fait rien si on est déjà dans un worktree secondaire', () => {
@@ -31,48 +34,46 @@ describe('session-start-worktree-if-main', () => {
       currentRoot: WT_PATH,
       worktreeList: `${MAIN}  abc [main]\n${WT_PATH}  def [${BRANCH}]`,
     });
-    const result = run({ exec });
-    expect(result).toBeNull();
+    expect(run({ exec, random: fixedRandom })).toBeNull();
   });
 
-  it("cree un worktree s'il n'en existe pas pour aujourd'hui", () => {
+  it('crée un worktree frais avec un nom unique par session', () => {
     const exec = makeExec();
     const addWorktree = vi.fn();
     const exists = vi.fn(() => true);
-    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);
-    const result = run({ exec, addWorktree, exists, now });
+    const result = run({ exec, addWorktree, exists, now: fixedNow, random: fixedRandom });
+    expect(addWorktree).toHaveBeenCalledWith(WT_PATH, BRANCH);
+    expect(result).toContain('Worktree isolé créé automatiquement');
+    expect(result).toContain(WT_PATH);
+    expect(result).toContain(BRANCH);
+  });
+
+  it('crée toujours un nouveau worktree même si un worktree du même jour existe déjà', () => {
+    // Un worktree d'une session précédente du même jour est présent — on ne le réutilise JAMAIS.
+    const oldSuffix = 'fff000';
+    const oldPath = `${MAIN}/.claude/worktrees/session-${DATE}-${oldSuffix}`;
+    const oldBranch = `claude/session-${DATE}-${oldSuffix}`;
+    const list = `${MAIN}  abc [main]\n${oldPath}  def [${oldBranch}]`;
+    const exec = makeExec({ worktreeList: list });
+    const addWorktree = vi.fn();
+    const exists = vi.fn(() => true);
+    const result = run({ exec, addWorktree, exists, now: fixedNow, random: fixedRandom });
     expect(addWorktree).toHaveBeenCalledWith(WT_PATH, BRANCH);
     expect(result).toContain('Worktree isolé créé automatiquement');
   });
 
-  it("reutilise le worktree du jour s'il existe et n'est pas merge", () => {
-    const list = `${MAIN}  abc [main]\n${WT_PATH}  def [${BRANCH}]`;
-    const exec = makeExec({ worktreeList: list, mergedBranches: '' });
-    const addWorktree = vi.fn();
-    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);
-    const result = run({ exec, addWorktree, now });
-    expect(addWorktree).not.toHaveBeenCalled();
-    expect(result).toContain('Worktree session existant');
-    expect(result).toContain(WT_PATH);
-  });
-
-  it('ne supprime jamais un worktree mergé (préserve les sessions actives)', () => {
-    // Un worktree mergé d'un autre jour est présent : il ne doit pas être touché.
-    const oldPath = `${MAIN}/.claude/worktrees/session-20260101`;
-    const oldBranch = 'work/session-20260101';
+  it('ne supprime jamais un worktree existant (préserve les sessions actives)', () => {
+    const oldPath = `${MAIN}/.claude/worktrees/session-20260101-aaa111`;
+    const oldBranch = 'claude/session-20260101-aaa111';
     const list = `${MAIN}  abc [main]\n${oldPath}  def [${oldBranch}]`;
-    const exec = makeExec({ worktreeList: list, mergedBranches: `  main\n  ${oldBranch}` });
+    const exec = makeExec({ worktreeList: list });
     const addWorktree = vi.fn();
     const exists = vi.fn(() => true);
-    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);
-    const result = run({ exec, addWorktree, exists, now });
-    // Aucune commande destructive ne doit être émise
+    run({ exec, addWorktree, exists, now: fixedNow, random: fixedRandom });
     const calls = exec.mock.calls.map((c) => c[0]);
     expect(calls.some((c) => c.includes('worktree remove'))).toBe(false);
     expect(calls.some((c) => c.includes('branch -D'))).toBe(false);
-    // Le worktree du jour est tout de même créé
     expect(addWorktree).toHaveBeenCalledWith(WT_PATH, BRANCH);
-    expect(result).toContain('Worktree isolé créé automatiquement');
   });
 
   it('synchronise main avec le remote avant de créer le worktree', () => {
@@ -86,31 +87,26 @@ describe('session-start-worktree-if-main', () => {
     });
     const addWorktree = vi.fn();
     const exists = vi.fn(() => true);
-    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);
-    run({ exec, addWorktree, exists, now });
+    run({ exec, addWorktree, exists, now: fixedNow, random: fixedRandom });
     const fetchIdx = calls.findIndex((c) => c.includes('fetch'));
     const mergeIdx = calls.findIndex((c) => c.includes('merge --ff-only'));
-    const addIdx = calls.findIndex((c) => c.includes('worktree list') && calls.indexOf(c) > mergeIdx);
+    expect(fetchIdx).toBeGreaterThanOrEqual(0);
     expect(mergeIdx).toBeGreaterThan(fetchIdx);
     expect(addWorktree).toHaveBeenCalled();
-    // le merge doit avoir eu lieu avant la création du worktree
-    expect(mergeIdx).toBeLessThan(calls.length);
   });
 
   it('retourne un avertissement si addWorktree échoue', () => {
     const exec = makeExec();
     const addWorktree = vi.fn(() => { throw new Error('branch exists'); });
-    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);
-    const result = run({ exec, addWorktree, now });
+    const result = run({ exec, addWorktree, now: fixedNow, random: fixedRandom });
     expect(result).toContain('⚠️');
   });
 
-  it("retourne null si le repertoire worktree n'existe pas apres creation", () => {
+  it("retourne null si le répertoire worktree n'existe pas après création", () => {
     const exec = makeExec();
     const addWorktree = vi.fn();
     const exists = vi.fn(() => false);
-    const now = () => new Date(`${DATE.slice(0, 4)}-${DATE.slice(4, 6)}-${DATE.slice(6, 8)}`);
-    const result = run({ exec, addWorktree, exists, now });
+    const result = run({ exec, addWorktree, exists, now: fixedNow, random: fixedRandom });
     expect(result).toBeNull();
   });
 });
