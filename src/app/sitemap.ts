@@ -1,7 +1,7 @@
 import { allHooks } from '@/lib/hooks'
 import type { MetadataRoute } from 'next'
 
-const BASE = 'https://hookstack.vercel.app'
+const BASE = 'https://hookstack.app'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [

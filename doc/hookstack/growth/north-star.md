@@ -3,7 +3,7 @@
 ## L'objectif
 
 - **Primaire** : `steve-magne/hookstack` atteint **5 000 ⭐** et devient un repo *trending*.
-- **Secondaire (et corrélé)** : trafic récurrent sur `hookstack.vercel.app` + installs `hookstack-cli`.
+- **Secondaire (et corrélé)** : trafic récurrent sur `hookstack.app` + installs `hookstack-cli`.
 
 ## Les maths honnêtes (à relire quand le doute s'installe)
 

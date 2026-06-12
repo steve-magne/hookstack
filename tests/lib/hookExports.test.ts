@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mergeSettings, toSettingsJson, collectScripts, generateInstallScript } from '@/lib/hookExports'
+import { mergeSettings, toSettingsJson, collectScripts, generateInstallScript, toPluginFiles } from '@/lib/hookExports'
 import type { Hook } from '@/types/hook'
 
 function makeHook(overrides: Partial<Hook> & { config: Record<string, unknown> }): Hook {
@@ -100,6 +100,56 @@ describe('collectScripts', () => {
     const result = collectScripts([hookWithScript])
     expect(result).toHaveLength(1)
     expect(result[0].path).toBe('.claude/hooks/test.mjs')
+  })
+})
+
+describe('toPluginFiles', () => {
+  it('genere plugin.json et hooks/hooks.json', () => {
+    const files = toPluginFiles([hookA])
+    expect(files['.claude-plugin/plugin.json']).toBeDefined()
+    expect(files['hooks/hooks.json']).toBeDefined()
+  })
+
+  it('plugin.json contient le slug du hook', () => {
+    const files = toPluginFiles([hookA])
+    const plugin = JSON.parse(files['.claude-plugin/plugin.json'])
+    expect(plugin.description).toContain('test-hook')
+  })
+
+  it('hooks.json contient la config fusionnee', () => {
+    const files = toPluginFiles([hookA])
+    const hooks = JSON.parse(files['hooks/hooks.json'])
+    expect(hooks.hooks.PreToolUse).toHaveLength(1)
+  })
+
+  it('encode le code_snippet en base64 dans la commande', () => {
+    const hookWithSnippet = makeHook({
+      slug: 'snip-hook',
+      config: {
+        hooks: {
+          PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'node $CLAUDE_PROJECT_DIR/.claude/hooks/snip.mjs' }] }],
+        },
+      },
+      implementation: {
+        type: 'settings_json',
+        config: {
+          hooks: {
+            PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'node $CLAUDE_PROJECT_DIR/.claude/hooks/snip.mjs' }] }],
+          },
+        },
+        script_path: '.claude/hooks/snip.mjs',
+        code_snippet: 'console.log("snip")',
+      },
+    })
+    const files = toPluginFiles([hookWithSnippet])
+    const hooks = JSON.parse(files['hooks/hooks.json'])
+    const cmd = hooks.hooks.PreToolUse[0].hooks[0].command
+    expect(cmd).toContain('base64 -d')
+  })
+
+  it('retourne des fichiers vides pour une liste vide', () => {
+    const files = toPluginFiles([])
+    expect(JSON.parse(files['hooks/hooks.json'])).toEqual({ hooks: {} })
   })
 })
 

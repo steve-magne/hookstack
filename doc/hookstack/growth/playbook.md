@@ -16,7 +16,7 @@ Tant que le repo et le site ne convertissent pas un visiteur en star, tout le tr
 - [ ] Section « Quickstart » : la commande `npx hookstack-cli@latest install` en évidence
 - [ ] Fichier `CONTRIBUTING.md` clair (le contrib engine en dépend)
 
-**Site `hookstack.vercel.app`**
+**Site `hookstack.app`**
 - [ ] CTA GitHub Star visible (header) + lien repo
 - [ ] OG image + meta description soignées (partage social)
 - [ ] Message post-install du CLI : `✅ hooks installed · star us → github.com/steve-magne/hookstack`

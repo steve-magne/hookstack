@@ -23,7 +23,7 @@ Les utilisateurs découvrent le projet par trois canaux. Le message, le flow et 
 | Canal | Fichier / URL |
 |---|---|
 | Dépôt GitHub | [`README.md`](README.md) — tagline, exemples CLI, tableau des hooks phares |
-| Site web | `https://hookstack.vercel.app` — catalogue filtrable + `HookConfigurator` |
+| Site web | `https://hookstack.app` — catalogue filtrable + `HookConfigurator` |
 | Package npm | [`packages/cli/README.md`](packages/cli/README.md) — référence CLI (`npx hookstack-cli@latest`) |
 
 > Règle : toute évolution du flow utilisateur, des slugs d'exemple ou du wording CLI doit être répercutée dans les trois. Le README GitHub et le README npm sont les deux faces d'une même promesse — une divergence brouille le message.
@@ -32,7 +32,7 @@ Les utilisateurs découvrent le projet par trois canaux. Le message, le flow et 
 
 | Dossier | Rôle |
 |---|---|
-| [`/src/`](src/) | Site web Next.js — catalogue, HookConfigurator, pages (`hookstack.vercel.app`) |
+| [`/src/`](src/) | Site web Next.js — catalogue, HookConfigurator, pages (`hookstack.app`) |
 | [`/packages/cli/`](packages/cli/) | Package npm public `hookstack-cli` — CLI installé par les utilisateurs via `npx` |
 | [`/registry/`](registry/) | `registry.json` — source de vérité des **métadonnées** du catalogue (`name`, `benefit`, `description`, `config`…) ; `code_snippet` dérivé automatiquement des `.mjs` |
 | [`/doc/hookstack/`](doc/hookstack/) | Vision produit, marketing, brainstorm, positionnement (ne pas modifier sans raison) |
@@ -138,7 +138,7 @@ Le dossier **`doc/hookstack/`** est la référence centrale pour la vision produ
 
 ## Système de croissance (growth)
 
-Objectif : `steve-magne/hookstack` → **5000 ⭐** + trafic sur `hookstack.vercel.app`. Le **système d'exécution** vit dans [`doc/hookstack/growth/`](doc/hookstack/growth/README.md) (stratégie) et est piloté par 3 skills :
+Objectif : `steve-magne/hookstack` → **5000 ⭐** + trafic sur `hookstack.app`. Le **système d'exécution** vit dans [`doc/hookstack/growth/`](doc/hookstack/growth/README.md) (stratégie) et est piloté par 3 skills :
 
 - **`/growth-coach`** — diagnostique la phase, recommande les 1–3 actions à plus fort levier, gère le board GitHub Issues (`growth-coach review` = bilan ; `growth-coach seed` = poser le board).
 - **`/growth-post`** — produit un post prêt-à-coller (X / LinkedIn / Reddit-HN), draft-and-review (ne publie jamais).

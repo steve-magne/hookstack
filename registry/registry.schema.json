@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://hookstack.vercel.app/registry.schema.json",
+  "$id": "https://hookstack.app/registry.schema.json",
   "title": "Hookstack registry",
   "description": "Source of truth for the Hookstack catalogue metadata. `additionalProperties: false` is intentional: it rejects any field the codebase does not consume, so dead metadata (e.g. legacy `id`/`votes`) cannot creep back in. Keep this schema in sync with src/types/hook.ts.",
   "type": "array",

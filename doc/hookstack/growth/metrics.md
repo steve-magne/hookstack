@@ -8,7 +8,7 @@
 |---|---|---|---|
 | ⭐ GitHub stars | Résultat | `gh api` | ✅ `metrics.mjs` |
 | Downloads `hookstack-cli` (7j) | Résultat | registry npm (downloads API) | ✅ `metrics.mjs` |
-| Visites site | Résultat | GA4 (`hookstack.vercel.app`) | ❌ relevé manuel hebdo |
+| Visites site | Résultat | GA4 (`hookstack.app`) | ❌ relevé manuel hebdo |
 | Repos soumis via `/contribute` | Résultat | GitHub Issues (`repo-submission`) | ✅ `metrics.mjs` |
 | Posts publiés / sem | Pilotable | relevé manuel | ❌ |
 | Touches d'outreach / sem | Pilotable | Issues (label `outreach`) | ✅ via `gh` |
