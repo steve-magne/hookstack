@@ -1,6 +1,9 @@
 {
-  "name": "MyWebSite",
-  "short_name": "MySite",
+  "name": "HookStack — Agentic Hooks for Claude Code",
+  "short_name": "HookStack",
+  "description": "Community catalogue of agentic hooks for Claude Code. Install a production-ready stack in one npx command.",
+  "start_url": "/",
+  "id": "/",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
@@ -15,7 +18,8 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
-  "display": "standalone"
+  "theme_color": "#0b0b12",
+  "background_color": "#0b0b12",
+  "display": "standalone",
+  "categories": ["developer", "productivity", "utilities"]
 }

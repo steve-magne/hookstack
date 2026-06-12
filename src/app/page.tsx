@@ -80,12 +80,41 @@ export default function HomePage() {
     })),
   }
 
+  const organizationJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'HookStack',
+    url: BASE,
+    logo: `${BASE}/web-app-manifest-512x512.png`,
+    description: T.metaDescription,
+    sameAs: [
+      'https://github.com/steve-magne/hookstack',
+      'https://www.npmjs.com/package/hookstack-cli',
+    ],
+  }
+
+  const howToJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'How to install Claude Code hooks with HookStack',
+    description: T.metaDescription,
+    step: T.howItWorksSteps.map((s, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      name: s.title,
+      text: s.desc,
+      url: `${BASE}/#catalogue`,
+    })),
+  }
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }} />
       {/* HomePage */}
       <div data-component="HomePage" className="mx-auto max-w-6xl px-4">
         {/* HeroSection */}
@@ -123,6 +152,9 @@ export default function HomePage() {
 
         {/* CatalogueSection */}
         <section data-component="CatalogueSection" id="catalogue" className="scroll-mt-20 pb-24">
+          <h2 className="mb-8 text-center text-2xl font-bold text-white">
+            Browse the Claude Code hooks catalogue
+          </h2>
           <CatalogueExplorer />
         </section>
       </div>

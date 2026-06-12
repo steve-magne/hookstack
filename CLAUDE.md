@@ -78,7 +78,6 @@ hookstack/
 │   │   ├── page.tsx                 # Route / — Home (hero + catalogue)
 │   │   ├── layout.tsx               # Layout racine (HTML, polices, providers)
 │   │   ├── globals.css              # Styles globaux Tailwind
-│   │   ├── contribute/              # Route /contribute — soumission de dépôt GitHub
 │   │   └── hook/[slug]/             # Route /hook/[slug] — détail d'un hook
 │   ├── components/                  # Composants React (tous marqués 'use client')
 │   │   ├── Header.tsx               # Barre de navigation principale
@@ -87,7 +86,6 @@ hookstack/
 │   │   ├── HookConfigurator.tsx     # Panneau sélection + génération settings.json
 │   │   ├── CatalogueExplorer.tsx    # Catalogue : recherche + bascule de regroupement (event/catégorie) + liste groupée + modale
 │   │   ├── Badge.tsx                # Badge générique (catégorie, provider…)
-│   │   ├── ContributeForm.tsx       # Formulaire de soumission de dépôt
 │   │   ├── MotionProvider.tsx       # Racine motion : LazyMotion (domMax) + MotionConfig reducedMotion
 │   │   ├── CopySwap.tsx             # Icône Copy↔Check animée — partagée par tous les boutons « Copier »
 │   │   ├── AnimatedCheck.tsx        # Coche SVG qui se dessine (pathLength) — geste de sélection
@@ -164,7 +162,7 @@ Hookstack est un catalogue de hooks agentiques pour Claude Code. Next.js 15 (App
 
 **Langue** : tout est en anglais. Pas d'i18n, pas de routing `/[locale]`. Le registre est canoniquement en anglais — `name`, `description`, `use_cases` directement dans les champs racine, sans overlay `i18n`. Les textes UI sont dans `src/lib/i18n.ts` (constante `T` exportée, anglais uniquement). `useT()` (`src/lib/locale-context.tsx`) retourne simplement `T` — utilisable dans les composants client.
 
-**Routes** : `/` (Home = hero + catalogue), `/hook/[slug]` (détail), `/contribute` (soumission de dépôt).
+**Routes** : `/` (Home = hero + catalogue), `/hook/[slug]` (détail).
 
 **Composants** : tous marqués `'use client'` (Zustand + state). Les pages (`app/`) sont des Server Components — elles importent `T` directement depuis `src/lib/i18n.ts`. Les composants client utilisent `useT()` depuis `src/lib/locale-context.tsx`.
 

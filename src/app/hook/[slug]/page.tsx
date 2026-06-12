@@ -69,7 +69,7 @@ export default async function HookDetailPage({
     '@context': 'https://schema.org',
     '@type': 'SoftwareSourceCode',
     name: hook.name,
-    description: hook.description,
+    description: hook.benefit ? `${hook.benefit} — ${hook.description}` : hook.description,
     keywords: [...SEO_KEYWORDS, ...hook.tags].join(', '),
     programmingLanguage: 'JavaScript',
     url: `${BASE}/hook/${hook.slug}`,
@@ -119,10 +119,26 @@ export default async function HookDetailPage({
         </div>
 
         <h1 className="mb-3 text-3xl font-bold text-white">{hook.name}</h1>
+        {hook.benefit && (
+          <p className="mb-3 text-lg font-medium text-[var(--color-brand)]">{hook.benefit}</p>
+        )}
         <p className="mb-6 text-lg text-zinc-300">{hook.description}</p>
 
         {/* HookSelectButton */}
         <HookSelectButton slug={hook.slug} />
+
+        {/* HookDetailPage-answer — question-phrased direct answer (AEO / featured snippets) */}
+        <section data-component="HookDetailPage-answer" className="mt-8">
+          <h2 className="mb-2 text-lg font-semibold text-white">
+            What does the {hook.name} hook do?
+          </h2>
+          <p className="text-zinc-300">
+            {hook.name} is a Claude Code <strong>{hook.hook_type}</strong> hook
+            {hook.trigger && hook.trigger !== '*' ? ` matching ${hook.trigger}` : ''}. It fires
+            automatically at that lifecycle event — outside the model, so it can&apos;t be skipped
+            or forgotten.{hook.benefit ? ` ${hook.benefit}.` : ''}
+          </p>
+        </section>
 
         {/* HookDetailPage-details-grid */}
         <div data-component="HookDetailPage-details-grid" className="grid gap-6 sm:grid-cols-2">
