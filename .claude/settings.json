@@ -56,19 +56,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/webfetch-allowlist.mjs"
-          },
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-webfetch-html-to-markdown.mjs"
-          }
-        ],
-        "matcher": "WebFetch"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-guard.mjs"
           }
         ],
@@ -103,6 +90,15 @@
           }
         ],
         "matcher": "Read"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-webfetch-html-to-markdown.mjs"
+          }
+        ],
+        "matcher": "WebFetch"
       }
     ],
     "UserPromptSubmit": [
@@ -140,11 +136,11 @@
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-worktree-if-main.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-pull-if-main.mjs"
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-pull-if-main.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-worktree-if-main.mjs"
           },
           {
             "type": "command",
