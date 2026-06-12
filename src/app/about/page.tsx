@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 const TITLE = 'About HookStack'
 const DESCRIPTION =
-  'HookStack is an open-source catalogue of agentic hooks for Claude Code, maintained by Steve Magné and dogfooded on its own repository. Learn who builds it and why.'
+  'HookStack is an open-source catalogue of agentic hooks for Claude Code, maintained by Steve Magne and dogfooded on its own repository. Learn who builds it and why.'
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -29,13 +29,6 @@ const SECTIONS: { heading: string; body: string[] }[] = [
     ],
   },
   {
-    heading: 'Who maintains HookStack?',
-    body: [
-      'HookStack is created and maintained by Steve Magné, an independent developer working on agentic developer tooling. The project is built in the open on GitHub, and contributions and hook submissions are welcome.',
-      'There is no company behind it and no paywall — the catalogue and every hook implementation are released under the MIT licence.',
-    ],
-  },
-  {
     heading: 'How is HookStack built?',
     body: [
       'Every hook in the catalogue is dogfooded on the HookStack repository itself: the same scripts run on every Claude Code session that touches this project, which validates them in real conditions. Each hook ships with a unit test, and the live source on disk is the single source of truth for the code you install.',
@@ -46,7 +39,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
     heading: 'How can I get in touch or contribute?',
     body: [
       'For feedback, bug reports, or hook ideas, the best channel is a GitHub issue on the repository — it keeps the discussion public and trackable. You can also submit a hook by pull request, or star the project to follow along.',
-      'To reach the maintainer directly, Steve Magné is on LinkedIn. The CLI is published on npm as hookstack-cli.',
+      'To reach the maintainer directly, Steve Magne is on LinkedIn. The CLI is published on npm as hookstack-cli.',
     ],
   },
 ]
@@ -87,6 +80,27 @@ export default function AboutPage() {
       <div data-component="AboutPage" className="mx-auto max-w-3xl px-4 py-12">
         <h1 className="mb-4 text-3xl font-bold text-white">About HookStack</h1>
         <p className="mb-10 text-lg text-zinc-300">{DESCRIPTION}</p>
+
+        <section className="mb-8">
+          <h2 className="mb-3 text-xl font-semibold text-white">Who maintains HookStack?</h2>
+          <p className="mb-3 leading-relaxed text-zinc-400">
+            HookStack is created and maintained by Steve Magne, an AI Agentic, OS Agentic, and Vibe Coding coach. Steve
+            is not a developer — he is a practitioner who set up agentic hooks on his own projects (
+            <a href="https://www.movinglive.ca/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
+              movinglive.ca
+            </a>{' '}
+            and{' '}
+            <a href="https://cyberharp.app/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] hover:underline">
+              cyberharp.app
+            </a>
+            ) and wanted to make them available to the community.
+          </p>
+          <p className="mb-3 leading-relaxed text-zinc-400">
+            The project is built in the open on GitHub, and contributions and hook submissions are welcome. There is no
+            company behind it and no paywall — the catalogue and every hook implementation are released under the MIT
+            licence.
+          </p>
+        </section>
 
         {SECTIONS.map((s) => (
           <section key={s.heading} className="mb-8">
