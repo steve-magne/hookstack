@@ -19,8 +19,8 @@ export const SITE = {
 } as const
 
 export const MAINTAINER = {
-  name: 'Steve Magné',
-  role: 'Creator & maintainer',
+  name: 'Steve Magne',
+  role: 'AI Agentic & Vibe Coding Coach · Creator of HookStack',
   github: 'https://github.com/steve-magne',
   linkedin: 'https://www.linkedin.com/in/steve-magne/',
   url: 'https://github.com/steve-magne',
