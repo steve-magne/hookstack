@@ -28,7 +28,26 @@ describe('pre-write-main-guard', () => {
     expect(run({ tool_input: { file_path: '/wt/src/x.ts' } }, { exec })).toBeNull();
   });
 
-  it('laisse passer une écriture ciblant un autre worktree', () => {
+  it('laisse passer une écriture ciblant un autre worktree (hors mainRoot)', () => {
     expect(run({ tool_input: { file_path: '/wt/src/x.ts' } }, { exec: makeExec() })).toBeNull();
+  });
+
+  it('laisse passer une écriture dans un worktree secondaire imbriqué dans le repo principal', () => {
+    // Cas réel : worktrees sous .claude/worktrees/ qui commencent par mainRoot
+    const exec = makeExec({
+      list: '/main  abc [main]\n/main/.claude/worktrees/session-abc  def [claude/session-abc]',
+    });
+    expect(run(
+      { tool_input: { file_path: '/main/.claude/worktrees/session-abc/src/lib/site.ts' } },
+      { exec },
+    )).toBeNull();
+  });
+
+  it('bloque une écriture dans .claude/hooks/ du repo principal (pas un worktree)', () => {
+    const exec = makeExec({
+      list: '/main  abc [main]\n/main/.claude/worktrees/session-abc  def [claude/session-abc]',
+    });
+    const r = run({ tool_input: { file_path: '/main/.claude/hooks/my-hook.mjs' } }, { exec });
+    expect(r?.decision).toBe('block');
   });
 });
