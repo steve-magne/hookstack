@@ -3,6 +3,8 @@ import { HookSelectButton } from '@/components/HookSelectButton'
 import { HookDetailTracker } from '@/components/HookDetailTracker'
 import { allHooks, getHookBySlug } from '@/lib/hooks'
 import { T, SEO_KEYWORDS } from '@/lib/i18n'
+import { SITE, MAINTAINER, hookSourceUrl } from '@/lib/site'
+import { HOOK_TYPE_INFO, type HookTypeInfo } from '@/types/hook'
 import { ArrowLeft } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -64,6 +66,17 @@ export default async function HookDetailPage({
   }
 
   const settingsFragment = JSON.stringify(hook.implementation.config, null, 2)
+  // The registry can carry events newer than the typed map (cast at load time),
+  // so look-ups may be undefined — guard accordingly.
+  const eventInfo: HookTypeInfo | undefined = HOOK_TYPE_INFO[hook.hook_type]
+  const sourceUrl = hookSourceUrl(hook.implementation.script_path)
+
+  // Related hooks for internal linking: same category first, then same event.
+  const sameCategory = allHooks.filter((h) => h.slug !== hook.slug && h.category === hook.category)
+  const sameEvent = allHooks.filter(
+    (h) => h.slug !== hook.slug && h.hook_type === hook.hook_type && h.category !== hook.category,
+  )
+  const relatedHooks = [...sameCategory, ...sameEvent].slice(0, 4)
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -72,7 +85,15 @@ export default async function HookDetailPage({
     description: hook.benefit ? `${hook.benefit} — ${hook.description}` : hook.description,
     keywords: [...SEO_KEYWORDS, ...hook.tags].join(', '),
     programmingLanguage: 'JavaScript',
+    runtimePlatform: 'Node.js',
     url: `${BASE}/hook/${hook.slug}`,
+    ...(sourceUrl ? { codeRepository: sourceUrl } : {}),
+    license: 'https://opensource.org/licenses/MIT',
+    isAccessibleForFree: true,
+    datePublished: SITE.contentUpdated,
+    dateModified: SITE.contentUpdated,
+    author: { '@type': 'Person', name: MAINTAINER.name, url: MAINTAINER.url },
+    maintainer: { '@type': 'Organization', name: 'HookStack', url: BASE },
     isPartOf: {
       '@type': 'WebSite',
       name: 'HookStack',
@@ -138,6 +159,15 @@ export default async function HookDetailPage({
             automatically at that lifecycle event — outside the model, so it can&apos;t be skipped
             or forgotten.{hook.benefit ? ` ${hook.benefit}.` : ''}
           </p>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+            {eventInfo &&
+              (eventInfo.blocking
+                ? `As a ${hook.hook_type} hook it runs before the action completes, so it can block or adjust what Claude is about to do. `
+                : `As a ${hook.hook_type} hook it runs after the action, reacting to what just happened rather than blocking it. `)}
+            Because it is a deterministic Node.js script, it executes on every matching event without
+            relying on the model to remember — the guarantee that makes agentic workflows safe to
+            automate.
+          </p>
         </section>
 
         {/* HookDetailPage-details-grid */}
@@ -190,6 +220,63 @@ export default async function HookDetailPage({
               <code>{hook.implementation.code_snippet}</code>
             </pre>
           </div>
+        )}
+
+        {/* HookDetailPage-learn-more — outbound citations (authoritative docs + source) */}
+        <section
+          data-component="HookDetailPage-learn-more"
+          className="mt-8 border-t border-[var(--color-border)] pt-6"
+        >
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">Learn more</h2>
+          <ul className="space-y-1.5 text-sm">
+            <li>
+              <a
+                href={SITE.claudeCodeHooksDocs}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--color-brand)] hover:underline"
+              >
+                Claude Code hooks — official Anthropic documentation
+              </a>
+            </li>
+            {sourceUrl && (
+              <li>
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--color-brand)] hover:underline"
+                >
+                  View this hook&apos;s source on GitHub
+                </a>
+              </li>
+            )}
+            <li>
+              <Link href="/guides/what-are-claude-code-hooks" className="text-[var(--color-brand)] hover:underline">
+                Guide: What are Claude Code hooks?
+              </Link>
+            </li>
+          </ul>
+        </section>
+
+        {/* HookDetailPage-related — internal cross-links to similar hooks */}
+        {relatedHooks.length > 0 && (
+          <section data-component="HookDetailPage-related" className="mt-8">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">Related hooks</h2>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {relatedHooks.map((rel) => (
+                <li key={rel.slug}>
+                  <Link
+                    href={`/hook/${rel.slug}`}
+                    className="block rounded-lg border border-[var(--color-border)] bg-[#0d0d14] p-3 transition-colors hover:border-[var(--color-text-muted)]"
+                  >
+                    <span className="block text-sm font-medium text-white">{rel.name}</span>
+                    {rel.benefit && <span className="block text-xs text-zinc-500">{rel.benefit}</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
       </div>
     </>

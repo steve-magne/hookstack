@@ -112,6 +112,19 @@ export const T = {
   pluginInstallHint: 'Run once in your project root:',
   previewClickToAdd: 'Click the row to add it',
   previewMustHint: 'Recommended — already selected',
+  navGuides: 'Guides',
+  navAbout: 'About',
+  guidesLinkText: 'Read the guides',
+  compareTitle: 'Hooks vs slash-commands vs prompt instructions',
+  compareIntro: 'Three ways to steer Claude Code — only one is guaranteed to run on every action.',
+  compareCols: ['', 'Agentic hooks', 'Slash-commands', 'Prompt instructions'],
+  compareRows: [
+    { dim: 'How it runs', hook: 'Node.js script, outside the model', cmd: 'You type it; the model interprets', prompt: 'Text the model may follow' },
+    { dim: 'Deterministic?', hook: 'Yes — fires unconditionally', cmd: 'No — the model decides', prompt: 'No — probabilistic' },
+    { dim: 'Can it be skipped?', hook: 'No', cmd: 'Yes', prompt: 'Yes' },
+    { dim: 'Token cost', hook: 'Zero (separate process)', cmd: 'Consumes context', prompt: 'Consumes context' },
+    { dim: 'Best for', hook: 'Guardrails, gates, automation', cmd: 'On-demand interactive tasks', prompt: 'Soft guidance & style' },
+  ],
   faqTitle: 'Frequently asked questions',
   faq: [
     {

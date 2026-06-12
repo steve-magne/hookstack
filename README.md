@@ -222,6 +222,8 @@ The CLI re-fetches each installed hook from the registry and overwrites the loca
 Hookstack is built by [Steve Magne](https://github.com/steve-magne) with contributions from the Claude Code community.
 
 - **Catalogue**: [hookstack.app](https://www.hookstack.app)
+- **Guides**: [hookstack.app/guides](https://www.hookstack.app/guides) — what hooks are, PreToolUse vs PostToolUse, hooks vs slash-commands
+- **About**: [hookstack.app/about](https://www.hookstack.app/about)
 - **Issues**: [github.com/steve-magne/hookstack/issues](https://github.com/steve-magne/hookstack/issues)
 - **Contribute a hook**: [hookstack.app/contribute](https://www.hookstack.app/contribute)
 - **npm**: [npmjs.com/package/hookstack-cli](https://www.npmjs.com/package/hookstack-cli)
