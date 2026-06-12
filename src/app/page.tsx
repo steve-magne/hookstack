@@ -93,6 +93,20 @@ export default function HomePage() {
     ],
   }
 
+  const howToJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'How to install Claude Code hooks with HookStack',
+    description: T.metaDescription,
+    step: T.howItWorksSteps.map((s, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      name: s.title,
+      text: s.desc,
+      url: `${BASE}/#catalogue`,
+    })),
+  }
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
@@ -100,6 +114,7 @@ export default function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }} />
       {/* HomePage */}
       <div data-component="HomePage" className="mx-auto max-w-6xl px-4">
         {/* HeroSection */}

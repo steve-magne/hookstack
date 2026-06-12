@@ -127,6 +127,19 @@ export default async function HookDetailPage({
         {/* HookSelectButton */}
         <HookSelectButton slug={hook.slug} />
 
+        {/* HookDetailPage-answer — question-phrased direct answer (AEO / featured snippets) */}
+        <section data-component="HookDetailPage-answer" className="mt-8">
+          <h2 className="mb-2 text-lg font-semibold text-white">
+            What does the {hook.name} hook do?
+          </h2>
+          <p className="text-zinc-300">
+            {hook.name} is a Claude Code <strong>{hook.hook_type}</strong> hook
+            {hook.trigger && hook.trigger !== '*' ? ` matching ${hook.trigger}` : ''}. It fires
+            automatically at that lifecycle event — outside the model, so it can&apos;t be skipped
+            or forgotten.{hook.benefit ? ` ${hook.benefit}.` : ''}
+          </p>
+        </section>
+
         {/* HookDetailPage-details-grid */}
         <div data-component="HookDetailPage-details-grid" className="grid gap-6 sm:grid-cols-2">
           {/* HookDetailPage-use-cases */}
