@@ -2,7 +2,7 @@
 
 **Install Claude Code hooks in one command.**
 
-[hookstack.app](https://www.hookstack.app) — browse a growing catalogue of Claude Code hooks, then run this CLI to wire them into your project.
+[hookstack.app](https://www.hookstack.app) — the community catalogue for Claude Code hooks. Browse, select, and wire them into your project with one command.
 
 ---
 
