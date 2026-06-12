@@ -4648,5 +4648,227 @@
       "code_snippet": "#!/usr/bin/env node\n// Vérifie la duplication de code à l'arrêt de session via jscpd (Stop).\n// Non bloquant — avertit si le seuil est dépassé, silencieux si jscpd absent.\nimport { execSync } from 'child_process';\nimport { existsSync } from 'fs';\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nconst MIN_TOKENS = 50;   // blocs < 50 tokens ignorés (évite les faux positifs sur boilerplate)\nconst THRESHOLD = 5;     // % de duplication max avant avertissement\n\nfunction defaultExec(cmd) {\n  return execSync(cmd, { encoding: 'utf8', timeout: 30_000, stdio: 'pipe', shell: true });\n}\n\nfunction jscpdBin({ exists = existsSync } = {}) {\n  // Préfère la version locale (devDependency), replie sur le PATH\n  const local = 'node_modules/.bin/jscpd';\n  return exists(local) ? local : 'jscpd';\n}\n\nfunction findSrcDirs({ exists = existsSync } = {}) {\n  return ['src', 'lib', 'tests', 'app'].filter((d) => exists(d));\n}\n\nexport function run(_input, { exec = defaultExec, exists = existsSync } = {}) {\n  const dirs = findSrcDirs({ exists });\n  if (!dirs.length) return null;\n\n  const bin = jscpdBin({ exists });\n  try {\n    exec(\n      `${bin} --min-tokens ${MIN_TOKENS} --threshold ${THRESHOLD} --reporters console ${dirs.join(' ')} 2>&1`,\n    );\n    return null; // exit 0 → duplication en-dessous du seuil\n  } catch (e) {\n    // exit 1 → seuil dépassé (stdout contient le rapport) ; ou jscpd absent (pas de stdout)\n    const out = e.stdout ?? '';\n    if (out && /found \\d+ clone/i.test(out)) {\n      return { message: `[duplication-check] Code duplication above ${THRESHOLD}% threshold:\\n${out}` };\n    }\n    return null;\n  }\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stderr.write(JSON.stringify(result));\n}\n",
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-duplication-check.mjs';\n\nconst noClones = () => 'Analysis complete. 0 clones found.';\nconst withClones = () => 'Found 3 clones in 4 files.\\nClone at src/a.ts:10-20';\nconst failWith = (out) => () => { const e = new Error('exit 1'); e.stdout = out; throw e; };\n\nconst deps = (exec, dirs = ['src']) => ({ exec, exists: (d) => dirs.includes(d) });\n\ndescribe('stop-duplication-check', () => {\n  it('retourne null si aucun répertoire source trouvé', () => {\n    expect(run({}, { exec: vi.fn(), exists: () => false })).toBeNull();\n  });\n\n  it('retourne null si jscpd est absent (exec lève sans stdout)', () => {\n    const exec = () => { throw new Error('jscpd: command not found'); };\n    expect(run({}, deps(exec))).toBeNull();\n  });\n\n  it('retourne null si jscpd passe (exit 0) — duplication sous le seuil', () => {\n    // exit 0 = seuil non dépassé, même s'il y a des clones mineurs → silence\n    expect(run({}, deps(noClones))).toBeNull();\n    expect(run({}, deps(withClones))).toBeNull();\n  });\n\n  it('retourne un message si jscpd exit 1 avec stdout de clones', () => {\n    const r = run({}, deps(failWith('Found 1 clone in 2 files.')));\n    expect(r?.message).toContain('[duplication-check]');\n    expect(r?.message).toContain('Found 1 clone');\n  });\n\n  it('retourne null si jscpd exit 1 sans stdout utile', () => {\n    expect(run({}, deps(failWith('')))).toBeNull();\n  });\n\n  it('passe les répertoires existants à jscpd', () => {\n    const exec = vi.fn(noClones);\n    run({}, deps(exec, ['src', 'tests']));\n    expect(exec).toHaveBeenCalledWith(expect.stringContaining('src tests'));\n  });\n});\n"
     }
+  },
+  {
+    "slug": "seo-page-metadata-guard",
+    "name": "SEO page metadata guard",
+    "benefit": "Every page ships indexable — title + description set",
+    "category": "validation",
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "stack": [
+      "typescript"
+    ],
+    "tags": [
+      "seo",
+      "metadata",
+      "nextjs",
+      "indexing",
+      "google"
+    ],
+    "description": "After editing a Next.js App Router page (src/app/**/page.tsx), verifies it exports `metadata` or `generateMetadata` with both a title and a description — the two tags Google shows in results and weighs when ranking. Non-blocking: names exactly what is missing so no page ever goes live invisible to search.",
+    "use_cases": [
+      "Stop an agent from shipping a page Google cannot rank",
+      "Keep title + description coverage at 100% across every route"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/seo-page-metadata-guard.mjs",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/seo-page-metadata-guard.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Vérifie qu'une page Next.js App Router expose ses métadonnées SEO après écriture\n// (PostToolUse Write|Edit). Cible : src/app/**/page.tsx.\n// Règle : la page doit exporter `metadata` OU `generateMetadata`, et l'objet doit\n// porter un `title` ET une `description` (les deux leviers SEO de base).\n// Non bloquant : signale précisément ce qui manque.\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\n// Cible un fichier page.tsx sous un dossier app/ (App Router), racine incluse.\nconst PAGE_RE = /\\/app\\/(?:.*\\/)?page\\.tsx$/;\n\nexport function run(input, { readFile = readFileSync } = {}) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!PAGE_RE.test(filePath)) return null;\n\n  let content;\n  try {\n    content = readFile(filePath, 'utf8');\n  } catch {\n    return null; // fichier illisible/supprimé → rien à vérifier\n  }\n\n  const hasMetadata =\n    /export\\s+(?:const|let)\\s+metadata\\b/.test(content) ||\n    /export\\s+(?:async\\s+)?function\\s+generateMetadata\\b/.test(content) ||\n    /export\\s*\\{[^}]*\\bmetadata\\b[^}]*\\}/.test(content);\n\n  if (!hasMetadata) {\n    return {\n      message:\n        `[seo-metadata] ${filePath} exports no metadata.\\n` +\n        `  → Add 'export const metadata = { title, description }' (or generateMetadata) ` +\n        `so this page is indexable.\\n`,\n    };\n  }\n\n  const missing = [];\n  if (!/\\btitle\\s*:/.test(content)) missing.push('title');\n  if (!/\\bdescription\\s*:/.test(content)) missing.push('description');\n  if (!missing.length) return null;\n\n  return {\n    message:\n      `[seo-metadata] ${filePath} metadata is missing: ${missing.join(', ')}.\\n` +\n      `  → A page needs both a title and a description to rank.\\n`,\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/seo-page-metadata-guard.mjs';\n\nconst input = (file_path) => ({ tool_input: { file_path } });\nconst PAGE = '/p/src/app/about/page.tsx';\n\ndescribe('seo-page-metadata-guard', () => {\n  it('ignore les fichiers hors page.tsx', () => {\n    expect(run(input('/p/src/components/Header.tsx'), { readFile: () => '' })).toBeNull();\n  });\n\n  it('ignore un fichier illisible', () => {\n    expect(run(input(PAGE), { readFile: () => { throw new Error('ENOENT'); } })).toBeNull();\n  });\n\n  it('silencieux quand metadata + title + description sont présents', () => {\n    const code = \"export const metadata = { title: 'A', description: 'B' };\\nexport default function P() {}\";\n    expect(run(input(PAGE), { readFile: () => code })).toBeNull();\n  });\n\n  it('accepte generateMetadata', () => {\n    const code = 'export async function generateMetadata() { return { title: x, description: y }; }';\n    expect(run(input(PAGE), { readFile: () => code })).toBeNull();\n  });\n\n  it('signale une page sans aucune metadata', () => {\n    const r = run(input(PAGE), { readFile: () => 'export default function P() { return null; }' });\n    expect(r?.message).toContain('exports no metadata');\n  });\n\n  it('signale une description manquante', () => {\n    const r = run(input(PAGE), { readFile: () => \"export const metadata = { title: 'A' };\" });\n    expect(r?.message).toContain('description');\n    expect(r?.message).not.toContain('title,');\n  });\n\n  it('signale title et description manquants', () => {\n    const r = run(input(PAGE), { readFile: () => 'export const metadata = { robots: {} };' });\n    expect(r?.message).toContain('title, description');\n  });\n\n  it('gère la route racine src/app/page.tsx', () => {\n    const r = run(input('/p/src/app/page.tsx'), { readFile: () => 'export default function P() {}' });\n    expect(r?.message).toContain('exports no metadata');\n  });\n});\n"
+    }
+  },
+  {
+    "slug": "seo-next-image-guard",
+    "name": "Next.js image guard",
+    "benefit": "Stop a raw <img> from wrecking your LCP score",
+    "category": "validation",
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "stack": [
+      "typescript"
+    ],
+    "tags": [
+      "seo",
+      "performance",
+      "core-web-vitals",
+      "nextjs",
+      "images",
+      "lcp"
+    ],
+    "description": "Flags raw <img> tags in components (src/**/*.tsx) and routes you to next/image (<Image>) — automatic LCP optimization, zero layout shift (CLS), lazy-loading and modern formats (AVIF/WebP) for free. Non-blocking: a raw <img> is a silent Core Web Vitals regression that quietly costs you ranking.",
+    "use_cases": [
+      "Protect your Core Web Vitals when adding imagery",
+      "Enforce next/image over raw <img> in every review"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/seo-next-image-guard.mjs",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/seo-next-image-guard.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Interdit les balises <img> brutes dans les composants (PostToolUse Write|Edit).\n// Cible : src/**/*.tsx. Next.js fournit next/image (<Image>) qui optimise le LCP,\n// évite le CLS et sert des formats modernes — un <img> brut est une régression\n// perf/SEO. Non bloquant : signale chaque occurrence avec la correction.\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\n// <img …> mais pas <Image …> (next/image) ni un nom commençant par Img…\nconst RAW_IMG_RE = /<img(?=[\\s/>])/;\n\nexport function run(input, { readFile = readFileSync } = {}) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!/\\/src\\/.*\\.tsx$/.test(filePath)) return null;\n\n  let content;\n  try {\n    content = readFile(filePath, 'utf8');\n  } catch {\n    return null;\n  }\n\n  if (!RAW_IMG_RE.test(content)) return null;\n\n  return {\n    message:\n      `[seo-next-image] ${filePath} uses a raw <img> tag.\\n` +\n      `  → Use next/image (<Image>) instead: it optimizes LCP, prevents layout ` +\n      `shift (CLS) and serves modern formats.\\n`,\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/seo-next-image-guard.mjs';\n\nconst input = (file_path) => ({ tool_input: { file_path } });\nconst FILE = '/p/src/components/Hero.tsx';\n\ndescribe('seo-next-image-guard', () => {\n  it('ignore les fichiers hors src/', () => {\n    expect(run(input('/p/scripts/x.tsx'), { readFile: () => '<img src=\"a\" />' })).toBeNull();\n  });\n\n  it('ignore les fichiers non .tsx', () => {\n    expect(run(input('/p/src/lib/x.ts'), { readFile: () => '<img src=\"a\" />' })).toBeNull();\n  });\n\n  it('ignore un fichier illisible', () => {\n    expect(run(input(FILE), { readFile: () => { throw new Error('ENOENT'); } })).toBeNull();\n  });\n\n  it('silencieux avec next/image <Image>', () => {\n    expect(run(input(FILE), { readFile: () => '<Image src={x} alt=\"a\" width={10} height={10} />' })).toBeNull();\n  });\n\n  it('signale un <img> brut', () => {\n    const r = run(input(FILE), { readFile: () => 'return <img src=\"/a.png\" alt=\"a\" />;' });\n    expect(r?.message).toContain('raw <img>');\n  });\n\n  it('ne confond pas <Image> avec <img>', () => {\n    expect(run(input(FILE), { readFile: () => '<Image alt=\"x\" />' })).toBeNull();\n  });\n});\n"
+    }
+  },
+  {
+    "slug": "seo-heading-hierarchy-guard",
+    "name": "Single H1 heading guard",
+    "benefit": "One <h1> per page — the clean outline crawlers trust",
+    "category": "validation",
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "stack": [
+      "typescript"
+    ],
+    "tags": [
+      "seo",
+      "accessibility",
+      "headings",
+      "html",
+      "semantics"
+    ],
+    "description": "Ensures a single <h1> per file in components (src/**/*.tsx). Two top-level titles confuse crawlers and screen readers about what the page is really about, diluting the keyword signal you worked to earn. Non-blocking. Deep h2-h6 nesting is a render-time concern, left to a full audit.",
+    "use_cases": [
+      "Catch a duplicate <h1> after a copy-paste",
+      "Keep one clear topic signal per page for SEO"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/seo-heading-hierarchy-guard.mjs",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/seo-heading-hierarchy-guard.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Garde la hiérarchie de titres après écriture d'un composant (PostToolUse Write|Edit).\n// Cible : src/**/*.tsx. Règle à très faible faux-positif : un seul <h1> par fichier.\n// Plusieurs <h1> dans une même vue cassent l'outline SEO/accessibilité (un document =\n// un titre principal). La hiérarchie h2→h6 fine, elle, dépend du rendu cross-composant\n// → couverte au runtime par le skill seo-geo-aeo, pas en statique.\n// Non bloquant : signale le compte de <h1>.\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\n// <h1 …> ou <h1>, mais pas un composant <H1…>.\nconst H1_RE = /<h1(?=[\\s/>])/g;\n\nexport function run(input, { readFile = readFileSync } = {}) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!/\\/src\\/.*\\.tsx$/.test(filePath)) return null;\n\n  let content;\n  try {\n    content = readFile(filePath, 'utf8');\n  } catch {\n    return null;\n  }\n\n  const count = (content.match(H1_RE) ?? []).length;\n  if (count <= 1) return null;\n\n  return {\n    message:\n      `[seo-heading] ${filePath} has ${count} <h1> tags.\\n` +\n      `  → Keep a single <h1> per page (the main title). Demote the others to <h2>/<h3> ` +\n      `to preserve the document outline.\\n`,\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/seo-heading-hierarchy-guard.mjs';\n\nconst input = (file_path) => ({ tool_input: { file_path } });\nconst FILE = '/p/src/app/page.tsx';\n\ndescribe('seo-heading-hierarchy-guard', () => {\n  it('ignore les fichiers hors src/', () => {\n    expect(run(input('/p/docs/x.tsx'), { readFile: () => '<h1/><h1/>' })).toBeNull();\n  });\n\n  it('ignore un fichier illisible', () => {\n    expect(run(input(FILE), { readFile: () => { throw new Error('ENOENT'); } })).toBeNull();\n  });\n\n  it('silencieux avec un seul <h1>', () => {\n    expect(run(input(FILE), { readFile: () => '<h1>Title</h1><h2>Sub</h2><h2>Sub</h2>' })).toBeNull();\n  });\n\n  it('silencieux sans aucun <h1>', () => {\n    expect(run(input(FILE), { readFile: () => '<h2>A</h2><h3>B</h3>' })).toBeNull();\n  });\n\n  it('signale plusieurs <h1>', () => {\n    const r = run(input(FILE), { readFile: () => '<h1>A</h1>\\n<h1>B</h1>' });\n    expect(r?.message).toContain('2 <h1>');\n  });\n\n  it('ne confond pas un composant <H1>', () => {\n    expect(run(input(FILE), { readFile: () => '<H1/><H1/>' })).toBeNull();\n  });\n});\n"
+    }
+  },
+  {
+    "slug": "a11y-jsx-guard",
+    "name": "JSX accessibility guard",
+    "benefit": "Catch WCAG failures the moment you write the JSX",
+    "category": "validation",
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "stack": [
+      "typescript"
+    ],
+    "tags": [
+      "accessibility",
+      "a11y",
+      "wcag",
+      "jsx",
+      "react"
+    ],
+    "description": "Static accessibility lint on JSX (src/**/*.tsx) — no ESLint, no AST, instant: <Image> without alt, positive tabIndex, target=\"_blank\" without rel=\"noopener\", and onClick on non-interactive elements without a role or keyboard handler. These are the WCAG failures that lock keyboard and screen-reader users out of your UI — caught in the write loop, not in a costly audit. Non-blocking, tuned for low false-positives.",
+    "use_cases": [
+      "Catch a missing alt or keyboard trap before commit",
+      "Keep the UI usable for keyboard and screen-reader users"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/a11y-jsx-guard.mjs",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/a11y-jsx-guard.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Garde d'accessibilité statique sur les composants (PostToolUse Write|Edit).\n// Cible : src/**/*.tsx. Quatre règles à faible faux-positif, sans ESLint ni AST :\n//   - <Image> (next/image) sans `alt`            → image non décrite\n//   - tabIndex positif                            → casse l'ordre de tabulation\n//   - <a target=\"_blank\"> sans rel noopener       → sécurité + bonne pratique\n//   - onClick sur div/span/li sans role ni clavier → contrôle inaccessible au clavier\n// Non bloquant : cumule les violations dans un seul message.\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\n// Extrait chaque balise ouvrante d'un type donné, du `<tag` jusqu'au `>` de fermeture\n// au niveau 0. On suit la profondeur des accolades et on saute les chaînes : ainsi un\n// `>` issu d'une fonction fléchée `() =>` dans une prop, ou d'un `>` dans une string,\n// ne tronque pas la balise (sinon role=/onKeyDown placés après seraient ignorés).\nfunction openingTags(content, tag) {\n  const tags = [];\n  const re = new RegExp(`<${tag}\\\\b`, 'g');\n  let m;\n  while ((m = re.exec(content))) {\n    let depth = 0;\n    let quote = null;\n    for (let j = m.index; j < content.length; j++) {\n      const ch = content[j];\n      if (quote) {\n        if (ch === quote) quote = null;\n      } else if (ch === '\"' || ch === \"'\" || ch === '`') {\n        quote = ch;\n      } else if (ch === '{') {\n        depth++;\n      } else if (ch === '}') {\n        depth--;\n      } else if (ch === '>' && depth === 0) {\n        tags.push(content.slice(m.index, j + 1));\n        break;\n      }\n    }\n  }\n  return tags;\n}\n\nconst CHECKS = [\n  (c) =>\n    openingTags(c, 'Image').some((t) => !/\\balt\\s*=/.test(t))\n      ? '<Image> without an `alt` prop → describe the image (alt=\"\" only if purely decorative)'\n      : null,\n  (c) =>\n    /\\btabIndex=\\{?\\s*['\"]?[1-9]\\d*/.test(c)\n      ? 'positive tabIndex → breaks natural tab order; use tabIndex={0} or restructure the DOM'\n      : null,\n  (c) =>\n    openingTags(c, 'a').some(\n      (t) => /target=['\"]_blank['\"]/.test(t) && !/\\brel=['\"][^'\"]*noopener/.test(t),\n    )\n      ? 'target=\"_blank\" without rel=\"noopener noreferrer\" → security + SEO best practice'\n      : null,\n  (c) =>\n    ['div', 'span', 'li'].some((tag) =>\n      openingTags(c, tag).some(\n        (t) => /\\bonClick=/.test(t) && !/\\brole=/.test(t) && !/\\bonKey(?:Down|Press|Up)=/.test(t),\n      ),\n    )\n      ? 'onClick on a non-interactive element (div/span/li) without role + keyboard handler → use <button>, or add role and onKeyDown'\n      : null,\n];\n\nexport function run(input, { readFile = readFileSync } = {}) {\n  const filePath = input.tool_input?.file_path ?? '';\n  if (!/\\/src\\/.*\\.tsx$/.test(filePath)) return null;\n\n  let content;\n  try {\n    content = readFile(filePath, 'utf8');\n  } catch {\n    return null;\n  }\n\n  const violations = CHECKS.map((check) => check(content)).filter(Boolean);\n  if (!violations.length) return null;\n\n  return {\n    message:\n      `[a11y] ${filePath} has accessibility issues:\\n` +\n      violations.map((v) => `  - ${v}`).join('\\n') +\n      '\\n',\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/a11y-jsx-guard.mjs';\n\nconst input = (file_path) => ({ tool_input: { file_path } });\nconst FILE = '/p/src/components/Card.tsx';\nconst r = (code) => run(input(FILE), { readFile: () => code });\n\ndescribe('a11y-jsx-guard', () => {\n  it('ignore les fichiers hors src/', () => {\n    expect(run(input('/p/x.tsx'), { readFile: () => '<Image src={x} />' })).toBeNull();\n  });\n\n  it('ignore un fichier illisible', () => {\n    expect(run(input(FILE), { readFile: () => { throw new Error('ENOENT'); } })).toBeNull();\n  });\n\n  it('silencieux sur un composant conforme', () => {\n    const code =\n      '<Image src={x} alt=\"a\" />\\n<a href=\"/x\" target=\"_blank\" rel=\"noopener noreferrer\">x</a>\\n' +\n      '<button onClick={f}>go</button>';\n    expect(r(code)).toBeNull();\n  });\n\n  it('signale un <Image> sans alt', () => {\n    expect(r('<Image src={x} width={10} />')?.message).toContain('without an `alt`');\n  });\n\n  it('accepte un alt vide (décoratif)', () => {\n    expect(r('<Image src={x} alt=\"\" />')).toBeNull();\n  });\n\n  it('signale un tabIndex positif', () => {\n    expect(r('<div tabIndex={3} />')?.message).toContain('positive tabIndex');\n  });\n\n  it('accepte tabIndex={0}', () => {\n    expect(r('<div tabIndex={0} />')).toBeNull();\n  });\n\n  it('signale target=_blank sans rel noopener', () => {\n    expect(r('<a href=\"/x\" target=\"_blank\">x</a>')?.message).toContain('rel=\"noopener');\n  });\n\n  it('signale onClick sur div sans role ni clavier', () => {\n    expect(r('<div onClick={f}>x</div>')?.message).toContain('non-interactive element');\n  });\n\n  it('accepte onClick sur div avec role + onKeyDown', () => {\n    expect(r('<div onClick={f} role=\"button\" onKeyDown={k}>x</div>')).toBeNull();\n  });\n\n  it('ne tronque pas la balise sur une fonction fléchée (le `>` de =>)', () => {\n    // Régression : un `>` issu de `() =>` ne doit pas couper la balise avant role/onKeyDown.\n    const code =\n      '<div\\n  onClick={() => setOpen((v) => !v)}\\n  role=\"button\"\\n  tabIndex={0}\\n' +\n      '  onKeyDown={(e) => { if (e.key === \"Enter\") setOpen(true); }}\\n>content</div>';\n    expect(r(code)).toBeNull();\n  });\n\n  it('ne se laisse pas berner par un `>` dans une chaîne', () => {\n    expect(r('<div title=\"a > b\" onClick={f} role=\"button\" onKeyDown={k}>x</div>')).toBeNull();\n  });\n\n  it('cumule plusieurs violations', () => {\n    const code = '<Image src={x} />\\n<div tabIndex={2} onClick={f}>x</div>';\n    expect(r(code)?.message.match(/^ {2}- /gm)?.length).toBe(3);\n  });\n});\n"
+    }
+  },
+  {
+    "slug": "stop-seo-structure-check",
+    "name": "SEO structure gate",
+    "benefit": "Your SEO can't regress — gated like your test suite",
+    "category": "validation",
+    "hook_type": "Stop",
+    "trigger": "*",
+    "stack": [
+      "typescript"
+    ],
+    "tags": [
+      "seo",
+      "gate",
+      "stop",
+      "links",
+      "nextjs",
+      "crawlability"
+    ],
+    "description": "Session-end SEO gate (Stop) for Next.js projects — a test suite for search. Verifies every page.tsx carries a title + description, the structural files exist (robots, sitemap, OpenGraph image, manifest), and every literal internal <Link href=\"/...\"> resolves to a real route, so no broken link bleeds crawl budget. Blocks the stop (exit 2) on any regression. Runtime JSON-LD and Core Web Vitals stay with a full audit.",
+    "use_cases": [
+      "Gate SEO structure the way tests gate your code",
+      "Catch a broken internal link before it reaches production"
+    ],
+    "default_on": false,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/stop-seo-structure-check.mjs",
+      "config": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-seo-structure-check.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Gate SEO structurel en fin de session (Stop) — l'équivalent « suite de tests » pour\n// le référencement. Sur un projet Next.js App Router (src/app présent), vérifie en\n// statique, sans navigateur ni réseau :\n//   1. chaque page.tsx exporte ses métadonnées (title + description)\n//   2. les fichiers structurels existent : robots, sitemap, image OpenGraph, manifest\n//   3. chaque <Link href=\"/…\"> interne littéral pointe vers une route connue (broken-link)\n// Bloquant (exitCode 2) si une régression est trouvée ; silencieux sinon.\n// La validité runtime des schémas JSON-LD et des Core Web Vitals relève du skill seo-geo-aeo.\nimport { readFileSync, existsSync, readdirSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nfunction defaultWalkTsx(dir, { exists = existsSync, readdir = readdirSync } = {}) {\n  if (!exists(dir)) return [];\n  const out = [];\n  for (const entry of readdir(dir, { withFileTypes: true })) {\n    const full = join(dir, entry.name);\n    if (entry.isDirectory()) out.push(...defaultWalkTsx(full, { exists, readdir }));\n    else if (entry.name.endsWith('.tsx')) out.push(full);\n  }\n  return out;\n}\n\nfunction defaultListDirs(dir, { exists = existsSync, readdir = readdirSync } = {}) {\n  if (!exists(dir)) return [];\n  return readdir(dir, { withFileTypes: true })\n    .filter((e) => e.isDirectory())\n    .map((e) => e.name);\n}\n\nfunction hasMetadata(content) {\n  const present =\n    /export\\s+(?:const|let)\\s+metadata\\b/.test(content) ||\n    /export\\s+(?:async\\s+)?function\\s+generateMetadata\\b/.test(content) ||\n    /export\\s*\\{[^}]*\\bmetadata\\b[^}]*\\}/.test(content);\n  return present && /\\btitle\\s*:/.test(content) && /\\bdescription\\s*:/.test(content);\n}\n\nexport function run(_input, deps = {}) {\n  const {\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n    readFile = readFileSync,\n    exists = existsSync,\n    walkTsx = (dir) => defaultWalkTsx(dir),\n    listDirs = (dir) => defaultListDirs(dir),\n  } = deps;\n\n  const appDir = join(projectDir, 'src/app');\n  if (!exists(appDir)) return null; // pas un projet Next App Router → no-op\n\n  const problems = [];\n  const read = (p) => {\n    try {\n      return readFile(p, 'utf8');\n    } catch {\n      return '';\n    }\n  };\n\n  // 1. Couverture métadonnées sur chaque page.tsx\n  const pages = walkTsx(appDir).filter((p) => p.endsWith('page.tsx'));\n  for (const page of pages) {\n    if (!hasMetadata(read(page))) {\n      problems.push(`metadata missing (title + description) → ${page.replace(projectDir + '/', '')}`);\n    }\n  }\n\n  // 2. Fichiers structurels (au moins un candidat par catégorie)\n  const need = [\n    ['robots', ['src/app/robots.ts', 'src/app/robots.txt', 'public/robots.txt']],\n    ['sitemap', ['src/app/sitemap.ts', 'src/app/sitemap.xml', 'public/sitemap.xml']],\n    [\n      'OpenGraph image',\n      ['src/app/opengraph-image.tsx', 'src/app/opengraph-image.png', 'src/app/opengraph-image.jpg'],\n    ],\n    ['web manifest', ['src/app/manifest.ts', 'public/site.webmanifest', 'public/manifest.json']],\n  ];\n  for (const [label, candidates] of need) {\n    if (!candidates.some((c) => exists(join(projectDir, c)))) {\n      problems.push(`${label} missing → expected one of: ${candidates.join(', ')}`);\n    }\n  }\n\n  // 3. Liens internes cassés (<Link href=\"/…\"> littéral vers une route inconnue)\n  const routes = new Set(listDirs(appDir)); // segments de 1er niveau (about, guides, hook, …)\n  const LINK_RE = /<Link\\b[^>]*\\bhref=[\"'](\\/[^\"'#?]*)/g;\n  for (const file of walkTsx(join(projectDir, 'src'))) {\n    const content = read(file);\n    for (const [, href] of content.matchAll(LINK_RE)) {\n      if (href === '/') continue; // racine\n      const seg = href.split('/')[1];\n      if (!seg || routes.has(seg)) continue; // ancre ou route connue\n      problems.push(`broken internal link \"${href}\" → unknown route in ${file.replace(projectDir + '/', '')}`);\n    }\n  }\n\n  if (!problems.length) return null;\n\n  return {\n    exitCode: 2,\n    message:\n      `[seo-structure] SEO gate failed — fix before ending the session:\\n` +\n      problems.map((p) => `  - ${p}`).join('\\n') +\n      '\\n',\n  };\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const result = run();\n  if (result?.message) process.stderr.write(result.message);\n  if (result?.exitCode) process.exit(result.exitCode);\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, beforeAll, afterAll } from 'vitest';\nimport { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';\nimport { tmpdir } from 'os';\nimport { join } from 'path';\nimport { run } from '../../.claude/hooks/stop-seo-structure-check.mjs';\n\nconst META = \"export const metadata = { title: 'T', description: 'D' };\";\n\n// ── Tests unitaires : dépendances injectées, une branche par cas ──────────────\ndescribe('stop-seo-structure-check (injecté)', () => {\n  const base = {\n    projectDir: '/p',\n    exists: () => true,\n    listDirs: () => ['about', 'guides'],\n    walkTsx: (dir) =>\n      dir.endsWith('src/app')\n        ? ['/p/src/app/page.tsx']\n        : ['/p/src/app/page.tsx', '/p/src/components/Header.tsx'],\n    readFile: (p) =>\n      p.endsWith('page.tsx') ? META : '<Link href=\"/about\">x</Link>',\n  };\n\n  it('no-op si src/app absent (pas un projet Next)', () => {\n    expect(run({}, { ...base, exists: () => false })).toBeNull();\n  });\n\n  it('silencieux quand tout est conforme', () => {\n    expect(run({}, base)).toBeNull();\n  });\n\n  it('bloque (exitCode 2) si une page manque de métadonnées', () => {\n    const out = run({}, { ...base, readFile: (p) => (p.endsWith('page.tsx') ? 'export default function P(){}' : '') });\n    expect(out?.exitCode).toBe(2);\n    expect(out?.message).toContain('metadata missing');\n  });\n\n  it('signale un fichier structurel manquant (sitemap)', () => {\n    const out = run({}, { ...base, exists: (p) => !/sitemap/.test(p) });\n    expect(out?.message).toContain('sitemap');\n  });\n\n  it('signale un lien interne cassé', () => {\n    const out = run({}, {\n      ...base,\n      readFile: (p) => (p.endsWith('page.tsx') ? META : '<Link href=\"/guide/x\">x</Link>'),\n    });\n    expect(out?.message).toContain('broken internal link \"/guide/x\"');\n  });\n\n  it('ignore les ancres et la racine', () => {\n    const out = run({}, {\n      ...base,\n      readFile: (p) => (p.endsWith('page.tsx') ? META : '<Link href=\"/\">a</Link><Link href=\"/#catalogue\">b</Link>'),\n    });\n    expect(out).toBeNull();\n  });\n});\n\n// ── Test d'intégration : vrai dossier temporaire, walkers fs par défaut ────────\ndescribe('stop-seo-structure-check (fs réel)', () => {\n  let dir;\n\n  beforeAll(() => {\n    dir = mkdtempSync(join(tmpdir(), 'seo-gate-'));\n    const app = join(dir, 'src/app');\n    mkdirSync(join(app, 'about'), { recursive: true });\n    mkdirSync(join(dir, 'src/components'), { recursive: true });\n    writeFileSync(join(app, 'page.tsx'), META);\n    writeFileSync(join(app, 'about/page.tsx'), META);\n    for (const f of ['robots.ts', 'sitemap.ts', 'opengraph-image.tsx', 'manifest.ts']) {\n      writeFileSync(join(app, f), '// stub');\n    }\n    writeFileSync(join(dir, 'src/components/Nav.tsx'), '<Link href=\"/about\">About</Link>');\n  });\n\n  afterAll(() => rmSync(dir, { recursive: true, force: true }));\n\n  it('passe sur une arbo Next complète', () => {\n    expect(run({}, { projectDir: dir })).toBeNull();\n  });\n\n  it('attrape un lien cassé ajouté', () => {\n    writeFileSync(join(dir, 'src/components/Bad.tsx'), '<Link href=\"/contatc\">x</Link>');\n    const out = run({}, { projectDir: dir });\n    expect(out?.exitCode).toBe(2);\n    expect(out?.message).toContain('/contatc');\n  });\n});\n"
+    }
   }
 ]
