@@ -252,8 +252,19 @@ export default async function HookDetailPage({
               </li>
             )}
             <li>
-              <Link href="/guides/what-are-claude-code-hooks" className="text-[var(--color-brand)] hover:underline">
-                Guide: What are Claude Code hooks?
+              {hook.hook_type === 'PreToolUse' || hook.hook_type === 'PostToolUse' ? (
+                <Link href="/guides/pretooluse-vs-posttooluse" className="text-[var(--color-brand)] hover:underline">
+                  Guide: PreToolUse vs PostToolUse — choosing the right hook event
+                </Link>
+              ) : (
+                <Link href="/guides/what-are-claude-code-hooks" className="text-[var(--color-brand)] hover:underline">
+                  Guide: What are Claude Code hooks?
+                </Link>
+              )}
+            </li>
+            <li>
+              <Link href="/guides/claude-code-hooks-not-working" className="text-[var(--color-brand)] hover:underline">
+                Hook not firing? Troubleshooting guide
               </Link>
             </li>
           </ul>

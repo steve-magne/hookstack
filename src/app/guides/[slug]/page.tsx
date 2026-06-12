@@ -94,6 +94,12 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
     return h ? [h] : []
   })
 
+  // "Read next" — resolve related guide slugs defensively (slug may not exist yet)
+  const readNextGuides = (guide.related ?? []).flatMap((s) => {
+    const g = getGuideBySlug(s)
+    return g ? [g] : []
+  })
+
   const articleJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'TechArticle',
@@ -212,6 +218,26 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
             ))}
           </ul>
         </section>
+
+        {/* GuidePage-read-next — internal links to related guides */}
+        {readNextGuides.length > 0 && (
+          <section className="mt-12 border-t border-[var(--color-border)] pt-6">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">Read next</h2>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {readNextGuides.map((rg) => (
+                <li key={rg.slug}>
+                  <Link
+                    href={`/guides/${rg.slug}`}
+                    className="block rounded-lg border border-[var(--color-border)] bg-[#0d0d14] p-3 transition-colors hover:border-[var(--color-text-muted)]"
+                  >
+                    <span className="block text-sm font-medium text-white">{rg.title}</span>
+                    <span className="mt-1 block text-xs leading-snug text-zinc-500">{rg.description}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </article>
     </>
   )

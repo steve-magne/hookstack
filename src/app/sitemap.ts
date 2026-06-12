@@ -23,12 +23,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }))
 
-  const hookPages: MetadataRoute.Sitemap = allHooks.map((hook) => ({
-    url: `${BASE}/hook/${hook.slug}`,
-    lastModified: updated,
-    changeFrequency: 'monthly',
-    priority: hook.default_on ? 0.9 : 0.7,
-  }))
+  // Deduplicate by slug — guards against any future registry duplication.
+  const seenSlugs = new Set<string>()
+  const hookPages: MetadataRoute.Sitemap = allHooks
+    .filter((hook) => {
+      if (seenSlugs.has(hook.slug)) return false
+      seenSlugs.add(hook.slug)
+      return true
+    })
+    .map((hook) => ({
+      url: `${BASE}/hook/${hook.slug}`,
+      lastModified: updated,
+      changeFrequency: 'monthly',
+      priority: hook.default_on ? 0.9 : 0.7,
+    }))
 
   return [...staticPages, ...guidePages, ...hookPages]
 }

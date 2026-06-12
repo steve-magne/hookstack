@@ -2,9 +2,9 @@
 
 # Hookstack
 
-**Your AI agent runs fast. Hooks keep it honest.**
+**Your AI agent runs fast. Claude Code hooks keep it honest.**
 
-A growing catalogue of production-ready lifecycle hooks for Claude Code.  
+The community catalogue of production-ready Claude Code hooks.  
 Browse, select, install with one command — your agent gets guardrails in under a minute.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
@@ -71,7 +71,7 @@ Thanks!
 
 ## The Lifecycle
 
-Hooks fire at 26 distinct points in the Claude Code agent loop. Here is how the most important ones fit together:
+Hooks fire at 25 distinct points in the Claude Code agent loop. Here is how the most important ones fit together:
 
 **1. SessionStart — set the stage**
 
@@ -214,6 +214,18 @@ npx hookstack-cli@latest update
 ```
 
 The CLI re-fetches each installed hook from the registry and overwrites the local `.mjs`. Your `settings.json` is not touched unless the config fragment changed.
+
+---
+
+## Guides
+
+Five short guides on Claude Code hooks — from first principles to production debugging:
+
+- [**What are Claude Code hooks?**](https://www.hookstack.app/guides/what-are-claude-code-hooks) — the concept explained in plain language: what an event is, how settings.json wires it, and when to reach for a hook vs a slash-command.
+- [**PreToolUse vs PostToolUse**](https://www.hookstack.app/guides/pretooluse-vs-posttooluse) — when to block (PreToolUse) vs when to observe and react (PostToolUse), with concrete examples of each.
+- [**Claude Code hooks vs slash commands**](https://www.hookstack.app/guides/claude-code-hooks-vs-slash-commands) — the two extension points compared: trigger model, blocking capability, and the right choice for each use-case.
+- [**Claude Code hooks not working?**](https://www.hookstack.app/guides/claude-code-hooks-not-working) — a practical troubleshooting checklist: permissions, shebang, stdin parsing, exit codes, and the most common mistakes.
+- [**Write your first Claude Code hook**](https://www.hookstack.app/guides/write-your-first-claude-code-hook) — a step-by-step walkthrough from an empty `.mjs` to a tested, wired hook in under 10 minutes.
 
 ---
 

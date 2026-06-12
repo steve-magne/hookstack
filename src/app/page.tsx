@@ -2,6 +2,7 @@ import { CatalogueExplorer } from '@/components/CatalogueExplorer'
 import { StickyInstallBanner } from '@/components/StickyInstallBanner'
 import { HeroRotatingTitle } from '@/components/HeroRotatingTitle'
 import { allHooks } from '@/lib/hooks'
+import { guides } from '@/lib/guides'
 import { T, SEO_KEYWORDS } from '@/lib/i18n'
 import { SITE, MAINTAINER, SAME_AS, PERSON_SAME_AS } from '@/lib/site'
 import type { Metadata } from 'next'
@@ -10,7 +11,9 @@ import Link from 'next/link'
 const BASE = 'https://www.hookstack.app'
 
 export const metadata: Metadata = {
-  title: T.metaTitle,
+  // Use absolute to avoid layout template appending "| HookStack" to a title
+  // that already ends with "— HookStack", which would produce a double brand.
+  title: { absolute: T.metaTitle },
   description: T.metaDescription,
   keywords: SEO_KEYWORDS,
   openGraph: {
@@ -169,7 +172,7 @@ export default async function HomePage() {
             className="mx-auto mt-6 flex max-w-2xl flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs text-zinc-400"
           >
             <li className="rounded-full border border-[var(--color-border)] px-3 py-1">{allHooks.length} hooks</li>
-            {stars !== null && (
+            {stars !== null && stars > 0 && (
               <li className="rounded-full border border-[var(--color-border)] px-3 py-1">
                 ★ {stars.toLocaleString('en-US')} on GitHub
               </li>
@@ -254,6 +257,30 @@ export default async function HomePage() {
         </p>
       </section>
 
+      {/* GuidesSection — internal links to long-form content (SEO + user education) */}
+      <section
+        data-component="GuidesSection"
+        className="mx-auto max-w-3xl px-4 pb-16"
+        aria-labelledby="guides-heading"
+      >
+        <h2 id="guides-heading" className="mb-6 text-xl font-semibold text-white">
+          Learn more about Claude Code hooks
+        </h2>
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {guides.map((g) => (
+            <li key={g.slug}>
+              <Link
+                href={`/guides/${g.slug}`}
+                className="block rounded-xl border border-[var(--color-border)] bg-[#0d0d14] p-4 transition-colors hover:border-[var(--color-text-muted)]"
+              >
+                <span className="block text-sm font-medium text-white">{g.title}</span>
+                <span className="mt-1 block text-xs leading-snug text-zinc-500">{g.description.slice(0, 90)}{g.description.length > 90 ? '…' : ''}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       {/* FaqSection */}
       <section
         data-component="FaqSection"
@@ -267,13 +294,23 @@ export default async function HomePage() {
           {T.faqTitle}
         </h2>
         <dl className="space-y-0">
-          {T.faq.map(({ q, a }) => (
+          {T.faq.map((item) => (
             <div
-              key={q}
+              key={item.q}
               className="border-t border-[var(--color-border)] py-6 last:border-b"
             >
-              <dt className="mb-2 font-medium text-white">{q}</dt>
-              <dd className="text-sm leading-relaxed text-zinc-400">{a}</dd>
+              <dt className="mb-2 font-medium text-white">{item.q}</dt>
+              <dd className="text-sm leading-relaxed text-zinc-400">
+                {item.a}
+                {'guide' in item && item.guide && (
+                  <Link
+                    href={`/guides/${item.guide}`}
+                    className="mt-2 block text-[var(--color-brand)] hover:underline"
+                  >
+                    Read the full guide →
+                  </Link>
+                )}
+              </dd>
             </div>
           ))}
         </dl>
