@@ -19,6 +19,9 @@ export function Header() {
           <Link href="/guides" className="text-zinc-400 transition-colors hover:text-white">
             {T.navGuides}
           </Link>
+          <Link href="/evolution" className="text-zinc-400 transition-colors hover:text-white">
+            {T.navEvolution}
+          </Link>
           <Link href="/about" className="hidden sm:block text-zinc-400 transition-colors hover:text-white">
             {T.navAbout}
           </Link>

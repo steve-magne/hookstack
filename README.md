@@ -22,6 +22,22 @@ Browse, select, install with one command — your agent gets guardrails in under
 
 ---
 
+<!-- HOOKS_TIMELINE:START -->
+
+## 📈 The stack grows in the open
+
+**91 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+
+<p align="center">
+  <a href="https://www.hookstack.app/evolution">
+    <img src="public/hooks-timeline.svg" alt="HookStack growth — contribution-style heatmap of hooks added over time"/>
+  </a>
+</p>
+
+<sub>First hook 2026-05-29 · latest 2026-06-13 · explore the live timeline → <a href="https://www.hookstack.app/evolution"><b>hookstack.app/evolution</b></a></sub>
+
+<!-- HOOKS_TIMELINE:END -->
+
 ## Promise
 
 Install a production-ready Claude Code HookStack in one command - Up and running in 60 seconds.

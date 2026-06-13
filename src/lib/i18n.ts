@@ -117,6 +117,7 @@ export const T = {
   previewClickToAdd: 'Click the row to add it',
   previewMustHint: 'Recommended — already selected',
   navGuides: 'Guides',
+  navEvolution: 'Evolution',
   navAbout: 'About',
   guidesLinkText: 'Read the guides',
   compareTitle: 'Hooks vs slash-commands vs prompt instructions',

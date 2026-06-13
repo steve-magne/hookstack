@@ -43,3 +43,6 @@ jobs:
 
       - name: Registry sync drift guard
         run: node .claude/sync-hooks.mjs --check
+
+      - name: Hooks timeline drift guard
+        run: node .claude/hooks-timeline.mjs --check
