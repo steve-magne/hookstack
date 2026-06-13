@@ -336,7 +336,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       { q: 'Are PostToolUse hooks always non-blocking?', a: 'Not inherently. HookStack PostToolUse hooks exit quietly on missing tools by convention (silent try/catch), but the runtime still lets a PostToolUse hook return a block decision. The non-blocking behavior is a design choice, not a hard rule.' },
       { q: 'Can I use both events together?', a: 'Yes, and it is a common combination — PreToolUse to guard, PostToolUse to format and check.' },
     ],
-    related: ['what-are-claude-code-hooks', 'secure-claude-code-with-hooks', 'claude-code-hooks-not-working', 'write-your-first-claude-code-hook'],
+    related: ['what-are-claude-code-hooks', 'secure-claude-code-with-hooks', 'claude-code-hooks-not-working', 'write-your-first-claude-code-hook', 'automate-code-quality-claude-code-hooks'],
     relatedHookSlugs: ['pre-bash-block-destructive', 'pre-bash-secret-detection', 'post-write-eslint', 'post-tool-batch-typecheck'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
@@ -998,7 +998,7 @@ cat .claude/data/bash-log.jsonl
       { q: 'Can a hook actually stop Claude from doing something?', a: 'Yes, but only `PreToolUse` hooks. They run before a tool executes and can return `{ decision: \'block\', reason: \'…\' }` on stdout to reject the call. `PostToolUse`, `Stop`, and `SessionStart` hooks react or inject context but cannot retroactively undo a completed action.' },
       { q: 'Where do installed hooks live?', a: 'Scripts go in your project’s `.claude/hooks/` directory and are referenced from `.claude/settings.json` via `$CLAUDE_PROJECT_DIR`. The HookStack CLI writes both, so the script on disk and its registration stay in sync.' },
     ],
-    related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'secure-claude-code-with-hooks'],
+    related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'secure-claude-code-with-hooks', 'automate-code-quality-claude-code-hooks'],
     relatedHookSlugs: ['pre-bash-secret-detection', 'pre-write-main-guard', 'post-write-eslint', 'stop-run-tests', 'user-prompt-inject-conventions', 'session-start-load-git-context', 'notification-slack', 'pre-bash-block-destructive'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
@@ -1172,6 +1172,272 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     ],
     related: ['what-are-claude-code-hooks', 'pretooluse-vs-posttooluse', 'claude-code-hooks-examples'],
     relatedHookSlugs: ['pre-bash-block-destructive', 'pre-bash-secret-detection', 'pre-write-secret-detection', 'pre-edit-protect-paths', 'pre-read-env-guard', 'pre-bash-guard-git-push-main', 'pre-write-main-guard', 'message-display-redact-secrets'],
+    sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
+  },
+  {
+    slug: 'automate-code-quality-claude-code-hooks',
+    title: 'Automate Code Quality in Claude Code with Hooks',
+    metaTitle: 'Automate Code Quality in Claude Code with Hooks',
+    description:
+      'Automate code quality in Claude Code with hooks: run formatters, lint on write, typecheck after edits, and gate tests at stop. PostToolUse and Stop patterns.',
+    datePublished: '2026-06-13',
+    dateModified: '2026-06-13',
+    readingMinutes: 8,
+    intro: [
+      'Every time an AI coding agent writes a file, you want that file to be formatted, lint-clean, and type-correct before the session moves on. Every time it finishes a task, you want the tests to pass. The problem is that prompt instructions — even in a CLAUDE.md — are probabilistic: the model may follow them, drift on a long turn, or decide an exception applies.',
+      'Hooks eliminate the uncertainty. A PostToolUse hook runs on every file write, in its own process, before the session continues. A Stop hook runs every time the agent finishes a turn, regardless of whether the model remembered to check. This guide shows exactly what each quality hook looks like, how to wire it up, and how to combine them into a quality gate the model cannot skip.',
+    ],
+    sections: [
+      {
+        heading: 'Why automate code quality with hooks instead of asking the agent?',
+        body: [
+          'When you write a quality rule in CLAUDE.md, you are making a request the model will usually honour. A hook makes it a rule the runtime enforces. The difference matters in practice: a hook runs on every matching event, consumes zero context tokens unless it surfaces a problem, and cannot be deprioritized by the model in a long session.',
+          'Prompt instructions express intent. Hooks encode invariants. For anything that must be true at every turn — formatted files, zero lint errors, passing types — an invariant is what you want. The model is free to focus on the task; the quality pipeline runs regardless.',
+        ],
+      },
+      {
+        heading: 'How do you format every file the moment it is written?',
+        body: [
+          'Register a PostToolUse hook with the matcher `Write|Edit`. It fires every time the agent writes or edits a file. Filter by extension to skip non-formattable files, then call Prettier with `--write` inside a silent try/catch — if Prettier is absent, the hook exits quietly and nothing breaks.',
+          {
+            code: `// .claude/hooks/post-write-autoformat.mjs
+import { readFileSync } from 'fs'
+import { execSync } from 'child_process'
+import { fileURLToPath } from 'url'
+
+function defaultExec(cmd) {
+  execSync(cmd, { stdio: 'ignore', timeout: 10_000 })
+}
+
+export function run(input, { exec = defaultExec } = {}) {
+  const filePath = input.tool_input?.file_path ?? ''
+  if (!filePath) return null
+
+  try {
+    exec(\`npx --no-install prettier --write "\${filePath}"\`)
+    return { formatted: filePath }
+  } catch {
+    return null // formatter absent or non-fatal error — stay silent
+  }
+}
+
+/* v8 ignore next 4 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  run(input)
+}`,
+          },
+          'Wire it in `settings.json` under `PostToolUse` with the `Write|Edit` matcher. PostToolUse hooks are non-blocking by convention: the session continues whether or not Prettier is installed.',
+          {
+            code: `{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-autoformat.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+        ],
+      },
+      {
+        heading: 'How do you lint and auto-fix every file automatically?',
+        body: [
+          'The ESLint hook follows the same shape — PostToolUse, `Write|Edit` matcher, extension filter — but it surfaces unfixable errors to Claude instead of staying fully silent. The lint report goes to stderr so the model reads it and can correct the remaining issues on the next edit.',
+          {
+            code: `// .claude/hooks/post-write-eslint.mjs
+import { readFileSync } from 'fs'
+import { execSync } from 'child_process'
+import { fileURLToPath } from 'url'
+
+function defaultExec(cmd) {
+  return execSync(cmd, { stdio: 'pipe', timeout: 15_000 })
+}
+
+export function run(input, { exec = defaultExec } = {}) {
+  const filePath = input.tool_input?.file_path ?? ''
+  if (!filePath || !/\\.[cm]?[jt]sx?$/.test(filePath)) return null
+
+  try {
+    exec(\`npx --no-install eslint --max-warnings=0 "\${filePath}"\`)
+    return null
+  } catch (err) {
+    const output = err.stdout?.toString() ?? ''
+    return output ? { message: \`ESLint: \${output.trim()}\\n\` } : null
+  }
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result?.message) process.stderr.write(result.message)
+}`,
+          },
+          'Stack both hooks under the same `Write|Edit` matcher group in `settings.json` — the formatter runs first so ESLint sees the already-formatted file.',
+        ],
+      },
+      {
+        heading: 'How do you catch type errors automatically?',
+        body: [
+          'Running `tsc --noEmit` after every single file write is expensive — the TypeScript compiler does a full project check each time, which is redundant when several files change in one batch. A PostToolBatch hook is the right event: it fires after the agent completes a group of edits, inspects which files changed, skips the run entirely if none are TypeScript, and surfaces compiler errors as context the model can act on.',
+          {
+            code: `// .claude/hooks/post-tool-batch-typecheck.mjs
+import { readFileSync } from 'fs'
+import { execSync } from 'child_process'
+import { fileURLToPath } from 'url'
+
+function defaultExec(cmd) {
+  return execSync(cmd, { stdio: 'pipe', timeout: 30_000 })
+}
+
+export function run(input, { exec = defaultExec } = {}) {
+  const calls = input.tool_calls ?? []
+  const hasTs = calls.some(
+    (c) => ['Write', 'Edit'].includes(c.tool_name) && /\\.tsx?$/.test(c.tool_input?.file_path ?? ''),
+  )
+  if (!hasTs) return null
+
+  try {
+    exec('npx --no-install tsc --noEmit --pretty false 2>&1')
+    return null
+  } catch (e) {
+    const out = (e.stdout ?? e.stderr ?? '').toString().slice(0, 2000)
+    return {
+      hookSpecificOutput: {
+        hookEventName: 'PostToolBatch',
+        additionalContext: \`TypeScript errors after batch edit:\\n\${out}\`,
+      },
+    }
+  }
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result) process.stdout.write(JSON.stringify(result))
+}`,
+          },
+          'Register this under `PostToolBatch`, not `PostToolUse`. The batch event gives you a single compiler run after a group of changes rather than one noisy invocation per file.',
+        ],
+      },
+      {
+        heading: 'How do you guarantee tests pass before the agent hands back control?',
+        body: [
+          'The `Stop` event fires every time the agent finishes a turn and returns control to you. A Stop hook at that moment turns a completed turn into a verified one. If the suite fails, exit code 2 feeds the stderr output back to Claude as context and the agent continues working.',
+          {
+            code: `// .claude/hooks/stop-run-tests.mjs
+import { readFileSync } from 'fs'
+import { execSync } from 'child_process'
+import { fileURLToPath } from 'url'
+
+const TEST_CMD = process.env.HOOKSTACK_TEST_CMD ?? 'npm test'
+
+export function run(_input, {
+  exec = (cmd) => execSync(cmd, { stdio: 'pipe', timeout: 120_000 }),
+  testCmd = TEST_CMD,
+} = {}) {
+  try {
+    exec(testCmd)
+    return null // tests passed — stay silent
+  } catch (err) {
+    const out = (err.stdout ?? err.stderr ?? '').toString().slice(0, 3000)
+    return { failed: true, output: out }
+  }
+}
+
+/* v8 ignore next 7 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result?.failed) {
+    process.stderr.write(\`Tests failed:\\n\${result.output}\\n\`)
+    process.exit(2) // exit 2 → stderr is fed back to Claude as context
+  }
+}`,
+          },
+          'Set `HOOKSTACK_TEST_CMD` to your test command (`pnpm test`, `pytest`, `cargo test`) and the hook reads it at runtime. The 120-second timeout covers most suites; raise it for slow integration runs.',
+          {
+            code: `{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-run-tests.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+        ],
+      },
+      {
+        heading: 'Pre-write vs post-write: when should each quality check run?',
+        body: [
+          'Quality hooks nearly always go on PostToolUse or Stop — they react to completed changes rather than speculative ones. The practical split by cost and scope:',
+          {
+            list: [
+              '`PostToolUse` (matcher `Write|Edit`) — format and lint a single file. Runs immediately after every write; stays fast by filtering on extension.',
+              '`PostToolBatch` — typecheck. One compiler run covers all files in the batch, far cheaper than running `tsc` per file.',
+              '`Stop` — test suite, coverage gate. Runs once at the end of a turn, not after each individual file.',
+            ],
+          },
+          'PreToolUse quality checks make sense in one specific case: blocking a write to a read-only or auto-generated file. For everything else, PostToolUse is the right event. The PreToolUse vs PostToolUse guide (linked below) covers the full event comparison and which events can block.',
+        ],
+      },
+      {
+        heading: 'How do you assemble and install a complete quality gate?',
+        body: [
+          'With the four hooks on disk, the `settings.json` wires them together — format and lint run on every write, typecheck runs once per batch, and tests gate every finished turn:',
+          {
+            code: `{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-autoformat.mjs" },
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-eslint.mjs" }
+        ]
+      }
+    ],
+    "PostToolBatch": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-batch-typecheck.mjs" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-run-tests.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+          'All four hooks are in the HookStack catalogue. Install the full set in one command:',
+          { code: 'npx hookstack-cli@latest install' },
+          'The CLI writes each script to `.claude/hooks/` and patches your `settings.json` with the correct event and matcher. From the next session on, every file the agent writes is formatted and linted immediately, types are verified after each batch of edits, and the test suite must pass before the session closes. Quality becomes an invariant, not a reminder.',
+        ],
+      },
+    ],
+    faq: [
+      { q: 'Can a PostToolUse hook break my Claude Code session if a tool is missing?', a: 'Not if it is written correctly. HookStack quality hooks wrap external tools in a silent try/catch so a missing formatter or linter exits quietly and the session continues. The hook returns null and control passes through.' },
+      { q: 'How do I run tests automatically in Claude Code?', a: 'Register a Stop hook that runs your test command. The Stop event fires every time Claude finishes a turn. Set HOOKSTACK_TEST_CMD to your command (pnpm test, pytest, cargo test) and use exit code 2 to feed test failures back to Claude as context.' },
+      { q: 'Should I run tsc after every file write?', a: 'Better to use a PostToolBatch hook: it fires after a group of edits, checks the full project once, and skips entirely if no TypeScript files were touched. Running tsc on every single write is slow — one pass per batch is enough.' },
+      { q: 'Can I auto-format files in Claude Code without writing a hook myself?', a: 'Yes. Install the post-write-autoformat hook from the HookStack catalogue with npx hookstack-cli@latest install. The CLI writes the script and registers it in settings.json so Prettier runs on every file the agent writes without any manual setup.' },
+    ],
+    related: ['pretooluse-vs-posttooluse', 'claude-code-hooks-examples', 'write-your-first-claude-code-hook'],
+    relatedHookSlugs: ['post-write-autoformat', 'post-write-eslint', 'post-edit-typecheck', 'post-tool-batch-typecheck', 'stop-run-tests', 'stop-quality-check', 'stop-missing-test-detection', 'file-changed-run-tests'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
 ]
