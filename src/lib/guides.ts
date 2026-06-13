@@ -194,7 +194,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       { q: 'Can a hook block Claude from doing something?', a: 'Yes — a PreToolUse hook can block the action by writing { "decision": "block", "reason": "…" } to stdout before the tool runs.' },
       { q: 'Where do hooks live in my project?', a: 'Scripts live in .claude/hooks/ and are referenced by event and matcher in .claude/settings.json, usually as "node $CLAUDE_PROJECT_DIR/.claude/hooks/<name>.mjs".' },
     ],
-    related: ['write-your-first-claude-code-hook', 'pretooluse-vs-posttooluse', 'claude-code-hooks-vs-slash-commands'],
+    related: ['write-your-first-claude-code-hook', 'claude-code-hooks-examples', 'pretooluse-vs-posttooluse', 'claude-code-hooks-vs-slash-commands'],
     relatedHookSlugs: ['pre-bash-secret-detection', 'post-write-eslint', 'stop-run-tests', 'user-prompt-inject-conventions'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
@@ -336,7 +336,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       { q: 'Are PostToolUse hooks always non-blocking?', a: 'Not inherently. HookStack PostToolUse hooks exit quietly on missing tools by convention (silent try/catch), but the runtime still lets a PostToolUse hook return a block decision. The non-blocking behavior is a design choice, not a hard rule.' },
       { q: 'Can I use both events together?', a: 'Yes, and it is a common combination — PreToolUse to guard, PostToolUse to format and check.' },
     ],
-    related: ['what-are-claude-code-hooks', 'claude-code-hooks-not-working', 'write-your-first-claude-code-hook'],
+    related: ['what-are-claude-code-hooks', 'secure-claude-code-with-hooks', 'claude-code-hooks-not-working', 'write-your-first-claude-code-hook'],
     relatedHookSlugs: ['pre-bash-block-destructive', 'pre-bash-secret-detection', 'post-write-eslint', 'post-tool-batch-typecheck'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
@@ -582,7 +582,7 @@ console.log('checking command…')`,
       { q: 'What exit code should a Claude Code hook return?', a: 'Exit 0 and print a JSON decision to stdout (the HookStack convention). Exit 2 blocks the action and sends stderr to Claude. Any other code is a non-blocking error and the action proceeds — which is what happens when your hook crashes.' },
       { q: 'Why does my hook work in the terminal but not in Claude Code?', a: 'Almost always a path issue. Reference the script with $CLAUDE_PROJECT_DIR (node $CLAUDE_PROJECT_DIR/.claude/hooks/x.mjs) instead of a relative path, because Claude Code may run from a different working directory.' },
     ],
-    related: ['write-your-first-claude-code-hook', 'what-are-claude-code-hooks', 'pretooluse-vs-posttooluse'],
+    related: ['write-your-first-claude-code-hook', 'claude-code-settings-json', 'what-are-claude-code-hooks', 'pretooluse-vs-posttooluse'],
     relatedHookSlugs: ['pre-bash-secret-detection', 'pre-bash-block-destructive', 'post-write-eslint', 'pre-write-main-guard'],
     sources: [
       { label: 'Anthropic — Claude Code hooks documentation', url: DOCS },
@@ -728,6 +728,450 @@ cat .claude/data/bash-log.jsonl
     ],
     related: ['what-are-claude-code-hooks', 'claude-code-hooks-not-working', 'pretooluse-vs-posttooluse'],
     relatedHookSlugs: ['post-bash-command-log', 'pre-bash-block-destructive', 'pre-bash-enforce-package-managers', 'pre-bash-secret-detection'],
+    sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
+  },
+  {
+    slug: 'claude-code-settings-json',
+    title: 'Claude Code settings.json: The Complete Reference',
+    metaTitle: 'Claude Code settings.json: Complete Reference',
+    description:
+      'A complete reference for Claude Code settings.json: where it lives, hooks and permissions blocks, settings.local.json precedence, env, and common mistakes.',
+    datePublished: '2026-06-12',
+    dateModified: '2026-06-12',
+    readingMinutes: 8,
+    intro: [
+      'The `settings.json` file is where you configure Claude Code per project and per user — which hooks fire on agent events, which tools run without prompting, and a handful of other keys. If you have ever wondered where Claude Code reads its configuration from, why a hook silently does nothing, or how `settings.local.json` differs from `settings.json`, this is the file you need to understand.',
+      'This guide walks through what goes in `settings.json`, the three locations it can live in and how they merge, the structure of the `hooks` and `permissions` blocks, how to set environment variables, the mistakes that quietly break a config, and how to keep the file under control across a team.',
+    ],
+    sections: [
+      {
+        heading: 'What is the .claude/settings.json file and what goes in it?',
+        body: [
+          '`settings.json` is Claude Code’s configuration file, written as plain JSON. Each top-level key controls one area of behaviour. The keys you will use most often are:',
+          {
+            list: [
+              '`hooks` — scripts that run automatically on lifecycle events such as `PreToolUse`, `PostToolUse`, `SessionStart`, and `Stop`.',
+              '`permissions` — `allow`, `deny`, and `ask` lists that decide which tool calls run without a prompt, which are blocked, and which require confirmation.',
+              '`env` — environment variables exported into the session and into the processes your hooks spawn.',
+              '`model` — an override for which model the session uses, when you want to pin it rather than rely on the default.',
+            ],
+          },
+          'A minimal file is just an object with the keys you care about. Everything you omit falls back to Claude Code’s defaults, so it is normal for a project to ship a `settings.json` that only defines `hooks` and `permissions`.',
+        ],
+      },
+      {
+        heading: 'Where is Claude Code settings.json located?',
+        body: [
+          'There are three locations, each with a different scope. Claude Code reads all of them and merges the result:',
+          {
+            list: [
+              'Project — `.claude/settings.json` at the repository root. Committed to git and shared with the whole team. This is where your project’s hooks and shared permissions belong.',
+              'Local — `.claude/settings.local.json`, also at the repository root but gitignored. Personal overrides that should never reach your teammates, such as machine-specific paths or experimental permissions.',
+              'User — `~/.claude/settings.json` in your home directory. Global defaults that apply to every project you open on this machine.',
+            ],
+          },
+          'So the short answer to "where is Claude Code settings" is: per-project in `.claude/`, per-user in `~/.claude/`, plus a gitignored `.claude/settings.local.json` for personal tweaks.',
+        ],
+      },
+      {
+        heading: 'How do settings.local.json and settings.json merge?',
+        body: [
+          'The three files are merged, not replaced. The more specific location wins on conflicting keys: local overrides project, and project overrides user. In other words `settings.local.json` has the final say, then the committed project `settings.json`, then your global `~/.claude/settings.json`.',
+          'This is exactly the difference between `settings.local.json` and `settings.json`: the project file is the shared, committed baseline for the team, while the local file is your personal, gitignored layer on top. Put anything the team depends on in `settings.json`, and anything that is just for you — or that contains a secret — in `settings.local.json`.',
+        ],
+      },
+      {
+        heading: 'How is the hooks block structured?',
+        body: [
+          'The `hooks` block is keyed by event name. Each event holds an array of matcher groups; each group has a `matcher` (the tool name pattern it applies to) and a `hooks` array of commands to run. The nesting is event → matcher group → command:',
+          {
+            code: `{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/guard-bash.mjs"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/format-on-write.mjs"
+          }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+          'The `matcher` is a pattern against the tool name — `"Bash"` for one tool, `"Write|Edit"` for several, `"*"` for every tool. The referenced script is a Node `.mjs` file: a pure `export function run(input, deps)` holding the logic, plus an entry guard `if (process.argv[1] === fileURLToPath(import.meta.url)) { ... }` that reads the event JSON from stdin and runs it. Block decisions go to stdout; logs and diagnostics go to stderr.',
+        ],
+      },
+      {
+        heading: 'How does the permissions block work?',
+        body: [
+          'The `permissions` block decides, ahead of time, which tool calls need your confirmation. It holds three lists:',
+          {
+            list: [
+              '`allow` — tool calls that run without prompting. Use it for the commands you already trust, like `Bash(git status)` or read-only operations.',
+              '`deny` — tool calls that are blocked outright, regardless of anything else.',
+              '`ask` — tool calls that always require an explicit confirmation, even if they would otherwise be allowed.',
+            ],
+          },
+          {
+            code: `{
+  "permissions": {
+    "allow": ["Bash(git status)", "Bash(pnpm test)", "Read"],
+    "deny": ["Bash(rm -rf:*)"],
+    "ask": ["Bash(git push:*)"]
+  }
+}`,
+          },
+          'A well-tuned `allow` list is the single biggest reducer of approval friction: the operations you run constantly stop interrupting you, while `deny` and `ask` keep a guard on the dangerous ones. Keep team-wide rules in the project file and personal additions in `settings.local.json`.',
+        ],
+      },
+      {
+        heading: 'How do you set environment variables and the model?',
+        body: [
+          'The `env` key takes an object of string key/value pairs. Those variables are exported into the Claude Code session and are visible to the processes your hooks spawn, which makes `env` the right place for non-secret configuration your hooks read:',
+          {
+            code: `{
+  "env": {
+    "NODE_ENV": "development",
+    "HOOKSTACK_LOG_LEVEL": "info"
+  },
+  "model": "claude-opus-4-8"
+}`,
+          },
+          'The `model` key pins the session to a specific model instead of the default. Treat both keys as optional: only add them when you have a concrete reason, and prefer `settings.local.json` for anything machine-specific. Do not put secrets such as API tokens directly in a committed `settings.json` — keep them in the local file or in your real shell environment.',
+        ],
+      },
+      {
+        heading: 'What are the common settings.json mistakes?',
+        body: [
+          'Most "my hook isn’t running" reports trace back to one of these:',
+          {
+            list: [
+              'Invalid JSON. A trailing comma or a missing brace makes the whole file unparseable, and the config is silently ignored — hooks and permissions both stop applying with no obvious error.',
+              'Wrong file location. The file must be `.claude/settings.json` at the repo root, not in a subdirectory or your home folder when you meant it to be project-scoped.',
+              'Relative command paths. A bare `node .claude/hooks/x.mjs` breaks when the working directory differs. Always anchor with `$CLAUDE_PROJECT_DIR`, as in `node $CLAUDE_PROJECT_DIR/.claude/hooks/x.mjs`.',
+              'Committed secrets. Tokens in a project `settings.json` end up in git history. Keep them in `settings.local.json` (gitignored) or in your shell environment via `env` indirection.',
+            ],
+          },
+          'Validate the JSON before you trust it — this prints the parsed object or a precise parse error:',
+          {
+            code: `node -e "JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8')); console.log('valid')"`,
+          },
+        ],
+      },
+      {
+        heading: 'How do you keep settings.json under control on a team?',
+        body: [
+          'The split between the two files is what keeps a shared config sane:',
+          {
+            list: [
+              'Commit `.claude/settings.json` so every contributor gets the same hooks and the same baseline `permissions` the moment they clone the repo.',
+              'Add `.claude/settings.local.json` to `.gitignore` so personal overrides and secrets never get pushed.',
+              'Audit changes to the committed file in review — a new `allow` entry or a new hook command is a meaningful change in what runs automatically, and deserves the same scrutiny as code.',
+            ],
+          },
+          'If you would rather not hand-edit the JSON, HookStack’s CLI does it for you: `npx hookstack-cli@latest install` patches your `settings.json` with the hooks you selected and writes the matching scripts into `.claude/hooks/`, so the config and the code stay consistent.',
+        ],
+      },
+    ],
+    faq: [
+      { q: 'Where is the Claude Code settings.json file?', a: 'Project settings live in `.claude/settings.json` at the repository root, personal gitignored overrides in `.claude/settings.local.json`, and global defaults in `~/.claude/settings.json` in your home directory.' },
+      { q: 'What is the difference between settings.local.json and settings.json?', a: '`settings.json` is the committed, team-shared config; `settings.local.json` is a gitignored personal layer that overrides it. Local wins over project, and project wins over the user-level file.' },
+      { q: 'Why are my Claude Code hooks defined in settings.json not running?', a: 'The most common cause is invalid JSON — a trailing comma or missing brace makes the file unparseable and silently ignored. Validate it with a JSON parser, and make sure command paths use `$CLAUDE_PROJECT_DIR`.' },
+      { q: 'Should I commit settings.json to git?', a: 'Yes, commit `.claude/settings.json` so the team shares the same hooks and permissions. Keep secrets and personal tweaks in `.claude/settings.local.json`, which should be gitignored.' },
+    ],
+    related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'claude-code-hooks-not-working'],
+    relatedHookSlugs: ['config-change-audit-log', 'instructions-loaded-audit-log', 'permission-request-auto-allow-readonly', 'user-prompt-inject-conventions'],
+    sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
+  },
+  {
+    slug: 'claude-code-hooks-examples',
+    title: '10 Claude Code Hooks Worth Installing (With Examples)',
+    metaTitle: '10 Claude Code Hooks Examples Worth Installing',
+    description:
+      'A curated list of useful Claude Code hooks examples: block secrets and destructive commands, lint on save, run tests on stop, and inject conventions.',
+    datePublished: '2026-06-12',
+    dateModified: '2026-06-12',
+    readingMinutes: 8,
+    intro: [
+      'Claude Code hooks are shell or Node scripts that fire on lifecycle events — before a tool runs, after a file is written, when the agent finishes. They turn vague intentions like “don’t touch main” or “always run the tests” into deterministic rules the agent cannot skip. The hard part is not the mechanism; it is knowing which hooks are actually worth the wiring.',
+      'This is an opinionated roundup of eight hooks that pay for themselves on the first session, drawn from the HookStack catalogue. Each one names the event it binds to and the concrete outcome it buys you. You can install any of them in a minute with the HookStack CLI, covered at the end.',
+    ],
+    sections: [
+      {
+        heading: 'Why install hooks instead of writing them?',
+        body: [
+          'You can write any of these yourself — a hook is just a script wired into `.claude/settings.json`. The reason to install from a catalogue is that the edge cases are already handled: correct exit-code semantics, the right `decision`/`reason` shape on stdout, extension filtering so heavy tools don’t run on every file, and timeouts so a hook never hangs your session.',
+          'Installing also keeps the executable script and its settings entry in sync. The CLI writes the script to `.claude/hooks/` and patches `settings.json` for you, so you avoid the most common failure mode: a hook that is on disk but never registered, or registered against the wrong event.',
+        ],
+      },
+      {
+        heading: 'Block a leaked secret before a shell command runs',
+        body: [
+          'This `PreToolUse` hook inspects the command the agent is about to run and blocks it if it contains something that looks like a credential — an API key, a token, an `AWS_SECRET` value pasted inline. Instead of the secret reaching your shell history or a remote service, the tool call is rejected with an actionable reason.',
+          { list: ['Event: `PreToolUse` (matcher `Bash`)', 'Outcome: a command carrying a secret never executes.'] },
+        ],
+      },
+      {
+        heading: 'Stop a disk-wiping command like rm -rf',
+        body: [
+          'The single most expensive mistake an agent can make is a destructive shell command. This `PreToolUse` hook pattern-matches the proposed `Bash` command against known-dangerous shapes (`rm -rf`, `git reset --hard` on dirty trees, `dd` to a device, recursive `chmod`) and returns `{ decision: \'block\' }` before anything runs. It earns its place by being the one rule you never want to rely on a prompt to enforce.',
+        ],
+      },
+      {
+        heading: 'Refuse edits on main until you branch',
+        body: [
+          'A `PreToolUse` guard that checks the current git branch before any `Write` or `Edit` is applied. If you are on `main` (or `master`), it blocks the edit and tells the agent to create a feature branch first. This keeps experimental agent work off your protected branch without you having to remember to branch every session.',
+          { list: ['Event: `PreToolUse` (matcher `Write|Edit`)', 'Outcome: no file changes land on `main` by accident.'] },
+        ],
+      },
+      {
+        heading: 'Lint and fix every file the moment it is written',
+        body: [
+          'This `PostToolUse` hook runs ESLint with `--fix` on each file the agent writes or edits, filtered to JavaScript and TypeScript extensions so it stays fast. Style and trivially fixable errors are corrected immediately, which means the agent works against already-clean files instead of accumulating a lint debt you discover at commit time. Being a `PostToolUse` hook, it is non-blocking: if ESLint is not installed, it stays silent.',
+        ],
+      },
+      {
+        heading: 'Run the test suite when Claude says it is done',
+        body: [
+          'A `Stop` hook fires when the agent finishes a turn. This one runs your test command at that moment, so “I’m done” is verified rather than trusted. If tests fail, the result is surfaced back into the session and the agent keeps working instead of leaving you with a red suite. It is the cheapest way to close the gap between an agent claiming success and the code actually passing.',
+          { list: ['Event: `Stop`', 'Outcome: every completed turn ends on a green (or visibly red) test run.'] },
+        ],
+      },
+      {
+        heading: 'Inject your project conventions on every prompt',
+        body: [
+          'A `UserPromptSubmit` hook runs each time you send a message and prepends context to it — your naming conventions, the packages you forbid, the way you structure modules. Rather than repeating house rules in every prompt or hoping they survive in `CLAUDE.md`, you inject them deterministically at the moment they matter, so the agent reads them on every single turn.',
+        ],
+      },
+      {
+        heading: 'Load git repo state at session start',
+        body: [
+          'A `SessionStart` hook runs once when a session begins and feeds the agent the current git context: the branch, recent commits, and the working-tree status. The agent opens already knowing where it is in history, so it stops re-discovering the repo state with redundant `git` calls and avoids acting on stale assumptions about what changed.',
+          { list: ['Event: `SessionStart`', 'Outcome: the agent starts oriented, not blind.'] },
+        ],
+      },
+      {
+        heading: 'Ping Slack when the agent needs you',
+        body: [
+          'A `Notification` hook fires when Claude Code raises a notification — typically when it is waiting on you for permission or input. This one posts to a Slack webhook so you can step away from a long-running session and get pulled back exactly when the agent is blocked, instead of babysitting the terminal.',
+        ],
+      },
+      {
+        heading: 'How do you install these?',
+        body: [
+          'Every hook above is in the HookStack catalogue. The fastest path is the CLI: pick a stack or individual hooks on hookstack.app, copy the generated command, and run it in your project. A minimal install looks like this.',
+          { code: `npx hookstack-cli@latest install` },
+          'The CLI writes each selected script into `.claude/hooks/` and patches your `.claude/settings.json` so the hook is registered against the correct event and matcher. Your existing settings and `permissions` are preserved — it merges, it does not overwrite. A registered entry looks like the following, pointing at the script the CLI just wrote.',
+          { code: `{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-bash-block-destructive.mjs" }
+        ]
+      }
+    ]
+  }
+}` },
+          'After installing, open a new session so the hooks load, and confirm them with a harmless test — for example, ask the agent to run a blocked command and watch the `PreToolUse` guard reject it.',
+        ],
+      },
+    ],
+    faq: [
+      { q: 'What are the best Claude Code hooks to start with?', a: 'Begin with the safety hooks — secret detection and destructive-command blocking on `PreToolUse` — because they prevent irreversible mistakes. Then add a `Stop` hook that runs your tests and a `PostToolUse` linter so quality is enforced automatically rather than reviewed manually.' },
+      { q: 'Do hooks slow down Claude Code?', a: 'Well-written hooks are negligible. `PreToolUse` hooks do cheap pattern matching, and `PostToolUse` tools like ESLint should filter by file extension so they only run on relevant files. Always set an explicit timeout so a hook can never hang the session.' },
+      { q: 'Can a hook actually stop Claude from doing something?', a: 'Yes, but only `PreToolUse` hooks. They run before a tool executes and can return `{ decision: \'block\', reason: \'…\' }` on stdout to reject the call. `PostToolUse`, `Stop`, and `SessionStart` hooks react or inject context but cannot retroactively undo a completed action.' },
+      { q: 'Where do installed hooks live?', a: 'Scripts go in your project’s `.claude/hooks/` directory and are referenced from `.claude/settings.json` via `$CLAUDE_PROJECT_DIR`. The HookStack CLI writes both, so the script on disk and its registration stay in sync.' },
+    ],
+    related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'secure-claude-code-with-hooks'],
+    relatedHookSlugs: ['pre-bash-secret-detection', 'pre-write-main-guard', 'post-write-eslint', 'stop-run-tests', 'user-prompt-inject-conventions', 'session-start-load-git-context', 'notification-slack', 'pre-bash-block-destructive'],
+    sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
+  },
+  {
+    slug: 'secure-claude-code-with-hooks',
+    title: 'How to Secure Claude Code with Hooks',
+    metaTitle: 'How to Secure Claude Code with Hooks',
+    description:
+      'Secure Claude Code with deterministic hooks: block destructive commands, prevent secrets leaking, protect .env, and guard the main branch every run.',
+    datePublished: '2026-06-12',
+    dateModified: '2026-06-12',
+    readingMinutes: 8,
+    intro: [
+      'Claude Code is an agent that runs shell commands and edits files in your repository. That is exactly what makes it useful, and exactly what makes it worth constraining. A single misread instruction can turn into an `rm -rf`, a committed API key, or a force-push to `main`. You want the productivity without handing the agent unconditional write access to your machine.',
+      'The strongest control you have is the hook system. A `PreToolUse` hook runs before every tool call and can block it deterministically — the model does not get a vote. This guide walks through the concrete guardrails that matter most: blocking dangerous commands, stopping secret leaks, protecting sensitive files, and defending your default branch. Each one is a small, testable script you can install and read in full.',
+    ],
+    sections: [
+      {
+        heading: 'Why do you need security guardrails for an AI coding agent?',
+        body: [
+          'The agent decides what to do from natural language. Most of the time it gets it right, but "most of the time" is not a security boundary. When you ask it to clean up a directory, the difference between deleting build artifacts and deleting your home folder is one path the model inferred under uncertainty.',
+          'You might reach for `CLAUDE.md` and write "never run destructive commands". That instruction is probabilistic — it is one more piece of context competing for the model’s attention, and it can be misread, deprioritized, or simply lost in a long session. A hook is different. It is code that runs every time the matching tool fires, before the action happens, and its verdict is final.',
+          'The practical takeaway: put intent in `CLAUDE.md`, but put enforcement in hooks. A `PreToolUse` guard is deterministic — it runs on every call and the model cannot skip it.',
+        ],
+      },
+      {
+        heading: 'How do you block destructive shell commands?',
+        body: [
+          'Shell access is the highest-leverage risk surface, so it gets the first guard. A `PreToolUse` hook with the matcher `Bash` inspects every command the agent wants to run and returns `{ decision: \'block\', reason: \'…\' }` to stop it. Filter on `tool_name` first, then match the dangerous patterns you care about — recursive force-deletes, piping a remote script straight into a shell, disk-wipe utilities.',
+          {
+            code: `import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+const DANGEROUS = [
+  /rm\\s+-rf?\\s+(\\/|~|\\$HOME)/,
+  /:\\(\\)\\s*\\{.*\\};:/,
+  /\\b(mkfs|dd)\\b/,
+  /curl[^|]*\\|\\s*(sh|bash)/
+]
+
+export function run(input) {
+  if (input.tool_name !== 'Bash') return null
+  const command = input.tool_input?.command ?? ''
+  for (const pattern of DANGEROUS) {
+    if (pattern.test(command)) {
+      return { decision: 'block', reason: 'Blocked a potentially destructive shell command. Run it manually if you are certain.' }
+    }
+  }
+  return null
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result) process.stdout.write(JSON.stringify(result))
+}`,
+          },
+          'The matcher `Bash` is the key detail: this hook only ever sees `Bash` tool calls, so it stays cheap and focused. Returning `null` lets everything else through unchanged.',
+        ],
+      },
+      {
+        heading: 'How do you stop secrets from leaking?',
+        body: [
+          'Secrets leak two ways: the agent echoes a credential into a shell command, or it writes one into a file you commit. A single `PreToolUse` hook can cover both by registering against `Bash` for command inspection and `Write|Edit` for file content. Scan the relevant payload against a small set of high-signal patterns and block on a match.',
+          {
+            code: `import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+const SECRETS = [
+  /sk-[a-zA-Z0-9]{20,}/,
+  /AKIA[0-9A-Z]{16}/,
+  /ghp_[a-zA-Z0-9]{36}/,
+  /-----BEGIN (RSA |EC )?PRIVATE KEY-----/,
+  /xox[baprs]-[a-zA-Z0-9-]{10,}/
+]
+
+export function run(input) {
+  const text =
+    input.tool_name === 'Bash'
+      ? input.tool_input?.command ?? ''
+      : input.tool_input?.content ?? input.tool_input?.new_string ?? ''
+  if (!text) return null
+  for (const pattern of SECRETS) {
+    if (pattern.test(text)) {
+      return { decision: 'block', reason: 'A value matching a secret pattern was detected. Use an environment variable or a secrets manager instead.' }
+    }
+  }
+  return null
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result) process.stdout.write(JSON.stringify(result))
+}`,
+          },
+          'Wire it to both events in `settings.json` so it covers the full surface: the matcher `Bash` catches `echo $TOKEN` or `export KEY=…`, and the matcher `Write|Edit` catches a key being written into source. Pattern lists are never exhaustive, so treat this as a tripwire that catches the common shapes, not a guarantee.',
+        ],
+      },
+      {
+        heading: 'How do you protect sensitive files like .env?',
+        body: [
+          'Some files should never be in the agent’s working set at all. A `PreToolUse` hook on `Read` and `Edit` can block any access to `.env`, private keys, and credential files, so a secret never even enters the model’s context — which is the cleanest way to prevent it from being echoed or copied later.',
+          {
+            code: `import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+const PROTECTED = [
+  /(^|\\/)\\.env(\\.|$)/,
+  /\\.pem$/,
+  /(^|\\/)id_(rsa|ed25519)$/,
+  /(^|\\/)credentials(\\.json)?$/
+]
+
+export function run(input) {
+  if (!['Read', 'Edit'].includes(input.tool_name)) return null
+  const path = input.tool_input?.file_path ?? ''
+  if (PROTECTED.some((p) => p.test(path))) {
+    return { decision: 'block', reason: 'Access to this file is blocked to keep secrets out of the agent context.' }
+  }
+  return null
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result) process.stdout.write(JSON.stringify(result))
+}`,
+          },
+          'You can extend the same idea to lockfiles and CI configuration when you want the agent to read source but not silently rewrite the files that govern your builds.',
+        ],
+      },
+      {
+        heading: 'How do you protect the main branch?',
+        body: [
+          'Two failure modes hit the default branch: the agent edits files while `main` is checked out, and the agent pushes directly to `main`. Both are easy to gate with hooks. A `PreToolUse` guard on `Write|Edit` can read the current branch with `git rev-parse --abbrev-ref HEAD` and block writes until a feature branch exists.',
+          'A separate `Bash` guard inspects the command and blocks any `git push` whose target is `main` or `master`, including `--force` variants. Always pass a `timeout` to `execSync` so a hung `git` call cannot stall the session.',
+          {
+            list: [
+              'Block writes on `main`: nudge the agent to create a branch first, so no change lands on the protected branch by accident.',
+              'Block `git push origin main`: a push is irreversible in a way a local edit is not, so it deserves its own deterministic gate.',
+              'Allow everything on feature branches: the guards return `null` once you are off `main`, staying out of the way during normal work.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'How do you keep secrets off the screen during a demo or screen-share?',
+        body: [
+          'Security is not only about what the agent does — it is also about what ends up on your screen while you record a demo or pair over a call. A hook that runs when messages are displayed can redact values matching secret patterns before they render, replacing them with a placeholder like `[REDACTED]`.',
+          'This does not stop a leak at the source, so pair it with the file and command guards above. Its job is narrow and worth it: a token that scrolls past during a screen-share is a real disclosure, and redacting the display closes that specific gap.',
+        ],
+      },
+      {
+        heading: 'How do these compose into a security baseline, and how do you install them?',
+        body: [
+          'Each hook is small and single-purpose, and together they form layered defense: command blocking, secret scanning, file protection, branch guards, and display redaction. No single one is sufficient, but stacked they cover the realistic ways an agent causes harm. This is defense-in-depth, not a replacement for reviewing what the agent actually does — hooks catch the patterns you anticipated, your attention catches the rest.',
+          'HookStack groups these under the security category so you do not have to assemble them by hand. Select the guards you want from the catalogue, then install the whole stack in one step:',
+          {
+            code: `npx hookstack-cli@latest install`,
+          },
+          'The command writes the hooks into `.claude/hooks/` and wires the matchers into your `settings.json`. From the next session on, every matching tool call passes through your guards before it runs — deterministically, with no instruction for the model to forget.',
+        ],
+      },
+    ],
+    faq: [
+      { q: 'Can the model disable or skip a PreToolUse hook?', a: 'No. Hooks are configured in `settings.json` and executed by Claude Code itself, not by the model. A `PreToolUse` guard runs before every matching tool call, and its `block` decision is final regardless of what the model intends.' },
+      { q: 'Is a CLAUDE.md instruction enough to keep the agent safe?', a: 'No. Instructions in `CLAUDE.md` are probabilistic context the model may misread or deprioritize. Use it to express intent, but enforce hard limits with deterministic `PreToolUse` hooks that run every time.' },
+      { q: 'Do these hooks replace code review?', a: 'No. Hooks are defense-in-depth: they block the dangerous patterns you anticipated. You still need to review what the agent changed, because no pattern list covers every way an action can go wrong.' },
+      { q: 'Will secret-detection hooks slow down my session?', a: 'No meaningfully. The hooks filter on `tool_name` first and run a handful of regular expressions against a single payload, so the overhead per tool call is negligible compared to the model and tool latency.' },
+    ],
+    related: ['what-are-claude-code-hooks', 'pretooluse-vs-posttooluse', 'claude-code-hooks-examples'],
+    relatedHookSlugs: ['pre-bash-block-destructive', 'pre-bash-secret-detection', 'pre-write-secret-detection', 'pre-edit-protect-paths', 'pre-read-env-guard', 'pre-bash-guard-git-push-main', 'pre-write-main-guard', 'message-display-redact-secrets'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
 ]

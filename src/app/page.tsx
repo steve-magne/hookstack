@@ -264,7 +264,10 @@ export default async function HomePage() {
         aria-labelledby="guides-heading"
       >
         <h2 id="guides-heading" className="mb-6 text-xl font-semibold text-white">
-          Learn more about Claude Code hooks
+          <Link href="/guides" className="group inline-flex items-center gap-1.5 hover:text-white">
+            Learn more about Claude Code hooks
+            <span aria-hidden className="text-zinc-500 transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--color-brand)]">→</span>
+          </Link>
         </h2>
         <ul className="grid gap-3 sm:grid-cols-2">
           {guides.map((g) => (
