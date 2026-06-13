@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { T } from '@/lib/i18n'
 
 export function Header() {
@@ -6,13 +7,7 @@ export function Header() {
     <header data-component="Header" className="border-b border-[var(--color-border)] bg-[#0a0a0a]/80 backdrop-blur">
       <div data-component="HeaderInner" className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Link data-component="HeaderLogo" href="/" className="inline-flex items-center gap-2 text-white" aria-label="HookStack — home">
-          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="8.5" y="1"    width="7"  height="3.5" rx="1" fill="currentColor"/>
-            <rect x="6"   y="6"    width="12" height="3.5" rx="1" fill="currentColor"/>
-            <rect x="3"   y="11"   width="18" height="3.5" rx="1" fill="currentColor"/>
-            <rect x="1"   y="16"   width="22" height="3.5" rx="1" fill="currentColor"/>
-            <rect x="1"   y="21"   width="22" height="2.5" rx="1" fill="currentColor"/>
-          </svg>
+          <Image src="/hookstack.svg" alt="" width={24} height={24} aria-hidden="true" />
           <span className="text-base font-semibold tracking-tight">HookStack</span>
         </Link>
         <nav data-component="HeaderNav" className="flex items-center gap-3 text-sm sm:gap-4">
