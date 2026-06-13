@@ -1,14 +1,98 @@
 #!/usr/bin/env node
-// Garde d'accessibilité statique sur les composants (PostToolUse Write|Edit).
-// Cible : src/**/*.tsx. Quatre règles à faible faux-positif, sans ESLint ni AST :
-//   - <Image> (next/image) sans `alt`            → image non décrite
-//   - tabIndex positif                            → casse l'ordre de tabulation
-//   - <a target="_blank"> sans rel noopener       → sécurité + bonne pratique
-//   - onClick sur div/span/li sans role ni clavier → contrôle inaccessible au clavier
-// Non bloquant : cumule les violations dans un seul message.
-import { readFileSync } from 'fs';
+// Garde d'accessibilité JSX sur les composants src/**/*.tsx|jsx (PostToolUse Write|Edit).
+// Progressive enhancement :
+//   • eslint-plugin-jsx-a11y installé → ESLint v8/v9 (12 règles WCAG, config temp /tmp/)
+//   • plugin absent               → vérifications statiques (4 règles regex, zéro dépendance)
+// Non bloquant : cumule les violations dans un message.
+import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'fs';
+import { execSync } from 'child_process';
+import { join } from 'path';
 import { fileURLToPath } from 'url';
 
+// ── Chemin ESLint ──────────────────────────────────────────────────────────────
+
+const A11Y_RULES = {
+  'jsx-a11y/alt-text': 'error',
+  'jsx-a11y/aria-props': 'error',
+  'jsx-a11y/aria-proptypes': 'error',
+  'jsx-a11y/aria-role': 'error',
+  'jsx-a11y/aria-unsupported-elements': 'error',
+  'jsx-a11y/click-events-have-key-events': 'warn',
+  'jsx-a11y/heading-has-content': 'error',
+  'jsx-a11y/interactive-supports-focus': 'warn',
+  'jsx-a11y/label-has-associated-control': 'warn',
+  'jsx-a11y/no-positive-tabindex': 'error',
+  'jsx-a11y/role-has-required-aria-props': 'error',
+  'jsx-a11y/role-supports-aria-props': 'error',
+};
+
+function defaultExec(cmd) {
+  return execSync(cmd, { stdio: 'pipe', timeout: 20_000, encoding: 'utf8' });
+}
+
+function defaultUnlink(p) {
+  try { unlinkSync(p); } catch { /* silencieux */ }
+}
+
+function runEslint(filePath, { exec, writeFile, unlink, readFile, projectDir }) {
+  let eslintMajor;
+  try {
+    const pkg = JSON.parse(readFile(join(projectDir, 'node_modules/eslint/package.json'), 'utf8'));
+    eslintMajor = parseInt(pkg.version.split('.')[0], 10);
+  } catch {
+    return null;
+  }
+
+  const ext = eslintMajor >= 9 ? 'mjs' : 'json';
+  const configPath = `/tmp/hookstack-a11y-${process.pid}.${ext}`;
+
+  if (eslintMajor >= 9) {
+    const pluginPath = join(projectDir, 'node_modules/eslint-plugin-jsx-a11y/index.js');
+    const rulesStr = Object.entries(A11Y_RULES)
+      .map(([k, v]) => `    '${k}': '${v}'`).join(',\n');
+    writeFile(
+      configPath,
+      `import plugin from '${pluginPath}';\n` +
+      `export default [{ plugins: { 'jsx-a11y': plugin }, rules: {\n${rulesStr}\n} }];\n`,
+    );
+  } else {
+    writeFile(configPath, JSON.stringify({
+      plugins: ['jsx-a11y'],
+      rules: A11Y_RULES,
+      parserOptions: { ecmaVersion: 2020, sourceType: 'module', ecmaFeatures: { jsx: true } },
+    }));
+  }
+
+  try {
+    const configFlag = eslintMajor >= 9
+      ? `--no-config-lookup --config "${configPath}"`
+      : `--no-eslintrc -c "${configPath}" --resolve-plugins-relative-to "${projectDir}"`;
+    exec(`npx --no-install eslint ${configFlag} --format json "${filePath}"`);
+    return null;
+  } catch (err) {
+    const raw = err.stdout?.toString() ?? '';
+    let results;
+    try { results = JSON.parse(raw); } catch { return null; }
+
+    const msgs = results
+      .flatMap((r) => r.messages ?? [])
+      .filter((m) => m.ruleId?.startsWith('jsx-a11y/'));
+    if (!msgs.length) return null;
+
+    return {
+      message:
+        `[a11y] ${filePath.split('/').pop()} accessibility violations:\n` +
+        msgs.map((m) =>
+          `  ${m.severity === 2 ? '✗' : '⚠'} ${m.ruleId}: ${m.message} (line ${m.line})`,
+        ).join('\n') + '\n',
+    };
+  } finally {
+    unlink(configPath);
+  }
+}
+
+// ── Chemin statique (fallback zéro-dépendance) ────────────────────────────────
+//
 // Extrait chaque balise ouvrante d'un type donné, du `<tag` jusqu'au `>` de fermeture
 // au niveau 0. On suit la profondeur des accolades et on saute les chaînes : ainsi un
 // `>` issu d'une fonction fléchée `() =>` dans une prop, ou d'un `>` dans une string,
@@ -39,7 +123,7 @@ function openingTags(content, tag) {
   return tags;
 }
 
-const CHECKS = [
+const STATIC_CHECKS = [
   (c) =>
     openingTags(c, 'Image').some((t) => !/\balt\s*=/.test(t))
       ? '<Image> without an `alt` prop → describe the image (alt="" only if purely decorative)'
@@ -64,26 +148,41 @@ const CHECKS = [
       : null,
 ];
 
-export function run(input, { readFile = readFileSync } = {}) {
-  const filePath = input.tool_input?.file_path ?? '';
-  if (!/\/src\/.*\.tsx$/.test(filePath)) return null;
-
+function runStatic(filePath, { readFile }) {
   let content;
   try {
     content = readFile(filePath, 'utf8');
   } catch {
     return null;
   }
-
-  const violations = CHECKS.map((check) => check(content)).filter(Boolean);
+  const violations = STATIC_CHECKS.map((check) => check(content)).filter(Boolean);
   if (!violations.length) return null;
-
   return {
     message:
       `[a11y] ${filePath} has accessibility issues:\n` +
       violations.map((v) => `  - ${v}`).join('\n') +
       '\n',
   };
+}
+
+// ── Point d'entrée ─────────────────────────────────────────────────────────────
+
+export function run(input, {
+  exec = defaultExec,
+  exists = existsSync,
+  writeFile = writeFileSync,
+  unlink = defaultUnlink,
+  readFile = readFileSync,
+  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+} = {}) {
+  const filePath = input.tool_input?.file_path ?? '';
+  if (!/\/src\/.*\.[jt]sx$/.test(filePath)) return null;
+
+  if (exists(join(projectDir, 'node_modules/eslint-plugin-jsx-a11y'))) {
+    return runEslint(filePath, { exec, writeFile, unlink, readFile, projectDir });
+  }
+
+  return runStatic(filePath, { readFile });
 }
 
 /* v8 ignore next 5 */
