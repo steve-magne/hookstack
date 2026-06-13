@@ -893,7 +893,7 @@ cat .claude/data/bash-log.jsonl
       { q: 'Why are my Claude Code hooks defined in settings.json not running?', a: 'The most common cause is invalid JSON — a trailing comma or missing brace makes the file unparseable and silently ignored. Validate it with a JSON parser, and make sure command paths use `$CLAUDE_PROJECT_DIR`.' },
       { q: 'Should I commit settings.json to git?', a: 'Yes, commit `.claude/settings.json` so the team shares the same hooks and permissions. Keep secrets and personal tweaks in `.claude/settings.local.json`, which should be gitignored.' },
     ],
-    related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'claude-code-hooks-not-working'],
+    related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'claude-code-hooks-not-working', 'claude-code-git-worktrees-hooks'],
     relatedHookSlugs: ['config-change-audit-log', 'instructions-loaded-audit-log', 'permission-request-auto-allow-readonly', 'user-prompt-inject-conventions'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
@@ -1923,6 +1923,336 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     ],
     related: ['automate-code-quality-claude-code-hooks', 'claude-code-hooks-examples', 'what-are-claude-code-hooks'],
     relatedHookSlugs: ['seo-page-metadata-guard', 'seo-heading-hierarchy-guard', 'seo-next-image-guard', 'a11y-jsx-guard', 'stop-seo-structure-check', 'post-write-nextjs-quality'],
+    sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
+  },
+  {
+    slug: 'claude-code-git-worktrees-hooks',
+    title: 'Isolate Agent Work with Git Worktrees and Hooks',
+    metaTitle: 'Claude Code: Isolate Agent Work with Git Worktrees',
+    description:
+      'Isolate Claude Code agent work with git worktree hooks: auto-redirect from main, provision env files, guard against cross-repo edits, and clean up on removal.',
+    datePublished: '2026-06-13',
+    dateModified: '2026-06-13',
+    readingMinutes: 8,
+    intro: [
+      'When an AI coding agent runs directly on your main branch, experimental changes tangle with production code and concurrent sessions overwrite each other. Git worktrees solve this the same way feature branches do — each piece of work gets its own directory and its own branch — but they add a coordination problem: the agent needs to be steered into the right worktree, the environment provisioned, edits guarded, and the workspace cleaned up when the work is done.',
+      'This guide shows how to automate the full worktree lifecycle with Claude Code hooks. You will see how a SessionStart hook redirects the agent from main to a fresh worktree, how companion hooks copy environment files and install dependencies in the background, how a PreToolUse guard blocks edits from leaking into the main repository, and how a WorktreeRemove hook reclaims disk and stops orphaned containers on teardown.',
+    ],
+    sections: [
+      {
+        heading: 'Why run an AI coding agent in a git worktree?',
+        body: [
+          'A git worktree is a second checked-out directory of the same repository on a different branch. For an AI coding agent, that distinction matters in three concrete ways.',
+          {
+            list: [
+              'Isolation — experimental changes land in the worktree\'s branch, never on `main`. If the session goes sideways, removing the worktree reverts everything without touching the main repo.',
+              'Parallelism — you can run multiple Claude Code sessions at the same time, each in its own worktree, without conflicts. Session A works on one feature, session B on another, both editing different files simultaneously.',
+              'Clean rollback — `git worktree remove <path>` discards the entire workspace in one command. There is no need to hunt for uncommitted changes or stash a messy tree.',
+            ],
+          },
+          'The alternative — feature branches in the main working directory — forces you to stash and switch before starting a new agent session, and a long-running session blocks you from using your own editor on the same tree. Worktrees remove both constraints.',
+        ],
+      },
+      {
+        heading: 'How do you redirect the agent to a worktree if it starts on main?',
+        body: [
+          'The `session-start-worktree-if-main` hook runs at `SessionStart`. It reads the current branch, and if it is `main` or `master`, it creates a fresh worktree under `.claude/worktrees/` — one per session, never reused. It then prints the path and branch name to stdout as context, so the agent opens already knowing where to work.',
+          {
+            code: `// .claude/hooks/session-start-worktree-if-main.mjs
+import { execSync } from 'child_process'
+import { existsSync } from 'fs'
+import { randomBytes } from 'crypto'
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+function defaultExec(cmd) {
+  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim() } catch { return '' }
+}
+
+export function run(input, {
+  exec = defaultExec,
+  exists = existsSync,
+  now = () => new Date(),
+  random = () => randomBytes(3).toString('hex'),
+} = {}) {
+  const branch = exec('git branch --show-current') || exec('git rev-parse --abbrev-ref HEAD')
+  if (!branch || !/^(main|master)$/.test(branch)) return null   // already on a feature branch
+
+  const mainRoot = exec('git rev-parse --show-toplevel')
+  const primary  = exec('git worktree list').split('\\n')[0]?.split(/\\s+/)[0] ?? ''
+  if (!mainRoot || primary !== mainRoot) return null             // already inside a worktree
+
+  const tag          = now().toISOString().slice(0, 10).replace(/-/g, '') + '-' + random()
+  const worktreePath = mainRoot + '/.claude/worktrees/session-' + tag
+  const branchName   = 'claude/session-' + tag
+
+  try {
+    execSync('git worktree add "' + worktreePath + '" -b "' + branchName + '"', {
+      timeout: 15_000, stdio: 'ignore',
+    })
+  } catch {
+    return 'Could not create a worktree automatically — create one manually before editing files.'
+  }
+
+  if (!exists(worktreePath)) return null
+
+  return (
+    '## Isolated worktree created\\n' +
+    'Path: ' + worktreePath + '\\n' +
+    'Branch: ' + branchName + '\\n' +
+    'Work in this worktree — do not edit files in the main repository.\\n'
+  )
+}
+
+/* v8 ignore next 4 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result) process.stdout.write(result)
+}`,
+          },
+          'Register it in `.claude/settings.json` under `SessionStart`. The event fires once per session, so there is no tool matcher — just a list of hooks:',
+          {
+            code: `// .claude/settings.json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-worktree-if-main.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+          'The hook only acts when it is inside the primary worktree. If the session is already inside a secondary worktree — as happens when Claude Code opens a `.claude/worktrees/session-*` directory — it detects the mismatch between `git rev-parse --show-toplevel` and the first entry of `git worktree list` and exits silently.',
+        ],
+      },
+      {
+        heading: 'How do you provision a new worktree with environment files and dependencies?',
+        body: [
+          'Two companion hooks run at `SessionStart` and detect when the session is inside a secondary worktree (not the primary repo). The first copies `.env` files from the main repository so the worktree can run immediately. The second installs Node dependencies in a detached background process so the session never blocks waiting for `npm ci`.',
+          {
+            code: `// .claude/hooks/worktree-create-setup-env.mjs
+import { execSync } from 'child_process'
+import { existsSync, copyFileSync, mkdirSync } from 'fs'
+import { join, dirname } from 'path'
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+const ENV_FILES = ['.env', '.env.local', '.env.development', '.env.development.local']
+
+function defaultExec(cmd) {
+  try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim() } catch { return '' }
+}
+
+export function run(input, { exec = defaultExec, exists = existsSync, copy = copyFileSync, mkdir = mkdirSync } = {}) {
+  const worktreeList = exec('git worktree list')
+  const mainDir      = worktreeList.split('\\n')[0]?.split(/\\s+/)[0] ?? ''
+  const worktreeDir  = exec('git rev-parse --show-toplevel')
+
+  if (!mainDir || !worktreeDir || mainDir === worktreeDir) return null // not in a secondary worktree
+
+  for (const file of ENV_FILES) {
+    const src = join(mainDir, file)
+    const dst = join(worktreeDir, file)
+    if (exists(src) && !exists(dst)) {
+      const dir = dirname(dst)
+      if (!exists(dir)) mkdir(dir, { recursive: true })
+      copy(src, dst)
+    }
+  }
+  return null // stay silent — no context to inject
+}
+
+/* v8 ignore next 4 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  readFileSync(0, 'utf8') // drain stdin
+  run(null)
+}`,
+          },
+          'The dependency hook follows the same detection logic — `mainDir !== worktreeDir` — then checks whether `node_modules` is absent and `package.json` is present before spawning the install as a detached child process (`spawn` with `detached: true` + `child.unref()`). The session opens immediately; the install finishes in the background, usually before the agent needs to run the project.',
+          {
+            code: `// .claude/settings.json — all three SessionStart hooks together
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-worktree-if-main.mjs" },
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-create-setup-env.mjs" },
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-create-update-deps.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+        ],
+      },
+      {
+        heading: 'How do you prevent an edit from leaking into the main repository?',
+        body: [
+          'Even in a worktree session, a path slip can target a file outside the current worktree — for example if the agent resolves an absolute path anchored in the main repo. The `pre-edit-worktree-guard` hook fires on every `Edit` or `Write` call, compares the resolved absolute file path against the current worktree root, and blocks any write that would land outside it.',
+          {
+            code: `// .claude/hooks/pre-edit-worktree-guard.mjs
+import { execSync } from 'child_process'
+import { resolve } from 'path'
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+function defaultExec(cmd) {
+  return execSync(cmd, { encoding: 'utf8', timeout: 5_000 }).trim()
+}
+
+export function run(input, { exec = defaultExec } = {}) {
+  const filePath = input.tool_input?.file_path ?? ''
+  if (!filePath) return null
+
+  try {
+    const worktreeRoot = exec('git rev-parse --show-toplevel')
+    const primary      = exec('git worktree list').split('\\n')[0]?.split(/\\s+/)[0] ?? ''
+
+    if (!primary || worktreeRoot === primary) return null // in the main repo — guard is off
+
+    const absFile = resolve(filePath)
+    if (!absFile.startsWith(worktreeRoot + '/')) {
+      return {
+        decision: 'block',
+        reason: 'Edit target is outside the current worktree (' + worktreeRoot + '). Correct the file path.',
+      }
+    }
+  } catch {
+    return null // not a git repo — pass through
+  }
+  return null
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result) process.stdout.write(JSON.stringify(result))
+}`,
+          },
+          'Register it under `PreToolUse` with the `Edit|Write` matcher. The guard is deliberately passive in the main repo (`worktreeRoot === primary` → return null) — it only activates inside a secondary worktree where a path leak would actually cross a boundary.',
+          {
+            code: `{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-edit-worktree-guard.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+        ],
+      },
+      {
+        heading: 'How do you clean up when a worktree is removed?',
+        body: [
+          'When you run `git worktree remove <path>`, Claude Code fires the `WorktreeRemove` event. The `worktree-remove-cleanup` hook receives the worktree path in `input.worktree_path`, stops any Docker Compose services the worktree started, and deletes `node_modules` to reclaim disk space. Both steps are wrapped in independent try/catch blocks so a missing `docker-compose.yml` or an already-absent `node_modules` does not abort the rest.',
+          {
+            code: `// .claude/hooks/worktree-remove-cleanup.mjs
+import { execSync } from 'child_process'
+import { existsSync, rmSync } from 'fs'
+import { join } from 'path'
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+function defaultExec(cmd) {
+  execSync(cmd, { timeout: 30_000 })
+}
+
+export function run(input, { exec = defaultExec, exists = existsSync, rm = rmSync } = {}) {
+  const p = input.worktree_path
+  if (!p) return null
+
+  try {
+    if (exists(join(p, 'docker-compose.yml')) || exists(join(p, 'docker-compose.yaml'))) {
+      exec('docker compose -f ' + join(p, 'docker-compose.yml') + ' down --remove-orphans')
+    }
+  } catch { /* no running services — ignore */ }
+
+  try {
+    const nm = join(p, 'node_modules')
+    if (exists(nm)) rm(nm, { recursive: true, force: true })
+  } catch { /* ignore */ }
+
+  return null
+}
+
+/* v8 ignore next 4 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  run(input)
+}`,
+          },
+          'Register it under `WorktreeRemove`. Unlike tool hooks, there is no matcher — the event fires once per removal and carries the path in the payload:',
+          {
+            code: `{
+  "hooks": {
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/worktree-remove-cleanup.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+        ],
+      },
+      {
+        heading: 'What pitfalls should you avoid with worktrees and hooks?',
+        body: [
+          'Worktrees are straightforward once you know the failure modes. The most common ones:',
+          {
+            list: [
+              'Relative paths in hook commands. Hooks run from different working directories depending on where Claude Code launches. Always anchor with `$CLAUDE_PROJECT_DIR`: `node $CLAUDE_PROJECT_DIR/.claude/hooks/x.mjs`. A bare `./` prefix resolves differently inside a worktree.',
+              'Port conflicts between parallel sessions. If your dev server binds to a fixed port (3000, 8080…), two worktree sessions will collide. Give each worktree its own port via a worktree-specific `.env.local` — the setup-env hook copies `.env.local` from the main repo, so set `PORT=3001` there before launching the second session.',
+              'Non-standard `.env` file names. The setup-env hook copies a predefined list of env files. If your project uses `.env.staging`, `.envrc`, or a monorepo sub-package path, extend the `ENV_FILES` list in the hook to cover them. The HookStack implementation also runs a recursive `find` scan to catch monorepo layouts automatically.',
+              'Stale worktrees accumulating on disk. Each session on `main` creates a new worktree. Run `git worktree list` periodically to audit what exists and `git worktree remove <path>` to remove what you no longer need. The WorktreeRemove hook cleans up on explicit removal, but it does not fire on abandoned sessions.',
+              'A non-fast-forward main before session start. The session-start hook syncs main with `git fetch` + `git merge --ff-only` before creating the worktree. If main has diverged or there are local uncommitted changes, the merge fails, worktree creation is skipped, and you see the fallback message. Sync manually before starting.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'How do you install these hooks?',
+        body: [
+          'All five hooks in this guide are in the HookStack catalogue under the `workflow` category. Browse hookstack.app, select the worktree cluster, and run the generated command — or install with the defaults in one step:',
+          { code: 'npx hookstack-cli@latest install' },
+          'The CLI writes each script to `.claude/hooks/` and patches your `.claude/settings.json` with the correct event, matcher, and command. Existing settings and permissions are preserved — it merges, it does not overwrite. Open a new Claude Code session from your project root while on `main` to confirm the redirect hook fires: the worktree path and branch name should appear injected at the top of the first response.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'Does the session-start redirect work for parallel Claude Code sessions?',
+        a: 'Yes. Each session on `main` creates a new worktree with a unique `session-YYYYMMDD-xxxxxx` suffix, so two sessions starting at the same moment get two different directories and two different branches. They cannot conflict at the git level. Port conflicts are a separate concern — assign distinct dev server ports via per-worktree `.env.local` files.',
+      },
+      {
+        q: 'What happens if the automatic worktree creation fails at session start?',
+        a: 'The hook catches the error and prints a fallback message telling the agent to create a worktree manually before editing files. The session continues — the agent starts in the main repo — and you can run `git worktree add <path> -b <branch>` yourself before asking it to make changes.',
+      },
+      {
+        q: 'Can the pre-edit guard prevent writes to the main repo from inside a worktree?',
+        a: 'Yes, that is exactly what it does. When the agent is inside a secondary worktree, the guard resolves every Write or Edit target to an absolute path and blocks any write that does not start with the worktree root. The guard is passive in the main repo (where cross-boundary edits are expected) and active only in worktrees.',
+      },
+      {
+        q: 'How do I clean up worktrees that are no longer needed?',
+        a: 'Run `git worktree list` to see all active worktrees, then `git worktree remove <path>` to delete one — this triggers the WorktreeRemove hook, which stops Docker Compose services and deletes `node_modules`. For worktrees with uncommitted changes, pass `--force`. After a crash or a manual directory delete, run `git worktree prune` to repair the git metadata.',
+      },
+    ],
+    related: ['claude-code-settings-json', 'what-are-claude-code-hooks', 'claude-code-hooks-examples'],
+    relatedHookSlugs: ['session-start-worktree-if-main', 'worktree-create-setup-env', 'worktree-create-update-deps', 'pre-edit-worktree-guard', 'worktree-remove-cleanup'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
 ]
