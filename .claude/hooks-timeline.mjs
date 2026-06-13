@@ -174,6 +174,110 @@ export function buildWeeks(timeline, minWeeks = MIN_WEEKS) {
 const LEVEL_COLORS = ['#1c1c20', '#3f3f46', '#71717a', '#a1a1aa', '#f4f4f5'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+/**
+ * Rend une courbe cumulative en SVG autonome (embarquée dans le README via <img>).
+ * Chaque jour de firstDate→lastDate est tracé ; les dots n'apparaissent qu'aux jours
+ * où des hooks ont été ajoutés. Purement déterministe (aucun Date.now()).
+ */
+export function renderLinechartSvg(timeline) {
+  const { byDay, total, firstDate, lastDate } = timeline;
+  if (!firstDate || !lastDate || total === 0) {
+    const W = 680, H = 200;
+    return (
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" ` +
+      `role="img" aria-label="HookStack evolution — no hooks yet" ` +
+      `font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">` +
+      `<rect width="${W}" height="${H}" fill="#0a0a0a"/>` +
+      `<text x="${W / 2}" y="${H / 2}" fill="#71717a" font-size="14" text-anchor="middle">No hooks yet</text>` +
+      `</svg>\n`
+    );
+  }
+
+  const W = 680, H = 200;
+  const PL = 40, PR = 20, PT = 20, PB = 36;
+  const CW = W - PL - PR;
+  const CH = H - PT - PB;
+
+  const firstMs = new Date(`${firstDate}T00:00:00Z`).getTime();
+  const lastMs = new Date(`${lastDate}T00:00:00Z`).getTime();
+  const spanMs = lastMs - firstMs || 1;
+
+  // Série cumulée pour chaque jour de la plage
+  const allDays = [];
+  let cum = 0;
+  for (let ms = firstMs; ms <= lastMs; ms += 86400000) {
+    const iso = new Date(ms).toISOString().slice(0, 10);
+    cum += byDay[iso] ?? 0;
+    allDays.push({ iso, ms, cum, count: byDay[iso] ?? 0 });
+  }
+
+  const xOf = (ms) => PL + ((ms - firstMs) / spanMs) * CW;
+  const yOf = (val) => PT + CH - (val / total) * CH;
+
+  // Ticks Y : 0 + 4 valeurs équidistantes jusqu'à total
+  const yTickVals = [...new Set([0, 1, 2, 3, 4].map((i) => Math.round((total / 4) * i)))];
+  // Ticks X : ~5 dates équidistantes
+  const step = Math.max(1, Math.floor((allDays.length - 1) / 4));
+  const xTickDays = allDays.filter((_, i) => i % step === 0 || i === allDays.length - 1);
+  const seenX = new Set();
+  const uniqueXTicks = xTickDays.filter((d) => (seenX.has(d.iso) ? false : seenX.add(d.iso)));
+
+  const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const fmtDate = (iso) => {
+    const d = new Date(`${iso}T00:00:00Z`);
+    return `${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCDate()}`;
+  };
+
+  const font = `-apple-system,Segoe UI,Helvetica,Arial,sans-serif`;
+  const lines = [];
+  lines.push(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" ` +
+    `font-family="${font}" role="img" aria-label="HookStack evolution — ${total} hooks since ${firstDate}">`,
+  );
+  lines.push(`  <rect width="${W}" height="${H}" fill="#0a0a0a"/>`);
+
+  // Grille horizontale
+  for (const tick of yTickVals) {
+    const y = yOf(tick).toFixed(1);
+    lines.push(`  <line x1="${PL}" y1="${y}" x2="${W - PR}" y2="${y}" stroke="#27272a" stroke-width="1"/>`);
+  }
+  // Labels Y
+  for (const tick of yTickVals) {
+    const y = (yOf(tick) + 4).toFixed(1);
+    lines.push(`  <text x="${PL - 6}" y="${y}" fill="#52525b" font-size="10" text-anchor="end">${tick}</text>`);
+  }
+
+  // Aire remplie sous la courbe
+  const linePts = allDays.map((d) => `${xOf(d.ms).toFixed(1)},${yOf(d.cum).toFixed(1)}`);
+  const bottomY = (PT + CH).toFixed(1);
+  const areaD =
+    `M${xOf(firstMs).toFixed(1)},${bottomY} ` +
+    linePts.map((p) => `L${p}`).join(' ') +
+    ` L${xOf(lastMs).toFixed(1)},${bottomY} Z`;
+  lines.push(`  <path d="${areaD}" fill="white" fill-opacity="0.07"/>`);
+
+  // Courbe
+  lines.push(
+    `  <polyline points="${linePts.join(' ')}" fill="none" stroke="white" ` +
+    `stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`,
+  );
+
+  // Dots aux jours d'activité
+  for (const d of allDays.filter((d) => d.count > 0)) {
+    lines.push(`  <circle cx="${xOf(d.ms).toFixed(1)}" cy="${yOf(d.cum).toFixed(1)}" r="3" fill="white"/>`);
+  }
+
+  // Labels X
+  for (const d of uniqueXTicks) {
+    lines.push(
+      `  <text x="${xOf(d.ms).toFixed(1)}" y="${PT + CH + 16}" fill="#52525b" font-size="10" text-anchor="middle">${fmtDate(d.iso)}</text>`,
+    );
+  }
+
+  lines.push(`</svg>`);
+  return lines.join('\n') + '\n';
+}
+
 /** Rend le heatmap en SVG autonome (embarqué dans le README via <img>). */
 export function renderHeatmapSvg(timeline) {
   const weeks = buildWeeks(timeline);
@@ -256,13 +360,13 @@ export function renderReadmeBlock(timeline) {
   return [
     START_MARK,
     '',
-    '## 📈 The stack grows in the open',
+    '## The HookStack evolution',
     '',
     `**${total} hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.`,
     '',
     '<p align="center">',
     `  <a href="${SITE}/evolution">`,
-    `    <img src="public/hooks-timeline.svg" alt="HookStack growth — contribution-style heatmap of hooks added over time"/>`,
+    `    <img src="public/hooks-timeline.svg" alt="HookStack evolution — cumulative hook count over time"/>`,
     '  </a>',
     '</p>',
     '',
@@ -309,7 +413,7 @@ export function generate(deps = defaultDeps) {
   return {
     timeline,
     json: serializeTimeline(timeline),
-    svg: renderHeatmapSvg(timeline),
+    svg: renderLinechartSvg(timeline),
     readmeBlock: renderReadmeBlock(timeline),
   };
 }

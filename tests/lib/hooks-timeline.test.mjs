@@ -6,6 +6,7 @@ import {
   bucketLevel,
   buildWeeks,
   renderHeatmapSvg,
+  renderLinechartSvg,
   renderReadmeBlock,
   injectReadme,
 } from '../../.claude/hooks-timeline.mjs'
@@ -115,6 +116,31 @@ describe('renderHeatmapSvg', () => {
   })
   it('encodes the day count in a <title> for hover tooltips', () => {
     expect(svg).toContain('2026-05-29 — 1 hook added')
+  })
+})
+
+describe('renderLinechartSvg', () => {
+  const entries = [
+    { slug: 'a', name: 'A', category: 'security', date: '2026-05-29' },
+    { slug: 'b', name: 'B', category: 'workflow', date: '2026-06-01' },
+    { slug: 'c', name: 'C', category: 'workflow', date: '2026-06-01' },
+  ]
+  const svg = renderLinechartSvg(buildTimeline(entries))
+
+  it('is a self-contained accessible SVG', () => {
+    expect(svg.startsWith('<svg')).toBe(true)
+    expect(svg).toContain('role="img"')
+    expect(svg).toContain('aria-label="HookStack evolution — 3 hooks since 2026-05-29"')
+  })
+  it('draws a polyline (the cumulative line)', () => {
+    expect(svg).toContain('<polyline')
+  })
+  it('draws dots at active days', () => {
+    expect(svg).toContain('<circle')
+  })
+  it('returns an empty-state svg when timeline is empty', () => {
+    const empty = renderLinechartSvg(buildTimeline([]))
+    expect(empty).toContain('No hooks yet')
   })
 })
 
