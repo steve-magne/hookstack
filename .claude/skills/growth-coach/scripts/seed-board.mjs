@@ -28,7 +28,7 @@ const LABELS = [
 // Issues de fondation = phases 0 et 1 du playbook. Titre sert de clé d'idempotence.
 const ISSUES = [
   ['[Foundation] README hero : GIF de démo + CTA star + quickstart', ['growth', 'seo'],
-    'Le README doit convertir en 5 secondes. Ajouter : GIF de démo (sélection → `npx` → install en 30s), proposition de valeur claire, badge stars, CTA « ⭐ Star if useful », bloc Quickstart avec `npx hookstack-cli@latest install`.\n\nDone = un visiteur froid comprend la valeur et sait quoi faire sans scroller.\n\nRéf : doc/hookstack/growth/playbook.md (Phase 0).'],
+    'Le README doit convertir en 5 secondes. Ajouter : GIF de démo (sélection → `npx` → install en 30s), proposition de valeur claire, badge stars, CTA « ⭐ Star if useful », bloc Quickstart avec `npx hookstack-cli@latest install`.\n\nDone = un visiteur froid comprend la valeur et sait quoi faire sans scroller.\n\nRéf : hookstack-marketing/growth/playbook.md (Phase 0).'],
   ['[Foundation] Social preview image du repo (Settings → Social preview)', ['growth', 'seo'],
     "Image affichée quand le repo est partagé sur X/LinkedIn/Slack. Sans elle, les partages sont fades. Réutiliser l'OG image du site.\n\nRéf : Phase 0."],
   ['[Foundation] OG image + meta description du site', ['growth', 'seo'],
@@ -40,9 +40,9 @@ const ISSUES = [
   ['[Seed] Réseau perso : post LinkedIn de lancement + 10-20 DM', ['growth', 'content'],
     'Amorcer les 30-50 premières stars (preuve sociale). Post LinkedIn « pourquoi j\'ai construit ça » + DM ciblés à des devs Claude Code. Utiliser /growth-post (canal LinkedIn).\n\nRéf : Phase 1.'],
   ['[Seed] Soft-launch value-first sur r/ClaudeAI + Discord Anthropic', ['growth', 'spike'],
-    "Partage genuine (pas « regardez mon site »). Lire les règles anti-spam. Être présent dans les commentaires.\n\nRéf : Phase 1 + doc/hookstack/growth/channels.md."],
+    "Partage genuine (pas « regardez mon site »). Lire les règles anti-spam. Être présent dans les commentaires.\n\nRéf : Phase 1 + hookstack-marketing/growth/channels.md."],
   ['[Ops] Boucle growth hebdo : /growth-coach lundi, /growth-coach review vendredi', ['growth'],
-    'Rituel récurrent. Lundi : diagnostic + 1-3 priorités. Vendredi : bilan, log des chiffres, ajustement. Voir doc/hookstack/growth/README.md (la boucle hebdomadaire).'],
+    'Rituel récurrent. Lundi : diagnostic + 1-3 priorités. Vendredi : bilan, log des chiffres, ajustement. Voir hookstack-marketing/growth/README.md (la boucle hebdomadaire).'],
 ];
 
 function ensureLabels() {

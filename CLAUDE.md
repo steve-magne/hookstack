@@ -136,7 +136,7 @@ Le dossier **`doc/hookstack/`** est la référence centrale pour la vision produ
 
 ## Système de croissance (growth)
 
-Objectif : `steve-magne/hookstack` → **5000 ⭐** + trafic sur `hookstack.app`. Le **système d'exécution** vit dans [`doc/hookstack/growth/`](doc/hookstack/growth/README.md) (stratégie) et est piloté par 3 skills :
+Objectif : `steve-magne/hookstack` → **5000 ⭐** + trafic sur `hookstack.app`. Le **système d'exécution** vit dans `~/workspace/hookstack-marketing/growth/` (repo privé — stratégie, playbook, brand-voice, drafts) et est piloté par 3 skills :
 
 - **`/growth-coach`** — diagnostique la phase, recommande les 1–3 actions à plus fort levier, gère le board GitHub Issues (`growth-coach review` = bilan ; `growth-coach seed` = poser le board).
 - **`/growth-post`** — produit un post prêt-à-coller (X / LinkedIn / Reddit-HN), draft-and-review (ne publie jamais).

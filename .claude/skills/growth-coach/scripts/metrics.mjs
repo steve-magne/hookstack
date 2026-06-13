@@ -11,9 +11,8 @@ import { dirname, resolve } from 'node:path';
 
 const REPO = 'steve-magne/hookstack';
 const NPM_PKG = 'hookstack-cli';
-// .claude/skills/growth-coach/scripts/ -> remonter à la racine projet
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
-const LOG = resolve(ROOT, 'doc/hookstack/growth/metrics.log.ndjson');
+// Log dans le repo privé hookstack-marketing (hors repo public)
+const LOG = '/Users/stevemagne/workspace/hookstack-marketing/growth/metrics.log.ndjson';
 
 function sh(cmd) {
   return execSync(cmd, { encoding: 'utf8', timeout: 20000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
