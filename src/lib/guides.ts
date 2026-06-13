@@ -194,7 +194,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       { q: 'Can a hook block Claude from doing something?', a: 'Yes — a PreToolUse hook can block the action by writing { "decision": "block", "reason": "…" } to stdout before the tool runs.' },
       { q: 'Where do hooks live in my project?', a: 'Scripts live in .claude/hooks/ and are referenced by event and matcher in .claude/settings.json, usually as "node $CLAUDE_PROJECT_DIR/.claude/hooks/<name>.mjs".' },
     ],
-    related: ['write-your-first-claude-code-hook', 'claude-code-hooks-examples', 'pretooluse-vs-posttooluse', 'claude-code-hooks-vs-slash-commands'],
+    related: ['write-your-first-claude-code-hook', 'claude-code-hooks-examples', 'pretooluse-vs-posttooluse', 'claude-code-hooks-vs-slash-commands', 'inject-context-claude-code-hooks'],
     relatedHookSlugs: ['pre-bash-secret-detection', 'post-write-eslint', 'stop-run-tests', 'user-prompt-inject-conventions'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
@@ -444,7 +444,7 @@ Use the project's existing test framework and conventions.`,
       { q: 'Do hooks really cost zero tokens?', a: 'A silent hook does — it runs outside the context window. But any text a hook prints back (a block reason, injected context) does consume tokens. You control exactly what reaches the model.' },
       { q: 'What is the difference between a hook and an MCP server?', a: 'An MCP server adds new capabilities and data the model can use. A hook governs the lifecycle around tools the model already has — allowing, blocking, logging, and automating.' },
     ],
-    related: ['what-are-claude-code-hooks', 'pretooluse-vs-posttooluse', 'write-your-first-claude-code-hook'],
+    related: ['what-are-claude-code-hooks', 'pretooluse-vs-posttooluse', 'write-your-first-claude-code-hook', 'inject-context-claude-code-hooks'],
     relatedHookSlugs: ['user-prompt-inject-conventions', 'pre-write-main-guard', 'stop-run-tests'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
@@ -1438,6 +1438,241 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     ],
     related: ['pretooluse-vs-posttooluse', 'claude-code-hooks-examples', 'write-your-first-claude-code-hook'],
     relatedHookSlugs: ['post-write-autoformat', 'post-write-eslint', 'post-edit-typecheck', 'post-tool-batch-typecheck', 'stop-run-tests', 'stop-quality-check', 'stop-missing-test-detection', 'file-changed-run-tests'],
+    sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
+  },
+  {
+    slug: 'inject-context-claude-code-hooks',
+    title: 'Inject Context into Claude Code with Hooks',
+    metaTitle: 'Inject Context into Claude Code with Hooks',
+    description:
+      'Use UserPromptSubmit and SessionStart hooks to inject context into Claude Code — conventions, current date, and git state — on every prompt and at startup.',
+    datePublished: '2026-06-13',
+    dateModified: '2026-06-13',
+    readingMinutes: 8,
+    intro: [
+      'CLAUDE.md is read once at session start and persists in the context window — until the session grows long, gets compacted, or the model drifts on a noisy conversation. The current date, git branch, and project conventions are facts the agent needs on every turn. A UserPromptSubmit hook injects them before the model sees each message, reliably and at zero setup cost once registered.',
+      'This guide covers both context-injection events: UserPromptSubmit (once per prompt) and SessionStart (once per session or after compaction). You will see a working hook for each, how the source field lets context survive compaction, what else is worth injecting, and how to install the whole cluster in one command.',
+    ],
+    sections: [
+      {
+        heading: 'Why inject context via hooks rather than CLAUDE.md?',
+        body: [
+          'CLAUDE.md is a good place for long-lived, stable guidance — coding style, architecture decisions, constraints. But it has two weaknesses in practice. First, it can be summarized away when the context window fills and the session is compacted. Second, the model can deprioritize it during a long, noisy session. Both happen.',
+          'A UserPromptSubmit hook runs every single time you submit a prompt. It cannot be deprioritized, cannot be summarized away, and costs tokens only for what it actually prints. The model sees the injected text as part of your message, right at the moment it is about to respond.',
+          'The practical split: put stable, one-time guidance in CLAUDE.md. Put anything time-sensitive or worth repeating on every turn — the date, the current branch, a compact conventions snippet — in a hook.',
+        ],
+      },
+      {
+        heading: 'How does a UserPromptSubmit hook work?',
+        body: [
+          'When the UserPromptSubmit event fires, Claude Code passes the current prompt as JSON on stdin and reads whatever the hook prints to stdout. That text is prepended to the user\'s message before the model sees it. Nothing reaches the model if the hook stays silent.',
+          {
+            code: `// stdin payload received by a UserPromptSubmit hook
+{
+  "session_id": "abc123",
+  "transcript_path": "/path/to/transcript.jsonl",
+  "cwd": "/Users/you/project",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "refactor the auth module"
+}`,
+          },
+          'The hook can read `input.prompt` to inspect what the user wrote — useful for logging or conditional injection. Whatever it prints to stdout is prepended verbatim to the prompt. A hook that returns nothing lets the prompt through unchanged.',
+        ],
+      },
+      {
+        heading: 'How do you inject conventions and the current date on every prompt?',
+        body: [
+          'This hook runs on every UserPromptSubmit event and prepends the current date plus a compact conventions block. The date prevents stale reasoning ("today is probably around…"); the conventions keep house rules in front of the model on every turn without relying on CLAUDE.md staying in context:',
+          {
+            code: `// .claude/hooks/user-prompt-inject-conventions.mjs
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+export function run(_input, { now = () => new Date() } = {}) {
+  const date = now().toISOString().slice(0, 10)
+  const weekday = now().toLocaleDateString('en-US', { weekday: 'long' })
+  return [
+    '## Context (injected on every prompt)',
+    'Today: ' + weekday + ', ' + date,
+    '',
+    '## Project conventions',
+    '- Package manager: pnpm (not npm or yarn)',
+    '- Hooks: Node.js .mjs files in .claude/hooks/',
+    '- New features require a unit test before merging',
+  ].join('\\n')
+}
+
+/* v8 ignore next 4 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result) process.stdout.write(result)
+}`,
+          },
+          'Register it in `.claude/settings.json` under `UserPromptSubmit`. This event has no tool matcher — it fires on every prompt, so the matcher group is just a list of hooks:',
+          {
+            code: `{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt-inject-conventions.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+          'Keep the injected block short and focused. The model does not need every convention on every turn — only the rules that actually affect how it writes code. Aim for under 20 lines.',
+        ],
+      },
+      {
+        heading: 'How do you inject git state at session start with SessionStart?',
+        body: [
+          'A SessionStart hook fires once when a session opens, making it ideal for context that is expensive to compute but stable across the session: the current branch, recent commit log, and working-tree status. The agent opens already oriented — no need to discover the repo state with redundant `git` calls.',
+          {
+            code: `// .claude/hooks/session-start-load-git-context.mjs
+import { readFileSync } from 'fs'
+import { execSync } from 'child_process'
+import { fileURLToPath } from 'url'
+
+function defaultExec(cmd) {
+  return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim()
+}
+
+export function run(_input, { exec = defaultExec } = {}) {
+  try {
+    const branch = exec('git rev-parse --abbrev-ref HEAD')
+    const log    = exec('git log --oneline -5')
+    const status = exec('git status --short')
+    const lines = [
+      '## Git context (injected at session start)',
+      'Branch: ' + branch,
+      '',
+      'Recent commits:',
+      log,
+    ]
+    if (status) lines.push('', 'Working tree:', status)
+    return lines.join('\\n')
+  } catch {
+    return null // not a git repo — stay silent
+  }
+}
+
+/* v8 ignore next 4 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result) process.stdout.write(result)
+}`,
+          },
+          'Register it under `SessionStart`. No tool matcher is needed — the event fires once per session, not per tool call:',
+          {
+            code: `{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-load-git-context.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+        ],
+      },
+      {
+        heading: 'How does the SessionStart source field let context survive compaction?',
+        body: [
+          'The SessionStart payload includes a `source` field that tells you why the event fired:',
+          {
+            list: [
+              '`startup` — a fresh session opened.',
+              '`resume` — the user resumed an existing session.',
+              '`clear` — the user ran `/clear` to reset the conversation.',
+              '`compact` — the context window filled and the session was automatically compacted (most of the conversation was summarized and dropped).',
+            ],
+          },
+          'Compaction is the tricky case. When the context is compacted, whatever the session-start hook injected at `startup` is gone — it was part of the context that got summarized away. A hook that also fires on `compact` brings the git state back immediately, so the model resumes with accurate context instead of working from a stale summary:',
+          {
+            code: `// react to compaction — re-inject git context so the model has current state
+export function run(input, { exec = defaultExec } = {}) {
+  if (input.source !== 'startup' && input.source !== 'compact') return null
+  // ... same git context logic as the full hook above
+}`,
+          },
+          'The simpler approach: run the same hook on every source value. The overhead of one extra `git status` call at compaction time is negligible compared to the cost of the model working from stale assumptions.',
+        ],
+      },
+      {
+        heading: 'What other contexts are worth injecting?',
+        body: [
+          'The date and git state cover most projects well. A few more high-return injections:',
+          {
+            list: [
+              'AGENTS.md content — if your project ships an AGENTS.md file with agent-specific guidance, a SessionStart hook can read and inject it so the model gets role-specific rules at the right time, separate from CLAUDE.md.',
+              'GitHub PR context — a SessionStart hook can call `gh pr view --json title,body,reviews` and inject the current PR title, description, and review comments. The agent enters the session already understanding the goal and the feedback it needs to address.',
+              'CI status — inject the result of the last CI run at session start so the model knows whether the build is green before it starts editing.',
+              'Current timestamp on every prompt — even a single line with the ISO timestamp prevents the model from confusing "today" and "yesterday" across midnight or making stale date calculations.',
+            ],
+          },
+          'The guiding principle is cost at the call site. A hook that runs `git status` (fast, local) is cheap on every prompt. A hook that calls a remote API should be limited to `SessionStart` so it fires once per session, not hundreds of times.',
+        ],
+      },
+      {
+        heading: 'How much does context injection cost in tokens?',
+        body: [
+          'Only the text a hook prints reaches the model. A hook that exits silently costs zero tokens and zero latency to the model. Cost is entirely determined by the length of what gets injected.',
+          'Some rough benchmarks for common injections:',
+          {
+            list: [
+              'Date line only (`Today: Saturday, 2026-06-13`) — roughly 15 tokens.',
+              'Compact conventions block (10 bullet points) — roughly 80–90 tokens.',
+              'Git context (branch + 5-commit log + short working-tree status) — roughly 120–200 tokens depending on commit messages.',
+              'Full PR description with review comments — 300–600+ tokens; better kept in SessionStart than injected per-prompt.',
+            ],
+          },
+          'The practical question is not a token count but whether the injected context is worth its cost on every prompt. A date stamp and conventions block are nearly always worth it. A full PR body on every single message is probably not. Use UserPromptSubmit for short, high-frequency facts; use SessionStart for richer context that only needs to be fresh once per session.',
+        ],
+      },
+      {
+        heading: 'How do you install context-injection hooks in one command?',
+        body: [
+          'Every hook in the HookStack context cluster is in the catalogue — convention injection, datetime, git state, compaction re-injection, GitHub PR context, and AGENTS.md loading. Browse hookstack.app, pick the hooks you want, and run the generated command in your project root:',
+          { code: 'npx hookstack-cli@latest install' },
+          'The CLI writes each selected script to `.claude/hooks/` and patches your `.claude/settings.json` with the correct event registrations. Open a new Claude Code session and the injections are live — the model starts with your conventions, today\'s date, and git context already in view.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'Can a UserPromptSubmit hook read what the user typed?',
+        a: 'Yes. The stdin payload includes a `prompt` field with the full text of the submitted prompt. The hook can read `input.prompt` to inspect it — useful for conditional injection (inject PR context only when the prompt mentions a PR number) or for logging session prompts.',
+      },
+      {
+        q: 'What is the difference between UserPromptSubmit and SessionStart for context injection?',
+        a: 'UserPromptSubmit fires on every prompt — use it for facts that must always be in front of the model, like the current date and conventions. SessionStart fires once per session — use it for context that is expensive to compute (a git log, CI status, a PR description) or that only needs to be fresh once.',
+      },
+      {
+        q: 'Why does injected context disappear after a long session?',
+        a: 'When the context window fills, Claude Code compacts the session: most of the conversation is summarized and dropped, including context the hook injected at startup. Fix this by also running the hook when `input.source === "compact"` — SessionStart fires again after compaction, giving you a chance to re-inject.',
+      },
+      {
+        q: 'How many tokens does context injection add per prompt?',
+        a: 'Only the text the hook prints reaches the model — a silent hook costs zero tokens. A date line is roughly 15 tokens; a compact conventions block around 80–90; a git log with status 120–200. Keep per-prompt injections concise and move richer context to SessionStart.',
+      },
+    ],
+    related: ['what-are-claude-code-hooks', 'claude-code-hooks-vs-slash-commands', 'claude-code-settings-json'],
+    relatedHookSlugs: [
+      'user-prompt-inject-conventions',
+      'user-prompt-inject-datetime',
+      'session-start-load-git-context',
+      'session-start-reinject-after-compact',
+      'session-start-github-context',
+      'session-start-agents-md',
+      'user-prompt-log-session',
+    ],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
 ]
