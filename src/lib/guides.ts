@@ -998,7 +998,7 @@ cat .claude/data/bash-log.jsonl
       { q: 'Can a hook actually stop Claude from doing something?', a: 'Yes, but only `PreToolUse` hooks. They run before a tool executes and can return `{ decision: \'block\', reason: \'…\' }` on stdout to reject the call. `PostToolUse`, `Stop`, and `SessionStart` hooks react or inject context but cannot retroactively undo a completed action.' },
       { q: 'Where do installed hooks live?', a: 'Scripts go in your project’s `.claude/hooks/` directory and are referenced from `.claude/settings.json` via `$CLAUDE_PROJECT_DIR`. The HookStack CLI writes both, so the script on disk and its registration stay in sync.' },
     ],
-    related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'secure-claude-code-with-hooks', 'automate-code-quality-claude-code-hooks', 'claude-code-seo-accessibility-nextjs-hooks'],
+    related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'secure-claude-code-with-hooks', 'automate-code-quality-claude-code-hooks', 'claude-code-seo-accessibility-nextjs-hooks', 'claude-code-hooks-python'],
     relatedHookSlugs: ['pre-bash-secret-detection', 'pre-write-main-guard', 'post-write-eslint', 'stop-run-tests', 'user-prompt-inject-conventions', 'session-start-load-git-context', 'notification-slack', 'pre-bash-block-destructive'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
@@ -2253,6 +2253,294 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     ],
     related: ['claude-code-settings-json', 'what-are-claude-code-hooks', 'claude-code-hooks-examples'],
     relatedHookSlugs: ['session-start-worktree-if-main', 'worktree-create-setup-env', 'worktree-create-update-deps', 'pre-edit-worktree-guard', 'worktree-remove-cleanup'],
+    sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
+  },
+  {
+    slug: 'claude-code-hooks-python',
+    title: 'Claude Code Hooks for Python (ruff, pytest, pyright)',
+    metaTitle: 'Claude Code Hooks for Python: ruff, pytest, pyright',
+    description:
+      'Claude Code hooks for Python: run ruff, pyright, and pytest via uv — no virtualenv activation. Each tool fires on every file write and at session end.',
+    datePublished: '2026-06-13',
+    dateModified: '2026-06-13',
+    readingMinutes: 8,
+    intro: [
+      'Python projects need formatting, type-checking, and tests to stay clean — but running these manually is the rule a busy session skips. Claude Code hooks turn those three checks into invariants: each hook fires outside the model on every matching event, and the agent cannot choose to bypass it.',
+      'This guide covers the full Python hook stack: why hooks stay as Node.js `.mjs` files even in a Python project, why every Python tool invocation should go through `uv run`, and the exact hook for each tool — ruff format on write, ruff lint on write, pyright after edit, pytest at session end, and a PreToolUse guard that blocks `pip install` in favour of `uv add`.',
+    ],
+    sections: [
+      {
+        heading: 'Do Claude Code hooks work for Python?',
+        body: [
+          'Yes — and the key point is that a hook for a Python project is still a Node.js `.mjs` file. Node.js is the only runtime Claude Code guarantees on every platform it runs on. A Python script works as a hook on machines where the right interpreter is in `PATH`, but a `.mjs` file runs identically on macOS, Linux, and Windows with zero extra setup — exactly the reliability a guardrail needs.',
+          'The hook itself is thin: a few lines of Node.js that filter by file extension and delegate to the Python tool via `execSync`. The tool — ruff, pyright, pytest — stays in its project venv; the hook just knows how to call it. If you\'ve never written a hook before, the guide "Write Your First Claude Code Hook" covers the five-step setup in about five minutes before you layer in language-specific tools.',
+        ],
+      },
+      {
+        heading: 'Why run Python tools via `uv run` instead of calling them directly?',
+        body: [
+          '`uv run <tool>` resolves the project\'s venv automatically. You do not need `source .venv/bin/activate`, `PYTHONPATH` gymnastics, or hardcoded venv paths. `uv run` finds the right environment for the project in the current directory and runs the tool inside it — exactly what a hook needs, since it spawns as a subprocess with no interactive shell context.',
+          'A bare `ruff check` or `pyright` call fails whenever the tool is not in the system `PATH`. In a typical project managed with `uv`, that is almost always. `uv run ruff` also works even when ruff is only declared in `pyproject.toml` and has never been explicitly installed globally — `uv` resolves it on demand. Here is what this looks like in practice:',
+          {
+            code: `// .claude/hooks/post-write-ruff-check.mjs
+import { readFileSync } from 'fs'
+import { execSync } from 'child_process'
+import { fileURLToPath } from 'url'
+
+function defaultExec(cmd) {
+  return execSync(cmd, { encoding: 'utf8', stdio: 'pipe', timeout: 15_000 })
+}
+
+export function run(input, { exec = defaultExec } = {}) {
+  const filePath = input.tool_input?.file_path ?? ''
+  if (!filePath.endsWith('.py')) return null // skip non-Python files
+
+  try {
+    exec(\`uv run ruff check --fix "\${filePath}"\`) // uv resolves the venv for you
+    return null
+  } catch (err) {
+    const output = err.stdout?.toString() ?? ''
+    return output ? { message: \`[ruff-check] \${output.trim()}\\n\` } : null
+  }
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result?.message) process.stderr.write(result.message)
+}`,
+          },
+          'Two details worth noting: the `.endsWith(".py")` filter skips every non-Python file so ruff never runs on a TypeScript file or a Markdown document. And unfixable lint violations go to stderr so the agent reads them and can fix the file on the next edit — no missing tool or lint failure can crash your session.',
+        ],
+      },
+      {
+        heading: 'How do you format and lint every Python file on write?',
+        body: [
+          'Two PostToolUse hooks cover formatting and linting. They stack under the same `Write|Edit` matcher so both run on every Python file the agent writes or edits. The formatter (`post-write-ruff-format`) runs first and fixes code style silently. The linter (`post-write-ruff-check`) runs second and surfaces any remaining issues on stderr so the agent can correct them:',
+          {
+            code: `// .claude/hooks/post-write-ruff-format.mjs — silent formatter
+import { readFileSync } from 'fs'
+import { execSync } from 'child_process'
+import { fileURLToPath } from 'url'
+
+export function run(input, { exec = (cmd) => execSync(cmd, { stdio: 'ignore', timeout: 15_000 }) } = {}) {
+  const filePath = input.tool_input?.file_path ?? ''
+  if (!filePath.endsWith('.py')) return null
+
+  try {
+    exec(\`uv run ruff format "\${filePath}"\`)
+    return null
+  } catch {
+    return null // uv / ruff absent — stay silent
+  }
+}
+
+/* v8 ignore next 4 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  run(input)
+}`,
+          },
+          'Wire both hooks under `PostToolUse` in your `.claude/settings.json`. The formatter runs before the linter so the linter always sees already-formatted code:',
+          {
+            code: `{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-ruff-format.mjs" },
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-ruff-check.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+          'Both hooks are non-blocking by design: a missing ruff or uv exits silently. Neither can prevent a write — they react to a completed change and surface issues the agent can fix on the next edit.',
+        ],
+      },
+      {
+        heading: 'How do you catch type errors automatically?',
+        body: [
+          'The `post-edit-pyright` hook runs `uv run pyright` on every `.py` file the agent writes or edits and surfaces type errors on stderr. Because it fires immediately after each write, the agent reads the errors in the same turn and can fix them before moving on to the next file:',
+          {
+            code: `// .claude/hooks/post-edit-pyright.mjs
+import { readFileSync } from 'fs'
+import { execSync } from 'child_process'
+import { fileURLToPath } from 'url'
+
+function defaultExec(cmd) {
+  return execSync(cmd, { encoding: 'utf8', stdio: 'pipe', timeout: 30_000 })
+}
+
+export function run(input, { exec = defaultExec } = {}) {
+  const filePath = input.tool_input?.file_path ?? ''
+  if (!filePath.endsWith('.py')) return null
+
+  try {
+    exec(\`uv run pyright "\${filePath}"\`)
+    return null
+  } catch (err) {
+    const output = err.stdout?.toString() ?? ''
+    return output ? { message: \`[pyright] \${output.trim()}\\n\` } : null
+  }
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result?.message) process.stderr.write(result.message)
+}`,
+          },
+          'Note the 30-second timeout — pyright can take longer than ruff on a file with many imports. Like the ruff hooks, this one is non-blocking: a project that does not use pyright exits silently. Add it to the same `Write|Edit` matcher group in `settings.json`, after the ruff hooks.',
+        ],
+      },
+      {
+        heading: 'How do you run pytest before the agent hands back control?',
+        body: [
+          'A `Stop` hook fires every time the agent finishes a turn. Registering `stop-pytest` on that event means the test suite runs before every session hand-off — no manual test run, no trusting the agent\'s claim that everything passes. If the suite fails, the hook exits with code 2, which feeds the output back into the session as context so the agent keeps working rather than handing back a red suite:',
+          {
+            code: `// .claude/hooks/stop-pytest.mjs
+import { existsSync, readFileSync } from 'fs'
+import { spawnSync } from 'child_process'
+import { fileURLToPath } from 'url'
+
+const PYTHON_MARKERS = ['pyproject.toml', 'setup.py', 'pytest.ini', 'setup.cfg']
+
+export function run(_input, {
+  exists = existsSync,
+  spawn = spawnSync,
+  cwd = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+} = {}) {
+  if (!PYTHON_MARKERS.some((f) => exists(\`\${cwd}/\${f}\`))) return null // not a Python project
+
+  const result = spawn('uv', ['run', 'pytest', '--tb=short', '-q'], {
+    encoding: 'utf8', timeout: 120_000, cwd, stdio: ['ignore', 'pipe', 'pipe'],
+  })
+
+  const out = (result.stdout ?? '') + (result.stderr ?? '')
+  return { status: result.status ?? 1, message: out.slice(-2000) }
+}
+
+/* v8 ignore next 6 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result) {
+    process.stderr.write(result.message)
+    if (result.status !== 0) process.exit(2)
+  }
+}`,
+          },
+          'The `PYTHON_MARKERS` check skips the hook on non-Python projects — if none of the marker files exist, it returns null without spawning anything. Register it under `Stop` with no tool matcher:',
+          {
+            code: `{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-pytest.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+        ],
+      },
+      {
+        heading: 'How do you enforce uv and block pip and poetry?',
+        body: [
+          '`pre-bash-enforce-uv` is a PreToolUse hook that inspects every Bash command before it runs and blocks `pip install`, `pip3 install`, `poetry add`, and `poetry install`. When the agent tries one of those, the hook returns a block decision with a concrete suggestion — `uv add` or `uv sync` — so the agent immediately retries with the right tool:',
+          {
+            code: `// .claude/hooks/pre-bash-enforce-uv.mjs
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+const BLOCKED = [
+  { re: /(^|[;&|\\s\`])pip\\s+install\\b/,    fix: 'uv add' },
+  { re: /(^|[;&|\\s\`])pip3\\s+install\\b/,   fix: 'uv add' },
+  { re: /(^|[;&|\\s\`])poetry\\s+add\\b/,     fix: 'uv add' },
+  { re: /(^|[;&|\\s\`])poetry\\s+install\\b/, fix: 'uv sync' },
+]
+
+export function run(input) {
+  if (input.tool_name !== 'Bash') return null
+  const cmd = input.tool_input?.command ?? ''
+
+  const hit = BLOCKED.find(({ re }) => re.test(cmd))
+  if (!hit) return null
+
+  return {
+    decision: 'block',
+    reason: \`Use '\${hit.fix}' instead — this project manages dependencies with uv.\`,
+  }
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result) process.stdout.write(JSON.stringify(result))
+}`,
+          },
+          'Unlike the PostToolUse hooks, this one is a hard block: it returns `{ "decision": "block", "reason": "…" }` on stdout before the command runs. Register it under `PreToolUse` with the `Bash` matcher:',
+          {
+            code: `{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-bash-enforce-uv.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+        ],
+      },
+      {
+        heading: 'How do you install the Python stack in one command?',
+        body: [
+          'All five hooks in this guide are in the HookStack catalogue, annotated `stack: python`. Browse hookstack.app, select the Python stack, and run the generated command — or install the full set in one step:',
+          { code: 'npx hookstack-cli@latest install' },
+          'One prerequisite: `uv` must be installed on the machine where Claude Code runs. PostToolUse hooks exit silently when uv is absent, so the session does not break, but none of the quality checks will actually run. Install uv first:',
+          {
+            code: `# Install uv (one-time setup)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Then install the HookStack Python stack
+npx hookstack-cli@latest install`,
+          },
+          'The CLI writes each script to `.claude/hooks/` and patches your `.claude/settings.json` with the correct event, matcher, and command. Open a new Claude Code session, edit any `.py` file, and you should see ruff format + ruff check + pyright fire within seconds of the write. Ask the agent to run `pip install requests` — the PreToolUse guard should block it and suggest `uv add requests` instead.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'Do Claude Code hooks need to be Python files for Python projects?',
+        a: 'No. Every hook is a Node.js .mjs file regardless of project language. Node.js is the only runtime Claude Code guarantees on every platform, so a .mjs hook works identically wherever Claude Code runs. The hook calls Python tools via execSync — the tool stays in the project venv, the hook just knows how to invoke it.',
+      },
+      {
+        q: 'Why use `uv run` instead of calling ruff or pytest directly?',
+        a: '`uv run` resolves the project venv automatically — no source .venv/bin/activate, no PYTHONPATH setup. A bare `ruff` or `pytest` call fails when the tool is not in the system PATH, which is typical in uv-managed projects. `uv run ruff` works even when ruff is only declared in pyproject.toml and has never been installed globally.',
+      },
+      {
+        q: 'Will the pytest Stop hook run on non-Python projects?',
+        a: 'No. The stop-pytest hook checks for Python project markers (pyproject.toml, setup.py, pytest.ini, setup.cfg) before spawning pytest. If none of those files exist in the project root, the hook returns null and exits silently. It is safe to install globally — it only activates in Python projects.',
+      },
+      {
+        q: 'What if uv is not installed on the machine?',
+        a: 'PostToolUse hooks (ruff format, ruff check, pyright) wrap the uv call in a try/catch and exit silently when uv is absent — the session continues normally, none of the quality checks run. Install uv with the one-liner at astral.sh/uv before using this hook stack.',
+      },
+    ],
+    related: ['write-your-first-claude-code-hook', 'automate-code-quality-claude-code-hooks', 'pretooluse-vs-posttooluse'],
+    relatedHookSlugs: ['post-write-ruff-format', 'post-write-ruff-check', 'post-edit-pyright', 'stop-pytest', 'pre-bash-enforce-uv'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
 ]
