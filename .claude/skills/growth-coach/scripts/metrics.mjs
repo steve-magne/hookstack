@@ -6,8 +6,6 @@
 
 import { execSync } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
 
 const REPO = 'steve-magne/hookstack';
 const NPM_PKG = 'hookstack-cli';
@@ -84,6 +82,6 @@ console.log(`📦 npm downloads (7j)  ${f(snapshot.npmWeekly)}${delta('npmWeekly
 console.log(`📥 repo submissions    ${f(snapshot.submissions)}${delta('submissions')}`);
 console.log(`📋 growth issues open  ${f(snapshot.openGrowthIssues)}${delta('openGrowthIssues')}`);
 console.log('─'.repeat(40));
-console.log(`Logged → ${LOG.replace(ROOT + '/', '')}`);
+console.log(`Logged → ${LOG}`);
 if (prev) console.log(`(delta vs ${prev.date})`);
 console.log('');
