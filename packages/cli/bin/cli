@@ -191,28 +191,28 @@ async function interactiveInstall(slugs, args) {
     options: [
       {
         value: 'project',
-        label: 'This project',
-        hint: './.claude  —  committed with your repo',
+        label: 'Claude Code - This project',
+        hint: '<repo>/.claude',
       },
       {
         value: 'global',
-        label: 'All my projects',
-        hint: '~/.claude  —  every project on this machine',
-      },
-      {
-        value: 'codex-profile',
-        label: 'Codex profile',
-        hint: '~/.codex/hooks.json  —  every project (OpenAI Codex)',
+        label: 'Claude Code - Profile',
+        hint: '~/.claude/',
       },
       {
         value: 'codex-project',
-        label: 'Codex project',
-        hint: './.codex/hooks.json  —  committed with your repo',
+        label: 'Codex - This project',
+        hint: '<repo>/.codex/',
+      },
+      {
+        value: 'codex-profile',
+        label: 'Codex - Profile',
+        hint: '~/.codex/',
       },
       {
         value: 'copilot',
-        label: 'GitHub Copilot project',
-        hint: './.claude  —  paths adapted for Copilot',
+        label: 'GitHub Copilot - This project',
+        hint: '<repo>/.claude/ Copilot compatible',
       },
     ],
     initialValue: scope,
