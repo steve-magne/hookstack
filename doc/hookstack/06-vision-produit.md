@@ -2,7 +2,7 @@
 
 ## Ce qu'on construit
 
-Un catalogue communautaire de hooks agentiques, couplé à un CLI qui installe les hooks sélectionnés en une commande. L'objectif : qu'un développeur parte de zéro et ait ses hooks actifs dans Claude Code en moins d'une minute.
+Un catalogue communautaire de hooks agentiques **agnostique de l'agent**, couplé à un CLI qui installe les hooks sélectionnés en une commande. L'objectif : qu'un développeur parte de zéro et ait ses hooks actifs en moins d'une minute — sur Claude Code, OpenAI Codex ou GitHub Copilot. Un hook est écrit une fois et déployable sur les trois (code `.mjs` identique, seul le format de config change).
 
 **Tagline** : *"Get your HookStack in 1 minute"*
 
@@ -19,9 +19,9 @@ Le développeur arrive sur le site et voit immédiatement une stack de hooks rec
 > **État actuel** : implémenté. Bannière sticky avec effet pulse à chaque sélection/désélection.
 
 **Écran 3 — Install**
-L'utilisateur colle la commande dans son terminal. Le CLI installe les `.mjs` et patche `settings.json`. Terminé.
+L'utilisateur colle la commande dans son terminal. Le CLI lui demande l'agent cible (ou il le précise via flag : `--project`/`--global` pour Claude Code, `--codex-project`/`--codex-profile` pour OpenAI Codex, `--copilot` pour GitHub Copilot), installe les `.mjs` et patche le bon fichier de config (`.claude/settings.json` ou `.codex/hooks.json`). Terminé.
 
-> **État actuel** : implémenté. CLI publié sous `hookstack-cli` sur npm, code dans `packages/cli/`.
+> **État actuel** : implémenté. CLI publié sous `hookstack-cli` sur npm, code dans `packages/cli/`. Support multi-agent (Claude Code, OpenAI Codex, GitHub Copilot) livré côté CLI.
 
 ## Roadmap — ce qu'on n'a pas encore
 
@@ -70,4 +70,4 @@ Le catalogue ne disparaît pas — il reste le moteur. Mais la *vitrine* évolue
 - Docs officielles Claude Code : référence, pas un catalogue ni un outil d'installation
 - Le blog post perso : ponctuel, pas maintenable
 
-Hookstack occupe un angle unique : **catalogue + CLI + enrichissement communautaire automatisé**.
+Hookstack occupe un angle unique : **catalogue + CLI + enrichissement communautaire automatisé**, et désormais **agnostique de l'agent** — un même hook se déploie sur Claude Code, OpenAI Codex et GitHub Copilot. C'est un fossé concurrentiel : les collections existantes sont mono-agent ; Hookstack capitalise un hook une fois pour trois écosystèmes, ce qui multiplie le marché adressable sans diluer le catalogue.

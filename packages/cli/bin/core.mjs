@@ -13,6 +13,19 @@ const BLOCKING_EVENTS = new Set([
 
 // Matches $CLAUDE_PROJECT_DIR and ${CLAUDE_PROJECT_DIR}.
 export const PROJECT_DIR_RE = /\$\{?CLAUDE_PROJECT_DIR\}?/g
+// Matches the "$CLAUDE_PROJECT_DIR/.claude/" prefix — rewritten to ".codex/" for
+// Codex installs so scripts resolve under the Codex agent directory instead.
+const CLAUDE_PREFIX_RE = /\$\{?CLAUDE_PROJECT_DIR\}?\/\.claude\//g
+
+// All recognized install scopes. Claude-family: project, global, copilot
+// (settings.json under .claude). Codex-family: codex-project, codex-profile
+// (hooks.json under .codex, events at the top level).
+export const SCOPES = new Set(['project', 'global', 'copilot', 'codex-project', 'codex-profile'])
+const GLOBAL_SCOPES = new Set(['global', 'codex-profile'])
+const CODEX_SCOPES = new Set(['codex-project', 'codex-profile'])
+
+export const isGlobalScope = scope => GLOBAL_SCOPES.has(scope)
+export const isCodexScope = scope => CODEX_SCOPES.has(scope)
 
 function splitList(raw) {
   return raw.split(',').map(s => s.trim()).filter(Boolean)
@@ -39,9 +52,11 @@ export function parseArgs(argv) {
     if (arg === '--global' || arg === '-g') { result.scope = 'global'; continue }
     if (arg === '--project') { result.scope = 'project'; continue }
     if (arg === '--copilot') { result.scope = 'copilot'; continue }
+    if (arg === '--codex-profile') { result.scope = 'codex-profile'; continue }
+    if (arg === '--codex-project') { result.scope = 'codex-project'; continue }
     if (arg.startsWith('--scope=')) {
       const v = arg.slice('--scope='.length)
-      if (v === 'global' || v === 'project') result.scope = v
+      if (SCOPES.has(v)) result.scope = v
       continue
     }
     if (arg.startsWith('--hooks=')) { result.hooks = splitList(arg.slice('--hooks='.length)); continue }
@@ -52,16 +67,22 @@ export function parseArgs(argv) {
   return result
 }
 
-// Resolves where .claude/ lives for a given scope. Project → cwd; global → home.
+// Resolves where the agent directory lives for a given scope.
+// Project/copilot → cwd; global/codex-profile → home.
+// Claude-family uses .claude/settings.json; Codex-family uses .codex/hooks.json.
+// `claudeDir`/`settingsPath` keys are kept for back-compat (they hold the agent
+// dir and config-file path regardless of which agent it targets).
 export function resolveScopeRoot(scope, { cwd, home }) {
-  const root = scope === 'global' ? home : cwd
-  const claudeDir = join(root, '.claude')
+  const root = isGlobalScope(scope) ? home : cwd
+  const codex = isCodexScope(scope)
+  const agentDir = join(root, codex ? '.codex' : '.claude')
   return {
     scope,
     root,
-    claudeDir,
-    hooksDir: join(claudeDir, 'hooks'),
-    settingsPath: join(claudeDir, 'settings.json'),
+    format: codex ? 'codex' : 'claude',
+    claudeDir: agentDir,
+    hooksDir: join(agentDir, 'hooks'),
+    settingsPath: join(agentDir, codex ? 'hooks.json' : 'settings.json'),
   }
 }
 
@@ -99,10 +120,27 @@ export function mergeHooks(existing, incoming) {
   return merged
 }
 
+// Rewrites a hook command's path for the target scope:
+// - global             → $CLAUDE_PROJECT_DIR ↦ absolute global root (.claude stays)
+// - copilot            → strips $CLAUDE_PROJECT_DIR/ (relative, Copilot compatible)
+// - codex-project      → "$CLAUDE_PROJECT_DIR/.claude/" ↦ ".codex/" (relative)
+// - codex-profile      → "$CLAUDE_PROJECT_DIR/.claude/" ↦ "<home>/.codex/" (absolute)
+function rewriteCommand(command, scope, globalRoot) {
+  if (scope === 'global' && globalRoot)
+    return command.replace(PROJECT_DIR_RE, globalRoot)
+  if (scope === 'copilot')
+    return command.replace(/\$\{?CLAUDE_PROJECT_DIR\}?\//g, '')
+  if (scope === 'codex-project')
+    return command.replace(CLAUDE_PREFIX_RE, '.codex/')
+  if (scope === 'codex-profile' && globalRoot)
+    return command.replace(CLAUDE_PREFIX_RE, `${globalRoot}/.codex/`)
+  return command
+}
+
 // Gathers the hook fragments from an API hook list into a single event→entries
-// map. For global scope, rewrites $CLAUDE_PROJECT_DIR to the absolute global
-// root so commands resolve outside any project. For copilot scope, strips
-// $CLAUDE_PROJECT_DIR/ so paths become relative (GitHub Copilot compatible).
+// map, rewriting command paths per scope (see rewriteCommand). The resulting map
+// is identical in shape for both Claude (settings.hooks) and Codex (top-level
+// hooks.json) — only doInstall decides how to nest it on disk.
 export function collectIncomingHooks(hooks, { scope = 'project', globalRoot } = {}) {
   const incoming = {}
   for (const hook of hooks) {
@@ -115,17 +153,20 @@ export function collectIncomingHooks(hooks, { scope = 'project', globalRoot } = 
           ...entry,
           hooks: entry.hooks.map(h => {
             if (!h.command || typeof h.command !== 'string') return h
-            if (scope === 'global' && globalRoot)
-              return { ...h, command: h.command.replace(PROJECT_DIR_RE, globalRoot) }
-            if (scope === 'copilot')
-              return { ...h, command: h.command.replace(/\$\{?CLAUDE_PROJECT_DIR\}?\//g, '') }
-            return h
+            return { ...h, command: rewriteCommand(h.command, scope, globalRoot) }
           }),
         })
       }
     }
   }
   return incoming
+}
+
+// Maps a hook's script_path to its on-disk destination for the target scope.
+// Codex installs relocate scripts from .claude/hooks/ to .codex/hooks/.
+export function resolveScriptPath(scriptPath, scope) {
+  if (isCodexScope(scope)) return scriptPath.replace(/^\.claude\//, '.codex/')
+  return scriptPath
 }
 
 export function isBlockingEvent(event) {

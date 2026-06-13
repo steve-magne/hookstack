@@ -85,9 +85,16 @@ export default async function HomePage() {
     applicationCategory: 'DeveloperApplication',
     operatingSystem: 'Any',
     description:
-      'CLI to install agentic hooks for Claude Code from the HookStack catalogue. Enforce deterministic behavior in your vibe coding workflow in one command.',
+      'CLI to install agentic hooks from the HookStack catalogue for Claude Code, OpenAI Codex, and GitHub Copilot. The same hook scripts are portable across agents that share Claude Code lifecycle events (PreToolUse, PostToolUse, SessionStart, Stop) — only the config file differs. Enforce deterministic behavior in your vibe coding workflow in one command.',
     url: 'https://www.npmjs.com/package/hookstack-cli',
     downloadUrl: 'https://www.npmjs.com/package/hookstack-cli',
+    softwareRequirements: 'Node.js',
+    featureList: [
+      'Install hooks for Claude Code (.claude/settings.json)',
+      'Install hooks for OpenAI Codex (.codex/hooks.json)',
+      'Install hooks for GitHub Copilot',
+      'Multi-agent: same hook scripts, portable across agents',
+    ],
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     keywords: SEO_KEYWORDS.join(', '),
   }
@@ -180,6 +187,24 @@ export default async function HomePage() {
             <li className="rounded-full border border-[var(--color-border)] px-3 py-1">Open-source · MIT</li>
             <li className="rounded-full border border-[var(--color-border)] px-3 py-1">Every hook unit-tested</li>
           </ul>
+
+          {/* CompatibilityStrip — multi-agent support (Works with). Static, sober. */}
+          <div data-component="CompatibilityStrip" className="mx-auto mt-8 max-w-2xl">
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm">
+              <span className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+                {T.worksWithLabel}
+              </span>
+              {T.worksWithAgents.map((agent) => (
+                <span
+                  key={agent}
+                  className="rounded-full border border-[var(--color-border)] px-3 py-1 font-medium text-zinc-300"
+                >
+                  {agent}
+                </span>
+              ))}
+            </div>
+            <p className="mt-3 text-pretty text-xs leading-snug text-zinc-500">{T.worksWithCaption}</p>
+          </div>
 
           <p className="mx-auto mt-8 text-xs font-semibold uppercase tracking-widest text-zinc-500">
             {T.howItWorksTitle}

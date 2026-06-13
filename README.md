@@ -2,10 +2,12 @@
 
 # Hookstack
 
-**Your AI agent runs fast. Claude Code hooks keep it honest.**
+**Your AI agent runs fast. Hooks keep it honest.**
 
-The community catalogue of production-ready Claude Code hooks.  
+The community catalogue of production-ready agentic hooks — for **Claude Code, OpenAI Codex, and GitHub Copilot**.  
 Browse, select, install with one command — your agent gets guardrails in under a minute.
+
+> One hook, written once, deployable across all three agents. Codex and Claude Code share the same lifecycle events — the hook code (`.mjs`) is identical, only the config file format differs.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Hooks](https://img.shields.io/badge/hooks-catalogue-6366f1?style=flat-square)](https://www.hookstack.app)
@@ -40,7 +42,7 @@ Browse, select, install with one command — your agent gets guardrails in under
 
 ## Promise
 
-Install a production-ready Claude Code HookStack in one command - Up and running in 60 seconds.
+Install a production-ready HookStack in one command — up and running in 60 seconds, on Claude Code, OpenAI Codex, or GitHub Copilot.
 
 ---
 
@@ -52,7 +54,36 @@ Installation takes under a minute.
 npx hookstack-cli@latest install
 ```
 
-That's it. The CLI walks you through picking hooks, writes `.claude/hooks/*.mjs`, and patches `.claude/settings.json`, `tests/*` associated if needed — no manual copy-paste, no JSON editing.
+That's it. The CLI walks you through picking hooks, writes the `.mjs` scripts, and patches the right config file — no manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent.
+
+### Pick your agent
+
+The same hooks install for whichever agent you run. Choose the target with a flag, or let the interactive menu ask:
+
+```bash
+# Claude Code — this project (default)
+npx hookstack-cli@latest install --project
+
+# Claude Code — all my projects (global)
+npx hookstack-cli@latest install --global
+
+# OpenAI Codex — committed with the repo (./.codex/hooks.json)
+npx hookstack-cli@latest install --codex-project
+
+# OpenAI Codex — every project (~/.codex/hooks.json)
+npx hookstack-cli@latest install --codex-profile
+
+# GitHub Copilot
+npx hookstack-cli@latest install --copilot
+```
+
+| Agent | Scope | Config file |
+|---|---|---|
+| Claude Code | project | `.claude/settings.json` |
+| Claude Code | global | `~/.claude/settings.json` |
+| OpenAI Codex | project | `.codex/hooks.json` (committed) |
+| OpenAI Codex | profile | `~/.codex/hooks.json` (all projects) |
+| GitHub Copilot | project | `.claude/` paths adapted |
 
 Want to fine-tune your Hookstack? Go to **[hookstack.app](https://www.hookstack.app)** — browse the full catalogue, select exactly what you need, and copy the generated command:
 
@@ -68,9 +99,11 @@ The moment your agent starts a session, it knows absolutely nothing about your e
 
 Hooks change that.
 
-A hook is an ordinary Node.js script wired into the Claude Code lifecycle via your `settings.json`. No SDK, no plugin system — just events. When the agent is about to run a shell command, a `PreToolUse` hook fires first. It reads the full command, and it can **block** it. When the agent writes a file, a `PostToolUse` hook can reformat it automatically. When a long task finishes, a `Stop` hook can ping your phone.
+A hook is an ordinary Node.js script wired into the agent lifecycle via a config file. No SDK, no plugin system — just events. When the agent is about to run a shell command, a `PreToolUse` hook fires first. It reads the full command, and it can **block** it. When the agent writes a file, a `PostToolUse` hook can reformat it automatically. When a long task finishes, a `Stop` hook can ping your phone.
 
-Hookstack is the catalogue of these scripts — written, tested, and ready to install. You pick the ones you want, run one `npx` command, and your project gets a `.claude/hooks/` folder and a patched `settings.json`. Done.
+Hookstack is the catalogue of these scripts — written, tested, and ready to install. You pick the ones you want, run one `npx` command, and your project gets a hooks folder and a patched config file. Done.
+
+**Agent-agnostic by design.** Claude Code, OpenAI Codex, and GitHub Copilot share the same lifecycle event model, so the hook code is identical across all three — only the config file format differs (`.claude/settings.json` vs `.codex/hooks.json`). Write a hook once, deploy it on whichever agent you (or your team) run.
 
 The result: your agent still moves fast. It just can't do the dumb things anymore.
 

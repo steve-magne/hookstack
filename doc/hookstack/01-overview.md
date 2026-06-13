@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-**Hookstack** est une plateforme web permettant aux développeurs de **découvrir, sélectionner et installer des hooks agentiques** dans leurs projets — pour Claude Code. Le registre est vivant : il s'enrichit automatiquement en analysant des dépôts GitHub réels soumis.
+**Hookstack** est une plateforme web permettant aux développeurs de **découvrir, sélectionner et installer des hooks agentiques** dans leurs projets — **agnostique de l'agent** : Claude Code, OpenAI Codex et GitHub Copilot. Le code d'un hook (`.mjs`) est identique pour les trois agents ; seul le format du fichier de config diffère (`.claude/settings.json` vs `.codex/hooks.json`). Le registre est vivant : il s'enrichit automatiquement en analysant des dépôts GitHub réels soumis.
 
 **Tagline officielle** : *"Get your HookStack in 1 minute"*
 
@@ -28,7 +28,12 @@ npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...
 
 **Path avancé (optionnel)** : s'il veut affiner, il explore le catalogue (filtres par event type, catégorie, keyword), sélectionne des hooks supplémentaires via les cases à cocher (persistées en `localStorage`). `HookConfigurator` met à jour la commande en temps réel. Il copie la commande et la colle dans un terminal à la racine de son projet.
 
-Dans les deux cas, le CLI installe les `.mjs` dans `.claude/hooks/` et patche `.claude/settings.json`.
+Dans tous les cas, le CLI installe les `.mjs` et patche le fichier de config de l'agent ciblé. Le menu interactif demande l'agent cible (ordre : This project → All my projects → Codex profile → Codex project → GitHub Copilot), ou on le choisit via un flag :
+
+- `--project` (défaut) / `--global` → Claude Code (`.claude/settings.json` ou `~/.claude/settings.json`)
+- `--codex-project` → OpenAI Codex committé avec le repo (`./.codex/hooks.json`)
+- `--codex-profile` → OpenAI Codex pour tous les projets (`~/.codex/hooks.json`)
+- `--copilot` → GitHub Copilot (chemins `.claude/` adaptés)
 
 > **Le deliverable est la commande `npx hookstack-cli@latest`**, jamais un copier-coller de JSON.
 

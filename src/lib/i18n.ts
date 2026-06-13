@@ -1,12 +1,17 @@
 export const SEO_KEYWORDS = [
   'Claude Code hooks',
+  'OpenAI Codex hooks',
+  'Codex hooks',
+  'GitHub Copilot hooks',
+  'multi-agent hooks',
   'agentic hooks',
   'agentic workflow',
   'vibe coding',
-  'GitHub Copilot hooks',
   'deterministic behavior',
   'HookStack',
   'Claude Code',
+  'OpenAI Codex',
+  'GitHub Copilot',
   'agentic hook',
   'AI coding hooks',
   'PreToolUse',
@@ -19,7 +24,11 @@ export const SEO_KEYWORDS = [
 export const T = {
   metaTitle: 'Claude Code Hooks: Browse & Install 90+ — HookStack',
   metaDescription:
-    'Claude Code hooks catalogue: 90+ production-ready hooks for security, quality, and workflow automation. Install in one npx command.',
+    'Claude Code hooks catalogue: 90+ production-ready hooks for security, quality, and workflow automation. Works with Claude Code, OpenAI Codex, and GitHub Copilot. Install in one npx command.',
+  // Multi-agent compatibility strip (HeroSection). Same hooks, three agents.
+  worksWithLabel: 'Works with',
+  worksWithAgents: ['Claude Code', 'OpenAI Codex', 'GitHub Copilot'] as const,
+  worksWithCaption: 'Same hooks, one CLI — portable across agents that share Claude Code lifecycle events.',
   footerText: 'Hookstack — Community catalogue of agentic hooks',
   navCatalogue: 'Catalogue',
   hooksSelectedOne: 'hook selected',
@@ -144,7 +153,11 @@ export const T = {
     },
     {
       q: 'Does HookStack work with GitHub Copilot?',
-      a: 'HookStack is built around Claude Code hooks today. The agentic hook patterns are portable: any AI coding agent that exposes lifecycle events can adopt the same deterministic-behavior approach. GitHub Copilot Workspace and similar tools are natural targets as they mature.',
+      a: 'Yes. The hookstack-cli installs the same hooks for GitHub Copilot — the hook scripts (.mjs) are identical, only the config file paths are adapted. Run npx hookstack-cli@latest install --copilot in your project root. Because Copilot and Claude Code share the same lifecycle events (PreToolUse, PostToolUse, SessionStart, Stop), a HookStack hook is portable with no code changes.',
+    },
+    {
+      q: 'Does HookStack work with OpenAI Codex?',
+      a: 'Yes. The hookstack-cli installs the same hooks for OpenAI Codex into a .codex/hooks.json config file, with the hook scripts in .codex/hooks/. Use npx hookstack-cli@latest install --codex-project to commit the config with your repo, or --codex-profile to apply it to every project via ~/.codex/hooks.json. Codex and Claude Code share the same lifecycle event names (PreToolUse, PostToolUse, SessionStart, Stop), so the hook code (.mjs) is identical — only the config format differs.',
     },
     {
       q: 'Why are Claude Code hooks better than prompt instructions?',

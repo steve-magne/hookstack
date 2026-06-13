@@ -12,9 +12,11 @@ import {
   mergeHooks,
   assertSafeTarget,
   collectIncomingHooks,
+  resolveScriptPath,
   buildSecurityRows,
   buildPostInstallHints,
   doInstallTests,
+  isGlobalScope,
 } from './core.mjs'
 
 const API_BASE = process.env.HOOKSTACK_API_BASE || 'https://hookstack.vercel.app'
@@ -111,24 +113,31 @@ function doInstall(hooks, dirs, scope, log) {
   mkdirSync(dirs.claudeDir, { recursive: true })
   mkdirSync(dirs.hooksDir, { recursive: true })
 
+  const configName = dirs.format === 'codex' ? 'hooks.json' : 'settings.json'
   let settings = {}
   if (existsSync(dirs.settingsPath)) {
     try {
       settings = JSON.parse(readFileSync(dirs.settingsPath, 'utf8'))
     } catch {
-      log.warn('Could not parse existing settings.json — starting fresh')
+      log.warn(`Could not parse existing ${configName} — starting fresh`)
     }
   }
 
   const incoming = collectIncomingHooks(hooks, { scope, globalRoot: dirs.root })
-  settings.hooks = mergeHooks(settings.hooks ?? {}, incoming)
+  if (dirs.format === 'codex') {
+    // Codex hooks.json holds events at the top level (no "hooks" wrapper).
+    settings = mergeHooks(settings, incoming)
+  } else {
+    settings.hooks = mergeHooks(settings.hooks ?? {}, incoming)
+  }
   writeFileSync(dirs.settingsPath, JSON.stringify(settings, null, 2) + '\n')
 
   let scriptCount = 0
   for (const hook of hooks) {
     if (!hook.script_path || !hook.code_snippet) continue
-    assertSafeTarget(dirs.root, hook.script_path)
-    const dest = join(dirs.root, hook.script_path)
+    const target = resolveScriptPath(hook.script_path, scope)
+    assertSafeTarget(dirs.root, target)
+    const dest = join(dirs.root, target)
     mkdirSync(join(dest, '..'), { recursive: true })
     writeFileSync(dest, hook.code_snippet, 'utf8')
     scriptCount++
@@ -141,6 +150,15 @@ function doInstall(hooks, dirs, scope, log) {
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 
+// Human-readable destination shown in the confirm prompt and result panel.
+const SCOPE_LABELS = {
+  project: './.claude',
+  global: '~/.claude',
+  copilot: './.claude (Copilot mode)',
+  'codex-project': './.codex/hooks.json (Codex)',
+  'codex-profile': '~/.codex/hooks.json (Codex)',
+}
+
 function onCancel() {
   p.cancel('Installation cancelled.')
   process.exit(0)
@@ -148,7 +166,7 @@ function onCancel() {
 
 async function interactiveInstall(slugs, args) {
   console.log('\n' + BANNER + '\n')
-  p.intro(pc.bold('hooks') + pc.dim(`  Claude Code hook installer  v${VERSION}`))
+  p.intro(pc.bold('hooks') + pc.dim(`  Agentic hook installer · Claude Code · Codex · Copilot  v${VERSION}`))
 
   // Fetch
   const spin = p.spinner()
@@ -182,6 +200,16 @@ async function interactiveInstall(slugs, args) {
         hint: '~/.claude  —  every project on this machine',
       },
       {
+        value: 'codex-profile',
+        label: 'Codex profile',
+        hint: '~/.codex/hooks.json  —  every project (OpenAI Codex)',
+      },
+      {
+        value: 'codex-project',
+        label: 'Codex project',
+        hint: './.codex/hooks.json  —  committed with your repo',
+      },
+      {
         value: 'copilot',
         label: 'GitHub Copilot project',
         hint: './.claude  —  paths adapted for Copilot',
@@ -199,7 +227,7 @@ async function interactiveInstall(slugs, args) {
   p.note(securityPanel(secRows), 'Installation Summary')
 
   // Confirm
-  const scopeLabel = scope === 'global' ? '~/.claude' : scope === 'copilot' ? './.claude (Copilot mode)' : './.claude'
+  const scopeLabel = SCOPE_LABELS[scope] ?? './.claude'
   const confirmed = await p.confirm({
     message: `Install ${plural(hooks.length, 'hook')} into ${pc.cyan(scopeLabel)}?`,
   })
@@ -220,7 +248,7 @@ async function interactiveInstall(slugs, args) {
   // Unit tests prompt (project/copilot scope only)
   let testResult = null
   const hooksWithTests = hooks.filter(h => h.test_snippet)
-  if (scope !== 'global' && hooksWithTests.length > 0) {
+  if (!isGlobalScope(scope) && hooksWithTests.length > 0) {
     const wantTests = await p.confirm({
       message: `Install unit tests for ${plural(hooksWithTests.length, 'hook')} into ${pc.cyan('tests/hooks/')}? ${pc.dim('(vitest — helps SonarQube gating)')}`,
       initialValue: true,
@@ -276,7 +304,7 @@ async function directInstall(slugs, args) {
   const log = { warn: m => console.warn(`  ! ${m}`) }
   const result = doInstall(hooks, dirs, args.scope, log)
   console.log(`  ✓ ${dirs.settingsPath}`)
-  if (args.withTests && args.scope !== 'global') {
+  if (args.withTests && !isGlobalScope(args.scope)) {
     try {
       const testResult = doInstallTests(hooks, process.cwd(), { mkdirSync, writeFileSync, join: pathJoin })
       if (testResult.testCount > 0)
@@ -289,8 +317,9 @@ async function directInstall(slugs, args) {
   if (hints.length > 0) {
     for (const h of hints) console.warn(`  ⚠  ${h.slug}: ${h.hint}`)
   }
+  const agent = dirs.format === 'codex' ? 'Codex' : 'Claude Code'
   console.log(`\n✅ ${plural(result.hookCount, 'hook')} installed · star us → ${REPO_URL}`)
-  console.log('   Restart Claude Code to activate.\n')
+  console.log(`   Restart ${agent} to activate.\n`)
 }
 
 const HELP = `
@@ -304,7 +333,10 @@ const HELP = `
     --hooks <slugs>   Comma-separated list of hook slugs (omit for default set)
     --global, -g      Install into ~/.claude instead of ./.claude
     --copilot         Install into ./.claude with paths adapted for GitHub Copilot
-    --scope <s>       "project" (default), "global", or "copilot"
+    --codex-project   Install into ./.codex/hooks.json (OpenAI Codex, this repo)
+    --codex-profile   Install into ~/.codex/hooks.json (OpenAI Codex, all projects)
+    --scope <s>       "project" (default), "global", "copilot",
+                      "codex-project", or "codex-profile"
     --with-tests      Also install vitest unit tests into tests/hooks/ (project scope only)
     --yes, -y         Skip prompts (non-interactive install)
     --version, -v     Show version
