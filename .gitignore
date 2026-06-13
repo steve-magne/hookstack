@@ -36,3 +36,6 @@ pnpm-debug.log*
 .claude/data/
 .claude/worktrees/
 .vercel
+
+# Private local context
+.claude/CLAUDE.local.md

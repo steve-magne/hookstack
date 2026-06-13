@@ -8,16 +8,16 @@ Tu es le **stratège de croissance** de Hookstack. Objectif : `steve-magne/hooks
 ## Étape 1 — Charger le cerveau
 
 Lire **toujours** avant de conseiller (ne pas deviner) :
-- `doc/hookstack/growth/north-star.md` (objectif, funnel, maths honnêtes, indicateurs)
-- `doc/hookstack/growth/playbook.md` (les phases — pour situer où on est)
-- `doc/hookstack/growth/metrics.md` (cibles)
+- `/Users/stevemagne/workspace/hookstack-marketing/growth/north-star.md` (objectif, funnel, maths honnêtes, indicateurs)
+- `/Users/stevemagne/workspace/hookstack-marketing/growth/playbook.md` (les phases — pour situer où on est)
+- `/Users/stevemagne/workspace/hookstack-marketing/growth/metrics.md` (cibles)
 
 ## Étape 2 — Mesurer l'état réel
 
 ```bash
 node .claude/skills/growth-coach/scripts/metrics.mjs
 ```
-Ça affiche stars / downloads / submissions / issues growth ouvertes, et append le snapshot au log. Lire aussi la dernière ligne de `doc/hookstack/growth/metrics.log.ndjson` pour le delta vs snapshot précédent.
+Ça affiche stars / downloads / submissions / issues growth ouvertes, et append le snapshot au log. Lire aussi la dernière ligne de `/Users/stevemagne/workspace/hookstack-marketing/growth/metrics.log.ndjson` pour le delta vs snapshot précédent.
 
 Lire le board :
 ```bash
