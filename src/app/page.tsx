@@ -179,13 +179,14 @@ export default async function HomePage() {
             className="mx-auto mt-6 flex max-w-2xl flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs text-zinc-400"
           >
             <li className="rounded-full border border-[var(--color-border)] px-3 py-1">{allHooks.length} hooks</li>
-            {stars !== null && stars > 0 && (
+            {stars !== null && stars >= 100 && (
               <li className="rounded-full border border-[var(--color-border)] px-3 py-1">
                 ★ {stars.toLocaleString('en-US')} on GitHub
               </li>
             )}
             <li className="rounded-full border border-[var(--color-border)] px-3 py-1">Open-source · MIT</li>
-            <li className="rounded-full border border-[var(--color-border)] px-3 py-1">Every hook unit-tested</li>
+            <li className="rounded-full border border-[var(--color-border)] px-3 py-1">Hooks unit-tested</li>
+            <li className="rounded-full border border-[var(--color-border)] px-3 py-1">Security scanned</li>
           </ul>
 
           {/* CompatibilityStrip — multi-agent support (Works with). Static, sober. */}
