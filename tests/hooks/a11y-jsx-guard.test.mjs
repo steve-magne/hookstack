@@ -1,18 +1,32 @@
 // @vitest-environment node
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { run } from '../../.claude/hooks/a11y-jsx-guard.mjs';
+import { makeExecFail } from './_utils.mjs';
 
-const input = (file_path) => ({ tool_input: { file_path } });
+const inp = (file_path) => ({ tool_input: { file_path } });
 const FILE = '/p/src/components/Card.tsx';
-const r = (code) => run(input(FILE), { readFile: () => code });
 
-describe('a11y-jsx-guard', () => {
+// exists: () => false force le chemin statique (zéro-dépendance)
+const noPlugin = { exists: () => false };
+const r = (code) => run(inp(FILE), { ...noPlugin, readFile: () => code });
+
+// ── Chemin statique (eslint-plugin-jsx-a11y absent) ───────────────────────────
+
+describe('a11y-jsx-guard — statique (fallback)', () => {
   it('ignore les fichiers hors src/', () => {
-    expect(run(input('/p/x.tsx'), { readFile: () => '<Image src={x} />' })).toBeNull();
+    expect(run(inp('/p/x.tsx'), { ...noPlugin, readFile: () => '<Image src={x} />' })).toBeNull();
+  });
+
+  it('ignore un fichier .ts (pas du JSX)', () => {
+    expect(run(inp('/p/src/lib/utils.ts'), { ...noPlugin, readFile: () => 'export const x = 1;' })).toBeNull();
+  });
+
+  it('accepte les fichiers .jsx', () => {
+    expect(run(inp('/p/src/components/Btn.jsx'), { ...noPlugin, readFile: () => '<Image src={x} />' })?.message).toContain('alt');
   });
 
   it('ignore un fichier illisible', () => {
-    expect(run(input(FILE), { readFile: () => { throw new Error('ENOENT'); } })).toBeNull();
+    expect(run(inp(FILE), { ...noPlugin, readFile: () => { throw new Error('ENOENT'); } })).toBeNull();
   });
 
   it('silencieux sur un composant conforme', () => {
@@ -51,7 +65,6 @@ describe('a11y-jsx-guard', () => {
   });
 
   it('ne tronque pas la balise sur une fonction fléchée (le `>` de =>)', () => {
-    // Régression : un `>` issu de `() =>` ne doit pas couper la balise avant role/onKeyDown.
     const code =
       '<div\n  onClick={() => setOpen((v) => !v)}\n  role="button"\n  tabIndex={0}\n' +
       '  onKeyDown={(e) => { if (e.key === "Enter") setOpen(true); }}\n>content</div>';
@@ -65,5 +78,77 @@ describe('a11y-jsx-guard', () => {
   it('cumule plusieurs violations', () => {
     const code = '<Image src={x} />\n<div tabIndex={2} onClick={f}>x</div>';
     expect(r(code)?.message.match(/^ {2}- /gm)?.length).toBe(3);
+  });
+});
+
+// ── Chemin ESLint (eslint-plugin-jsx-a11y présent) ────────────────────────────
+
+const FILE_TSX = '/p/src/components/Foo.tsx';
+
+function eslintJson(ruleId, message, line = 1, severity = 2) {
+  return JSON.stringify([{ filePath: FILE_TSX, messages: [{ ruleId, message, line, severity }] }]);
+}
+
+function eslintDeps(execOverride, eslintVersion = '8.57.0') {
+  return {
+    exec: execOverride ?? vi.fn(() => ''),
+    exists: () => true,
+    writeFile: vi.fn(),
+    unlink: vi.fn(),
+    readFile: () => JSON.stringify({ version: eslintVersion }),
+    projectDir: '/p',
+  };
+}
+
+describe('a11y-jsx-guard — ESLint (plugin disponible)', () => {
+  it('silencieux si ESLint ne retourne aucune violation', () => {
+    expect(run(inp(FILE_TSX), eslintDeps())).toBeNull();
+  });
+
+  it('no-op si eslint/package.json est illisible', () => {
+    const deps = { ...eslintDeps(), readFile: () => { throw new Error('ENOENT'); } };
+    expect(run(inp(FILE_TSX), deps)).toBeNull();
+  });
+
+  it('silencieux si la sortie n\'est pas du JSON valide', () => {
+    expect(run(inp(FILE_TSX), eslintDeps(makeExecFail('eslint: command not found')))).toBeNull();
+  });
+
+  it('silencieux si les violations ne sont pas jsx-a11y', () => {
+    const json = JSON.stringify([{ messages: [{ ruleId: 'no-console', message: 'msg', line: 1, severity: 2 }] }]);
+    expect(run(inp(FILE_TSX), eslintDeps(makeExecFail(json)))).toBeNull();
+  });
+
+  it('reporte une violation error (✗)', () => {
+    const r = run(inp(FILE_TSX), eslintDeps(makeExecFail(eslintJson('jsx-a11y/alt-text', 'img needs alt', 5))));
+    expect(r?.message).toContain('✗ jsx-a11y/alt-text');
+    expect(r?.message).toContain('line 5');
+  });
+
+  it('reporte une violation warn (⚠)', () => {
+    const r = run(inp(FILE_TSX), eslintDeps(makeExecFail(eslintJson('jsx-a11y/click-events-have-key-events', 'needs key', 3, 1))));
+    expect(r?.message).toContain('⚠ jsx-a11y/click-events-have-key-events');
+  });
+
+  it('crée une config JSON (no-eslintrc) pour ESLint v8', () => {
+    const writeFile = vi.fn();
+    run(inp(FILE_TSX), { ...eslintDeps(), writeFile });
+    const [path, content] = writeFile.mock.calls[0];
+    expect(path).toMatch(/\.json$/);
+    expect(JSON.parse(content).plugins).toContain('jsx-a11y');
+  });
+
+  it('crée une flat config .mjs pour ESLint v9', () => {
+    const writeFile = vi.fn();
+    run(inp(FILE_TSX), { ...eslintDeps(undefined, '9.5.0'), writeFile });
+    const [path, content] = writeFile.mock.calls[0];
+    expect(path).toMatch(/\.mjs$/);
+    expect(content).toContain('export default');
+  });
+
+  it('nettoie le fichier config temp dans tous les cas', () => {
+    const unlink = vi.fn();
+    run(inp(FILE_TSX), { ...eslintDeps(makeExecFail(eslintJson('jsx-a11y/alt-text', 'missing', 1))), unlink });
+    expect(unlink).toHaveBeenCalledOnce();
   });
 });
