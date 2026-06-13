@@ -998,7 +998,7 @@ cat .claude/data/bash-log.jsonl
       { q: 'Can a hook actually stop Claude from doing something?', a: 'Yes, but only `PreToolUse` hooks. They run before a tool executes and can return `{ decision: \'block\', reason: \'…\' }` on stdout to reject the call. `PostToolUse`, `Stop`, and `SessionStart` hooks react or inject context but cannot retroactively undo a completed action.' },
       { q: 'Where do installed hooks live?', a: 'Scripts go in your project’s `.claude/hooks/` directory and are referenced from `.claude/settings.json` via `$CLAUDE_PROJECT_DIR`. The HookStack CLI writes both, so the script on disk and its registration stay in sync.' },
     ],
-    related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'secure-claude-code-with-hooks', 'automate-code-quality-claude-code-hooks'],
+    related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'secure-claude-code-with-hooks', 'automate-code-quality-claude-code-hooks', 'claude-code-seo-accessibility-nextjs-hooks'],
     relatedHookSlugs: ['pre-bash-secret-detection', 'pre-write-main-guard', 'post-write-eslint', 'stop-run-tests', 'user-prompt-inject-conventions', 'session-start-load-git-context', 'notification-slack', 'pre-bash-block-destructive'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
@@ -1673,6 +1673,256 @@ export function run(input, { exec = defaultExec } = {}) {
       'session-start-agents-md',
       'user-prompt-log-session',
     ],
+    sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
+  },
+  {
+    slug: 'claude-code-seo-accessibility-nextjs-hooks',
+    title: 'SEO & Accessibility Guardrails for Next.js with Hooks',
+    metaTitle: 'Next.js SEO & a11y Guardrails with Claude Code Hooks',
+    description:
+      'Guarantee SEO metadata, heading hierarchy, next/image, and accessible JSX in your Next.js app with Claude Code hooks that enforce quality automatically.',
+    datePublished: '2026-06-13',
+    dateModified: '2026-06-13',
+    readingMinutes: 8,
+    intro: [
+      'When an AI coding agent builds your Next.js app, it focuses on getting components to render — not on whether every page exports a title and description, the heading hierarchy starts with a single h1, images go through next/image, or icon buttons carry an accessible label. Those rules are easy to state and easy to skip on a fast-moving session.',
+      'This guide shows how to enforce all four concerns with Claude Code hooks that run on every file write and at session end. You will see the exact code for each hook, the settings.json wiring, and a one-command install that assembles the full stack in under a minute.',
+    ],
+    sections: [
+      {
+        heading: 'Why does an AI agent cause SEO and a11y regressions?',
+        body: [
+          'The model does not forget the rule — it never had it as an invariant. A CLAUDE.md instruction like "always add metadata to every page" is probabilistic guidance: the agent usually follows it, but on a busy session with a dozen file writes it will miss some pages. A raw <img> tag slips in not because the model ignored the rule but because it completed JSX quickly, matched the template it was editing, and never ran a check.',
+          'The result is silent regression. Search crawlers index a page with no title. Lighthouse flags a missing alt attribute. A screen reader user hits an icon button with no label. None of these fail a build or a test unless you explicitly enforce them — and that is exactly what hooks are for.',
+          'A PostToolUse hook runs after every Write or Edit call, outside the model context window, in a separate process. It cannot be deprioritized, skipped by the agent, or lost during context compaction. For a check that costs a few milliseconds of regex evaluation, the trade-off is clear: the rule is either guaranteed or it is not a rule.',
+        ],
+      },
+      {
+        heading: 'How do you enforce title + description on every Next.js page?',
+        body: [
+          'Register a PostToolUse hook that fires on every Write and Edit, filters to App Router page files (`src/app/**/page.tsx`), and checks that the file exports metadata with both a title and a description. The hook is non-blocking: it surfaces a precise message to the agent on stderr so the very next edit can fix what is missing.',
+          {
+            code: `// .claude/hooks/seo-page-metadata-guard.mjs
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+const PAGE_RE = /\\/app\\/(?:.*\\/)?page\\.tsx$/
+
+export function run(input, { readFile = readFileSync } = {}) {
+  const filePath = input.tool_input?.file_path ?? ''
+  if (!PAGE_RE.test(filePath)) return null
+
+  let content
+  try { content = readFile(filePath, 'utf8') } catch { return null }
+
+  const hasExport =
+    /export\\s+(?:const|let)\\s+metadata\\b/.test(content) ||
+    /export\\s+(?:async\\s+)?function\\s+generateMetadata\\b/.test(content)
+
+  if (!hasExport) {
+    return { message: \`[seo] \${filePath}: no metadata export — add title + description.\\n\` }
+  }
+  const missing = []
+  if (!/\\btitle\\s*:/.test(content)) missing.push('title')
+  if (!/\\bdescription\\s*:/.test(content)) missing.push('description')
+  return missing.length
+    ? { message: \`[seo] \${filePath} metadata missing: \${missing.join(', ')}\\n\` }
+    : null
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result?.message) process.stderr.write(result.message)
+}`,
+          },
+          'The hook returns null for every non-page file, so it adds zero overhead when the agent edits a utility or a component. Register it under PostToolUse with the `Write|Edit` matcher:',
+          {
+            code: `{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/seo-page-metadata-guard.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+        ],
+      },
+      {
+        heading: 'How do you guarantee a single h1 per page?',
+        body: [
+          'Multiple h1 elements break the document outline: search crawlers and screen readers expect one main heading per view. A second h1 — often introduced when the agent copies a hero section or reuses a layout component — is invisible to the developer until an audit flags it.',
+          'This PostToolUse hook counts h1 tags in every `src/**/*.tsx` file and surfaces the count whenever it exceeds one:',
+          {
+            code: `// .claude/hooks/seo-heading-hierarchy-guard.mjs
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+const H1_RE = /<h1(?=[\\s/>])/g
+
+export function run(input, { readFile = readFileSync } = {}) {
+  const filePath = input.tool_input?.file_path ?? ''
+  if (!/\\/src\\/.*\\.tsx$/.test(filePath)) return null
+
+  let content
+  try { content = readFile(filePath, 'utf8') } catch { return null }
+
+  const count = (content.match(H1_RE) ?? []).length
+  if (count <= 1) return null
+
+  return {
+    message:
+      \`[seo-heading] \${filePath} has \${count} <h1> tags.\\n\` +
+      \`  → Keep a single <h1> (the main title). Demote extras to <h2>/<h3>.\\n\`,
+  }
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result?.message) process.stderr.write(result.message)
+}`,
+          },
+          'The regex `<h1(?=[\\s/>])` matches literal h1 tags but not custom components like `<H1` or `<Heading1`, keeping false-positive noise low. Multiple h1 tags in a single component file are almost always a structural mistake — the hook assumes one component does not legitimately own two main titles.',
+        ],
+      },
+      {
+        heading: 'How do you block a raw <img> in favour of next/image?',
+        body: [
+          'A raw <img> tag in Next.js is a performance and SEO regression at once: it bypasses next/image automatic format conversion (WebP, AVIF), lazy loading, and Largest Contentful Paint (LCP) optimisation. An LCP regression on a landing page is a ranking signal — Google Core Web Vitals measures it and factors it into search ranking.',
+          'This PostToolUse hook detects any raw <img> in a `.tsx` file and tells the agent exactly what to use instead:',
+          {
+            code: `// .claude/hooks/seo-next-image-guard.mjs
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+const RAW_IMG_RE = /<img(?=[\\s/>])/
+
+export function run(input, { readFile = readFileSync } = {}) {
+  const filePath = input.tool_input?.file_path ?? ''
+  if (!/\\/src\\/.*\\.tsx$/.test(filePath)) return null
+
+  let content
+  try { content = readFile(filePath, 'utf8') } catch { return null }
+
+  if (!RAW_IMG_RE.test(content)) return null
+
+  return {
+    message:
+      \`[seo-next-image] \${filePath} uses a raw <img> tag.\\n\` +
+      \`  → Use next/image (<Image>) instead — it optimises LCP and prevents layout shift.\\n\`,
+  }
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result?.message) process.stderr.write(result.message)
+}`,
+          },
+          'Stack this hook with the metadata guard under the same `Write|Edit` matcher group — both run on every write and neither blocks the write. Surfacing a message immediately and letting the agent fix the file on the next edit is the right model for PostToolUse quality hooks.',
+        ],
+      },
+      {
+        heading: 'How do you catch WCAG violations in the JSX?',
+        body: [
+          'Accessibility violations in JSX fall into two categories: missing semantics (no alt text on an image, a button without a visible label) and incorrect structure (an interactive element that is not keyboard-focusable). Both slip through when an agent generates components at speed.',
+          'The a11y-jsx-guard hook uses eslint-plugin-jsx-a11y when the plugin is installed, and falls back to a small set of static regex checks when it is not. Either way it catches the most common violations — missing alt, empty headings, positive tabIndex — immediately after the write:',
+          {
+            code: `// .claude/hooks/a11y-jsx-guard.mjs (static fallback shown)
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+const CHECKS = [
+  { re: /<img(?=[\\s/>])[^>]*(?!alt=)[^>]*\\/?>/, msg: '<img> without alt attribute (WCAG 1.1.1)' },
+  { re: /<h[1-6](?=[\\s/>])[^>]*>\\s*<\\/h[1-6]>/, msg: 'Empty heading — no information for screen readers (WCAG 2.4.6)' },
+  { re: /tabIndex=\\{[1-9]/, msg: 'Positive tabIndex disrupts focus order (WCAG 2.4.3)' },
+]
+
+export function run(input, { readFile = readFileSync } = {}) {
+  const filePath = input.tool_input?.file_path ?? ''
+  if (!/\\/src\\/.*\\.[jt]sx?$/.test(filePath)) return null
+
+  let content
+  try { content = readFile(filePath, 'utf8') } catch { return null }
+
+  const violations = CHECKS.filter(({ re }) => re.test(content)).map(({ msg }) => msg)
+  if (!violations.length) return null
+
+  return {
+    message: \`[a11y] \${filePath}:\\n\` + violations.map((v) => \`  \${v}\\n\`).join(''),
+  }
+}
+
+/* v8 ignore next 5 */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8'))
+  const result = run(input)
+  if (result?.message) process.stderr.write(result.message)
+}`,
+          },
+          'When eslint-plugin-jsx-a11y is available the full hook switches to ESLint (12 WCAG rules, 20-second timeout). The static fallback ensures the highest-signal checks run even in a bare project with no dev dependencies installed — one hook covers both environments.',
+        ],
+      },
+      {
+        heading: 'How do you prevent any SEO regression at end of session?',
+        body: [
+          'Write-time checks catch issues as they are introduced, but they run file by file. A session that adds three pages and moves one might miss the moved file. The Stop hook is the safety net: it runs once when the agent finishes a turn and audits the entire app in one pass.',
+          'The stop-seo-structure-check hook checks three things: every `page.tsx` exports metadata with a title and a description; structural files exist (robots.txt, sitemap.xml, an OpenGraph image, a web manifest); and every literal internal `<Link href="…">` resolves to a known route. It exits with code 2 on failure — which feeds the error report back into the session as context and keeps the agent working rather than handing back control with regressions in place:',
+          {
+            code: `{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-seo-structure-check.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+          'The Stop hook is the enforcement layer; the PostToolUse hooks are the early-warning layer. Running both means the agent corrects issues immediately after each write and still cannot close a session with a structural SEO regression outstanding.',
+        ],
+      },
+      {
+        heading: 'How do you install the full SEO and a11y stack?',
+        body: [
+          'All six hooks in this guide are in the HookStack catalogue. Select them on hookstack.app — or install the complete Next.js SEO and accessibility cluster in one command:',
+          { code: 'npx hookstack-cli@latest install' },
+          'The CLI writes each script into `.claude/hooks/` and patches your `.claude/settings.json` with the correct event, matcher, and command. Existing settings and permissions are preserved — the install merges, it does not overwrite. Open a new Claude Code session and the guardrails are live: every page write is checked for metadata, every component is scanned for raw img and h1 violations, every JSX change is tested against accessibility rules, and every completed turn is gated by the structural SEO audit.',
+          'To confirm the stack is wired correctly, ask the agent to create a new `app/about/page.tsx` without a metadata export — the seo-page-metadata-guard should fire within seconds of the write, before the agent moves on to the next file.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'Do these hooks slow down the Claude Code agent?',
+        a: 'No meaningfully. Each PostToolUse hook filters on the file extension first and returns null early for non-matching files. The core logic is a handful of regex checks against a single file — overhead per write is negligible compared to model and tool latency. The Stop hook runs once at the end of a turn, not after every individual file write.',
+      },
+      {
+        q: 'Do these hooks replace a real accessibility audit?',
+        a: 'No. The a11y-jsx-guard catches common static violations at write time — missing alt, empty headings, positive tabIndex — but it cannot test focus traps, colour contrast, or runtime ARIA state. Treat it as a fast first filter that keeps obvious violations out of the codebase. Run a dedicated tool like Axe or Lighthouse on staging to catch what static analysis misses.',
+      },
+      {
+        q: 'What if my project uses the Next.js Pages Router instead of App Router?',
+        a: 'The seo-page-metadata-guard and stop-seo-structure-check hooks target src/app/**/page.tsx — the App Router convention. They return null silently for Pages Router projects and do not interfere. For Pages Router SEO you would check for next/head usage instead of an exported metadata object; the hook pattern is identical, only the target regex changes.',
+      },
+      {
+        q: 'Will the Stop hook block my session if robots.txt or sitemap.xml is missing?',
+        a: 'Yes, intentionally. The stop-seo-structure-check hook exits with code 2 when a structural file is absent, which feeds the list of missing files back to Claude as context so the agent can generate them before the session closes. If you are in an early project phase where those files are not yet expected, disable the Stop hook temporarily in .claude/settings.json.',
+      },
+    ],
+    related: ['automate-code-quality-claude-code-hooks', 'claude-code-hooks-examples', 'what-are-claude-code-hooks'],
+    relatedHookSlugs: ['seo-page-metadata-guard', 'seo-heading-hierarchy-guard', 'seo-next-image-guard', 'a11y-jsx-guard', 'stop-seo-structure-check', 'post-write-nextjs-quality'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
 ]
