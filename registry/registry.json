@@ -4911,5 +4911,89 @@
       "code_snippet": "#!/usr/bin/env node\n// Bloque la fin de session si du code source a été modifié sans qu'un fichier\n// doc/implementation/ ait été créé ou mis à jour. Garantit zéro dette de doc. (Stop)\nimport { execSync } from 'child_process';\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd, opts) {\n  return execSync(cmd, { encoding: 'utf8', timeout: 10_000, ...opts });\n}\n\nconst CODE_EXTS = /\\.(ts|tsx|mjs|cjs|js|jsx|css|scss|sass|py|go|rs|java|rb|php|swift|kt)$/;\nconst SKIP_PATH =\n  /^(node_modules\\/|\\.git\\/|dist\\/|build\\/|out\\/|\\.next\\/|tests?\\/|__tests?__\\/|doc\\/|docs\\/|\\.claude\\/|public\\/)/;\nconst SKIP_NAME = /(\\.(test|spec)\\.[a-z]+$|\\.json$|\\.md$|\\.lock$|\\.txt$|\\.env)/;\n\nfunction isSourceFile(p) {\n  return CODE_EXTS.test(p) && !SKIP_PATH.test(p) && !SKIP_NAME.test(p);\n}\n\nfunction isImplDoc(p) {\n  return p.startsWith('doc/implementation/');\n}\n\nexport function run(_input, {\n  exec = defaultExec,\n  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n} = {}) {\n  let files;\n  try {\n    const modified = exec('git diff --name-only HEAD', { cwd: projectDir });\n    const untracked = exec('git ls-files --others --exclude-standard', { cwd: projectDir });\n    files = [\n      ...new Set(\n        [...modified.split('\\n'), ...untracked.split('\\n')]\n          .map((l) => l.trim())\n          .filter(Boolean),\n      ),\n    ];\n  } catch {\n    return null; // pas un dépôt git ou git absent → no-op\n  }\n\n  if (!files.some(isSourceFile)) return null;\n  if (files.some(isImplDoc)) return null;\n\n  return {\n    exitCode: 2,\n    message:\n      `[force-implementation-doc] Source code was modified but doc/implementation/ was not updated.\\n` +\n      `→ Create or update doc/implementation/<feature-name>.md explaining your technical choices\\n` +\n      `  and the implementation before ending this session.\\n`,\n  };\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result?.message) process.stderr.write(result.message);\n  if (result?.exitCode) process.exit(result.exitCode);\n}\n",
       "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-force-implementation-doc.mjs';\n\nfunction makeExec(modified = '', untracked = '') {\n  return vi.fn((cmd) => {\n    if (cmd.includes('diff')) return modified;\n    if (cmd.includes('ls-files')) return untracked;\n    return '';\n  });\n}\n\ndescribe('stop-force-implementation-doc', () => {\n  it('no-op quand git échoue (pas de dépôt)', () => {\n    const exec = vi.fn(() => { throw new Error('not a git repo'); });\n    expect(run({}, { exec, projectDir: '/p' })).toBeNull();\n  });\n\n  it('no-op quand aucun fichier source modifié (seulement doc/config/lock)', () => {\n    const exec = makeExec('README.md\\npackage.json\\npnpm-lock.yaml\\n');\n    expect(run({}, { exec, projectDir: '/p' })).toBeNull();\n  });\n\n  it('no-op quand le code ET un fichier doc/implementation/ sont modifiés', () => {\n    const exec = makeExec('src/app/page.tsx\\ndoc/implementation/my-feature.md\\n');\n    expect(run({}, { exec, projectDir: '/p' })).toBeNull();\n  });\n\n  it('no-op si doc/implementation/ apparaît dans les untracked (nouveau fichier non stagé)', () => {\n    const exec = makeExec('src/app/page.tsx\\n', 'doc/implementation/my-feature.md\\n');\n    expect(run({}, { exec, projectDir: '/p' })).toBeNull();\n  });\n\n  it('bloque (exit 2) si fichier .tsx modifié sans doc/implementation/', () => {\n    const exec = makeExec('src/components/Header.tsx\\nsrc/lib/hooks.ts\\n');\n    const r = run({}, { exec, projectDir: '/p' });\n    expect(r?.exitCode).toBe(2);\n    expect(r?.message).toContain('doc/implementation/');\n  });\n\n  it('bloque pour un fichier .mjs hors .claude/ (ex: packages/cli)', () => {\n    const exec = makeExec('packages/cli/bin/core.mjs\\n');\n    const r = run({}, { exec, projectDir: '/p' });\n    expect(r?.exitCode).toBe(2);\n  });\n\n  it('bloque pour un fichier .py applicatif', () => {\n    const exec = makeExec('src/api/main.py\\n');\n    const r = run({}, { exec, projectDir: '/p' });\n    expect(r?.exitCode).toBe(2);\n  });\n\n  it('ignore les fichiers dans .claude/ (hooks internes)', () => {\n    const exec = makeExec('.claude/hooks/my-hook.mjs\\n');\n    expect(run({}, { exec, projectDir: '/p' })).toBeNull();\n  });\n\n  it('ignore les fichiers de test', () => {\n    const exec = makeExec('tests/hooks/my-hook.test.mjs\\n');\n    expect(run({}, { exec, projectDir: '/p' })).toBeNull();\n  });\n\n  it('ignore les fichiers dans dist/', () => {\n    const exec = makeExec('dist/index.js\\n');\n    expect(run({}, { exec, projectDir: '/p' })).toBeNull();\n  });\n\n  it('le message contient une instruction actionnable avec le chemin attendu', () => {\n    const exec = makeExec('src/app/page.tsx\\n');\n    const r = run({}, { exec, projectDir: '/p' });\n    expect(r?.message).toContain('<feature-name>.md');\n    expect(r?.message).toContain('technical choices');\n  });\n});\n"
     }
+  },
+  {
+    "slug": "message-display-redact-pii",
+    "name": "PII redactor for display",
+    "benefit": "Prevents credit card numbers, IBANs, SSNs and emails from ever appearing on screen",
+    "category": "security",
+    "hook_type": "MessageDisplay",
+    "trigger": "*",
+    "description": "For enterprise environments requiring strict compliance, this hook redacts Personally Identifiable Information (PII) at display time: credit card numbers (Visa/Mastercard/Amex/Discover), IBANs, Social Security Numbers (US format and French 13-digit), and customer email addresses. Fires on every MessageDisplay event and replaces matches with labelled redaction tokens before the content reaches the screen.",
+    "use_cases": [
+      "GDPR/PCI-DSS compliance: prevent customer data from appearing during debugging sessions with database exports or log files",
+      "Screen-recording safety: ensure no PII is visible when recording pair programming sessions or demos",
+      "Audit trail: redact sensitive fields in assistant output that echoes back tool results from customer tables"
+    ],
+    "tags": [
+      "security",
+      "pii",
+      "compliance",
+      "gdpr",
+      "pci-dss",
+      "redaction"
+    ],
+    "default_on": false,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/message-display-redact-pii.mjs",
+      "config": {
+        "hooks": {
+          "MessageDisplay": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/message-display-redact-pii.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Caviarde les PII dans le contenu affiché (MessageDisplay) : cartes, IBANs, SSNs, e-mails\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\n// Numéros de carte Luhn-like (Visa/MC/Amex/Discover) — séparateurs optionnels\nconst CC_RE = /\\b(?:4[0-9]{3}|5[1-5][0-9]{2}|3[47][0-9]{2}|6(?:011|5[0-9]{2}))[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{3,4}\\b/g;\n// IBAN (2 lettres, 2 chiffres, puis jusqu'à 30 alphanum, groupés par 4 optionnels)\nconst IBAN_RE = /\\b[A-Z]{2}[0-9]{2}(?:\\s?[A-Z0-9]{4}){3,7}(?:\\s?[A-Z0-9]{1,4})?\\b/g;\n// SSN US (NNN-NN-NNNN) et numéro de sécu français (13 chiffres + clé 2 chiffres)\nconst SSN_RE = /\\b(?:\\d{3}-\\d{2}-\\d{4}|\\d{13}\\s?\\d{2})\\b/g;\n// E-mails — seulement ceux qui ressemblent à des données client (hors code source)\nconst EMAIL_RE = /\\b[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}\\b/g;\n\nexport function run(input) {\n  const delta = input.delta ?? '';\n\n  const redacted = delta\n    .replace(CC_RE, '[REDACTED-CARD]')\n    .replace(IBAN_RE, '[REDACTED-IBAN]')\n    .replace(SSN_RE, '[REDACTED-SSN]')\n    .replace(EMAIL_RE, '[REDACTED-EMAIL]');\n\n  if (redacted === delta) return null;\n  return {\n    hookSpecificOutput: {\n      hookEventName: 'MessageDisplay',\n      displayContent: redacted,\n    },\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/message-display-redact-pii.mjs';\n\ndescribe('message-display-redact-pii', () => {\n  it('caviarde un numéro de carte Visa', () => {\n    const r = run({ delta: 'Card: 4111 1111 1111 1111 expiry 12/26' });\n    expect(r?.hookSpecificOutput?.displayContent).toContain('[REDACTED-CARD]');\n    expect(r?.hookSpecificOutput?.displayContent).not.toContain('4111');\n  });\n\n  it('caviarde un numéro de carte avec tirets', () => {\n    const r = run({ delta: 'Payment: 5500-0000-0000-0004' });\n    expect(r?.hookSpecificOutput?.displayContent).toContain('[REDACTED-CARD]');\n  });\n\n  it('caviarde un IBAN français', () => {\n    const r = run({ delta: 'IBAN: FR76 3000 6000 0112 3456 7890 189' });\n    expect(r?.hookSpecificOutput?.displayContent).toContain('[REDACTED-IBAN]');\n  });\n\n  it('caviarde un SSN américain', () => {\n    const r = run({ delta: 'SSN: 123-45-6789 — do not share' });\n    expect(r?.hookSpecificOutput?.displayContent).toContain('[REDACTED-SSN]');\n  });\n\n  it('caviarde une adresse e-mail client', () => {\n    const r = run({ delta: 'User john.doe@example.com signed up' });\n    expect(r?.hookSpecificOutput?.displayContent).toContain('[REDACTED-EMAIL]');\n    expect(r?.hookSpecificOutput?.displayContent).not.toContain('john.doe');\n  });\n\n  it('caviarde plusieurs PII dans un même delta', () => {\n    const r = run({ delta: 'Card 4111111111111111 email foo@bar.com' });\n    const content = r?.hookSpecificOutput?.displayContent ?? '';\n    expect(content).toContain('[REDACTED-CARD]');\n    expect(content).toContain('[REDACTED-EMAIL]');\n  });\n\n  it('retourne null si aucune PII détectée', () => {\n    expect(run({ delta: 'SELECT count(*) FROM orders WHERE status = \\'pending\\'' })).toBeNull();\n  });\n\n  it('retourne null si delta vide', () => {\n    expect(run({ delta: '' })).toBeNull();\n    expect(run({})).toBeNull();\n  });\n});\n"
+    }
+  },
+  {
+    "slug": "stop-dead-link-checker",
+    "name": "Dead link checker",
+    "benefit": "No broken links in Markdown docs you ship — checked automatically at session end",
+    "category": "documentation",
+    "hook_type": "Stop",
+    "trigger": "*",
+    "description": "At session end, detects any Markdown files (.md, .mdx) modified during the session via git diff and runs markdown-link-check on each one. Reports dead links (HTTP 404, missing anchors, deleted files) as a non-blocking warning so you can fix them before pushing. Uses npx to run markdown-link-check without a global install. Silent when no Markdown files were touched or when the check passes.",
+    "use_cases": [
+      "Catch dead links in README and documentation generated or updated by the agent before pushing",
+      "Ensure internal anchor links (#section) still exist after refactoring headings",
+      "Prevent broken external URLs in changelogs, guides, or API docs from reaching the main branch"
+    ],
+    "tags": [
+      "documentation",
+      "markdown",
+      "links",
+      "quality"
+    ],
+    "default_on": false,
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/stop-dead-link-checker.mjs",
+      "config": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-dead-link-checker.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "code_snippet": "#!/usr/bin/env node\n// Vérifie les liens morts dans les fichiers Markdown modifiés (Stop).\n// Non bloquant — avertit si markdown-link-check détecte des 404/broken links.\n// Silencieux si aucun .md/.mdx modifié ou si l'outil est absent.\nimport { execSync } from 'child_process';\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\nfunction defaultExec(cmd, opts = {}) {\n  return execSync(cmd, { encoding: 'utf8', timeout: 60_000, stdio: 'pipe', shell: true, ...opts });\n}\n\nexport function run(_input, { exec = defaultExec } = {}) {\n  // 1. Détecte les fichiers Markdown modifiés depuis la base de la branche\n  let diffOutput = '';\n  try {\n    const base = exec('git merge-base origin/main HEAD 2>/dev/null || git merge-base origin/master HEAD 2>/dev/null || echo HEAD').trim();\n    diffOutput = exec(`git diff --name-only ${base} HEAD`);\n  } catch {\n    try {\n      diffOutput = exec('git diff --name-only HEAD');\n    } catch {\n      return null;\n    }\n  }\n\n  const mdFiles = diffOutput\n    .split('\\n')\n    .map((f) => f.trim())\n    .filter((f) => /\\.mdx?$/.test(f));\n\n  if (!mdFiles.length) return null;\n\n  // 2. Lance markdown-link-check sur chaque fichier (--no-progress pour output propre)\n  const broken = [];\n  for (const file of mdFiles) {\n    try {\n      exec(`npx --yes markdown-link-check --quiet --no-progress \"${file}\" 2>&1`);\n    } catch (e) {\n      const out = (e.stdout ?? '').toString();\n      // Extrait les lignes d'erreur (liens morts marqués ✖ ou [✖])\n      const errors = out\n        .split('\\n')\n        .filter((l) => /✖|ERROR|dead/.test(l))\n        .join('\\n')\n        .trim();\n      if (errors) broken.push(`${file}:\\n${errors}`);\n    }\n  }\n\n  if (!broken.length) return null;\n\n  return {\n    message:\n      `[dead-link-checker] Dead links found — fix before ending the session:\\n` +\n      broken.map((b) => `  ${b}`).join('\\n\\n') +\n      '\\n',\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stderr.write(JSON.stringify(result));\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/stop-dead-link-checker.mjs';\n\nconst noMdChanges = () => 'src/lib/utils.ts\\nsrc/components/Button.tsx\\n';\nconst withMdChanges = () => 'README.md\\ndocs/guide.mdx\\nsrc/lib/utils.ts\\n';\nconst mlcClean = () => '';\nconst mlcBroken = () => {\n  const e = new Error('exit 1');\n  e.stdout = 'FILE: README.md\\n  [✖] https://dead-link.example.com → Status: 404\\n';\n  throw e;\n};\nconst gitFail = () => { throw new Error('not a git repo'); };\n\nfunction deps(execMap) {\n  return {\n    exec: (cmd) => {\n      if (cmd.includes('merge-base')) return execMap.mergeBase?.() ?? 'HEAD';\n      if (cmd.includes('git diff --name-only')) return execMap.diff?.() ?? '';\n      if (cmd.includes('markdown-link-check')) return execMap.mlc?.() ?? '';\n      throw new Error(`unmatched cmd: ${cmd}`);\n    },\n  };\n}\n\ndescribe('stop-dead-link-checker', () => {\n  it('retourne null si aucun fichier Markdown modifié', () => {\n    expect(run({}, deps({ mergeBase: () => 'abc123', diff: noMdChanges }))).toBeNull();\n  });\n\n  it('retourne null si markdown-link-check passe (exit 0)', () => {\n    const r = run({}, deps({ mergeBase: () => 'abc123', diff: withMdChanges, mlc: mlcClean }));\n    expect(r).toBeNull();\n  });\n\n  it('retourne un message si des liens morts sont trouvés', () => {\n    const r = run({}, deps({ mergeBase: () => 'abc123', diff: withMdChanges, mlc: mlcBroken }));\n    expect(r?.message).toContain('[dead-link-checker]');\n    expect(r?.message).toContain('README.md');\n  });\n\n  it('retourne null si git échoue complètement', () => {\n    const r = run({}, { exec: gitFail });\n    expect(r).toBeNull();\n  });\n\n  it('filtre uniquement les fichiers .md et .mdx', () => {\n    const execSpy = vi.fn((cmd) => {\n      if (cmd.includes('merge-base')) return 'HEAD';\n      if (cmd.includes('git diff')) return 'README.md\\npage.mdx\\nindex.ts\\nstyle.css\\n';\n      return '';\n    });\n    run({}, { exec: execSpy });\n    const mlcCalls = execSpy.mock.calls.filter(([c]) => c.includes('markdown-link-check'));\n    expect(mlcCalls).toHaveLength(2);\n    expect(mlcCalls[0][0]).toContain('README.md');\n    expect(mlcCalls[1][0]).toContain('page.mdx');\n  });\n});\n"
+    }
   }
 ]
