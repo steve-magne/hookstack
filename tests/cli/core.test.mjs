@@ -6,6 +6,9 @@ import {
   assertSafeTarget,
   mergeHooks,
   collectIncomingHooks,
+  resolveScriptPath,
+  isGlobalScope,
+  isCodexScope,
   analyzeSecurity,
   snykVerdict,
   shortRepo,
@@ -37,6 +40,21 @@ describe('parseArgs', () => {
   it('--scope invalide ignoré', () => {
     expect(parseArgs(argv('install', '--scope=root')).scope).toBe('project')
   })
+  it('--copilot bascule en copilot', () => {
+    expect(parseArgs(argv('install', '--copilot')).scope).toBe('copilot')
+  })
+  it('--codex-project bascule en codex-project', () => {
+    expect(parseArgs(argv('install', '--codex-project')).scope).toBe('codex-project')
+  })
+  it('--codex-profile bascule en codex-profile', () => {
+    expect(parseArgs(argv('install', '--codex-profile')).scope).toBe('codex-profile')
+  })
+  it('--scope=codex-project accepté', () => {
+    expect(parseArgs(argv('install', '--scope=codex-project')).scope).toBe('codex-project')
+  })
+  it('--scope=copilot accepté', () => {
+    expect(parseArgs(argv('install', '--scope=copilot')).scope).toBe('copilot')
+  })
   it('-y active yes', () => {
     expect(parseArgs(argv('install', '-y')).yes).toBe(true)
   })
@@ -60,6 +78,51 @@ describe('resolveScopeRoot', () => {
     const d = resolveScopeRoot('global', { cwd: '/proj', home: '/home/u' })
     expect(d.root).toBe('/home/u')
     expect(d.settingsPath).toBe('/home/u/.claude/settings.json')
+    expect(d.format).toBe('claude')
+  })
+  it('copilot → cwd/.claude (format claude)', () => {
+    const d = resolveScopeRoot('copilot', { cwd: '/proj', home: '/home/u' })
+    expect(d.settingsPath).toBe('/proj/.claude/settings.json')
+    expect(d.format).toBe('claude')
+  })
+  it('codex-project → cwd/.codex/hooks.json', () => {
+    const d = resolveScopeRoot('codex-project', { cwd: '/proj', home: '/home/u' })
+    expect(d.root).toBe('/proj')
+    expect(d.settingsPath).toBe('/proj/.codex/hooks.json')
+    expect(d.hooksDir).toBe('/proj/.codex/hooks')
+    expect(d.format).toBe('codex')
+  })
+  it('codex-profile → home/.codex/hooks.json', () => {
+    const d = resolveScopeRoot('codex-profile', { cwd: '/proj', home: '/home/u' })
+    expect(d.root).toBe('/home/u')
+    expect(d.settingsPath).toBe('/home/u/.codex/hooks.json')
+    expect(d.format).toBe('codex')
+  })
+})
+
+describe('isGlobalScope / isCodexScope', () => {
+  it('global et codex-profile sont globaux', () => {
+    expect(isGlobalScope('global')).toBe(true)
+    expect(isGlobalScope('codex-profile')).toBe(true)
+    expect(isGlobalScope('project')).toBe(false)
+    expect(isGlobalScope('codex-project')).toBe(false)
+  })
+  it('codex-project et codex-profile sont codex', () => {
+    expect(isCodexScope('codex-project')).toBe(true)
+    expect(isCodexScope('codex-profile')).toBe(true)
+    expect(isCodexScope('project')).toBe(false)
+    expect(isCodexScope('copilot')).toBe(false)
+  })
+})
+
+describe('resolveScriptPath', () => {
+  it('claude : inchangé', () => {
+    expect(resolveScriptPath('.claude/hooks/s.mjs', 'project')).toBe('.claude/hooks/s.mjs')
+    expect(resolveScriptPath('.claude/hooks/s.mjs', 'copilot')).toBe('.claude/hooks/s.mjs')
+  })
+  it('codex : relocalise vers .codex/hooks', () => {
+    expect(resolveScriptPath('.claude/hooks/s.mjs', 'codex-project')).toBe('.codex/hooks/s.mjs')
+    expect(resolveScriptPath('.claude/hooks/s.mjs', 'codex-profile')).toBe('.codex/hooks/s.mjs')
   })
 })
 
@@ -117,6 +180,19 @@ describe('collectIncomingHooks', () => {
     const h = [{ slug: 's', config: { hooks: { Stop: [{ hooks: [{ command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/s.mjs' }] }] } } }]
     const out = collectIncomingHooks(h, { scope: 'copilot' })
     expect(out.Stop[0].hooks[0].command).toBe('node .claude/hooks/s.mjs')
+  })
+  it('codex-project : réécrit .claude/ en .codex/ (relatif)', () => {
+    const out = collectIncomingHooks(hooks, { scope: 'codex-project' })
+    expect(out.PreToolUse[0].hooks[0].command).toBe('node .codex/hooks/s.mjs')
+  })
+  it('codex-profile : réécrit vers <home>/.codex/ (absolu)', () => {
+    const out = collectIncomingHooks(hooks, { scope: 'codex-profile', globalRoot: '/home/u' })
+    expect(out.PreToolUse[0].hooks[0].command).toBe('node /home/u/.codex/hooks/s.mjs')
+  })
+  it('codex : gère aussi la forme ${CLAUDE_PROJECT_DIR}/', () => {
+    const h = [{ slug: 's', config: { hooks: { Stop: [{ hooks: [{ command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/s.mjs' }] }] } } }]
+    const out = collectIncomingHooks(h, { scope: 'codex-project' })
+    expect(out.Stop[0].hooks[0].command).toBe('node .codex/hooks/s.mjs')
   })
   it('ignore les hooks sans fragment config', () => {
     expect(collectIncomingHooks([{ slug: 'x' }], {})).toEqual({})

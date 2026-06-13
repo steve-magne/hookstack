@@ -17,5 +17,10 @@ Les hooks agentiques (Claude Code, GitHub Copilot, Cursor, etc.) permettent d'en
 |---|---|
 | Découverte rapide des hooks pertinents | Catalogue filtrable par provider, cas d'usage, type de projet |
 | Implémentation immédiate | Génération automatique de la config (`settings.json`, skill, prompt) prête à coller |
+| Un hook écrit une fois, déployé sur 3 agents | Code `.mjs` identique pour Claude Code, OpenAI Codex et GitHub Copilot — seul le format de config diffère. Le CLI gère la traduction |
 | Apprentissage par l'exemple | Cas d'usage réels extraits de projets GitHub de la communauté |
 | Registre toujours à jour | Boucle d'enrichissement automatique par analyse de repos via Claude Code |
+
+### Effet de levier multi-agent
+
+La compatibilité multi-agent **élargit le marché adressable** : les utilisateurs de Claude Code, OpenAI Codex et GitHub Copilot deviennent tous des cibles, sans fragmenter le catalogue. Comme les trois agents partagent le même modèle d'événements de cycle de vie (`PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`…), un hook reste **portable sans modification** — l'investissement dans un hook se rentabilise sur trois écosystèmes au lieu d'un. C'est le cœur du positionnement : *le catalogue de hooks agentiques, agnostique de l'agent*.

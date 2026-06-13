@@ -2,7 +2,9 @@
 
 ## Présentation du projet
 
-**Hookstack** est un catalogue communautaire de hooks agentiques pour **Claude Code**. Un hook est un script Node.js `.mjs` branché sur le cycle de vie de l'agent (PreToolUse, PostToolUse, SessionStart, Stop…) via `.claude/settings.json` — pas un plugin, pas un SDK, juste un événement.
+**Hookstack** est un catalogue communautaire de hooks agentiques **multi-agent** — **Claude Code**, **OpenAI Codex** et **GitHub Copilot**. Un hook est un script Node.js `.mjs` branché sur le cycle de vie de l'agent (PreToolUse, PostToolUse, SessionStart, Stop…) via un fichier de config — pas un plugin, pas un SDK, juste un événement.
+
+**Portabilité multi-agent** : Codex et Claude Code partagent les **mêmes noms d'événements** de cycle de vie. Le code des hooks (`.mjs`) est donc **identique entre agents** — seul le format du fichier de config diffère : Claude Code/Copilot → `.claude/settings.json` (`{ "hooks": { Event: [...] } }`, scripts dans `.claude/hooks/`) ; Codex → `.codex/hooks.json` (événements **à la racine**, scripts dans `.codex/hooks/`). Le CLI gère cette transformation à l'installation (voir [« Scopes d'installation CLI »](#scopes-dinstallation-cli)). Un hook s'écrit une fois, se déploie sur les trois agents.
 
 **Promesse** : *"Get your HookStack in 1 minute"* — un développeur arrive sur le site et peut immédiatement injecter une stack de hooks prédéfinis pour son type de projet via une seule commande `npx`. S'il le souhaite, il explore le catalogue, sélectionne des hooks plus spécifiques, copie la commande `npx` générée et les installe dans son projet.
 
@@ -155,6 +157,20 @@ Hookstack est un catalogue de hooks agentiques pour Claude Code. Next.js 15 (App
 **État global** : Zustand persisté dans `src/store/selection.ts` (clé `hookstack-selection`) — stocke les slugs des hooks sélectionnés.
 
 **Génération de config** : `src/lib/mergeConfig.ts` fusionne les fragments `implementation.config.hooks` de plusieurs hooks en un `settings.json` valide, en regroupant par événement puis par matcher. `collectScripts` extrait les scripts associés.
+
+### Scopes d'installation CLI
+
+Le CLI ([`packages/cli/bin/cli`](packages/cli/bin/cli) + logique pure dans [`core.mjs`](packages/cli/bin/core.mjs)) installe les mêmes hooks vers **5 scopes**, couvrant 3 agents :
+
+| Scope | Flag | Cible | Format | Réécriture des chemins |
+|---|---|---|---|---|
+| `project` | (défaut) | `./.claude/settings.json` | claude (clé `hooks`) | conserve `$CLAUDE_PROJECT_DIR` |
+| `global` | `--global`/`-g` | `~/.claude/settings.json` | claude | `$CLAUDE_PROJECT_DIR` → racine absolue |
+| `copilot` | `--copilot` | `./.claude/settings.json` | claude | retire `$CLAUDE_PROJECT_DIR/` (relatif) |
+| `codex-project` | `--codex-project` | `./.codex/hooks.json` | codex (events racine) | `$CLAUDE_PROJECT_DIR/.claude/` → `.codex/` |
+| `codex-profile` | `--codex-profile` | `~/.codex/hooks.json` | codex | `$CLAUDE_PROJECT_DIR/.claude/` → `<home>/.codex/` |
+
+Fonctions clés dans `core.mjs` : `resolveScopeRoot` (retourne `format` + chemins, clés `claudeDir`/`settingsPath` conservées par rétro-compat), `collectIncomingHooks` (réécrit `command` par scope), `resolveScriptPath` (relocalise les `.mjs` `.claude/hooks/` → `.codex/hooks/` pour Codex), `isGlobalScope`/`isCodexScope` (prédicats). Pour Codex, `doInstall` écrit les événements **à la racine** du `hooks.json` (pas de wrapper `hooks`). Toute évolution doit rester couverte par [`tests/cli/core.test.mjs`](tests/cli/core.test.mjs). **Ordre du menu interactif** : This project → All my projects → Codex profile → Codex project → GitHub Copilot.
 
 **Type `Hook`** (`src/types/hook.ts`) : chaque hook a un `slug`, une `category`, un ou plusieurs `provider[]`, un `hook_type` (événement Claude Code), un `trigger` (matcher d'outil, ex. `"Bash"`, `"Write|Edit"`, `"*"`), une `implementation` de type `settings_json` avec un fragment `config` prêt à fusionner, et un champ optionnel `stack?: Stack[]` (`'typescript' | 'python' | 'node'`). Un hook **sans** `stack` est universel et toujours affiché ; un hook **avec** `stack` n'est affiché que si sa stack est dans la sélection de l'utilisateur.
 
