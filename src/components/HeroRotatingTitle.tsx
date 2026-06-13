@@ -48,11 +48,10 @@ export function HeroRotatingTitle() {
 
   return (
     <h1
-      className="mx-auto max-w-3xl text-balance text-5xl font-bold leading-[1.04] tracking-tight text-white sm:text-6xl"
+      className="mx-auto max-w-4xl text-balance text-5xl font-bold leading-[1.04] tracking-tight text-white sm:text-6xl"
       onMouseEnter={handleHover}
     >
       <SplitFlap text={T.heroTitleA} eager {...splitFlapHero} />{' '}
-      <br className="hidden sm:block" />
       <SplitFlap
         text={T.heroRotating[index]}
         delay={(T.heroTitleA.length + 1) * splitFlapHero.perChar}

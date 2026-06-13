@@ -188,25 +188,7 @@ export default async function HomePage() {
             <li className="rounded-full border border-[var(--color-border)] px-3 py-1">Every hook unit-tested</li>
           </ul>
 
-          {/* CompatibilityStrip — multi-agent support (Works with). Static, sober. */}
-          <div data-component="CompatibilityStrip" className="mx-auto mt-8 max-w-2xl">
-            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm">
-              <span className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-                {T.worksWithLabel}
-              </span>
-              {T.worksWithAgents.map((agent) => (
-                <span
-                  key={agent}
-                  className="rounded-full border border-[var(--color-border)] px-3 py-1 font-medium text-zinc-300"
-                >
-                  {agent}
-                </span>
-              ))}
-            </div>
-            <p className="mt-3 text-pretty text-xs leading-snug text-zinc-500">{T.worksWithCaption}</p>
-          </div>
-
-          <p className="mx-auto mt-8 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+<p className="mx-auto mt-8 text-xs font-semibold uppercase tracking-widest text-zinc-500">
             {T.howItWorksTitle}
           </p>
         </section>
