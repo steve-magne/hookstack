@@ -1,5 +1,5 @@
 {
-  "total": 91,
+  "total": 93,
   "firstDate": "2026-05-29",
   "lastDate": "2026-06-13",
   "byDay": {
@@ -14,7 +14,7 @@
     "2026-06-10": 9,
     "2026-06-11": 1,
     "2026-06-12": 5,
-    "2026-06-13": 1
+    "2026-06-13": 3
   },
   "hooks": [
     {
@@ -558,9 +558,21 @@
       "date": "2026-06-12"
     },
     {
+      "slug": "stop-dead-link-checker",
+      "name": "Dead link checker",
+      "category": "documentation",
+      "date": "2026-06-13"
+    },
+    {
       "slug": "stop-force-implementation-doc",
       "name": "Force implementation doc at stop",
       "category": "documentation",
+      "date": "2026-06-13"
+    },
+    {
+      "slug": "message-display-redact-pii",
+      "name": "PII redactor for display",
+      "category": "security",
       "date": "2026-06-13"
     }
   ]

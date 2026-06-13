@@ -26,7 +26,7 @@ Browse, select, install with one command — your agent gets guardrails in under
 
 ## The HookStack evolution
 
-**91 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+**93 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">
