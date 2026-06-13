@@ -24,24 +24,23 @@ describe('message-display-redact-pii', () => {
     expect(r?.hookSpecificOutput?.displayContent).toContain('[REDACTED-SSN]');
   });
 
-  it('caviarde une adresse e-mail client', () => {
-    const r = run({ delta: 'User john.doe@example.com signed up' });
-    expect(r?.hookSpecificOutput?.displayContent).toContain('[REDACTED-EMAIL]');
-    expect(r?.hookSpecificOutput?.displayContent).not.toContain('john.doe');
+  it('ne caviarde PAS les adresses e-mail (trop communes en contexte dev)', () => {
+    const r = run({ delta: 'Contact: john.doe@example.com for support' });
+    expect(r).toBeNull();
   });
 
-  it('caviarde plusieurs PII dans un même delta', () => {
-    const r = run({ delta: 'Card 4111111111111111 email foo@bar.com' });
+  it('caviarde plusieurs types de hard-PII dans un même delta', () => {
+    const r = run({ delta: 'Card 4111111111111111 SSN 123-45-6789' });
     const content = r?.hookSpecificOutput?.displayContent ?? '';
     expect(content).toContain('[REDACTED-CARD]');
-    expect(content).toContain('[REDACTED-EMAIL]');
+    expect(content).toContain('[REDACTED-SSN]');
   });
 
-  it('retourne null si aucune PII détectée', () => {
+  it('retourne null si aucun hard-PII détecté', () => {
     expect(run({ delta: 'SELECT count(*) FROM orders WHERE status = \'pending\'' })).toBeNull();
   });
 
-  it('retourne null si delta vide', () => {
+  it('retourne null si delta vide ou absent', () => {
     expect(run({ delta: '' })).toBeNull();
     expect(run({})).toBeNull();
   });

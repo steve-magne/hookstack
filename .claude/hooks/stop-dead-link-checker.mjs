@@ -1,50 +1,57 @@
 #!/usr/bin/env node
-// Vérifie les liens morts dans les fichiers Markdown modifiés (Stop).
-// Non bloquant — avertit si markdown-link-check détecte des 404/broken links.
-// Silencieux si aucun .md/.mdx modifié ou si l'outil est absent.
-import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
+// Vérifie les liens relatifs cassés dans tous les fichiers Markdown du repo (Stop).
+// Scan complet — couvre la dette existante, pas seulement les fichiers de la session.
+// Purement Node.js (fs + path), sans réseau ni dépendance externe.
+import { readFileSync, existsSync, readdirSync } from 'fs';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
-function defaultExec(cmd, opts = {}) {
-  return execSync(cmd, { encoding: 'utf8', timeout: 60_000, stdio: 'pipe', shell: true, ...opts });
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'out', '.claude']);
+// Capture [text](href) — exclut les images ![alt](src) incluses dans la même syntaxe
+const LINK_RE = /(?<!!)\[([^\]]*)\]\(([^)]+)\)/g;
+
+function isRelative(href) {
+  return !href.startsWith('http') && !href.startsWith('#') && !href.startsWith('mailto:');
 }
 
-export function run(_input, { exec = defaultExec } = {}) {
-  // 1. Détecte les fichiers Markdown modifiés depuis la base de la branche
-  let diffOutput = '';
-  try {
-    const base = exec('git merge-base origin/main HEAD 2>/dev/null || git merge-base origin/master HEAD 2>/dev/null || echo HEAD').trim();
-    diffOutput = exec(`git diff --name-only ${base} HEAD`);
-  } catch {
-    try {
-      diffOutput = exec('git diff --name-only HEAD');
-    } catch {
-      return null;
-    }
+function stripAnchor(href) {
+  return href.split('#')[0].trim();
+}
+
+function walkMd(dir, { readdir = readdirSync, exists = existsSync } = {}) {
+  if (!exists(dir)) return [];
+  const results = [];
+  for (const entry of readdir(dir, { withFileTypes: true })) {
+    if (SKIP_DIRS.has(entry.name)) continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) results.push(...walkMd(full, { readdir, exists }));
+    else if (/\.mdx?$/.test(entry.name)) results.push(full);
   }
+  return results;
+}
 
-  const mdFiles = diffOutput
-    .split('\n')
-    .map((f) => f.trim())
-    .filter((f) => /\.mdx?$/.test(f));
-
+export function run(_input, {
+  projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+  readFile = readFileSync,
+  exists = existsSync,
+  readdir = readdirSync,
+} = {}) {
+  const mdFiles = walkMd(projectDir, { readdir, exists });
   if (!mdFiles.length) return null;
 
-  // 2. Lance markdown-link-check sur chaque fichier (--no-progress pour output propre)
   const broken = [];
   for (const file of mdFiles) {
-    try {
-      exec(`npx --yes markdown-link-check --quiet --no-progress "${file}" 2>&1`);
-    } catch (e) {
-      const out = (e.stdout ?? '').toString();
-      // Extrait les lignes d'erreur (liens morts marqués ✖ ou [✖])
-      const errors = out
-        .split('\n')
-        .filter((l) => /✖|ERROR|dead/.test(l))
-        .join('\n')
-        .trim();
-      if (errors) broken.push(`${file}:\n${errors}`);
+    let content;
+    try { content = readFile(file, 'utf8'); } catch { continue; }
+
+    for (const [, , href] of content.matchAll(LINK_RE)) {
+      if (!isRelative(href)) continue;
+      const target = stripAnchor(href);
+      if (!target) continue; // lien ancre pure (#section)
+      const abs = resolve(dirname(file), target);
+      if (!exists(abs)) {
+        broken.push(`${file.replace(projectDir + '/', '')}  →  ${href}`);
+      }
     }
   }
 
@@ -52,8 +59,8 @@ export function run(_input, { exec = defaultExec } = {}) {
 
   return {
     message:
-      `[dead-link-checker] Dead links found — fix before ending the session:\n` +
-      broken.map((b) => `  ${b}`).join('\n\n') +
+      `[dead-link-checker] ${broken.length} broken relative link(s) across docs:\n` +
+      broken.map((b) => `  - ${b}`).join('\n') +
       '\n',
   };
 }
