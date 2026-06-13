@@ -1,0 +1,567 @@
+{
+  "total": 91,
+  "firstDate": "2026-05-29",
+  "lastDate": "2026-06-13",
+  "byDay": {
+    "2026-05-29": 16,
+    "2026-05-30": 1,
+    "2026-05-31": 28,
+    "2026-06-01": 19,
+    "2026-06-02": 1,
+    "2026-06-04": 3,
+    "2026-06-07": 3,
+    "2026-06-08": 4,
+    "2026-06-10": 9,
+    "2026-06-11": 1,
+    "2026-06-12": 5,
+    "2026-06-13": 1
+  },
+  "hooks": [
+    {
+      "slug": "post-write-autoformat",
+      "name": "Automatic formatting after write",
+      "category": "validation",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "pre-bash-block-destructive",
+      "name": "Destructive command blocking",
+      "category": "security",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "pre-bash-enforce-package-managers",
+      "name": "Enforce package managers",
+      "category": "validation",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "post-write-eslint",
+      "name": "ESLint lint after write",
+      "category": "validation",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "stop-missing-test-detection",
+      "name": "Missing test detection (Stop)",
+      "category": "validation",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "stop-per-file-coverage",
+      "name": "Per-modified-file coverage (Stop)",
+      "category": "validation",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "stop-per-file-lint",
+      "name": "Per-modified-file lint (Stop)",
+      "category": "validation",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "post-edit-pyright",
+      "name": "Pyright type checking",
+      "category": "validation",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "post-write-ruff-format",
+      "name": "Ruff format after write",
+      "category": "validation",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "post-write-ruff-check",
+      "name": "Ruff lint after write",
+      "category": "validation",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "pre-bash-secret-detection",
+      "name": "Secret detection before Bash execution",
+      "category": "security",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "pre-edit-protect-paths",
+      "name": "Sensitive file write protection",
+      "category": "security",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "post-edit-typecheck",
+      "name": "TypeScript type checking",
+      "category": "validation",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "worktree-create-update-deps",
+      "name": "Worktree dependency update",
+      "category": "workflow",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "worktree-create-setup-env",
+      "name": "Worktree env initialization",
+      "category": "workflow",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "pre-write-secret-detection",
+      "name": "Write-time secret detection",
+      "category": "security",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "permission-request-auto-allow-readonly",
+      "name": "Auto-approve read-only permissions",
+      "category": "security",
+      "date": "2026-05-30"
+    },
+    {
+      "slug": "stop-session-dedup-autodisable",
+      "name": "Auto-disable Stop hook after N failures",
+      "category": "workflow",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "permission-request-auto-allow-exit-plan",
+      "name": "Automatic ExitPlanMode approval",
+      "category": "workflow",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "stop-quality-check",
+      "name": "Automatic quality check (Stop)",
+      "category": "validation",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "user-prompt-llm-agent-name",
+      "name": "Automatic session naming",
+      "category": "context",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "post-bash-command-log",
+      "name": "Bash command log",
+      "category": "workflow",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "config-change-audit-log",
+      "name": "Configuration change audit log",
+      "category": "workflow",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "user-prompt-inject-datetime",
+      "name": "Current date and time injection",
+      "category": "context",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "setup-check-install-deps",
+      "name": "Dependency check and install at startup",
+      "category": "workflow",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "session-end-audit-log",
+      "name": "End-of-session audit log",
+      "category": "notification",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "stop-i18n-validation",
+      "name": "Full i18n validation (Stop)",
+      "category": "validation",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "pre-bash-guard-git-push-main",
+      "name": "git push to main guardrail",
+      "category": "security",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "session-start-load-git-context",
+      "name": "Load Git context at startup",
+      "category": "context",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "user-prompt-log-session",
+      "name": "Per-session prompt log",
+      "category": "context",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "user-prompt-inject-conventions",
+      "name": "Project conventions injection",
+      "category": "context",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "session-start-reinject-after-compact",
+      "name": "Re-inject context after compaction",
+      "category": "context",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "cwd-changed-reload-direnv",
+      "name": "Reload direnv on directory change",
+      "category": "workflow",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "stop-run-tests",
+      "name": "Run tests at end of response",
+      "category": "validation",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "stop-generate-changelog",
+      "name": "Session summary generation",
+      "category": "documentation",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "notification-slack",
+      "name": "Slack notification on agent event",
+      "category": "notification",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "post-tool-failure-log",
+      "name": "Structured tool failure log",
+      "category": "context",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "subagent-stop-tts-summary",
+      "name": "Subagent end voice summary",
+      "category": "notification",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "subagent-start-tts-announce",
+      "name": "Subagent start voice announcement",
+      "category": "notification",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "session-end-cleanup-temp",
+      "name": "Temporary file cleanup at session end",
+      "category": "workflow",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "post-bash-cost-tracker",
+      "name": "Tool usage tracking",
+      "category": "notification",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "pre-compact-transcript-backup",
+      "name": "Transcript backup before compaction",
+      "category": "workflow",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "notification-tts-voice",
+      "name": "TTS voice notification",
+      "category": "notification",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "stop-tts-completion",
+      "name": "Voice task-completion announcement",
+      "category": "notification",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "pre-edit-worktree-guard",
+      "name": "Worktree guardrail (Edit/Write)",
+      "category": "workflow",
+      "date": "2026-05-31"
+    },
+    {
+      "slug": "instructions-loaded-audit-log",
+      "name": "Audit log for CLAUDE.md file loads",
+      "category": "workflow",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "session-start-worktree-if-main",
+      "name": "Auto-create worktree when starting on main",
+      "category": "workflow",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "session-start-pull-if-main",
+      "name": "Auto-pull on main at session start",
+      "category": "context",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "file-changed-run-tests",
+      "name": "Auto-run tests when source files change",
+      "category": "validation",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "pre-write-main-guard",
+      "name": "Block file writes on main branch",
+      "category": "security",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "worktree-remove-cleanup",
+      "name": "Clean up artifacts on worktree removal",
+      "category": "workflow",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "stop-failure-rate-limit-alert",
+      "name": "Desktop notification on rate limit",
+      "category": "notification",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "task-created-naming-convention",
+      "name": "Enforce task naming conventions",
+      "category": "workflow",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "user-prompt-expansion-skill-context",
+      "name": "Inject context on skill invocation",
+      "category": "context",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "setup-install-deps",
+      "name": "Install project dependencies on init",
+      "category": "workflow",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "stop-failure-log-api-errors",
+      "name": "Log API errors to file",
+      "category": "workflow",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "permission-denied-auto-mode-log",
+      "name": "Log auto-mode permission denials",
+      "category": "workflow",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "message-display-redact-secrets",
+      "name": "Redact secrets from displayed output",
+      "category": "security",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "registry-changed-auto-sync",
+      "name": "Registry auto-sync",
+      "category": "workflow",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "file-changed-reload-env",
+      "name": "Reload .env on file change",
+      "category": "workflow",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "post-compact-save-summary",
+      "name": "Save compaction summary to log",
+      "category": "documentation",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "session-start-stash-warning",
+      "name": "Stale stash warning at session start",
+      "category": "context",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "task-completed-test-gate",
+      "name": "Test suite gate before task completion",
+      "category": "validation",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "post-tool-batch-typecheck",
+      "name": "Typecheck after parallel file edits",
+      "category": "validation",
+      "date": "2026-06-01"
+    },
+    {
+      "slug": "block-push-closed-pr",
+      "name": "Block push on closed PR",
+      "category": "workflow",
+      "date": "2026-06-02"
+    },
+    {
+      "slug": "pre-edit-protect-lockfiles",
+      "name": "Lock file write protection",
+      "category": "security",
+      "date": "2026-06-04"
+    },
+    {
+      "slug": "notification-sound",
+      "name": "System sound notification",
+      "category": "notification",
+      "date": "2026-06-04"
+    },
+    {
+      "slug": "stop-sound",
+      "name": "System sound on task completion",
+      "category": "notification",
+      "date": "2026-06-04"
+    },
+    {
+      "slug": "session-start-agents-md",
+      "name": "AGENTS.md context loader",
+      "category": "context",
+      "date": "2026-06-07"
+    },
+    {
+      "slug": "post-write-nextjs-quality",
+      "name": "Next.js App Router quality checker",
+      "category": "validation",
+      "date": "2026-06-07"
+    },
+    {
+      "slug": "pre-websearch-temporal-context",
+      "name": "WebSearch temporal context injector",
+      "category": "context",
+      "date": "2026-06-07"
+    },
+    {
+      "slug": "pre-read-block-binary",
+      "name": "Binary file read blocker",
+      "category": "context",
+      "date": "2026-06-08"
+    },
+    {
+      "slug": "pre-read-file-to-markdown",
+      "name": "Binary file to Markdown converter",
+      "category": "context",
+      "date": "2026-06-08"
+    },
+    {
+      "slug": "pre-read-json-csv-compact",
+      "name": "Large JSON/CSV compactor",
+      "category": "context",
+      "date": "2026-06-08"
+    },
+    {
+      "slug": "pre-webfetch-html-to-markdown",
+      "name": "WebFetch HTML-to-Markdown converter",
+      "category": "context",
+      "date": "2026-06-08"
+    },
+    {
+      "slug": "post-edit-conflict-marker-check",
+      "name": "Conflict marker detector",
+      "category": "validation",
+      "date": "2026-06-10"
+    },
+    {
+      "slug": "file-changed-docs-consistency",
+      "name": "Docs consistency reminder",
+      "category": "documentation",
+      "date": "2026-06-10"
+    },
+    {
+      "slug": "pre-bash-enforce-uv",
+      "name": "Enforce uv for Python dependencies",
+      "category": "validation",
+      "date": "2026-06-10"
+    },
+    {
+      "slug": "pre-read-env-guard",
+      "name": "Env file read guard",
+      "category": "security",
+      "date": "2026-06-10"
+    },
+    {
+      "slug": "session-start-github-context",
+      "name": "GitHub context loader",
+      "category": "context",
+      "date": "2026-06-10"
+    },
+    {
+      "slug": "motion-rules-guard",
+      "name": "Motion rules guard",
+      "category": "validation",
+      "date": "2026-06-10"
+    },
+    {
+      "slug": "stop-registry-drift-check",
+      "name": "Registry drift check at stop",
+      "category": "validation",
+      "date": "2026-06-10"
+    },
+    {
+      "slug": "registry-validate-on-change",
+      "name": "Registry schema validation on change",
+      "category": "validation",
+      "date": "2026-06-10"
+    },
+    {
+      "slug": "stop-pytest",
+      "name": "Run pytest at end of response",
+      "category": "validation",
+      "date": "2026-06-10"
+    },
+    {
+      "slug": "stop-duplication-check",
+      "name": "Code duplication guard",
+      "category": "validation",
+      "date": "2026-06-11"
+    },
+    {
+      "slug": "a11y-jsx-guard",
+      "name": "JSX accessibility guard",
+      "category": "validation",
+      "date": "2026-06-12"
+    },
+    {
+      "slug": "seo-next-image-guard",
+      "name": "Next.js image guard",
+      "category": "validation",
+      "date": "2026-06-12"
+    },
+    {
+      "slug": "seo-page-metadata-guard",
+      "name": "SEO page metadata guard",
+      "category": "validation",
+      "date": "2026-06-12"
+    },
+    {
+      "slug": "stop-seo-structure-check",
+      "name": "SEO structure gate",
+      "category": "validation",
+      "date": "2026-06-12"
+    },
+    {
+      "slug": "seo-heading-hierarchy-guard",
+      "name": "Single H1 heading guard",
+      "category": "validation",
+      "date": "2026-06-12"
+    },
+    {
+      "slug": "stop-force-implementation-doc",
+      "name": "Force implementation doc at stop",
+      "category": "documentation",
+      "date": "2026-06-13"
+    }
+  ]
+}

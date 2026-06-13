@@ -14,7 +14,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "validate:registry": "node registry/validate-registry.mjs"
+    "validate:registry": "node registry/validate-registry.mjs",
+    "timeline": "node .claude/hooks-timeline.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.460.0",

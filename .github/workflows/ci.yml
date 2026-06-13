@@ -20,7 +20,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 — historique git complet requis par le « Hooks timeline drift
+      # guard » : .claude/hooks-timeline.mjs dérive la date de premier ajout de chaque
+      # hook via `git log --diff-filter=A`. Un clone superficiel (défaut) daterait tous
+      # les hooks du dernier commit → faux positif de dérive.
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v6
         with:
@@ -43,3 +49,6 @@ jobs:
 
       - name: Registry sync drift guard
         run: node .claude/sync-hooks.mjs --check
+
+      - name: Hooks timeline drift guard
+        run: node .claude/hooks-timeline.mjs --check
