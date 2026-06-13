@@ -24,13 +24,13 @@ Browse, select, install with one command — your agent gets guardrails in under
 
 <!-- HOOKS_TIMELINE:START -->
 
-## 📈 The stack grows in the open
+## The HookStack evolution
 
 **93 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">
-    <img src="public/hooks-timeline.svg" alt="HookStack growth — contribution-style heatmap of hooks added over time"/>
+    <img src="public/hooks-timeline.svg" alt="HookStack evolution — cumulative hook count over time"/>
   </a>
 </p>
 

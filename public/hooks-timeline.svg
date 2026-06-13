@@ -1,151 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="340" height="159" viewBox="0 0 340 159" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" role="img" aria-label="HookStack — 93 hooks added since 2026-05-29">
-  <rect width="340" height="159" fill="#0a0a0a"/>
-  <text x="30" y="13" fill="#71717a" font-size="10">May</text>
-  <text x="60" y="13" fill="#71717a" font-size="10">Jun</text>
-  <text x="120" y="13" fill="#71717a" font-size="10">Jul</text>
-  <text x="180" y="13" fill="#71717a" font-size="10">Aug</text>
-  <text x="255" y="13" fill="#71717a" font-size="10">Sep</text>
-  <text x="315" y="13" fill="#71717a" font-size="10">Oct</text>
-  <text x="24" y="45" fill="#71717a" font-size="9" text-anchor="end">Mon</text><text x="24" y="75" fill="#71717a" font-size="9" text-anchor="end">Wed</text><text x="24" y="105" fill="#71717a" font-size="9" text-anchor="end">Fri</text>
-  <rect x="30" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-05-24 — no hooks</title></rect>
-  <rect x="30" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-05-25 — no hooks</title></rect>
-  <rect x="30" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-05-26 — no hooks</title></rect>
-  <rect x="30" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-05-27 — no hooks</title></rect>
-  <rect x="30" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-05-28 — no hooks</title></rect>
-  <rect x="30" y="95" width="12" height="12" rx="2.5" fill="#f4f4f5"><title>2026-05-29 — 16 hooks added</title></rect>
-  <rect x="30" y="110" width="12" height="12" rx="2.5" fill="#3f3f46"><title>2026-05-30 — 1 hook added</title></rect>
-  <rect x="45" y="20" width="12" height="12" rx="2.5" fill="#f4f4f5"><title>2026-05-31 — 28 hooks added</title></rect>
-  <rect x="45" y="35" width="12" height="12" rx="2.5" fill="#f4f4f5"><title>2026-06-01 — 19 hooks added</title></rect>
-  <rect x="45" y="50" width="12" height="12" rx="2.5" fill="#3f3f46"><title>2026-06-02 — 1 hook added</title></rect>
-  <rect x="45" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-03 — no hooks</title></rect>
-  <rect x="45" y="80" width="12" height="12" rx="2.5" fill="#71717a"><title>2026-06-04 — 3 hooks added</title></rect>
-  <rect x="45" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-05 — no hooks</title></rect>
-  <rect x="45" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-06 — no hooks</title></rect>
-  <rect x="60" y="20" width="12" height="12" rx="2.5" fill="#71717a"><title>2026-06-07 — 3 hooks added</title></rect>
-  <rect x="60" y="35" width="12" height="12" rx="2.5" fill="#71717a"><title>2026-06-08 — 4 hooks added</title></rect>
-  <rect x="60" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-09 — no hooks</title></rect>
-  <rect x="60" y="65" width="12" height="12" rx="2.5" fill="#a1a1aa"><title>2026-06-10 — 9 hooks added</title></rect>
-  <rect x="60" y="80" width="12" height="12" rx="2.5" fill="#3f3f46"><title>2026-06-11 — 1 hook added</title></rect>
-  <rect x="60" y="95" width="12" height="12" rx="2.5" fill="#71717a"><title>2026-06-12 — 5 hooks added</title></rect>
-  <rect x="60" y="110" width="12" height="12" rx="2.5" fill="#71717a"><title>2026-06-13 — 3 hooks added</title></rect>
-  <rect x="75" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-14 — no hooks</title></rect>
-  <rect x="75" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-15 — no hooks</title></rect>
-  <rect x="75" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-16 — no hooks</title></rect>
-  <rect x="75" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-17 — no hooks</title></rect>
-  <rect x="75" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-18 — no hooks</title></rect>
-  <rect x="75" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-19 — no hooks</title></rect>
-  <rect x="75" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-20 — no hooks</title></rect>
-  <rect x="90" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-21 — no hooks</title></rect>
-  <rect x="90" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-22 — no hooks</title></rect>
-  <rect x="90" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-23 — no hooks</title></rect>
-  <rect x="90" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-24 — no hooks</title></rect>
-  <rect x="90" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-25 — no hooks</title></rect>
-  <rect x="90" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-26 — no hooks</title></rect>
-  <rect x="90" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-27 — no hooks</title></rect>
-  <rect x="105" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-28 — no hooks</title></rect>
-  <rect x="105" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-29 — no hooks</title></rect>
-  <rect x="105" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-06-30 — no hooks</title></rect>
-  <rect x="105" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-01 — no hooks</title></rect>
-  <rect x="105" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-02 — no hooks</title></rect>
-  <rect x="105" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-03 — no hooks</title></rect>
-  <rect x="105" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-04 — no hooks</title></rect>
-  <rect x="120" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-05 — no hooks</title></rect>
-  <rect x="120" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-06 — no hooks</title></rect>
-  <rect x="120" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-07 — no hooks</title></rect>
-  <rect x="120" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-08 — no hooks</title></rect>
-  <rect x="120" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-09 — no hooks</title></rect>
-  <rect x="120" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-10 — no hooks</title></rect>
-  <rect x="120" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-11 — no hooks</title></rect>
-  <rect x="135" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-12 — no hooks</title></rect>
-  <rect x="135" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-13 — no hooks</title></rect>
-  <rect x="135" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-14 — no hooks</title></rect>
-  <rect x="135" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-15 — no hooks</title></rect>
-  <rect x="135" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-16 — no hooks</title></rect>
-  <rect x="135" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-17 — no hooks</title></rect>
-  <rect x="135" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-18 — no hooks</title></rect>
-  <rect x="150" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-19 — no hooks</title></rect>
-  <rect x="150" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-20 — no hooks</title></rect>
-  <rect x="150" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-21 — no hooks</title></rect>
-  <rect x="150" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-22 — no hooks</title></rect>
-  <rect x="150" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-23 — no hooks</title></rect>
-  <rect x="150" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-24 — no hooks</title></rect>
-  <rect x="150" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-25 — no hooks</title></rect>
-  <rect x="165" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-26 — no hooks</title></rect>
-  <rect x="165" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-27 — no hooks</title></rect>
-  <rect x="165" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-28 — no hooks</title></rect>
-  <rect x="165" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-29 — no hooks</title></rect>
-  <rect x="165" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-30 — no hooks</title></rect>
-  <rect x="165" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-07-31 — no hooks</title></rect>
-  <rect x="165" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-01 — no hooks</title></rect>
-  <rect x="180" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-02 — no hooks</title></rect>
-  <rect x="180" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-03 — no hooks</title></rect>
-  <rect x="180" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-04 — no hooks</title></rect>
-  <rect x="180" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-05 — no hooks</title></rect>
-  <rect x="180" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-06 — no hooks</title></rect>
-  <rect x="180" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-07 — no hooks</title></rect>
-  <rect x="180" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-08 — no hooks</title></rect>
-  <rect x="195" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-09 — no hooks</title></rect>
-  <rect x="195" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-10 — no hooks</title></rect>
-  <rect x="195" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-11 — no hooks</title></rect>
-  <rect x="195" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-12 — no hooks</title></rect>
-  <rect x="195" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-13 — no hooks</title></rect>
-  <rect x="195" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-14 — no hooks</title></rect>
-  <rect x="195" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-15 — no hooks</title></rect>
-  <rect x="210" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-16 — no hooks</title></rect>
-  <rect x="210" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-17 — no hooks</title></rect>
-  <rect x="210" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-18 — no hooks</title></rect>
-  <rect x="210" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-19 — no hooks</title></rect>
-  <rect x="210" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-20 — no hooks</title></rect>
-  <rect x="210" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-21 — no hooks</title></rect>
-  <rect x="210" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-22 — no hooks</title></rect>
-  <rect x="225" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-23 — no hooks</title></rect>
-  <rect x="225" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-24 — no hooks</title></rect>
-  <rect x="225" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-25 — no hooks</title></rect>
-  <rect x="225" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-26 — no hooks</title></rect>
-  <rect x="225" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-27 — no hooks</title></rect>
-  <rect x="225" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-28 — no hooks</title></rect>
-  <rect x="225" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-29 — no hooks</title></rect>
-  <rect x="240" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-30 — no hooks</title></rect>
-  <rect x="240" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-08-31 — no hooks</title></rect>
-  <rect x="240" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-01 — no hooks</title></rect>
-  <rect x="240" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-02 — no hooks</title></rect>
-  <rect x="240" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-03 — no hooks</title></rect>
-  <rect x="240" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-04 — no hooks</title></rect>
-  <rect x="240" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-05 — no hooks</title></rect>
-  <rect x="255" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-06 — no hooks</title></rect>
-  <rect x="255" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-07 — no hooks</title></rect>
-  <rect x="255" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-08 — no hooks</title></rect>
-  <rect x="255" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-09 — no hooks</title></rect>
-  <rect x="255" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-10 — no hooks</title></rect>
-  <rect x="255" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-11 — no hooks</title></rect>
-  <rect x="255" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-12 — no hooks</title></rect>
-  <rect x="270" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-13 — no hooks</title></rect>
-  <rect x="270" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-14 — no hooks</title></rect>
-  <rect x="270" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-15 — no hooks</title></rect>
-  <rect x="270" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-16 — no hooks</title></rect>
-  <rect x="270" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-17 — no hooks</title></rect>
-  <rect x="270" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-18 — no hooks</title></rect>
-  <rect x="270" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-19 — no hooks</title></rect>
-  <rect x="285" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-20 — no hooks</title></rect>
-  <rect x="285" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-21 — no hooks</title></rect>
-  <rect x="285" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-22 — no hooks</title></rect>
-  <rect x="285" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-23 — no hooks</title></rect>
-  <rect x="285" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-24 — no hooks</title></rect>
-  <rect x="285" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-25 — no hooks</title></rect>
-  <rect x="285" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-26 — no hooks</title></rect>
-  <rect x="300" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-27 — no hooks</title></rect>
-  <rect x="300" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-28 — no hooks</title></rect>
-  <rect x="300" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-29 — no hooks</title></rect>
-  <rect x="300" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-09-30 — no hooks</title></rect>
-  <rect x="300" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-10-01 — no hooks</title></rect>
-  <rect x="300" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-10-02 — no hooks</title></rect>
-  <rect x="300" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-10-03 — no hooks</title></rect>
-  <rect x="315" y="20" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-10-04 — no hooks</title></rect>
-  <rect x="315" y="35" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-10-05 — no hooks</title></rect>
-  <rect x="315" y="50" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-10-06 — no hooks</title></rect>
-  <rect x="315" y="65" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-10-07 — no hooks</title></rect>
-  <rect x="315" y="80" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-10-08 — no hooks</title></rect>
-  <rect x="315" y="95" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-10-09 — no hooks</title></rect>
-  <rect x="315" y="110" width="12" height="12" rx="2.5" fill="#1c1c20"><title>2026-10-10 — no hooks</title></rect>
-  <text x="198" y="139" fill="#71717a" font-size="10">Less</text><rect x="232" y="131" width="10" height="10" rx="2" fill="#1c1c20"/><rect x="243" y="131" width="10" height="10" rx="2" fill="#3f3f46"/><rect x="254" y="131" width="10" height="10" rx="2" fill="#71717a"/><rect x="265" y="131" width="10" height="10" rx="2" fill="#a1a1aa"/><rect x="276" y="131" width="10" height="10" rx="2" fill="#f4f4f5"/><text x="291" y="139" fill="#71717a" font-size="10">More</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="200" viewBox="0 0 680 200" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" role="img" aria-label="HookStack evolution — 93 hooks since 2026-05-29">
+  <rect width="680" height="200" fill="#0a0a0a"/>
+  <line x1="40" y1="164.0" x2="660" y2="164.0" stroke="#27272a" stroke-width="1"/>
+  <line x1="40" y1="128.4" x2="660" y2="128.4" stroke="#27272a" stroke-width="1"/>
+  <line x1="40" y1="91.2" x2="660" y2="91.2" stroke="#27272a" stroke-width="1"/>
+  <line x1="40" y1="55.6" x2="660" y2="55.6" stroke="#27272a" stroke-width="1"/>
+  <line x1="40" y1="20.0" x2="660" y2="20.0" stroke="#27272a" stroke-width="1"/>
+  <text x="34" y="168.0" fill="#52525b" font-size="10" text-anchor="end">0</text>
+  <text x="34" y="132.4" fill="#52525b" font-size="10" text-anchor="end">23</text>
+  <text x="34" y="95.2" fill="#52525b" font-size="10" text-anchor="end">47</text>
+  <text x="34" y="59.6" fill="#52525b" font-size="10" text-anchor="end">70</text>
+  <text x="34" y="24.0" fill="#52525b" font-size="10" text-anchor="end">93</text>
+  <path d="M40.0,164.0 L40.0,139.2 L81.3,137.7 L122.7,94.3 L164.0,64.9 L205.3,63.4 L246.7,63.4 L288.0,58.7 L329.3,58.7 L370.7,58.7 L412.0,54.1 L453.3,47.9 L494.7,47.9 L536.0,33.9 L577.3,32.4 L618.7,24.6 L660.0,20.0 L660.0,164.0 Z" fill="white" fill-opacity="0.07"/>
+  <polyline points="40.0,139.2 81.3,137.7 122.7,94.3 164.0,64.9 205.3,63.4 246.7,63.4 288.0,58.7 329.3,58.7 370.7,58.7 412.0,54.1 453.3,47.9 494.7,47.9 536.0,33.9 577.3,32.4 618.7,24.6 660.0,20.0" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="40.0" cy="139.2" r="3" fill="white"/>
+  <circle cx="81.3" cy="137.7" r="3" fill="white"/>
+  <circle cx="122.7" cy="94.3" r="3" fill="white"/>
+  <circle cx="164.0" cy="64.9" r="3" fill="white"/>
+  <circle cx="205.3" cy="63.4" r="3" fill="white"/>
+  <circle cx="288.0" cy="58.7" r="3" fill="white"/>
+  <circle cx="412.0" cy="54.1" r="3" fill="white"/>
+  <circle cx="453.3" cy="47.9" r="3" fill="white"/>
+  <circle cx="536.0" cy="33.9" r="3" fill="white"/>
+  <circle cx="577.3" cy="32.4" r="3" fill="white"/>
+  <circle cx="618.7" cy="24.6" r="3" fill="white"/>
+  <circle cx="660.0" cy="20.0" r="3" fill="white"/>
+  <text x="40.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">May 29</text>
+  <text x="164.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 1</text>
+  <text x="288.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 4</text>
+  <text x="412.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 7</text>
+  <text x="536.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 10</text>
+  <text x="660.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 13</text>
 </svg>
