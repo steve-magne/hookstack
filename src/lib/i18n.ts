@@ -53,7 +53,7 @@ export const T = {
     'Stay in the loop.', // notification · Slack, voice, chime — told the moment work is done
     'Docs stay current.', // documentation · no stale READMEs, auto changelog
   ] as const,
-  heroSubtitleMain: 'Install a production-ready Claude Code HookStack in one command',
+  heroSubtitleMain: 'Production-ready hooks for Claude Code, Codex & Copilot',
   heroSubtitleSub: 'or fine-tune it hook by hook',
   howItWorksTitle: 'Up and running in 60 seconds',
   howItWorksSteps: [
