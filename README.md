@@ -9,6 +9,9 @@ Browse, select, install with one command — your agent gets guardrails in under
 
 > One hook, written once, deployable across all three agents. Codex and Claude Code share the same lifecycle events — the hook code (`.mjs`) is identical, only the config file format differs.
 
+[![Works with Claude Code](https://img.shields.io/badge/Claude_Code-compatible-CC785C?style=flat-square&logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code/overview)
+[![Works with OpenAI Codex](https://img.shields.io/badge/OpenAI_Codex-compatible-412991?style=flat-square&logo=openai&logoColor=white)](https://openai.com/codex)
+[![Works with GitHub Copilot](https://img.shields.io/badge/GitHub_Copilot-compatible-000000?style=flat-square&logo=githubcopilot&logoColor=white)](https://github.com/features/copilot)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Hooks](https://img.shields.io/badge/hooks-catalogue-6366f1?style=flat-square)](https://www.hookstack.app)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
