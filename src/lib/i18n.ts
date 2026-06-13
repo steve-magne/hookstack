@@ -29,16 +29,20 @@ export const T = {
   heroTitle2: 'in 1 minute',
   heroTitleA: 'Ship fast.',
   heroTitleB: 'Break nothing.',
-  // Second hero line — rotates every ~30s. Each slogan keeps the "X nothing."
-  // beat of the original and maps to a real catalogue category (the proof the
-  // stack delivers it). Order = first impression first. See HeroRotatingTitle.
+  // Second hero line — rotates every ~30s. Each slogan maps to a real catalogue
+  // category (the proof the stack delivers it). Order = first impression first.
+  // See HeroRotatingTitle.
   heroRotating: [
     'Break nothing.', // overall safety — the anchor
-    'Leak nothing.', // security · catch a leaked key before it runs
-    'Skip no test.', // validation · no source ships without a test
-    'Forget nothing.', // context · conventions survive a compaction
-    'Miss nothing.', // notification · told the moment work is done
-    'Touch no main.', // workflow · edits blocked on main until you branch
+    'Leak nothing.', // security · secrets never reach the model
+    'Tests always run.', // validation · no source ships without a passing test
+    'main stays guarded.', // security/workflow · writes and pushes blocked on main
+    'Types enforced.', // validation · TypeScript + Python type errors caught on save
+    'Forget nothing.', // context · conventions and AGENTS.md survive every compaction
+    'Env always ready.', // workflow · deps installed, worktrees booted, direnv reloaded
+    'Coverage enforced.', // validation · per-file coverage ≥80% checked before stop
+    'Stay in the loop.', // notification · Slack, voice, chime — told the moment work is done
+    'Docs stay current.', // documentation · no stale READMEs, auto changelog
   ] as const,
   heroSubtitleMain: 'Install a production-ready Claude Code HookStack in one command',
   heroSubtitleSub: 'or fine-tune it hook by hook',
