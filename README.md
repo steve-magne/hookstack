@@ -1,13 +1,11 @@
 <div align="center">
 
-# Hookstack
+# HookStack
 
 **Your AI agent runs fast. Hooks keep it honest.**
 
-The community catalogue of production-ready agentic hooks — for **Claude Code, OpenAI Codex, and GitHub Copilot**.  
-Browse, select, install with one command — your agent gets guardrails in under a minute.
-
-> One hook, written once, deployable across all three agents. Codex and Claude Code share the same lifecycle events — the hook code (`.mjs`) is identical, only the config file format differs.
+Production-ready hooks — for **Claude Code, OpenAI Codex, and GitHub Copilot**.  
+Only in one command — your agent gets guardrails in under a minute.
 
 [![Works with Claude Code](https://img.shields.io/badge/Claude_Code-compatible-CC785C?style=flat-square&logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code/overview)
 [![Works with OpenAI Codex](https://img.shields.io/badge/OpenAI_Codex-compatible-412991?style=flat-square&logo=openai&logoColor=white)](https://openai.com/codex)
@@ -19,12 +17,22 @@ Browse, select, install with one command — your agent gets guardrails in under
 [![CodeQL](https://img.shields.io/badge/CodeQL-security-passing?style=flat-square&logo=github&logoColor=white)](https://github.com/steve-magne/hookstack/actions/workflows/codeql.yml)
 [![Known Vulnerabilities](https://snyk.io/test/github/steve-magne/hookstack/badge.svg?style=flat-square)](https://snyk.io/test/github/steve-magne/hookstack)
 
-### **[→ hookstack.app](https://www.hookstack.app)**
 
 <img src="public/demo-hookstack.gif" alt="HookStack Mode Demo" width="600"/>
 
 </div>
 
+## Installation
+
+Installation takes under a minute.
+
+```bash
+npx hookstack-cli@latest install
+```
+
+That's it. The CLI walks you through picking hooks, writes the `.mjs` scripts, and patches the right config file — no manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent.
+
+>Want to fine-tune your Hookstack? Go to **[hookstack.app](https://www.hookstack.app)** — browse the full catalogue, select exactly what you need, copy the generated command and paste it in your terminal
 ---
 
 <!-- HOOKS_TIMELINE:START -->
@@ -46,53 +54,6 @@ Browse, select, install with one command — your agent gets guardrails in under
 ## Promise
 
 Install a production-ready HookStack in one command — up and running in 60 seconds, on Claude Code, OpenAI Codex, or GitHub Copilot.
-
----
-
-## Installation
-
-Installation takes under a minute.
-
-```bash
-npx hookstack-cli@latest install
-```
-
-That's it. The CLI walks you through picking hooks, writes the `.mjs` scripts, and patches the right config file — no manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent.
-
-### Pick your agent
-
-The same hooks install for whichever agent you run. Choose the target with a flag, or let the interactive menu ask:
-
-```bash
-# Claude Code — this project (default)
-npx hookstack-cli@latest install --project
-
-# Claude Code — all my projects (global)
-npx hookstack-cli@latest install --global
-
-# OpenAI Codex — committed with the repo (./.codex/hooks.json)
-npx hookstack-cli@latest install --codex-project
-
-# OpenAI Codex — every project (~/.codex/hooks.json)
-npx hookstack-cli@latest install --codex-profile
-
-# GitHub Copilot
-npx hookstack-cli@latest install --copilot
-```
-
-| Agent | Scope | Config file |
-|---|---|---|
-| Claude Code | project | `.claude/settings.json` |
-| Claude Code | global | `~/.claude/settings.json` |
-| OpenAI Codex | project | `.codex/hooks.json` (committed) |
-| OpenAI Codex | profile | `~/.codex/hooks.json` (all projects) |
-| GitHub Copilot | project | `.claude/` paths adapted |
-
-Want to fine-tune your Hookstack? Go to **[hookstack.app](https://www.hookstack.app)** — browse the full catalogue, select exactly what you need, and copy the generated command:
-
-```bash
-npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-block-destructive,session-start-load-git-context
-```
 
 ---
 
