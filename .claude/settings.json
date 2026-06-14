@@ -27,6 +27,18 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/block-push-closed-pr.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/block-curl-pipe-sh.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/guard-force-push-any.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/warn-sudo.mjs"
           }
         ],
         "matcher": "Bash"
@@ -48,6 +60,14 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/pre-write-secret-detection.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/block-generated-paths.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/env-gitignore-guard.mjs"
           }
         ],
         "matcher": "Write|Edit"
@@ -99,6 +119,15 @@
           }
         ],
         "matcher": "WebFetch"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/block-huge-write.mjs"
+          }
+        ],
+        "matcher": "Write"
       }
     ],
     "UserPromptSubmit": [
@@ -121,6 +150,15 @@
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt-name-agent.mjs"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/inject-deps-versions.mjs"
+          }
+        ],
+        "matcher": "*"
       }
     ],
     "SessionStart": [
@@ -183,6 +221,15 @@
           }
         ],
         "matcher": "compact"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/node-version-check.mjs"
+          }
+        ],
+        "matcher": "*"
       }
     ],
     "PostToolUse": [
@@ -223,6 +270,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/a11y-jsx-guard.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/debug-statement-guard.mjs"
           }
         ],
         "matcher": "Write|Edit"

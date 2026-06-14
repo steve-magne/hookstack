@@ -1,5 +1,5 @@
 {
-  "total": 93,
+  "total": 102,
   "firstDate": "2026-05-29",
   "lastDate": "2026-06-13",
   "byDay": {
@@ -14,7 +14,7 @@
     "2026-06-10": 9,
     "2026-06-11": 1,
     "2026-06-12": 5,
-    "2026-06-13": 3
+    "2026-06-13": 12
   },
   "hooks": [
     {
@@ -558,9 +558,33 @@
       "date": "2026-06-12"
     },
     {
+      "slug": "pre-edit-block-generated-paths",
+      "name": "Block edits to generated folders",
+      "category": "validation",
+      "date": "2026-06-13"
+    },
+    {
+      "slug": "pre-edit-block-huge-write",
+      "name": "Block oversized file writes",
+      "category": "validation",
+      "date": "2026-06-13"
+    },
+    {
+      "slug": "pre-bash-block-curl-pipe-sh",
+      "name": "Block remote script piped to shell",
+      "category": "security",
+      "date": "2026-06-13"
+    },
+    {
       "slug": "stop-dead-link-checker",
       "name": "Dead link checker",
       "category": "documentation",
+      "date": "2026-06-13"
+    },
+    {
+      "slug": "pre-write-env-gitignore-guard",
+      "name": "Env file gitignore guard",
+      "category": "security",
       "date": "2026-06-13"
     },
     {
@@ -570,8 +594,38 @@
       "date": "2026-06-13"
     },
     {
+      "slug": "pre-bash-guard-force-push-any",
+      "name": "Force-push guard (any branch)",
+      "category": "security",
+      "date": "2026-06-13"
+    },
+    {
+      "slug": "user-prompt-inject-deps-versions",
+      "name": "Inject installed dependency versions",
+      "category": "context",
+      "date": "2026-06-13"
+    },
+    {
+      "slug": "post-write-debug-statement-guard",
+      "name": "Leftover debug statement guard",
+      "category": "validation",
+      "date": "2026-06-13"
+    },
+    {
+      "slug": "session-start-node-version-check",
+      "name": "Node version mismatch check",
+      "category": "workflow",
+      "date": "2026-06-13"
+    },
+    {
       "slug": "message-display-redact-pii",
       "name": "PII redactor for display",
+      "category": "security",
+      "date": "2026-06-13"
+    },
+    {
+      "slug": "pre-bash-warn-sudo",
+      "name": "Sudo usage warning",
       "category": "security",
       "date": "2026-06-13"
     }

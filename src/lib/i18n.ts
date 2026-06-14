@@ -19,12 +19,16 @@ export const SEO_KEYWORDS = [
   'AI development workflow',
   'coding automation',
   'Claude Code extensions',
+  'supply chain security',
+  'secret leak prevention',
+  'force-push protection',
+  'dependency version pinning',
 ]
 
 export const T = {
-  metaTitle: 'Claude Code Hooks: Browse & Install 90+ — HookStack',
+  metaTitle: 'Claude Code Hooks: Browse & Install 100+ — HookStack',
   metaDescription:
-    'Claude Code hooks catalogue: 90+ production-ready hooks for security, quality, and workflow automation. Works with Claude Code, OpenAI Codex, and GitHub Copilot. Install in one npx command.',
+    'Claude Code hooks catalogue: 100+ production-ready hooks for security, quality, and workflow automation. Works with Claude Code, OpenAI Codex, and GitHub Copilot. Install in one npx command.',
   // Multi-agent compatibility strip (HeroSection). Same hooks, three agents.
   worksWithLabel: 'Works with',
   worksWithAgents: ['Claude Code', 'OpenAI Codex', 'GitHub Copilot'] as const,
@@ -44,10 +48,12 @@ export const T = {
   heroRotating: [
     'Break nothing.', // overall safety — the anchor
     'Leak nothing.', // security · secrets never reach the model
+    'Run nothing blind.', // security · curl|sh and remote scripts blocked until audited
     'Tests always run.', // validation · no source ships without a passing test
     'main stays guarded.', // security/workflow · writes and pushes blocked on main
     'Types enforced.', // validation · TypeScript + Python type errors caught on save
     'Forget nothing.', // context · conventions and AGENTS.md survive every compaction
+    'No version drift.', // context · agent codes against your real installed versions
     'Env always ready.', // workflow · deps installed, worktrees booted, direnv reloaded
     'Coverage enforced.', // validation · per-file coverage ≥80% checked before stop
     'Stay in the loop.', // notification · Slack, voice, chime — told the moment work is done
