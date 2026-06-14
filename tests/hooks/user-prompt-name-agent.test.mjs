@@ -8,7 +8,7 @@ function baseDeps(overrides = {}) {
     readFile: () => '{}',
     writeFile: vi.fn(),
     mkdir: vi.fn(),
-    projectDir: '/proj',
+    home: '/home',
     pickName: () => 'Nexus',
     ...overrides,
   };

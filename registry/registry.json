@@ -1824,68 +1824,12 @@
     ]
   },
   {
-    "benefit": "Every prompt saved, replayable later",
-    "category": "context",
-    "description": "Persists every user prompt into a per-session JSON file, allowing the exchange history to be retrieved.",
-    "hook_type": "UserPromptSubmit",
-    "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Journalise chaque prompt utilisateur dans .claude/data/sessions/ (UserPromptSubmit)\nimport { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    exists = existsSync,\n    readFile = readFileSync,\n    writeFile = writeFileSync,\n    mkdir = mkdirSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const sessionId = input.session_id ?? 'unknown';\n  const prompt = input.prompt ?? '';\n\n  const dir = join(projectDir, '.claude', 'data', 'sessions');\n  mkdir(dir, { recursive: true });\n\n  const file = join(dir, `${sessionId}.json`);\n  let data = { session_id: sessionId, prompts: [] };\n  if (exists(file)) {\n    try { data = JSON.parse(readFile(file, 'utf8')); } catch {}\n  }\n  data.prompts ??= [];\n  data.prompts.push({ prompt, timestamp: now() });\n  writeFile(file, JSON.stringify(data, null, 2));\n  return data;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
-      "config": {
-        "hooks": {
-          "UserPromptSubmit": [
-            {
-              "hooks": [
-                {
-                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt-log.mjs",
-                  "type": "command"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "script_path": ".claude/hooks/user-prompt-log.mjs",
-      "type": "settings_json",
-      "security": {
-        "snyk": {
-          "high": 0,
-          "medium": 0,
-          "low": 0,
-          "scannedAt": "2026-06-03T12:35:39.440Z"
-        },
-        "codeql": {
-          "critical": 0,
-          "high": 0,
-          "medium": 0,
-          "low": 0,
-          "scannedAt": "2026-06-05T02:10:00.374Z"
-        }
-      },
-      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/user-prompt-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('user-prompt-log', () => {\n  it('crée une nouvelle session avec le prompt', () => {\n    const deps = { ...base(), exists: () => false, writeFile: vi.fn() };\n    const data = run({ session_id: 's1', prompt: 'hello' }, deps);\n    expect(data.prompts).toHaveLength(1);\n    expect(data.prompts[0]).toMatchObject({ prompt: 'hello', timestamp: TS });\n    expect(deps.writeFile).toHaveBeenCalled();\n  });\n  it('append au tableau existant', () => {\n    const deps = {\n      ...base(),\n      exists: () => true,\n      readFile: () => JSON.stringify({ session_id: 's1', prompts: [{ prompt: 'a' }] }),\n      writeFile: vi.fn(),\n    };\n    const data = run({ session_id: 's1', prompt: 'b' }, deps);\n    expect(data.prompts).toHaveLength(2);\n  });\n});\n"
-    },
-    "name": "Per-session prompt log",
-    "slug": "user-prompt-log-session",
-    "tags": [
-      "logging",
-      "session",
-      "audit",
-      "prompt",
-      "history"
-    ],
-    "trigger": "*",
-    "use_cases": [
-      "Audit prompts submitted per session",
-      "Replay or analyze a past session"
-    ],
-    "default_on": false
-  },
-  {
     "benefit": "Each session gets a name, not a hash",
     "category": "context",
     "description": "Automatically generates a creative one-word name for each session (e.g. Phoenix, Sage, Nova) on the first prompt, for more human-friendly session tracking.",
     "hook_type": "UserPromptSubmit",
     "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Attribue un nom à l'agent pour la session courante (UserPromptSubmit)\nimport { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nconst NAMES = ['Phoenix', 'Sage', 'Nova', 'Echo', 'Atlas', 'Cipher', 'Nexus', 'Oracle', 'Aurora', 'Vortex'];\n\nexport function run(\n  input,\n  {\n    exists = existsSync,\n    readFile = readFileSync,\n    writeFile = writeFileSync,\n    mkdir = mkdirSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n    pickName = () => NAMES[Math.floor(Math.random() * NAMES.length)],\n  } = {},\n) {\n  const sessionId = input.session_id ?? 'unknown';\n  const dir = join(projectDir, '.claude', 'data', 'sessions');\n  mkdir(dir, { recursive: true });\n\n  const file = join(dir, `${sessionId}.json`);\n  let data = { session_id: sessionId };\n  if (exists(file)) {\n    try { data = JSON.parse(readFile(file, 'utf8')); } catch {}\n  }\n\n  if (data.agent_name) return null;\n\n  data.agent_name = pickName();\n  writeFile(file, JSON.stringify(data, null, 2));\n  return `Tu t'appelles **${data.agent_name}** pour cette session.\\n`;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(result);\n}\n",
+      "code_snippet": "#!/usr/bin/env node\n// Attribue un nom à l'agent pour la session courante (UserPromptSubmit)\nimport { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';\nimport { join } from 'path';\nimport { homedir } from 'os';\nimport { fileURLToPath } from 'url';\n\nconst NAMES = ['Phoenix', 'Sage', 'Nova', 'Echo', 'Atlas', 'Cipher', 'Nexus', 'Oracle', 'Aurora', 'Vortex'];\n\nexport function run(\n  input,\n  {\n    exists = existsSync,\n    readFile = readFileSync,\n    writeFile = writeFileSync,\n    mkdir = mkdirSync,\n    home = homedir(),\n    pickName = () => NAMES[Math.floor(Math.random() * NAMES.length)],\n  } = {},\n) {\n  const sessionId = input.session_id ?? 'unknown';\n  const dir = join(home, '.claude', 'data', 'sessions');\n  mkdir(dir, { recursive: true });\n\n  const file = join(dir, `${sessionId}.json`);\n  let data = { session_id: sessionId };\n  if (exists(file)) {\n    try { data = JSON.parse(readFile(file, 'utf8')); } catch {}\n  }\n\n  if (data.agent_name) return null;\n\n  data.agent_name = pickName();\n  writeFile(file, JSON.stringify(data, null, 2));\n  return `Tu t'appelles **${data.agent_name}** pour cette session.\\n`;\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(result);\n}\n",
       "config": {
         "hooks": {
           "UserPromptSubmit": [
@@ -1917,7 +1861,7 @@
           "scannedAt": "2026-06-05T02:10:00.374Z"
         }
       },
-      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/user-prompt-name-agent.mjs';\n\nfunction baseDeps(overrides = {}) {\n  return {\n    exists: () => false,\n    readFile: () => '{}',\n    writeFile: vi.fn(),\n    mkdir: vi.fn(),\n    projectDir: '/proj',\n    pickName: () => 'Nexus',\n    ...overrides,\n  };\n}\n\ndescribe('user-prompt-name-agent', () => {\n  it('attribue un nom à une nouvelle session', () => {\n    const writeFile = vi.fn();\n    const out = run({ session_id: 's1' }, baseDeps({ writeFile }));\n    expect(out).toContain('Nexus');\n    expect(writeFile).toHaveBeenCalled();\n  });\n\n  it('ne réattribue pas si un nom existe déjà', () => {\n    const deps = baseDeps({\n      exists: () => true,\n      readFile: () => JSON.stringify({ session_id: 's1', agent_name: 'Atlas' }),\n    });\n    expect(run({ session_id: 's1' }, deps)).toBeNull();\n  });\n\n  it('crée le dossier de sessions', () => {\n    const mkdir = vi.fn();\n    run({ session_id: 's1' }, baseDeps({ mkdir }));\n    expect(mkdir).toHaveBeenCalledWith(expect.stringContaining('sessions'), { recursive: true });\n  });\n});\n"
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/user-prompt-name-agent.mjs';\n\nfunction baseDeps(overrides = {}) {\n  return {\n    exists: () => false,\n    readFile: () => '{}',\n    writeFile: vi.fn(),\n    mkdir: vi.fn(),\n    home: '/home',\n    pickName: () => 'Nexus',\n    ...overrides,\n  };\n}\n\ndescribe('user-prompt-name-agent', () => {\n  it('attribue un nom à une nouvelle session', () => {\n    const writeFile = vi.fn();\n    const out = run({ session_id: 's1' }, baseDeps({ writeFile }));\n    expect(out).toContain('Nexus');\n    expect(writeFile).toHaveBeenCalled();\n  });\n\n  it('ne réattribue pas si un nom existe déjà', () => {\n    const deps = baseDeps({\n      exists: () => true,\n      readFile: () => JSON.stringify({ session_id: 's1', agent_name: 'Atlas' }),\n    });\n    expect(run({ session_id: 's1' }, deps)).toBeNull();\n  });\n\n  it('crée le dossier de sessions', () => {\n    const mkdir = vi.fn();\n    run({ session_id: 's1' }, baseDeps({ mkdir }));\n    expect(mkdir).toHaveBeenCalledWith(expect.stringContaining('sessions'), { recursive: true });\n  });\n});\n"
     },
     "name": "Automatic session naming",
     "slug": "user-prompt-llm-agent-name",
@@ -2460,63 +2404,6 @@
       "Planning workflows where manual approval is always granted",
       "CI/CD automation with plan mode enabled",
       "Reduce interruptions during intensive interactive sessions"
-    ],
-    "default_on": true
-  },
-  {
-    "benefit": "A full history of every command Claude ran",
-    "category": "workflow",
-    "description": "Records every Bash command executed by Claude into a timestamped log file for audit, debugging and a history of the session's actions.",
-    "hook_type": "PostToolUse",
-    "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// Journalise toutes les commandes Bash exécutées (PostToolUse Bash)\nimport { readFileSync, appendFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\nimport { fileURLToPath } from 'url';\n\nexport function run(\n  input,\n  {\n    append = appendFileSync,\n    mkdir = mkdirSync,\n    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n    cwd = process.cwd(),\n    now = () => new Date().toISOString(),\n  } = {},\n) {\n  const command = input.tool_input?.command ?? '';\n  if (!command) return null;\n\n  const logDir = join(projectDir, '.claude', 'data');\n  mkdir(logDir, { recursive: true });\n\n  const entry = {\n    ts: now(),\n    cmd: command.slice(0, 1000),\n    exit: input.tool_response?.exit_code ?? null,\n    cwd,\n  };\n\n  append(join(logDir, 'bash-log.jsonl'), JSON.stringify(entry) + '\\n');\n  return entry;\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  run(input);\n}\n",
-      "config": {
-        "hooks": {
-          "PostToolUse": [
-            {
-              "hooks": [
-                {
-                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/bash-command-log.mjs",
-                  "type": "command"
-                }
-              ],
-              "matcher": "Bash"
-            }
-          ]
-        }
-      },
-      "script_path": ".claude/hooks/bash-command-log.mjs",
-      "type": "settings_json",
-      "security": {
-        "snyk": {
-          "high": 0,
-          "medium": 0,
-          "low": 0,
-          "scannedAt": "2026-06-03T12:35:39.440Z"
-        },
-        "codeql": {
-          "critical": 0,
-          "high": 0,
-          "medium": 0,
-          "low": 0,
-          "scannedAt": "2026-06-05T02:10:00.374Z"
-        }
-      },
-      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect, vi } from 'vitest';\nimport { run } from '../../.claude/hooks/bash-command-log.mjs';\n\nconst TS = '2026-06-02T00:00:00.000Z';\nconst base = () => ({ append: vi.fn(), mkdir: vi.fn(), now: () => TS, projectDir: '/proj', home: '/home' });\n\ndescribe('bash-command-log', () => {\n  it('journalise une commande', () => {\n    const deps = { ...base(), cwd: '/proj' };\n    const e = run({ tool_input: { command: 'ls' }, tool_response: { exit_code: 0 } }, deps);\n    expect(e).toMatchObject({ ts: TS, cmd: 'ls', exit: 0, cwd: '/proj' });\n    expect(deps.append).toHaveBeenCalled();\n  });\n  it('ignore une commande vide', () => {\n    const deps = base();\n    expect(run({ tool_input: {} }, deps)).toBeNull();\n    expect(deps.append).not.toHaveBeenCalled();\n  });\n  it('tronque les commandes longues à 1000 car.', () => {\n    const e = run({ tool_input: { command: 'x'.repeat(2000) } }, base());\n    expect(e.cmd.length).toBe(1000);\n  });\n});\n"
-    },
-    "name": "Bash command log",
-    "slug": "post-bash-command-log",
-    "tags": [
-      "logging",
-      "bash",
-      "audit",
-      "history"
-    ],
-    "trigger": "Bash",
-    "use_cases": [
-      "Audit all shell commands executed by Claude",
-      "Debug Claude Code sessions after the fact",
-      "Action history for compliance or documentation"
     ],
     "default_on": true
   },

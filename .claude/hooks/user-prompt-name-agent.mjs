@@ -2,6 +2,7 @@
 // Attribue un nom à l'agent pour la session courante (UserPromptSubmit)
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
+import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 
 const NAMES = ['Phoenix', 'Sage', 'Nova', 'Echo', 'Atlas', 'Cipher', 'Nexus', 'Oracle', 'Aurora', 'Vortex'];
@@ -13,12 +14,12 @@ export function run(
     readFile = readFileSync,
     writeFile = writeFileSync,
     mkdir = mkdirSync,
-    projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+    home = homedir(),
     pickName = () => NAMES[Math.floor(Math.random() * NAMES.length)],
   } = {},
 ) {
   const sessionId = input.session_id ?? 'unknown';
-  const dir = join(projectDir, '.claude', 'data', 'sessions');
+  const dir = join(home, '.claude', 'data', 'sessions');
   mkdir(dir, { recursive: true });
 
   const file = join(dir, `${sessionId}.json`);

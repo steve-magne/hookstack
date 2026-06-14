@@ -143,10 +143,6 @@
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt-log.mjs"
-          },
-          {
-            "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt-name-agent.mjs"
           }
         ]
@@ -285,15 +281,6 @@
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/tool-usage.mjs"
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/bash-command-log.mjs"
-          }
-        ],
-        "matcher": "Bash"
       }
     ],
     "Stop": [
