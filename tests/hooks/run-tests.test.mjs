@@ -93,7 +93,7 @@ describe('detect', () => {
       readFile: () => '{}',
       projectDir: PROJECT_DIR,
     });
-    expect(result).toEqual(['python', ['-m', 'pytest', '--tb=short', '-q']]);
+    expect(result).toEqual(['uv', ['run', 'pytest', '--tb=short', '-q']]);
   });
 
   it('retourne go test si go.mod existe', () => {
