@@ -33,7 +33,7 @@ export function detect({ exists = existsSync, readFile = readFileSync, projectDi
     } catch {}
   }
   if (exists(join(projectDir, 'pytest.ini')) || exists(join(projectDir, 'pyproject.toml')))
-    return ['python', ['-m', 'pytest', '--tb=short', '-q']];
+    return ['uv', ['run', 'pytest', '--tb=short', '-q']];
   if (exists(join(projectDir, 'go.mod'))) return ['go', ['test', './...']];
   return null;
 }
