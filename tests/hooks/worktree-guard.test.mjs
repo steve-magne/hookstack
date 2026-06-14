@@ -34,4 +34,20 @@ describe('worktree-guard', () => {
     const exec = () => { throw new Error('not a git repo'); };
     expect(run({ tool_input: { file_path: '/x' } }, { exec })).toBeNull();
   });
+
+  it('laisse passer les chemins internes Claude Code (~/.claude/)', () => {
+    const r = run(
+      { tool_input: { file_path: '/home/user/.claude/plans/my-plan.md' } },
+      { exec: makeExec(), home: '/home/user' },
+    );
+    expect(r).toBeNull();
+  });
+
+  it('laisse passer les chemins internes Codex (~/.codex/)', () => {
+    const r = run(
+      { tool_input: { file_path: '/home/user/.codex/state/session.json' } },
+      { exec: makeExec(), home: '/home/user' },
+    );
+    expect(r).toBeNull();
+  });
 });
