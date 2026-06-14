@@ -4,11 +4,23 @@ import { run } from '../../.claude/hooks/pytest.mjs';
 
 const CWD = '/fake/project';
 
-function makeOpts({ marker = 'pyproject.toml', spawnStatus = 0, stdout = '', stderr = '' } = {}) {
+function makeOpts({
+  marker = 'pyproject.toml',
+  pytestStatus = 0,
+  xdistInstalled = false,
+  stdout = '',
+  stderr = '',
+} = {}) {
+  const spawn = vi.fn((cmd, args) => {
+    // Premier appel : détection xdist
+    if (args.includes('import xdist')) return { status: xdistInstalled ? 0 : 1, stdout: '', stderr: '' };
+    // Deuxième appel : pytest
+    return { status: pytestStatus, stdout, stderr };
+  });
   return {
     cwd: CWD,
     exists: (p) => marker ? p.endsWith(marker) : false,
-    spawn: vi.fn(() => ({ status: spawnStatus, stdout, stderr })),
+    spawn,
   };
 }
 
@@ -19,13 +31,18 @@ describe('pytest', () => {
     expect(opts.spawn).not.toHaveBeenCalled();
   });
 
-  it('détecte pyproject.toml et lance pytest', () => {
-    const opts = makeOpts({ marker: 'pyproject.toml' });
+  it('lance pytest sans -n auto si xdist absent', () => {
+    const opts = makeOpts({ marker: 'pyproject.toml', xdistInstalled: false });
     run(opts);
-    expect(opts.spawn).toHaveBeenCalledWith(
-      'uv', ['run', 'pytest', '--tb=short', '-q'],
-      expect.objectContaining({ cwd: CWD }),
-    );
+    const pytestCall = opts.spawn.mock.calls.find(([, args]) => args.includes('pytest'));
+    expect(pytestCall[1]).toEqual(['run', 'pytest', '--tb=short', '-q']);
+  });
+
+  it('lance pytest avec -n auto si xdist présent', () => {
+    const opts = makeOpts({ marker: 'pyproject.toml', xdistInstalled: true });
+    run(opts);
+    const pytestCall = opts.spawn.mock.calls.find(([, args]) => args.includes('pytest'));
+    expect(pytestCall[1]).toEqual(['run', 'pytest', '-n', 'auto', '--tb=short', '-q']);
   });
 
   it('détecte pytest.ini', () => {
@@ -36,14 +53,14 @@ describe('pytest', () => {
   });
 
   it('retourne status 0 et message succès', () => {
-    const opts = makeOpts({ spawnStatus: 0, stdout: '5 passed in 0.3s' });
+    const opts = makeOpts({ pytestStatus: 0, stdout: '5 passed in 0.3s' });
     const result = run(opts);
     expect(result.status).toBe(0);
     expect(result.message).toContain('✓ Tests passés');
   });
 
   it('retourne status non-0 et message échec', () => {
-    const opts = makeOpts({ spawnStatus: 1, stderr: 'FAILED test_foo.py' });
+    const opts = makeOpts({ pytestStatus: 1, stderr: 'FAILED test_foo.py' });
     const result = run(opts);
     expect(result.status).toBe(1);
     expect(result.message).toContain('ÉCHEC');
