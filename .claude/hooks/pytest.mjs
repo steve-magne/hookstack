@@ -14,7 +14,18 @@ export function run({
   const isPython = PYTHON_MARKERS.some(f => exists(`${cwd}/${f}`));
   if (!isPython) return null;
 
-  const result = spawn('uv', ['run', 'pytest', '--tb=short', '-q'], {
+  const hasXdist = spawn('uv', ['run', 'python', '-c', 'import xdist'], {
+    encoding: 'utf8',
+    timeout: 10_000,
+    cwd,
+    stdio: 'ignore',
+  }).status === 0;
+
+  const pytestArgs = hasXdist
+    ? ['run', 'pytest', '-n', 'auto', '--tb=short', '-q']
+    : ['run', 'pytest', '--tb=short', '-q'];
+
+  const result = spawn('uv', pytestArgs, {
     encoding: 'utf8',
     timeout: 300_000,
     cwd,
