@@ -727,7 +727,7 @@ cat .claude/data/bash-log.jsonl
       { q: 'How do I make my hook block an action instead of just reacting?', a: 'Use the PreToolUse event and return { decision: "block", reason: "…" } from run(), then write that JSON to stdout in the entry guard. PostToolUse runs after the action, so it cannot block.' },
     ],
     related: ['what-are-claude-code-hooks', 'claude-code-hooks-not-working', 'pretooluse-vs-posttooluse'],
-    relatedHookSlugs: ['post-bash-command-log', 'pre-bash-block-destructive', 'pre-bash-enforce-package-managers', 'pre-bash-secret-detection'],
+    relatedHookSlugs: ['pre-bash-block-destructive', 'pre-bash-enforce-package-managers', 'pre-bash-secret-detection'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
   {
@@ -1671,7 +1671,6 @@ export function run(input, { exec = defaultExec } = {}) {
       'session-start-reinject-after-compact',
       'session-start-github-context',
       'session-start-agents-md',
-      'user-prompt-log-session',
     ],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
