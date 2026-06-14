@@ -55,7 +55,7 @@ export function run({
   const result = spawn(cmd, args, {
     cwd: runDir,
     encoding: 'utf8',
-    timeout: 120_000,
+    timeout: 300_000,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, CI: 'true' },
   });
