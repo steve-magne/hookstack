@@ -157,6 +157,28 @@ describe('mergeHooks', () => {
     mergeHooks(existing, { PreToolUse: [{ matcher: 'Bash', hooks: [{ command: 'b' }] }] })
     expect(existing.PreToolUse[0].hooks).toHaveLength(1)
   })
+  it('idempotent — double install ne duplique pas les commandes', () => {
+    const incoming = { PreToolUse: [{ matcher: 'Bash', hooks: [{ command: 'node hook.mjs' }] }] }
+    const once = mergeHooks({}, incoming)
+    const twice = mergeHooks(once, incoming)
+    expect(twice.PreToolUse[0].hooks).toHaveLength(1)
+  })
+  it('idempotent — plusieurs events simultanés', () => {
+    const incoming = {
+      PreToolUse: [{ matcher: 'Write', hooks: [{ command: 'node a.mjs' }] }],
+      Stop: [{ hooks: [{ command: 'node b.mjs' }] }],
+    }
+    const once = mergeHooks({}, incoming)
+    const twice = mergeHooks(once, incoming)
+    expect(twice.PreToolUse[0].hooks).toHaveLength(1)
+    expect(twice.Stop[0].hooks).toHaveLength(1)
+  })
+  it('conserve deux commandes différentes sous le même matcher', () => {
+    const existing = { Stop: [{ hooks: [{ command: 'node a.mjs' }] }] }
+    const incoming = { Stop: [{ hooks: [{ command: 'node b.mjs' }] }] }
+    const m = mergeHooks(existing, incoming)
+    expect(m.Stop[0].hooks).toHaveLength(2)
+  })
 })
 
 describe('collectIncomingHooks', () => {
