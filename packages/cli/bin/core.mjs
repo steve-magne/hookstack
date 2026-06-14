@@ -106,14 +106,23 @@ export function assertSafeTarget(destDir, target) {
 }
 
 // Merges incoming settings.json hook fragments into existing ones, grouping by
-// event then by matcher (no overwrite). Same contract as src/lib/mergeConfig.
+// event then by matcher (no overwrite, no duplicate commands). Same contract as
+// src/lib/mergeConfig. Running install twice yields the same result as once.
 export function mergeHooks(existing, incoming) {
   const merged = structuredClone(existing)
   for (const [event, entries] of Object.entries(incoming)) {
     merged[event] ??= []
     for (const entry of entries) {
       const found = merged[event].find(e => (e.matcher ?? '') === (entry.matcher ?? ''))
-      if (found) found.hooks.push(...entry.hooks)
+      if (found) {
+        const seen = new Set(found.hooks.map(h => h.command))
+        for (const h of entry.hooks) {
+          if (!seen.has(h.command)) {
+            found.hooks.push(h)
+            seen.add(h.command)
+          }
+        }
+      }
       else merged[event].push({ ...entry, hooks: [...entry.hooks] })
     }
   }
