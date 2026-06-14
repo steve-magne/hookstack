@@ -70,15 +70,15 @@ Monté à la racine (`src/app/layout.tsx`). Deux responsabilités :
 
 | # | Effet | Où | Intention |
 |---|---|---|---|
-| ① | Cascade d'entrée | `CatalogueExplorer` | Révéler le catalogue avec qualité au 1er paint (joué une seule fois) |
-| ② | Filtrage vivant (FLIP) | `CatalogueExplorer` + `HookRow` | Les lignes *glissent* au filtre/regroupement au lieu de sauter |
+| ① | Cascade d'entrée | `CatalogueExplorer` | Révéler le catalogue au 1er paint via la cascade split-flap des **noms** (⑨). Les lignes sont **visibles par défaut** — aucun gating d'opacité (`initial={false}`), pour ne jamais livrer une section vide |
+| ② | Filtrage vivant (FLIP) | `CatalogueExplorer` + `HookRow` | Les lignes restantes *glissent* (FLIP `layout`) lors d'un réagencement ; les lignes filtrées se **démontent net** (pas d'`exit`, pas d'`AnimatePresence` au niveau ligne → zéro nœud fantôme) |
 | ③ | Modale spring + drag | `HookModal` | Vraie animation d'entrée/sortie ; bottom-sheet glissable sur mobile |
 | ④ | Checkbox / Plus→Check | `AnimatedCheck`, `HookRow`, `HookModal` | Le ✓ se *dessine* (pathLength) ; geste central rendu satisfaisant |
-| ⑤ | Toggle glissant | `CatalogueExplorer` | Indicateur `layoutId` partagé qui glisse sous l'onglet actif |
+| ⑤ | Toggle glissant | `CatalogueExplorer` | Indicateur `layoutId` partagé (`groupby-pill`) qui glisse sous l'axe de groupage actif (Category · Event · Recently added) |
 | ⑥ | Compteur + chips | `Header`, `HookConfigurator` | Pill qui pulse au changement ; chips qui entrent/sortent en reflow |
 | ⑦ | Copy→Check | `CopySwap` | Swap d'icône unique et cohérent sur les 3 boutons « Copier » |
 | ⑧ | Bannière d'install sticky + pulse | `CatalogueExplorer` | Commande épinglée en haut, reflète la sélection en direct, et pulse (anneau indigo + badge de compte) à chaque coche/décoche : « le lien vient d'être modifié ». Garde-fou 800 ms contre le pulse d'init. |
-| ⑨ | Tableau d'affichage (split-flap) | `SplitFlap`, `page` (hero), `CatalogueExplorer`, `HookRow` | Chaque caractère fait défiler des glyphes puis se verrouille, en cascade haut→bas / gauche→droite — un panneau Solari de gare/aéroport. Surfaces : **(a)** le titre hero — variante **rapide** (`splitFlapHero`) en mode **`eager`** : tout le titre tourne dès la 1re frame (zéro attente) puis se verrouille gauche → droite (~0,7 s), 3 segments décalés, le segment central garde son dégradé via `innerClassName` ; **(b)** au 1er paint, en-têtes (mono) + noms du catalogue, fenêtre d'intro 2,6 s puis texte direct (FLIP seul) ; **(c) reinit** : la bascule de regroupement (By event type ↔ By category) **rejoue** l'intro du catalogue ; **(d)** à chaque survol sur la carte flottante (`mode block` multi-lignes), la ligne *benefit* + le nom d'événement se recomposent quand la carte glisse d'un hook à l'autre. |
+| ⑨ | Tableau d'affichage (split-flap) | `SplitFlap`, `page` (hero), `CatalogueExplorer`, `HookRow` | Chaque caractère fait défiler des glyphes puis se verrouille, en cascade haut→bas / gauche→droite — un panneau Solari de gare/aéroport. Surfaces : **(a)** le titre hero — variante **rapide** (`splitFlapHero`) en mode **`eager`** : tout le titre tourne dès la 1re frame (zéro attente) puis se verrouille gauche → droite (~0,7 s), 3 segments décalés, le segment central garde son dégradé via `innerClassName` ; **(b)** au 1er paint, en-têtes (mono) + noms du catalogue, fenêtre d'intro 2,6 s puis texte direct (FLIP seul) ; **(c) reinit** : la bascule de regroupement (Category · Event · Recently added) **rejoue** l'intro du catalogue. *(d) supprimé)* — le *benefit* est désormais **affiché en permanence** sur la 2ᵉ ligne de chaque `HookRow` (lecture immédiate du payoff), il n'y a plus de recomposition split-flap au survol. |
 
 ## 5. Règles de contribution motion
 
