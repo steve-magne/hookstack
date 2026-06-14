@@ -3,7 +3,8 @@
 import { track } from '@/lib/analytics'
 import { allHooks, filterHooks } from '@/lib/hooks'
 import { useT } from '@/lib/locale-context'
-import { sectionReveal, splitFlap, spring, staggerContainer } from '@/lib/motion'
+import { splitFlap, spring } from '@/lib/motion'
+import { timeline } from '@/lib/timeline'
 import { useSelection } from '@/store/selection'
 import {
   HOOK_TYPES,
@@ -14,13 +15,12 @@ import {
   type HookType,
   type Stack,
 } from '@/types/hook'
-import { Check, ChevronDown, EyeOff, Filter } from 'lucide-react'
+import { Check, ChevronDown, EyeOff, Search, X } from 'lucide-react'
 import { AnimatePresence, m } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CategoryBadge, HookTypeBadge } from './Badge'
 import { HookConfigurator } from './HookConfigurator'
 import { HookModal } from './HookModal'
-import { HookRow } from './HookRow'
+import { HookRow, type GroupBy } from './HookRow'
 import { SplitFlap } from './SplitFlap'
 
 const CATEGORY_ORDER: Category[] = [
@@ -39,6 +39,19 @@ const STACK_MONOGRAM: Record<Stack, string> = {
 const STACK_MONO_COLOR: Record<Stack, string> = {
   typescript: 'bg-blue-500/25 text-blue-100',
   python: 'bg-yellow-500/25 text-yellow-100',
+}
+
+const DAY = 86_400_000
+
+/** Fenêtre de récence d'un hook (groupage « Recently added »). */
+type RecencyWindow = 'week' | 'month' | 'earlier'
+function recencyWindow(date: string | undefined, nowMs: number): RecencyWindow {
+  if (!date) return 'earlier'
+  const t = new Date(`${date}T00:00:00Z`).getTime()
+  const days = (nowMs - t) / DAY
+  if (days <= 7) return 'week'
+  if (days <= 31) return 'month'
+  return 'earlier'
 }
 
 interface FilterOption {
@@ -150,6 +163,51 @@ function FilterDropdown({
   )
 }
 
+/** Segmented control de groupage — indicateur glissant partagé (layoutId). */
+function GroupBySegmented({
+  value,
+  onChange,
+}: {
+  value: GroupBy
+  onChange: (g: GroupBy) => void
+}) {
+  const T = useT()
+  const options: [GroupBy, string][] = [
+    ['category', T.groupCategory],
+    ['event', T.groupEvent],
+    ['date', T.groupRecent],
+  ]
+  return (
+    <div className="inline-flex items-center gap-2">
+      <span className="hidden text-xs text-zinc-500 sm:inline">{T.groupByLabel}</span>
+      <div className="inline-flex rounded-lg border border-zinc-700/70 bg-zinc-900/40 p-0.5">
+        {options.map(([val, label]) => {
+          const active = value === val
+          return (
+            <button
+              key={val}
+              onClick={() => onChange(val)}
+              aria-pressed={active}
+              className={`relative rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                active ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              {active && (
+                <m.span
+                  layoutId="groupby-pill"
+                  className="absolute inset-0 rounded-md bg-white/10 ring-1 ring-inset ring-white/15"
+                  transition={spring.smooth}
+                />
+              )}
+              <span className="relative z-10">{label}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 interface Props {
   initialCategory?: Category | null
   showConfigurator?: boolean
@@ -159,37 +217,94 @@ interface Group {
   key: string
   label: string
   count: number
-  isEvent: boolean
+  kind: GroupBy
   hooks: Hook[]
 }
 
-function buildGroups(hooks: Hook[], categoryLabels: Record<string, string>): Group[] {
+function buildGroups(
+  hooks: Hook[],
+  groupBy: GroupBy,
+  categoryLabels: Record<string, string>,
+  dateBySlug: Map<string, string>,
+  nowMs: number,
+  windowLabels: Record<RecencyWindow, string>
+): Group[] {
+  if (groupBy === 'category') {
+    const map = new Map<string, Hook[]>()
+    for (const h of hooks) {
+      const bucket = map.get(h.category)
+      if (bucket) bucket.push(h)
+      else map.set(h.category, [h])
+    }
+    const rank = (k: string) => {
+      const i = CATEGORY_ORDER.indexOf(k as Category)
+      return i === -1 ? CATEGORY_ORDER.length : i
+    }
+    return [...map.keys()]
+      .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+      .map((key) => ({
+        key,
+        label: categoryLabels[key] ?? key,
+        count: map.get(key)!.length,
+        kind: 'category' as const,
+        hooks: map.get(key)!,
+      }))
+  }
+
+  if (groupBy === 'date') {
+    const order: RecencyWindow[] = ['week', 'month', 'earlier']
+    const map = new Map<RecencyWindow, Hook[]>()
+    for (const h of hooks) {
+      const w = recencyWindow(dateBySlug.get(h.slug), nowMs)
+      const bucket = map.get(w)
+      if (bucket) bucket.push(h)
+      else map.set(w, [h])
+    }
+    return order
+      .filter((w) => map.has(w))
+      .map((w) => ({
+        key: w,
+        label: windowLabels[w],
+        count: map.get(w)!.length,
+        kind: 'date' as const,
+        hooks: map.get(w)!.sort((a, b) => {
+          const da = dateBySlug.get(a.slug) ?? ''
+          const db = dateBySlug.get(b.slug) ?? ''
+          return db.localeCompare(da) || a.name.localeCompare(b.name)
+        }),
+      }))
+  }
+
+  // groupBy === 'event'
   const map = new Map<string, Hook[]>()
   for (const h of hooks) {
     const bucket = map.get(h.hook_type)
     if (bucket) bucket.push(h)
     else map.set(h.hook_type, [h])
   }
-
   const order = HOOK_TYPES as string[]
   const rank = (k: string) => {
     const i = order.indexOf(k)
     return i === -1 ? order.length : i
   }
-
   return [...map.keys()]
     .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
     .map((key) => ({
       key,
       label: key,
       count: map.get(key)!.length,
-      isEvent: true,
+      kind: 'event' as const,
       hooks: map.get(key)!,
     }))
 }
 
 export function CatalogueExplorer({ initialCategory, showConfigurator = true }: Props) {
   const T = useT()
+  const [query, setQuery] = useState('')
+  // Sur une page catégorie, le groupage par catégorie n'a pas de sens (un seul
+  // groupe) — on force l'événement et on masque la bascule. Sinon, défaut =
+  // catégorie : le browse s'oriente par « problème résolu ».
+  const [groupBy, setGroupBy] = useState<GroupBy>(initialCategory ? 'event' : 'category')
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([])
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([])
   const [selectedStacks, setSelectedStacks] = useState<Stack[]>([])
@@ -197,6 +312,16 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   const [active, setActive] = useState<Hook | null>(null)
 
   const selectedSlugs = useSelection((s) => s.selected)
+
+  // Date de premier ajout (git) par slug — alimente le groupage « Recently added ».
+  const dateBySlug = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const h of timeline.hooks) map.set(h.slug, h.date)
+    return map
+  }, [])
+  // « Maintenant » figé au montage : les fenêtres sont au jour près, pas de
+  // dérive d'hydratation entre serveur et client.
+  const nowMs = useMemo(() => Date.now(), [])
 
   // Counts from the full registry for dropdown display
   const categoryCounts = useMemo(() => {
@@ -255,9 +380,14 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
     setSelectedEventTypes((prev) => (prev.includes(evt) ? prev.filter((x) => x !== evt) : [...prev, evt]))
   }, [])
 
+  const changeGroupBy = useCallback((g: GroupBy) => {
+    track('toggle_grouping', { mode: g })
+    setGroupBy(g)
+  }, [])
+
   const results = useMemo(() => {
     const filtered = filterHooks(allHooks, {
-      query: '',
+      query,
       categories: initialCategory ? [initialCategory] : selectedCategories,
       events: selectedEventTypes as HookType[],
       stacks: selectedStacks,
@@ -266,16 +396,34 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
       return filtered.filter((h) => !selectedSlugs.includes(h.slug))
     }
     return filtered
-  }, [initialCategory, selectedCategories, selectedEventTypes, selectedStacks, hideSelected, selectedSlugs])
+  }, [
+    query,
+    initialCategory,
+    selectedCategories,
+    selectedEventTypes,
+    selectedStacks,
+    hideSelected,
+    selectedSlugs,
+  ])
 
-  const groups = useMemo(() => buildGroups(results, T.categoryLabels), [results, T])
+  const windowLabels = useMemo<Record<RecencyWindow, string>>(
+    () => ({ week: T.recentThisWeek, month: T.recentThisMonth, earlier: T.recentEarlier }),
+    [T]
+  )
 
+  const groups = useMemo(
+    () => buildGroups(results, groupBy, T.categoryLabels, dateBySlug, nowMs, windowLabels),
+    [results, groupBy, T, dateBySlug, nowMs, windowLabels]
+  )
+
+  // L'intro split-flap rejoue au montage ET à chaque changement d'axe de
+  // groupage (DESIGN ⑨c) — pas sur la frappe de recherche.
   const [intro, setIntro] = useState(true)
   useEffect(() => {
     setIntro(true)
     const t = setTimeout(() => setIntro(false), 2600)
     return () => clearTimeout(t)
-  }, [])
+  }, [groupBy])
 
   const introDelays = useMemo(() => {
     const map = new Map<string, number>()
@@ -296,64 +444,98 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
 
   return (
     <div data-component="CatalogueExplorer">
-      {/* Controls — all filters on one line */}
-      <div
-        data-component="CatalogueExplorer-controls"
-        className="mb-8 flex flex-wrap items-center gap-2 sm:gap-2.5"
-      >
-        <Filter className="size-3.5 shrink-0 text-zinc-500" aria-hidden />
+      <div data-component="CatalogueExplorer-controls" className="mb-7 space-y-3">
+        {/* Ligne 1 — recherche + compteur de sélection */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500"
+              aria-hidden
+            />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={T.searchPlaceholder}
+              aria-label={T.searchPlaceholder}
+              className="w-full rounded-lg border border-zinc-700/70 bg-zinc-900/50 py-2 pl-9 pr-9 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 hover:border-zinc-600 focus:border-white/40"
+            />
+            <AnimatePresence>
+              {query && (
+                <m.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={spring.snappy}
+                  onClick={() => setQuery('')}
+                  aria-label={T.searchClear}
+                  className="absolute right-2 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-200"
+                >
+                  <X className="size-3.5" />
+                </m.button>
+              )}
+            </AnimatePresence>
+          </div>
+          {selectedSlugs.length > 0 && (
+            <span className="hidden shrink-0 rounded-full border border-zinc-700/70 bg-zinc-900/50 px-3 py-1 font-mono text-xs text-zinc-400 sm:inline-block">
+              <span className="text-zinc-100">{selectedSlugs.length}</span> / {allHooks.length}
+            </span>
+          )}
+        </div>
 
-        {/* Stack filters */}
-        {(Object.keys(STACK_LABELS) as Stack[]).map((s) => {
-          const isActive = selectedStacks.includes(s)
-          return (
-            <button
-              key={s}
-              onClick={() => toggleStack(s)}
-              aria-pressed={isActive}
-              className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
-                isActive
-                  ? STACK_COLORS[s].active
-                  : 'border-zinc-700/70 bg-zinc-800/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
-              }`}
-            >
-              <span
-                className={`grid size-4 place-items-center rounded-[4px] font-mono text-[9px] font-bold leading-none ${STACK_MONO_COLOR[s]}`}
+        {/* Ligne 2 — groupage (gauche) + filtres (droite) */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+          {!initialCategory && <GroupBySegmented value={groupBy} onChange={changeGroupBy} />}
+
+          <div className="hidden h-4 w-px bg-zinc-700/50 sm:block" aria-hidden />
+
+          {/* Stack filters */}
+          {(Object.keys(STACK_LABELS) as Stack[]).map((s) => {
+            const isActive = selectedStacks.includes(s)
+            return (
+              <button
+                key={s}
+                onClick={() => toggleStack(s)}
+                aria-pressed={isActive}
+                className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
+                  isActive
+                    ? STACK_COLORS[s].active
+                    : 'border-zinc-700/70 bg-zinc-800/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                }`}
               >
-                {STACK_MONOGRAM[s]}
-              </span>
-              <span className="hidden sm:inline">{STACK_LABELS[s]}</span>
-              {isActive && <Check className="size-3" />}
-            </button>
-          )
-        })}
+                <span
+                  className={`grid size-4 place-items-center rounded-[4px] font-mono text-[9px] font-bold leading-none ${STACK_MONO_COLOR[s]}`}
+                >
+                  {STACK_MONOGRAM[s]}
+                </span>
+                <span className="hidden sm:inline">{STACK_LABELS[s]}</span>
+                {isActive && <Check className="size-3" />}
+              </button>
+            )
+          })}
 
-        <div className="hidden h-4 w-px bg-zinc-700/50 sm:block" aria-hidden />
+          {/* Category dropdown */}
+          {!initialCategory && (
+            <FilterDropdown
+              label={T.groupCategory}
+              options={categoryOptions}
+              selected={selectedCategories}
+              onToggle={toggleCategory}
+              onClear={() => setSelectedCategories([])}
+            />
+          )}
 
-        {/* Category dropdown */}
-        {!initialCategory && (
+          {/* Event type dropdown */}
           <FilterDropdown
-            label="Category"
-            options={categoryOptions}
-            selected={selectedCategories}
-            onToggle={toggleCategory}
-            onClear={() => setSelectedCategories([])}
+            label={T.filterEvent}
+            options={eventTypeOptions}
+            selected={selectedEventTypes}
+            onToggle={toggleEventType}
+            onClear={() => setSelectedEventTypes([])}
           />
-        )}
 
-        {/* Event type dropdown */}
-        <FilterDropdown
-          label="Event type"
-          options={eventTypeOptions}
-          selected={selectedEventTypes}
-          onToggle={toggleEventType}
-          onClear={() => setSelectedEventTypes([])}
-        />
-
-        {/* Hide selected */}
-        {selectedSlugs.length > 0 && (
-          <>
-            <div className="hidden h-4 w-px bg-zinc-700/50 sm:block" aria-hidden />
+          {/* Hide selected */}
+          {selectedSlugs.length > 0 && (
             <button
               onClick={() => setHideSelected((v) => !v)}
               aria-pressed={hideSelected}
@@ -367,71 +549,63 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
               <span className="hidden sm:inline">{T.filterHideSelected}</span>
               {hideSelected && <Check className="size-3" />}
             </button>
-          </>
-        )}
+          )}
 
-        {/* Clear all */}
-        {hasActiveFilters && (
-          <button
-            onClick={() => {
-              track('reset_all_filters', { stacks: selectedStacks.length, categories: selectedCategories.length, events: selectedEventTypes.length })
-              setSelectedStacks([])
-              setSelectedCategories([])
-              setSelectedEventTypes([])
-            }}
-            className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
-          >
-            {T.stackFilterReset}
-          </button>
-        )}
+          {/* Clear all */}
+          {hasActiveFilters && (
+            <button
+              onClick={() => {
+                track('reset_all_filters', {
+                  stacks: selectedStacks.length,
+                  categories: selectedCategories.length,
+                  events: selectedEventTypes.length,
+                })
+                setSelectedStacks([])
+                setSelectedCategories([])
+                setSelectedEventTypes([])
+              }}
+              className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
+            >
+              {T.stackFilterReset}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Grouped list */}
       {results.length > 0 ? (
-        <m.div
-          data-component="CatalogueExplorer-grouped-list"
-          variants={staggerContainer}
-          initial="hidden"
-          animate="show"
-          className="space-y-8"
-        >
-          <AnimatePresence mode="popLayout">
-            {groups.map((grp) => (
-              <m.section
-                key={grp.key}
-                layout
-                variants={sectionReveal}
-                exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                transition={spring.smooth}
-              >
-                <div className="sticky top-[138px] z-20 mb-1 flex items-center gap-3 bg-[#0a0a0a] px-3 pt-2 pb-1 [box-shadow:0_-8px_0_0_#0a0a0a]">
-                  <h3 className="cursor-default font-mono text-sm font-semibold text-zinc-300 transition-colors hover:text-white">
-                    <SplitFlap
-                      text={grp.label}
-                      play={intro}
-                      delay={introDelays.get(`grp:${grp.key}`) ?? 0}
-                    />
-                  </h3>
-                  <span className="text-xs text-zinc-500">{grp.count}</span>
-                  <div className="h-px flex-1 bg-[var(--color-border)]" />
-                </div>
-                <div className="divide-y divide-[var(--color-border)]/50">
-                  <AnimatePresence mode="popLayout">
-                    {grp.hooks.map((h) => (
-                      <HookRow
-                        key={h.slug}
-                        hook={h}
-                        groupBy="event"
-                        intro={intro}
-                        introDelay={introDelays.get(h.slug) ?? 0}
-                      />
-                    ))}
-                  </AnimatePresence>
-                </div>
-              </m.section>
-            ))}
-          </AnimatePresence>
-        </m.div>
+        <div data-component="CatalogueExplorer-grouped-list" className="space-y-8">
+          {groups.map((grp) => (
+            <section key={`${grp.kind}:${grp.key}`}>
+              <div className="sticky top-[138px] z-20 mb-1 flex items-center gap-3 bg-[#0a0a0a] px-3 pt-2 pb-1 [box-shadow:0_-8px_0_0_#0a0a0a]">
+                <h3
+                  className={`cursor-default text-sm font-semibold text-zinc-300 transition-colors hover:text-white ${
+                    grp.kind === 'event' ? 'font-mono' : 'font-sans'
+                  }`}
+                >
+                  <SplitFlap
+                    text={grp.label}
+                    play={intro}
+                    delay={introDelays.get(`grp:${grp.key}`) ?? 0}
+                  />
+                </h3>
+                <span className="text-xs text-zinc-500">{grp.count}</span>
+                <div className="h-px flex-1 bg-[var(--color-border)]" />
+              </div>
+              <div className="divide-y divide-[var(--color-border)]/50">
+                {grp.hooks.map((h) => (
+                  <HookRow
+                    key={h.slug}
+                    hook={h}
+                    groupBy={grp.kind}
+                    intro={intro}
+                    introDelay={introDelays.get(h.slug) ?? 0}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       ) : (
         <m.div
           initial={{ opacity: 0, y: 8 }}
