@@ -51,6 +51,21 @@ That's it. The CLI walks you through picking hooks, writes the `.mjs` scripts, a
 
 <!-- HOOKS_TIMELINE:END -->
 
+## Latest additions
+
+| Hook | Category | Added |
+|---|---|---|
+| [PII redactor for display](https://www.hookstack.app/hook/message-display-redact-pii) | security | Jun 13, 2026 |
+| [Force implementation doc at stop](https://www.hookstack.app/hook/stop-force-implementation-doc) | documentation | Jun 13, 2026 |
+| [Dead link checker](https://www.hookstack.app/hook/stop-dead-link-checker) | documentation | Jun 13, 2026 |
+| [Single H1 heading guard](https://www.hookstack.app/hook/seo-heading-hierarchy-guard) | validation | Jun 12, 2026 |
+| [SEO structure gate](https://www.hookstack.app/hook/stop-seo-structure-check) | validation | Jun 12, 2026 |
+| [SEO page metadata guard](https://www.hookstack.app/hook/seo-page-metadata-guard) | validation | Jun 12, 2026 |
+| [Next.js image guard](https://www.hookstack.app/hook/seo-next-image-guard) | validation | Jun 12, 2026 |
+| [JSX accessibility guard](https://www.hookstack.app/hook/a11y-jsx-guard) | validation | Jun 12, 2026 |
+
+<sub>→ <a href="https://www.hookstack.app/evolution">Full timeline on hookstack.app/evolution</a></sub>
+
 ## Promise
 
 Install a production-ready HookStack in one command — up and running in 60 seconds, on Claude Code, OpenAI Codex, or GitHub Copilot.
