@@ -32,10 +32,32 @@ Appliquer la voix : show-don't-tell, orienté résultat, concret/chiffré, zéro
 ## Étape 4 — Livrer le package complet
 
 Pour chaque post, fournir :
-1. **Le texte exact à coller** (formaté, prêt).
-2. **Le visuel suggéré** : quoi montrer (GIF démo sélection→install, capture de code, avant/après) — décrire précisément ce qu'il faut capturer.
-3. **Le meilleur créneau** (cf. channels.md : mar–jeu 9–11h ET pour X, etc.).
-4. **Checklist pré-publication** : CTA unique ? média présent ? lien au bon endroit ? accroche forte ?
+1. **Le texte exact à coller** (formaté, prêt — voir règles par canal ci-dessous).
+2. **Le meilleur créneau** (cf. channels.md : mar–jeu 9–11h ET pour X, etc.).
+3. **Checklist pré-publication** : CTA unique ? média présent ? lien au bon endroit ? accroche forte ?
+
+**Format LinkedIn — règle absolue** : le texte doit être en **plain text pur**, zéro markdown (`**`, `#`, `_`). Utiliser des sauts de ligne doubles entre paragraphes, les flèches `→` ou `·` comme puces. LinkedIn n'interprète pas le markdown — les `**bold**` s'affichent tels quels.
+
+## Étape 4bis — Générer la carte image HTML (LinkedIn uniquement)
+
+Pour tout post LinkedIn, générer **en plus du texte** une carte visuelle 1080×1080 en HTML :
+
+1. Préparer un objet JSON avec les champs :
+   - `accroche` : 2–4 lignes d'impact séparées par `\n` (le "héros" de la carte)
+   - `bullets` : 4–6 slugs/lignes courtes pour le bloc terminal
+   - `command` : la commande npx (sans `$`)
+   - `url` : `hookstack.app` (défaut)
+   - `date` : date au format `14 Jun 2026`
+
+2. Générer la carte :
+   ```bash
+   echo '<JSON>' | node /Users/stevemagne/workspace/hookstack/.claude/skills/growth-post/scripts/linkedin-card.mjs > /Users/stevemagne/workspace/hookstack-marketing/growth/drafts/<slug>.html
+   ```
+
+3. Indiquer à l'utilisateur :
+   - Ouvrir le `.html` dans Chrome (zoom 100%, Cmd+0)
+   - Chrome DevTools : Cmd+Shift+P → "Capture screenshot" → sélectionner `<body>`
+   - Uploader le PNG résultant comme **image native** dans LinkedIn (pas en lien)
 
 ## Étape 5 — Sauvegarder le brouillon
 
