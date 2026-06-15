@@ -1,4 +1,4 @@
-# doc/hookstack — Mémoire produit & référence de travail
+# doc/product — Mémoire produit & référence de travail
 
 Ce dossier est la **mémoire vivante** du projet Hookstack. Il est destiné aux agents IA et aux collaborateurs qui ont besoin de comprendre rapidement la vision, les décisions prises et l'état du produit avant de travailler sur un sujet précis.
 
@@ -12,8 +12,8 @@ Ce dossier est la **mémoire vivante** du projet Hookstack. Il est destiné aux 
 | [04-hook-101.md](04-hook-101.md) | Taxonomie des hooks, format du registre, hooks universels vs. tech-spécifiques |
 | [05-ux.md](05-ux.md) | Décision UX d'installation (CLI `npx hookstack-cli@latest`) — options analysées |
 | [06-vision-produit.md](06-vision-produit.md) | Vision, état actuel par écran, roadmap, concurrence |
-| `hookstack-marketing/strategie-marketing.md` (privé) | Canaux de distribution, messaging, métriques (le « quoi/pourquoi ») |
-| `hookstack-marketing/growth/` (privé) | **Système d'exécution de growth** : le « comment on exécute » — north-star, playbook, brand-voice, channels, metrics, drafts. Piloté par les skills `/growth-coach`, `/growth-post`, `/growth-outreach`. |
+
+Contexte marketing & growth → repo privé `hookstack-marketing` (skills `/growth-coach`, `/growth-post`, `/growth-outreach` disponibles depuis ce repo).
 
 ## Règles pour les agents IA
 
