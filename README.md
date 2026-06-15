@@ -180,25 +180,22 @@ Fires when a new worktree is created. Copy `.env`, assign a free port, run `pnpm
 
 ## Contributing
 
-### Via a pull request
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full guide: local setup, hook authoring contract, registry metadata, CI gates, and the pull request process.
 
-1. Fork the repository
-2. Write your hook as `.claude/hooks/<slug>.mjs` following the [conventions below](#hook-conventions)
-3. Add a test in `tests/hooks/<slug>.test.mjs` and verify `pnpm test` passes
-4. Add the metadata entry to `registry/registry.json` (see the schema in [CLAUDE.md](CLAUDE.md))
-5. Run `node .claude/sync-hooks.mjs` to propagate the code into `code_snippet`
-6. Submit a PR — CI runs `pnpm typecheck`, `pnpm test`, and a drift check
+Quick path for adding a hook:
 
-### Hook conventions (short version)
+```bash
+# 1. Write the script
+touch .claude/hooks/<slug>.mjs      # follow the run() + guard pattern
 
-- One file, one responsibility. No catch-all hooks.
-- Export `run(input, deps = {})` — pure logic, injectable fakes, returns a result or `null`.
-- The entry-point guard reads stdin, calls `run`, marshalls — nothing else.
-- `PreToolUse` hooks must provide an actionable `reason`, not just "blocked".
-- `PostToolUse` hooks must be non-blocking: tool-absent errors are silent.
-- Timeout every `execSync` call — no hook should hang indefinitely.
+# 2. Write the test
+touch tests/hooks/<slug>.test.mjs   # coverage ≥ 80 % required
 
-Full conventions: [CLAUDE.md → Conventions hooks](CLAUDE.md#conventions-hooks-claude-code).
+# 3. Add metadata to registry/registry.json, then sync
+node .claude/sync-hooks.mjs
+
+# 4. Open a PR — CI runs typecheck, tests, schema validation, and drift checks
+```
 
 ---
 
