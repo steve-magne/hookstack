@@ -6,7 +6,7 @@ const noClones = () => 'Analysis complete. 0 clones found.';
 const withClones = () => 'Found 3 clones in 4 files.\nClone at src/a.ts:10-20';
 const failWith = (out) => () => { const e = new Error('exit 1'); e.stdout = out; throw e; };
 
-const deps = (exec, dirs = ['src']) => ({ exec, exists: (d) => dirs.includes(d) });
+const deps = (exec, dirs = ['src']) => ({ exec, exists: (d) => dirs.includes(d), changed: ['src/a.ts'] });
 
 describe('stop-duplication-check', () => {
   it('retourne null si aucun répertoire source trouvé', () => {
@@ -38,5 +38,18 @@ describe('stop-duplication-check', () => {
     const exec = vi.fn(noClones);
     run({}, deps(exec, ['src', 'tests']));
     expect(exec).toHaveBeenCalledWith(expect.stringContaining('src tests'));
+  });
+
+  it('court-circuite (null, aucun exec) si seuls des docs ont changé', () => {
+    const exec = vi.fn(noClones);
+    const r = run({}, { exec, exists: (d) => d === 'src', changed: ['README.md', 'CHANGELOG.md'] });
+    expect(r).toBeNull();
+    expect(exec).not.toHaveBeenCalled();
+  });
+
+  it('analyse hors dépôt git (changed null)', () => {
+    const exec = vi.fn(noClones);
+    run({}, { exec, exists: (d) => d === 'src', changed: null });
+    expect(exec).toHaveBeenCalled();
   });
 });

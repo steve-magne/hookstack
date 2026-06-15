@@ -21,6 +21,7 @@ function makeOpts({
   return {
     projectDir: PROJECT_DIR,
     mainRoot: MAIN_ROOT,
+    changed: ['src/foo.ts'],
     exists: (p) => {
       if (p.endsWith('node_modules')) return hasNodeModules;
       if (p.endsWith('package.json')) return hasPkg;
@@ -87,13 +88,13 @@ describe('detect', () => {
     expect(result).toBeNull();
   });
 
-  it('retourne pytest si pyproject.toml existe', () => {
+  it('ne prend plus en charge pytest — délégué à stop-pytest (dédup)', () => {
     const result = detect({
       exists: (p) => p.endsWith('pyproject.toml'),
       readFile: () => '{}',
       projectDir: PROJECT_DIR,
     });
-    expect(result).toEqual(['uv', ['run', 'pytest', '--tb=short', '-q']]);
+    expect(result).toBeNull();
   });
 
   it('retourne go test si go.mod existe', () => {
@@ -104,6 +105,34 @@ describe('detect', () => {
     });
     expect(result).toEqual(['go', ['test', './...']]);
   });
+
+  it('scoped + vitest → --changed (tests liés seulement)', () => {
+    const opts = makeOpts({ scripts: { test: 'vitest' } });
+    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR, scoped: true });
+    expect(result).toEqual(['npm', ['test', '--', '--run', '--changed']]);
+  });
+
+  it('scoped + jest → --onlyChanged', () => {
+    const opts = makeOpts({ scripts: { test: 'jest' } });
+    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR, scoped: true });
+    expect(result).toEqual(['npm', ['test', '--', '--onlyChanged']]);
+  });
+
+  it('scoped + runner inconnu → suite complète (pas de flag affecté)', () => {
+    const opts = makeOpts({ scripts: { test: 'mocha' } });
+    const result = detect({ exists: opts.exists, readFile: opts.readFile, projectDir: PROJECT_DIR, scoped: true });
+    expect(result).toEqual(['npm', ['test', '--', '--run']]);
+  });
+
+  it('détecte vitest via la devDependency même si le script ne le nomme pas', () => {
+    const result = detect({
+      exists: () => true,
+      readFile: () => JSON.stringify({ scripts: { test: 'run-tests' }, devDependencies: { vitest: '^4' } }),
+      projectDir: PROJECT_DIR,
+      scoped: true,
+    });
+    expect(result).toEqual(['pnpm', ['test', '--', '--run', '--changed']]);
+  });
 });
 
 describe('run', () => {
@@ -112,9 +141,27 @@ describe('run', () => {
     expect(result).toBeNull();
   });
 
-  it('retourne status 0 et message succès quand les tests passent', () => {
+  it('cible les tests liés aux changements quand git est dispo (vitest)', () => {
     const result = run(makeOpts({ spawnStatus: 0 }));
     expect(result.status).toBe(0);
+    expect(result.runner[1]).toContain('--changed');
+    expect(result.message).toContain('✓ Tests liés aux changements passés');
+  });
+
+  it('en worktree (tests depuis mainRoot) → suite complète, pas de ciblage git', () => {
+    // node_modules absent dans projectDir → runDir = mainRoot ≠ projectDir.
+    // vitest --changed y lirait le mauvais arbre git, on ne doit pas l'activer.
+    const opts = makeOpts({ hasNodeModules: false, spawnStatus: 0 });
+    const result = run(opts);
+    expect(result.runner[1]).not.toContain('--changed');
+  });
+
+  it('relance la suite complète hors git (changed null)', () => {
+    const opts = makeOpts({ spawnStatus: 0 });
+    opts.changed = null;
+    const result = run(opts);
+    expect(result.status).toBe(0);
+    expect(result.runner[1]).not.toContain('--changed');
     expect(result.message).toContain('✓ Tests passés');
   });
 
@@ -153,5 +200,27 @@ describe('run', () => {
     };
     run(opts);
     expect(spawnCalls[0]).toBe(PROJECT_DIR);
+  });
+
+  it('court-circuite (null) si rien en attente', () => {
+    const opts = { ...makeOpts(), changed: [], spawn: () => { throw new Error('ne doit pas spawn'); } };
+    expect(run(opts)).toBeNull();
+  });
+
+  it('court-circuite (null) si seuls des fichiers docs/assets ont changé', () => {
+    const opts = { ...makeOpts(), changed: ['README.md', 'docs/logo.svg'], spawn: () => { throw new Error('ne doit pas spawn'); } };
+    expect(run(opts)).toBeNull();
+  });
+
+  it('lance la suite si un fichier de code est en attente parmi des docs', () => {
+    const opts = makeOpts({ spawnStatus: 0 });
+    opts.changed = ['README.md', 'src/app.ts'];
+    expect(run(opts).status).toBe(0);
+  });
+
+  it('lance la suite hors dépôt git (changed null → comportement historique)', () => {
+    const opts = makeOpts({ spawnStatus: 0 });
+    opts.changed = null;
+    expect(run(opts).status).toBe(0);
   });
 });

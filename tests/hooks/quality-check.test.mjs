@@ -7,6 +7,7 @@ const PROJECT_DIR = '/fake/project';
 function makeOpts({ hasPkg = true, hasTsConfig = true, hasEslintConfig = false, execResults = {} } = {}) {
   return {
     projectDir: PROJECT_DIR,
+    changed: ['src/foo.ts'],
     exists: (p) => {
       if (p.endsWith('package.json')) return hasPkg;
       if (p.endsWith('tsconfig.json')) return hasTsConfig;
@@ -66,6 +67,13 @@ describe('quality-check', () => {
     expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('--cache'));
   });
 
+  it('TypeScript tourne en incrémental (buildinfo) pour accélérer les runs suivants', () => {
+    const opts = makeOpts();
+    run(opts);
+    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('--incremental'));
+    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('.tsbuildinfo'));
+  });
+
   it('ne lance plus les tests — couverts par run-tests.mjs au Stop', () => {
     const opts = makeOpts({ hasEslintConfig: true });
     run(opts);
@@ -92,5 +100,27 @@ describe('quality-check', () => {
     const err = Object.assign(new Error('fail'), { stdout: Buffer.from('') });
     const result = run(makeOpts({ hasEslintConfig: true, execResults: { tsc: err, eslint: err } }));
     expect(result.message).toContain('vérification(s) échouée(s)');
+  });
+
+  it('court-circuite (0 check, aucun exec) si aucun fichier JS/TS modifié', () => {
+    const opts = makeOpts({ hasEslintConfig: true });
+    opts.changed = ['README.md', 'app/main.py'];
+    const result = run(opts);
+    expect(result.checks).toBe(0);
+    expect(opts.exec).not.toHaveBeenCalled();
+  });
+
+  it('lance les checks si un tsconfig/package.json a changé sans fichier .ts', () => {
+    const opts = makeOpts();
+    opts.changed = ['tsconfig.json'];
+    run(opts);
+    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('tsc'));
+  });
+
+  it('lance les checks hors dépôt git (changed null)', () => {
+    const opts = makeOpts();
+    opts.changed = null;
+    run(opts);
+    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('tsc'));
   });
 });
