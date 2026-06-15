@@ -17,7 +17,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
 
     steps:
@@ -53,6 +53,13 @@ jobs:
       - name: Publish
         working-directory: packages/cli
         run: npm publish --access public --provenance
+
+      - name: Create git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "hookstack-cli-v${{ steps.bump.outputs.new }}"
+          git push origin "hookstack-cli-v${{ steps.bump.outputs.new }}"
 
       - name: Publish summary
         run: |
