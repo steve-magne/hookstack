@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-bash-secret-detection
 // Bloc les commandes Bash contenant des secrets potentiels (PreToolUse)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

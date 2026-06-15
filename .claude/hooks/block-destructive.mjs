@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-bash-block-destructive
 // Bloc les commandes Bash destructives irréversibles (PreToolUse)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack worktree-create-setup-env
 // SessionStart : si la session démarre dans un worktree, copie depuis le dépôt principal
 // les fichiers d'environnement et secrets locaux. Deux passes :
 //   1. Liste statique de fichiers racine connus (multi-écosystème)

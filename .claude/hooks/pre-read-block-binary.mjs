@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-read-block-binary
 // Bloque les lectures de fichiers binaires inutilisables par Claude (PreToolUse Read)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

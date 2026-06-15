@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack user-prompt-inject-deps-versions
 // Injecte les versions réelles des dépendances dans chaque prompt (UserPromptSubmit)
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';

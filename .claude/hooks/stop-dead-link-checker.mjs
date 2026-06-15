@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-dead-link-checker
 // Vérifie les liens relatifs cassés dans tous les fichiers Markdown du repo (Stop).
 // Scan complet — couvre la dette existante, pas seulement les fichiers de la session.
 // Purement Node.js (fs + path), sans réseau ni dépendance externe.

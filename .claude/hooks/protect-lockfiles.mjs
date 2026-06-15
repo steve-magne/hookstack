@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-edit-protect-lockfiles
 // Bloque les éditions directes de fichiers de lock (PreToolUse Write|Edit)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

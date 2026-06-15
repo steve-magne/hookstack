@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack task-completed-test-gate
 // Bloque la complétion d'une tâche si les tests échouent (TaskCompleted)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

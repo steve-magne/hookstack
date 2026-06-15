@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack seo-page-metadata-guard
 // Vérifie qu'une page Next.js App Router expose ses métadonnées SEO après écriture
 // (PostToolUse Write|Edit). Cible : src/app/**/page.tsx.
 // Règle : la page doit exporter `metadata` OU `generateMetadata`, et l'objet doit

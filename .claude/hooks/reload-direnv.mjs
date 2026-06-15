@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack cwd-changed-reload-direnv
 // Recharge direnv quand le répertoire de travail change (CwdChanged)
 import { readFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';

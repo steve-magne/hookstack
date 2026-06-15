@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack setup-check-install-deps
 // Vérifie que les dépendances du projet sont à jour au démarrage de session (SessionStart)
 import { existsSync, statSync } from 'fs';
 import { join } from 'path';

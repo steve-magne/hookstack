@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack registry-validate-on-change
 // Valide registry.json contre son schéma dès qu'il change (FileChanged registry.json)
 // Feedback dans la session au lieu d'attendre l'échec de la CI.
 import { readFileSync } from 'fs';

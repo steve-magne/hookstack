@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-write-env-gitignore-guard
 // Avertit si un fichier .env créé n'est pas couvert par .gitignore (PreToolUse Write|Edit)
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';

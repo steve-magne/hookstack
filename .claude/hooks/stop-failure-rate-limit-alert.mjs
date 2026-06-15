@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-failure-rate-limit-alert
 // StopFailure (rate_limit) : déclenche une notification bureau via OSC-9
 import { fileURLToPath } from 'url';
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-session-dedup-autodisable
 // Auto-désactive les hooks Stop qui ont échoué ≥ N fois de suite (Stop)
 //
 // Contrat partagé : un hook Stop qui veut bénéficier du watchdog incrémente

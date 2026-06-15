@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack config-change-audit-log
 // Journalise les changements de configuration Claude Code (ConfigChange)
 import { readFileSync, appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';

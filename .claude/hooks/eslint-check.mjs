@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack post-write-eslint
 // Vérifie le fichier avec ESLint après écriture (PostToolUse Write|Edit)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

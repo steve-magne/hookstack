@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-sound
 // Joue un son de completion quand Claude termine une tâche (Stop)
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';

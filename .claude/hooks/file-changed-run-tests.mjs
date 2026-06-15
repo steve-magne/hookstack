@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack file-changed-run-tests
 // Relance les tests impactés quand un fichier source change (FileChanged)
 // Si vitest est disponible : `vitest related --run <fichier>` ne rejoue que les
 // tests qui importent le fichier modifié (latence et tokens minimaux).

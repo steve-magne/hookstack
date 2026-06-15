@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack session-start-github-context
 // Injecte l'état GitHub (PRs ouvertes, checks de la branche) au démarrage de session (SessionStart)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

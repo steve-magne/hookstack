@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-bash-warn-sudo
 // Avertit (sans bloquer) quand une commande Bash utilise sudo (PreToolUse Bash)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

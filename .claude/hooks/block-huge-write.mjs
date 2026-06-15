@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-edit-block-huge-write
 // Bloque l'écriture d'un fichier anormalement volumineux (PreToolUse Write)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

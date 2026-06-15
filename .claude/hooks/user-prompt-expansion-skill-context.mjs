@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack user-prompt-expansion-skill-context
 // Injecte du contexte additionnel lors de l'expansion de certains skills (UserPromptExpansion)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

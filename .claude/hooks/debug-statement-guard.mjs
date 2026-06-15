@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack post-write-debug-statement-guard
 // Signale les instructions de debug oubliées après une écriture (PostToolUse Write|Edit)
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';

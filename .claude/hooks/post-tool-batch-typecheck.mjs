@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack post-tool-batch-typecheck
 // Vérifie les types TypeScript après un lot d'écritures (PostToolBatch)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

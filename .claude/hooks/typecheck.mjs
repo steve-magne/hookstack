@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack post-edit-typecheck
 // Vérifie les types TypeScript après écriture (PostToolUse Write|Edit)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

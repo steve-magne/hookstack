@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack worktree-create-update-deps
 // SessionStart : si la session démarre dans un worktree fraîchement créé (node_modules
 // absent), lance l'install des dépendances en process DÉTACHÉ pour ne pas bloquer le
 // démarrage de session, puis rend la main immédiatement.

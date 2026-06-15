@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-per-file-coverage
 // Vérifie la coverage ≥80% par fichier .ts/.tsx modifié (Stop)
 import { readFileSync, existsSync, writeFileSync, unlinkSync } from 'fs';
 import { execSync } from 'child_process';

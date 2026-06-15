@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack user-prompt-inject-conventions
 // Injecte les règles d'agent dans chaque prompt (UserPromptSubmit)
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';

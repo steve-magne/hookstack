@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack notification-tts-voice
 // Lit les notifications Claude à voix haute via le TTS système (Notification)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

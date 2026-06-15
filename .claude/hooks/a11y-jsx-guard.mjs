@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack a11y-jsx-guard
 // Garde d'accessibilité JSX sur les composants src/**/*.tsx|jsx (PostToolUse Write|Edit).
 // Progressive enhancement :
 //   • eslint-plugin-jsx-a11y installé → ESLint v8/v9 (12 règles WCAG, config temp /tmp/)

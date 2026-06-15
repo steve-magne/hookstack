@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack task-created-naming-convention
 // Impose une référence de ticket en tête du sujet d'une tâche (TaskCreated)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

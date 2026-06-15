@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-edit-worktree-guard
 // Empêche l'édition de fichiers hors du worktree courant (PreToolUse Write|Edit)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

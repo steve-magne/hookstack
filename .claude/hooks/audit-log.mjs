@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack session-end-audit-log
 // Enregistre un résumé de session dans ~/.claude/audit-log.jsonl (SessionEnd)
 import { readFileSync, appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';

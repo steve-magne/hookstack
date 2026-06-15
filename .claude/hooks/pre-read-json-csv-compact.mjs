@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-read-json-csv-compact
 // Résume les grands fichiers JSON/CSV/JSONL avant lecture pour économiser le contexte (PreToolUse Read)
 import { readFileSync, existsSync, statSync } from 'fs';
 import { fileURLToPath } from 'url';

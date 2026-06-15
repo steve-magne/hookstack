@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-per-file-lint
 // Lint ESLint chaque fichier .js/.ts modifié depuis la merge base (Stop)
 import { readFileSync, existsSync, writeFileSync, unlinkSync } from 'fs';
 import { execSync } from 'child_process';
