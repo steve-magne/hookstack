@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack session-start-load-git-context
 // Injecte le contexte git (branche, statut) dans chaque prompt (UserPromptSubmit)
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';

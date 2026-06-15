@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-pytest
 // Exécute pytest à la fin d'une session Python (Stop)
 import { existsSync } from 'fs';
 import { spawnSync } from 'child_process';

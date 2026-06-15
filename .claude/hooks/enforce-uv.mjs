@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-bash-enforce-uv
 // Bloque pip/poetry install et suggère l'équivalent uv (PreToolUse Bash)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

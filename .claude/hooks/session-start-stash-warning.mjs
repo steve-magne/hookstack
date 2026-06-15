@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack session-start-stash-warning
 // SessionStart: avertit si des stashs Git non récupérés traînent depuis plusieurs jours
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';

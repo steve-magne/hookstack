@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-i18n-validation
 // Valide la cohérence des fichiers de traduction (Stop)
 import { readFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';

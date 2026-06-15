@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack post-tool-failure-log
 // Journalise les échecs d'outils pour le débogage (PostToolUseFailure)
 import { readFileSync, appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack session-start-pull-if-main
 // SessionStart: si on est sur main/master et qu'il y a des commits distants, lance git pull
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';

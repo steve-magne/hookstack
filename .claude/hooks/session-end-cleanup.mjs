@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack session-end-cleanup-temp
 // Nettoie les fichiers temporaires Claude datant de plus de 24h (SessionEnd)
 import { readdirSync, statSync, unlinkSync } from 'fs';
 import { join } from 'path';

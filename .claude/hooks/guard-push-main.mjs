@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-bash-guard-git-push-main
 // Bloque git push --force vers main/master (PreToolUse Bash)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

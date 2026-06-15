@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack subagent-start-tts-announce
 // Annonce le démarrage d'un sous-agent par TTS (SubagentStart)
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-registry-drift-check
 // Filet de sécurité : vérifie au Stop que registry.json est synchrone avec les
 // .mjs sur disque (sync-hooks --check). Attrape une sync auto qui aurait échoué
 // silencieusement en cours de session, avant que la CI ne rejette la PR. (Stop)

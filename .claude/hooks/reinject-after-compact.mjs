@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack session-start-reinject-after-compact
 // Réinjecte le contexte sauvegardé avant la dernière compaction (SessionStart)
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';

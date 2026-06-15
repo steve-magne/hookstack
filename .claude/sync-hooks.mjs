@@ -94,7 +94,18 @@ for (const hook of registry) {
 
   if (existsSync(scriptPath)) {
     // Le fichier est la source de vérité.
-    const disk = readFileSync(scriptPath, 'utf8');
+    let disk = readFileSync(scriptPath, 'utf8');
+
+    // Garantir la présence du fingerprint @hookstack en ligne 2
+    const patched = ensureFingerprint(disk, hook.slug);
+    if (patched !== disk) {
+      if (!CHECK && !DRY_RUN) {
+        writeFileSync(scriptPath, patched, 'utf8');
+      }
+      console.log(`  ${DRY_RUN || CHECK ? '[dry] ' : ''}✎ fingerprint injecté : ${hook.slug}`);
+      disk = patched;
+    }
+
     const current = hook.implementation.code_snippet ?? '';
     if (disk === current) {
       unchanged++;
@@ -171,6 +182,27 @@ if (testsUpdated > 0 || testsUnchanged > 0) {
 // Le CLI (hookstack-cli) lit ces champs directement depuis le registre.
 // On s'assure que chaque commande est de la forme "node $CLAUDE_PROJECT_DIR/..."
 // pour éviter les commandes malformées (ex. "node bash ..." héritées de l'ère .sh).
+
+// ── Étape 1b.5 : injection du fingerprint @hookstack ────────────────────────
+// Chaque .mjs doit avoir "// @hookstack <slug>" en ligne 2 (après le shebang).
+// Permet la détection automatique dans des repos open source (grep "@hookstack").
+
+function buildFingerprint(slug) {
+  return `// @hookstack ${slug}`;
+}
+
+function ensureFingerprint(content, slug) {
+  const expected = buildFingerprint(slug);
+  const lines = content.split('\n');
+  if (!lines[0]?.startsWith('#!')) return content; // pas de shebang → on ne touche pas
+  if (lines[1] === expected) return content; // déjà correct
+  if (lines[1]?.startsWith('// @hookstack')) {
+    lines[1] = expected; // mise à jour du slug
+  } else {
+    lines.splice(1, 0, expected); // insertion
+  }
+  return lines.join('\n');
+}
 
 const BAD_CMD_RE = /^(node\s+bash|bash\s+bash|bash\s+node)\b/;
 

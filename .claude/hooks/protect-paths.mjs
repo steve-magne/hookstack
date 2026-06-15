@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-edit-protect-paths
 // Protège les fichiers sensibles contre l'écriture (PreToolUse Write|Edit)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack message-display-redact-pii
 // Caviarde le hard-PII dans le contenu affiché (MessageDisplay) :
 // numéros de cartes, IBANs, SSNs — jamais présents dans du code légitime.
 // Les e-mails sont exclus volontairement (trop fréquents en contexte dev).

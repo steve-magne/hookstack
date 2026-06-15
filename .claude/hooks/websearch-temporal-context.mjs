@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-websearch-temporal-context
 // Injecte l'année courante dans les requêtes WebSearch sans contexte temporel (PreToolUse)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

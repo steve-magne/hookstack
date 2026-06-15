@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-force-implementation-doc
 // Bloque la fin de session si du code source a été modifié sans qu'un fichier
 // doc/implementation/ ait été créé ou mis à jour. Garantit zéro dette de doc. (Stop)
 import { execSync } from 'child_process';

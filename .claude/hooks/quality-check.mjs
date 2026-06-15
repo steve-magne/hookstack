@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-quality-check
 // Bilan qualité à la fin d'une session : typecheck + lint (Stop)
 // Les tests sont volontairement exclus : run-tests.mjs (Stop) les exécute déjà
 // avec un meilleur rapport d'erreur — les relancer ici doublerait la fin de session.

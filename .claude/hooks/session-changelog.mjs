@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-generate-changelog
 // Génère une entrée de changelog depuis le diff git de la session (Stop)
 import { execSync } from 'child_process';
 import { appendFileSync, existsSync } from 'fs';

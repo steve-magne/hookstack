@@ -218,6 +218,8 @@ Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/re
 
 **Règle absolue** : ne jamais éditer `code_snippet` à la main dans `registry.json` — il sera écrasé par le sync. Toute évolution du code passe par le `.mjs` + son test, puis sync.
 
+**Fingerprint `@hookstack`** : le sync injecte automatiquement `// @hookstack <slug>` en **ligne 2** (après le shebang) de chaque `.mjs`. Ce marqueur permet de détecter l'utilisation des hooks Hookstack dans des dépôts open source (`grep -r "@hookstack" --include="*.mjs"`). Ne pas le retirer ni l'éditer à la main — il est maintenu par le sync.
+
 ---
 
 ## Ajouter un hook
@@ -225,7 +227,7 @@ Le site utilise **Motion** (ex-Framer Motion, paquet `motion`, import `motion/re
 1. Écrire le script `.claude/hooks/<slug>.mjs` au pattern testable (voir « Conventions hooks »)
 2. Écrire son test `tests/hooks/<slug>.test.mjs`, vérifier `pnpm test`
 3. Ajouter l'entrée métadonnées dans `registry/registry.json` (type `Hook`) : `name`, `benefit`, `description`, `use_cases` (anglais, champs racine, pas d'overlay `i18n`), `implementation.config` (fragment `{ hooks: { [EventName]: [...] } }` fusionnable) et `implementation.script_path` pointant vers le `.mjs`. Laisser `code_snippet` vide ou approximatif : il sera rempli par le sync.
-4. Lancer `node .claude/sync-hooks.mjs` — il recopie le `.mjs` dans `code_snippet`. Toujours fournir un `benefit` (ligne courte, orientée résultat).
+4. Lancer `node .claude/sync-hooks.mjs` — il injecte automatiquement `// @hookstack <slug>` en ligne 2 du `.mjs`, recopie le résultat dans `code_snippet` et reconstruit `settings.json`. Toujours fournir un `benefit` (ligne courte, orientée résultat).
 5. **Si le hook requiert un outil externe** (ex. `jscpd`, `gh`, `uv`) → ajouter une entrée dans `PREREQ_HINTS` dans [`packages/cli/bin/core.mjs`](packages/cli/bin/core.mjs). Le CLI affichera automatiquement la commande d'installation après l'install du hook.
 6. **Après avoir committé le `.mjs`** (pour qu'il ait une date git), lancer `pnpm timeline` — régénère la timeline d'évolution (`registry/hooks-timeline.json`, `public/hooks-timeline.svg`, bloc README) depuis l'historique git, puis committer ces artefacts. La CI `--check` échoue sinon.
 
@@ -248,6 +250,8 @@ Met en valeur la croissance du catalogue « en public » (marketing/communauté)
 **Emplacement** : tous les scripts vivent dans `.claude/hooks/` du projet. Référencés via `$CLAUDE_PROJECT_DIR/.claude/hooks/<script>.mjs` dans `.claude/settings.json`.
 
 **Langage** : Node.js (`.mjs`) — OS-agnostique, disponible partout où `node` est dans le PATH. Pas de dépendances externes ; utiliser uniquement les builtins Node (`fs`, `child_process`, `path`).
+
+**Fingerprint** : chaque script commence par `#!/usr/bin/env node` suivi immédiatement de `// @hookstack <slug>` en ligne 2. Ce marqueur est injecté et maintenu automatiquement par `node .claude/sync-hooks.mjs` — ne pas l'éditer à la main. Il permet la détection dans des dépôts open source : `grep -r "@hookstack" --include="*.mjs"`. Format : `// @hookstack <slug-canonique-du-registre>`.
 
 **Pattern obligatoire — `run()` + garde + injection de dépendances** : tout hook expose une fonction pure `export function run(input, deps = {…})` qui contient la logique et **retourne** son résultat (`{ decision, reason }` | `{ exitCode, message }` | une chaîne de contexte | `null`), sans toucher à stdin/stdout/`process.exit`. Les effets de bord (`execSync`, `fs`, `fetch`, `process.platform`, horloge) passent par des dépendances injectées avec des valeurs par défaut réelles — c'est ce qui rend le hook testable. Une garde d'entrée fait le marshalling réel :
 

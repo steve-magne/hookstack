@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack session-start-worktree-if-main
 // SessionStart: crée un worktree isolé unique si la session démarre sur main/master.
 // Chaque session obtient un worktree frais avec un suffixe aléatoire — jamais de
 // réutilisation d'un worktree existant (un worktree désynchronisé provoquerait des conflits).

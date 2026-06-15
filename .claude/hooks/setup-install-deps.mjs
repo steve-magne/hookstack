@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack setup-install-deps
 // Installe les dépendances au démarrage si node_modules est absent (SessionStart/WorktreeCreate).
 // Dans un worktree distinct, update-deps.mjs gère l'install en mode détaché — ce hook
 // s'abstient pour éviter la race condition (deux pnpm install concurrents → ENOTEMPTY).

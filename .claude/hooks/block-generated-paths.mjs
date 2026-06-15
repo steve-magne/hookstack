@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-edit-block-generated-paths
 // Bloque l'écriture dans un dossier généré (node_modules, dist, .next…) (PreToolUse Write|Edit)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack notification-sound
 // Joue un son système quand Claude attend l'utilisateur (Notification)
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';

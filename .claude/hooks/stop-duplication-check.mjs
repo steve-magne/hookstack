@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-duplication-check
 // Vérifie la duplication de code à l'arrêt de session via jscpd (Stop).
 // Non bloquant — avertit si le seuil est dépassé, silencieux si jscpd absent.
 import { execSync } from 'child_process';

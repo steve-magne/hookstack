@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack file-changed-docs-consistency
 // Rappelle de propager les changements d'un README vers les surfaces sœurs
 // (FileChanged README.md). Quand un README change, liste les autres README du
 // repo (racine + packages/*) qui portent la même promesse produit et doivent

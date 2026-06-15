@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack post-write-ruff-check
 // Analyse et auto-corrige le fichier Python avec ruff après écriture (PostToolUse Write|Edit)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

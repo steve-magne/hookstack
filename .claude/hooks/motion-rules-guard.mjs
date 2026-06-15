@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack motion-rules-guard
 // Fait respecter les règles motion du projet après écriture d'un composant
 // (PostToolUse Write|Edit). Règles vérifiées (cf. DESIGN.md / CLAUDE.md) :
 //   - import depuis 'framer-motion' interdit → utiliser 'motion/react'

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack user-prompt-llm-agent-name
 // Attribue un nom à l'agent pour la session courante (UserPromptSubmit)
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';

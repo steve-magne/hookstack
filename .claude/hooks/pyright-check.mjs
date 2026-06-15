@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack post-edit-pyright
 // Vérifie les types Python avec pyright après édition (PostToolUse Write|Edit)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-seo-structure-check
 // Gate SEO structurel en fin de session (Stop) — l'équivalent « suite de tests » pour
 // le référencement. Sur un projet Next.js App Router (src/app présent), vérifie en
 // statique, sans navigateur ni réseau :

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack session-start-node-version-check
 // Avertit si la version de Node active ne correspond pas à celle attendue (SessionStart)
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack user-prompt-inject-datetime
 // Injecte la date et l'heure courantes dans chaque prompt (UserPromptSubmit)
 import { fileURLToPath } from 'url';
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack subagent-stop-tts-summary
 // Annonce la fin d'un sous-agent par TTS (SubagentStop)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-write-secret-detection
 // Bloque les écritures de fichiers contenant des secrets potentiels (PreToolUse Write|Edit)
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';

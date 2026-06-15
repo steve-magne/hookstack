@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack notification-slack
 // Envoie une notification Slack quand Claude veut notifier l'utilisateur (Notification)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

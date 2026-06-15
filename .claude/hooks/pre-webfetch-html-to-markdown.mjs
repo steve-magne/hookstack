@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack pre-webfetch-html-to-markdown
 // Convertit les pages HTML en Markdown avant traitement WebFetch (PreToolUse WebFetch)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';

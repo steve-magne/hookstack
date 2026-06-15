@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-missing-test-detection
 // Détecte les fichiers sources modifiés sans test correspondant (Stop)
 import { readFileSync, existsSync, writeFileSync, unlinkSync } from 'fs';
 import { execSync } from 'child_process';

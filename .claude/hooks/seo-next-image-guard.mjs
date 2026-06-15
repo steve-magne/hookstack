@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack seo-next-image-guard
 // Interdit les balises <img> brutes dans les composants (PostToolUse Write|Edit).
 // Cible : src/**/*.tsx. Next.js fournit next/image (<Image>) qui optimise le LCP,
 // évite le CLS et sert des formats modernes — un <img> brut est une régression

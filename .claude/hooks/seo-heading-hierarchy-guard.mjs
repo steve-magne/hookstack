@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack seo-heading-hierarchy-guard
 // Garde la hiérarchie de titres après écriture d'un composant (PostToolUse Write|Edit).
 // Cible : src/**/*.tsx. Règle à très faible faux-positif : un seul <h1> par fichier.
 // Plusieurs <h1> dans une même vue cassent l'outline SEO/accessibilité (un document =

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @hookstack stop-run-tests
 // Exécute la suite de tests à la fin d'une session (Stop)
 import { spawnSync, execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
