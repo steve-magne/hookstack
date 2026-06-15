@@ -19,6 +19,7 @@ function makeOpts({
   });
   return {
     cwd: CWD,
+    changed: ['test_foo.py'],
     exists: (p) => marker ? p.endsWith(marker) : false,
     spawn,
   };
@@ -65,5 +66,25 @@ describe('pytest', () => {
     expect(result.status).toBe(1);
     expect(result.message).toContain('ÉCHEC');
     expect(result.message).toContain('FAILED test_foo.py');
+  });
+
+  it('court-circuite (null, aucun spawn) si aucun .py modifié', () => {
+    const opts = makeOpts();
+    opts.changed = ['README.md', 'src/app.ts'];
+    expect(run(opts)).toBeNull();
+    expect(opts.spawn).not.toHaveBeenCalled();
+  });
+
+  it('lance pytest si un pyproject.toml a changé sans .py', () => {
+    const opts = makeOpts();
+    opts.changed = ['pyproject.toml'];
+    expect(run(opts)).not.toBeNull();
+    expect(opts.spawn).toHaveBeenCalled();
+  });
+
+  it('lance pytest hors dépôt git (changed null)', () => {
+    const opts = makeOpts();
+    opts.changed = null;
+    expect(run(opts)).not.toBeNull();
   });
 });

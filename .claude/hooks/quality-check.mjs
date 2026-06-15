@@ -8,11 +8,34 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 
+// Fichiers concernés par un typecheck/lint JS-TS. Une session qui ne touche que
+// du Markdown, du Python ou des assets n'a rien à vérifier ici.
+const JS_TS = /\.(ts|tsx|js|jsx|mjs|cjs|vue|svelte)$/;
+const QC_CFG = /(^|\/)(tsconfig.*\.json|package\.json|eslint\.config\.[a-z]+|\.eslintrc[^/]*)$/;
+
+/** Fichiers modifiés en attente (staged + unstaged + untracked), ou null hors git. */
+function defaultChanged(cwd) {
+  try {
+    const out = execSync('git status --porcelain', { encoding: 'utf8', cwd, timeout: 5_000 });
+    return out.split('\n').filter(Boolean).map((l) => {
+      const p = l.slice(3);
+      return p.includes(' -> ') ? p.split(' -> ').pop() : p;
+    });
+  } catch {
+    return null; // hors dépôt git → ne pas court-circuiter (comportement historique)
+  }
+}
+
 export function run({
   exec,
   exists = existsSync,
   projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+  changed = defaultChanged(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
 } = {}) {
+  // Aucun fichier JS/TS (ni config tsc/eslint) modifié → typecheck/lint inutiles.
+  if (changed && !changed.some((f) => JS_TS.test(f) || QC_CFG.test(f)))
+    return { checks: 0, failed: 0, message: '' };
+
   const doExec =
     exec ?? ((cmd) => execSync(cmd, { cwd: projectDir, stdio: 'pipe', timeout: 60_000 }));
 
@@ -32,7 +55,9 @@ export function run({
   const checks = [];
   const hasPkg = exists(join(projectDir, 'package.json'));
   if (hasPkg && exists(join(projectDir, 'tsconfig.json')))
-    checks.push(['TypeScript', 'npx --no-install tsc --noEmit']);
+    // --incremental + cache buildinfo : la 1re run reste froide, les suivantes ne
+    // retypent que ce qui a bougé → fin de session quasi instantanée côté types.
+    checks.push(['TypeScript', 'npx --no-install tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/stop-quality-check.tsbuildinfo']);
   const eslintConfigs = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml', '.eslintrc'];
   if (hasPkg && eslintConfigs.some((f) => exists(join(projectDir, f))))
     checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 --cache --cache-location node_modules/.cache/eslint .']);

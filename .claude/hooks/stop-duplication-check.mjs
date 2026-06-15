@@ -10,8 +10,24 @@ import { fileURLToPath } from 'url';
 const MIN_TOKENS = 50;   // blocs < 50 tokens ignorés (évite les faux positifs sur boilerplate)
 const THRESHOLD = 5;     // % de duplication max avant avertissement
 
+// Fichiers purement documentaires/binaires : pas de code à analyser.
+const DOC_ONLY = /\.(md|mdx|markdown|txt|rst|adoc|svg|png|jpe?g|gif|webp|ico|pdf|lock)$|(^|\/)LICENSE/i;
+
 function defaultExec(cmd) {
   return execSync(cmd, { encoding: 'utf8', timeout: 30_000, stdio: 'pipe', shell: true });
+}
+
+/** Fichiers modifiés en attente (staged + unstaged + untracked), ou null hors git. */
+function defaultChanged() {
+  try {
+    const out = execSync('git status --porcelain', { encoding: 'utf8', timeout: 5_000, stdio: 'pipe' });
+    return out.split('\n').filter(Boolean).map((l) => {
+      const p = l.slice(3);
+      return p.includes(' -> ') ? p.split(' -> ').pop() : p;
+    });
+  } catch {
+    return null; // hors dépôt git → ne pas court-circuiter
+  }
 }
 
 function jscpdBin({ exists = existsSync } = {}) {
@@ -24,7 +40,10 @@ function findSrcDirs({ exists = existsSync } = {}) {
   return ['src', 'lib', 'tests', 'app'].filter((d) => exists(d));
 }
 
-export function run(_input, { exec = defaultExec, exists = existsSync } = {}) {
+export function run(_input, { exec = defaultExec, exists = existsSync, changed = defaultChanged() } = {}) {
+  // Rien en attente, ou uniquement des fichiers docs/binaires → rien à dédupliquer.
+  if (changed && (changed.length === 0 || changed.every((f) => DOC_ONLY.test(f)))) return null;
+
   const dirs = findSrcDirs({ exists });
   if (!dirs.length) return null;
 
