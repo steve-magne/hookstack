@@ -37,7 +37,7 @@ Les utilisateurs découvrent le projet par trois canaux. Le message, le flow et 
 | [`/src/`](src/) | Site web Next.js — catalogue, HookConfigurator, pages (`hookstack.app`) |
 | [`/packages/cli/`](packages/cli/) | Package npm public `hookstack-cli` — CLI installé par les utilisateurs via `npx` |
 | [`/registry/`](registry/) | `registry.json` — source de vérité des **métadonnées** du catalogue (`name`, `benefit`, `description`, `config`…) ; `code_snippet` dérivé automatiquement des `.mjs` |
-| [`/doc/hookstack/`](doc/hookstack/) | Vision produit, marketing, brainstorm, positionnement (ne pas modifier sans raison) |
+| [`/doc/product/`](doc/product/) | Vision produit, marketing, brainstorm, positionnement (ne pas modifier sans raison) |
 | [`/README.md`](README.md) | README vendeur GitHub — destiné aux early adopters et contributeurs |
 
 ### Règle d'or : propagation des changements
@@ -46,7 +46,7 @@ Les utilisateurs découvrent le projet par trois canaux. Le message, le flow et 
 
 1. **Site** [`/src/`](src/) — cohérence visuelle et UX
 2. **CLI** [`/packages/cli/`](packages/cli/) — tonalité des messages, flags, exemples dans `README.md`
-3. **Docs marketing** [`/doc/hookstack/`](doc/hookstack/) — vision alignée avec la réalité du produit
+3. **Docs marketing** [`/doc/product/`](doc/product/) — vision alignée avec la réalité du produit
 4. **README** [`/README.md`](README.md) — pitch actualisé, exemples CLI cohérents
 
 ---
@@ -111,7 +111,7 @@ hookstack/
 │   └── skills/analyze-repo/         # Skill : analyse un dépôt GitHub ou une doc → entrées registre
 ├── supabase/
 │   └── schema.sql                   # Schéma BDD Supabase (table soumissions)
-├── doc/hookstack/                      # Documentation produit (personas, valeur, hook 101…)
+├── doc/product/                      # Documentation produit (personas, valeur, hook 101…)
 ├── public/                          # Assets statiques (logo, favicon…)
 ├── next.config.ts                   # Config Next.js
 ├── postcss.config.mjs               # Config PostCSS / Tailwind v4
@@ -130,21 +130,17 @@ pnpm lint            # ESLint via next lint
 
 ## Mémoire produit & vision
 
-Le dossier **`doc/hookstack/`** est la référence centrale pour la vision produit, les personas, l'UX, la stratégie marketing et les décisions architecturales. **Lire avant toute tâche qui touche à l'UX, au registre, au CLI ou au messaging.**
+Le dossier **`doc/product/`** est la référence centrale pour la vision produit, les personas, l'UX, la stratégie marketing et les décisions architecturales. **Lire avant toute tâche qui touche à l'UX, au registre, au CLI ou au messaging.**
 
-→ [`doc/hookstack/README.md`](doc/hookstack/README.md) pour l'index complet.
+→ [`doc/product/README.md`](doc/product/README.md) pour l'index complet.
 
-**Règle d'alimentation** : si tu découvres en session une information sur la vision, une décision produit, une contrainte métier ou un pattern marketing utile dans >80% des sessions futures → l'ajouter dans le fichier pertinent de `doc/hookstack/`. Seulement ce qui reste vrai sur la durée (pas de notes éphémères).
+**Règle d'alimentation** : si tu découvres en session une information sur la vision, une décision produit, une contrainte métier ou un pattern marketing utile dans >80% des sessions futures → l'ajouter dans le fichier pertinent de `doc/product/`. Seulement ce qui reste vrai sur la durée (pas de notes éphémères).
 
 ## Système de croissance (growth)
 
-Objectif : `steve-magne/hookstack` → **5000 ⭐** + trafic sur `hookstack.app`. Le **système d'exécution** vit dans `~/workspace/hookstack-marketing/growth/` (repo privé — stratégie, playbook, brand-voice, drafts) et est piloté par 3 skills :
+Objectif : `steve-magne/hookstack` → **5000 ⭐** + trafic sur `hookstack.app`. Le **système d'exécution** vit dans le repo privé `hookstack-marketing` (skills `/growth-coach`, `/growth-post`, `/growth-outreach` disponibles depuis ce repo). **Pour toute session marketing, ouvrir `hookstack-marketing`.**
 
-- **`/growth-coach`** — diagnostique la phase, recommande les 1–3 actions à plus fort levier, gère le board GitHub Issues (`growth-coach review` = bilan ; `growth-coach seed` = poser le board).
-- **`/growth-post`** — produit un post prêt-à-coller (X / LinkedIn / Reddit-HN), draft-and-review (ne publie jamais).
-- **`/growth-outreach`** — trouve des cibles (repos, threads, newsletters) et rédige l'outreach personnalisé.
-
-Backlog = **GitHub Issues** (label `growth` + `content`/`outreach`/`spike`/`seo`/`idea`). Métriques : `node .claude/skills/growth-coach/scripts/metrics.mjs` (snapshot stars/downloads, auto chaque lundi via `.github/workflows/growth-metrics.yml`). **Boucle hebdo** : `/growth-coach` lundi, `/growth-post` en semaine, `/growth-coach review` vendredi. Règle KISS : le système n'auto-poste jamais (zéro API payante, zéro risque de ban).
+Backlog = **GitHub Issues** dans ce repo (label `growth` + `content`/`outreach`/`spike`/`seo`/`idea`) — c'est le pont entre les décisions marketing et les changements produit. Métriques : `node .claude/skills/growth-coach/scripts/metrics.mjs` (snapshot stars/downloads, auto chaque lundi via `.github/workflows/growth-metrics.yml`).
 
 ## Architecture
 
