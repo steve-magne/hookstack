@@ -1,6 +1,7 @@
 import { CatalogueExplorer } from '@/components/CatalogueExplorer'
 import { StickyInstallBanner } from '@/components/StickyInstallBanner'
 import { HeroRotatingTitle } from '@/components/HeroRotatingTitle'
+import { HooksFlow } from '@/components/HooksFlow'
 import { allHooks } from '@/lib/hooks'
 import { guides } from '@/lib/guides'
 import { T, SEO_KEYWORDS } from '@/lib/i18n'
@@ -196,6 +197,12 @@ export default async function HomePage() {
 
         {/* StickyInstallBanner — dynamic, reflects live selection */}
         <StickyInstallBanner />
+        
+        {/* HooksFlowSection — animated explainer: what hooks bring to a project */}
+        <section data-component="HooksFlowSection" className="pt-4 pb-16">
+          <HooksFlow />
+        </section>
+
 
         {/* FineTuneSection */}
         <section data-component="FineTuneSection" className="pt-6">
