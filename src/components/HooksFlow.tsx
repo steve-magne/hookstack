@@ -1,7 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, m, useInView, useReducedMotion } from 'motion/react'
+import { useRef, useState } from 'react'
+import {
+  AnimatePresence,
+  m,
+  useMotionValueEvent,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+} from 'motion/react'
 import {
   Check,
   FileCheck2,
@@ -18,20 +25,14 @@ import {
 import { EASE_OUT, duration, spring } from '@/lib/motion'
 
 /**
- * HooksFlow — l'explicateur animé « ce qu'apportent les hooks ».
+ * HooksFlow — explicateur scroll-piloté « ce qu'apportent les hooks ».
  *
- * Un git-graph horizontal raconte le parcours d'UNE feature livrée sous la
- * garde des hooks : une tête de lecture part de `main`, se fait bloquer le push
- * direct, est reroutée dans un worktree isolé, qui installe ses deps, injecte les
- * conventions, formate/lint/type chaque fichier, force les tests au vert, puis
- * merge en sûreté. Chaque temps est narré par un encart « spotlight » qui montre
- * le *vrai* bénéfice du hook correspondant du catalogue.
+ * Le composant est un wrapper haut (≈ 450 vh) contenant un bloc sticky
+ * `h-screen`. Le scroll de la page pilote `step` via `useScroll` +
+ * `useTransform` — même technique que les animations produit Apple.
  *
- * Langage de motion : tokens de `motion.ts`, `m.*` only (LazyMotion strict),
- * transform/opacity + `pathLength` (cf. AnimatedCheck). Palette monochrome ;
- * `amber` pour le garde-fou, `emerald` pour le succès — au plus bas (précédent
- * établi dans le repo). A11y : `prefers-reduced-motion` saute à l'état final
- * composé (toute l'histoire visible, sans rejouer).
+ * A11y : `prefers-reduced-motion` → état final composé, aucun timer.
+ * Motion : tokens `motion.ts`, `m.*` uniquement (LazyMotion strict).
  */
 
 const VBW = 960
@@ -39,6 +40,9 @@ const VBH = 360
 const MAIN_Y = 76
 const WT_Y = 270
 const LAST = 7
+
+// Hauteur totale de scroll : (LAST étapes × 50 vh) + 100 vh fenêtre
+const SCROLL_HEIGHT = `${LAST * 50 + 100}vh`
 
 const NODES = {
   start: { x: 96, y: MAIN_Y },
@@ -62,9 +66,6 @@ const HEAD: Array<[number, number]> = [
   [NODES.merge.x, MAIN_Y],
 ]
 
-/** Durée d'affichage de chaque temps avant d'avancer (ms). */
-const DWELL = [900, 1500, 1300, 1300, 1200, 1700, 1700]
-
 type Tone = 'neutral' | 'guard' | 'ok'
 
 interface Beat {
@@ -79,7 +80,7 @@ const BEATS: Beat[] = [
   {
     ev: 'UserPromptSubmit',
     head: 'A feature lands on your plate',
-    sub: '“Add Stripe checkout.” The agent starts on main — exactly where it shouldn’t.',
+    sub: "“Add Stripe checkout.” The agent starts on main — exactly where it shouldn’t.",
     hooks: 'session-start-load-git-context',
     tone: 'neutral',
   },
@@ -100,7 +101,7 @@ const BEATS: Beat[] = [
   {
     ev: 'SessionStart',
     head: 'Dependencies ready — automatically',
-    sub: 'The fresh worktree runs pnpm install on its own. No “works on my machine”.',
+    sub: 'The fresh worktree runs pnpm install on its own. No "works on my machine".',
     hooks: 'worktree-create-update-deps · setup-install-deps',
     tone: 'neutral',
   },
@@ -120,7 +121,7 @@ const BEATS: Beat[] = [
   },
   {
     ev: 'Stop',
-    head: 'It won’t hand back until tests are green',
+    head: "It won't hand back until tests are green",
     sub: 'The session is gated on a passing suite. No red build slips through to you.',
     hooks: 'stop-run-tests · stop-quality-check',
     tone: 'ok',
@@ -160,42 +161,34 @@ const pct = (v: number, total: number) => `${(v / total) * 100}%`
 
 export function HooksFlow() {
   const reduce = useReducedMotion()
-  const rootRef = useRef<HTMLDivElement>(null)
-  const inView = useInView(rootRef, { once: true, amount: 0.45 })
+  const containerRef = useRef<HTMLDivElement>(null)
   const [step, setStep] = useState(0)
-  const [playing, setPlaying] = useState(false)
 
-  // Démarrage à l'entrée dans le viewport (une fois).
-  useEffect(() => {
-    if (inView && !reduce) setPlaying(true)
-  }, [inView, reduce])
+  // Scroll de la page → progression dans les étapes
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ['start start', 'end end'],
+  })
+  const stepRaw = useTransform(scrollYProgress, [0, 1], [0, LAST])
 
-  // prefers-reduced-motion → état final composé, sans rejouer.
-  useEffect(() => {
-    if (reduce) {
-      setStep(LAST)
-      setPlaying(false)
-    }
-  }, [reduce])
+  useMotionValueEvent(stepRaw, 'change', (v) => {
+    if (!reduce) setStep(Math.min(LAST, Math.max(0, Math.round(v))))
+  })
 
-  // Avance la timeline temps par temps.
-  useEffect(() => {
-    if (!playing || reduce) return
-    if (step >= LAST) {
-      setPlaying(false)
-      return
-    }
-    const t = setTimeout(() => setStep((s) => s + 1), DWELL[step] ?? 1200)
-    return () => clearTimeout(t)
-  }, [playing, step, reduce])
+  // prefers-reduced-motion → état final composé, sans scroll
+  const s = reduce ? LAST : step
 
-  const replay = () => {
-    setStep(0)
-    setPlaying(true)
+  // Scrolle vers l'étape i (clic sur un point de progression)
+  const scrollToStep = (i: number) => {
+    if (!containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const scrollable = containerRef.current.offsetHeight - window.innerHeight
+    const target = window.scrollY + rect.top + (i / LAST) * scrollable
+    window.scrollTo({ top: target, behavior: 'smooth' })
   }
 
-  const beat = BEATS[Math.min(step, LAST)]
-  const [hx, hy] = HEAD[Math.min(step, LAST)]
+  const beat = BEATS[Math.min(s, LAST)]
+  const [hx, hy] = HEAD[Math.min(s, LAST)]
   const headTone =
     beat.tone === 'guard'
       ? 'var(--color-amber, #fbbf24)'
@@ -204,257 +197,266 @@ export function HooksFlow() {
         : '#ffffff'
 
   return (
-    <div ref={rootRef} data-component="HooksFlow" className="mx-auto max-w-5xl">
-      {/* Intro */}
-      <div className="mb-8 text-center">
-        <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">
-          <Sparkles className="size-3.5" aria-hidden /> What hooks actually do
-        </p>
-        <h2 className="mx-auto mt-3 max-w-2xl text-balance text-2xl font-bold text-white sm:text-3xl">
-          Watch your hooks ship a feature
-        </h2>
-        <p className="mx-auto mt-3 max-w-2xl text-pretty text-sm leading-relaxed text-zinc-400 sm:text-base">
-          Hooks fire on the agent’s lifecycle — guardrails <em className="not-italic text-zinc-300">before</em> risky
-          actions, automation <em className="not-italic text-zinc-300">after</em>. Here’s one feature shipping under
-          their watch.
-        </p>
-      </div>
+    // Wrapper haut : fournit la zone scrollable qui pilote l'animation
+    <div
+      ref={containerRef}
+      data-component="HooksFlow"
+      style={{ height: SCROLL_HEIGHT }}
+    >
+      {/* Bloc sticky : reste à l'écran pendant tout le scroll */}
+      <div className="sticky top-0 flex h-screen flex-col items-center justify-center py-8">
+        <div className="mx-auto w-full max-w-5xl px-4">
 
-      {/* Le graphe — scrollable sur mobile (trop dense en dessous de sm) */}
-      <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:overflow-visible sm:px-0">
-      <div
-        className="relative w-full min-w-[680px] sm:min-w-0"
-        style={{ aspectRatio: `${VBW} / ${VBH}` }}
-      >
-        <svg
-          viewBox={`0 0 ${VBW} ${VBH}`}
-          className="absolute inset-0 h-full w-full overflow-visible"
-          aria-hidden
-        >
-          {/* main — segment amont (solide) */}
-          <line x1={24} y1={MAIN_Y} x2={NODES.guard.x} y2={MAIN_Y} stroke="#3a3a3a" strokeWidth={3} strokeLinecap="round" />
+          {/* Intro */}
+          <div className="mb-8 text-center">
+            <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+              <Sparkles className="size-3.5" aria-hidden /> What hooks actually do
+            </p>
+            <h2 className="mx-auto mt-3 max-w-2xl text-balance text-2xl font-bold text-white sm:text-3xl">
+              Watch your hooks ship a feature
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-pretty text-sm leading-relaxed text-zinc-400 sm:text-base">
+              Hooks fire on the agent's lifecycle — guardrails{' '}
+              <em className="not-italic text-zinc-300">before</em> risky actions, automation{' '}
+              <em className="not-italic text-zinc-300">after</em>. Scroll through one feature
+              shipping under their watch.
+            </p>
+          </div>
 
-          {/* main — chemin direct INTERDIT (pointillé, vire à l'amber au blocage) */}
-          <m.line
-            x1={NODES.guard.x}
-            y1={MAIN_Y}
-            x2={NODES.merge.x}
-            y2={MAIN_Y}
-            strokeWidth={2}
-            strokeDasharray="2 9"
-            strokeLinecap="round"
-            initial={false}
-            animate={{ stroke: step >= 1 ? 'rgba(251,191,36,0.45)' : '#272727' }}
-            transition={{ duration: duration.base }}
-          />
-
-          {/* embranchement main → worktree */}
-          <m.path
-            d={`M${NODES.guard.x} ${MAIN_Y} C ${NODES.guard.x + 34} ${MAIN_Y}, ${NODES.deps.x - 90} ${WT_Y}, ${NODES.deps.x - 64} ${WT_Y}`}
-            fill="none"
-            stroke="#e7e7e7"
-            strokeWidth={3}
-            strokeLinecap="round"
-            initial={false}
-            animate={{ pathLength: step >= 2 ? 1 : 0, opacity: step >= 2 ? 1 : 0 }}
-            transition={{ duration: duration.reveal, ease: EASE_OUT }}
-          />
-
-          {/* ligne du worktree */}
-          <m.line
-            x1={NODES.deps.x - 64}
-            y1={WT_Y}
-            x2={NODES.tests.x + 30}
-            y2={WT_Y}
-            stroke="#e7e7e7"
-            strokeWidth={3}
-            strokeLinecap="round"
-            initial={false}
-            animate={{ pathLength: step >= 2 ? 1 : 0, opacity: step >= 2 ? 1 : 0 }}
-            transition={{ duration: duration.reveal, ease: EASE_OUT }}
-          />
-
-          {/* merge worktree → main */}
-          <m.path
-            d={`M${NODES.tests.x + 30} ${WT_Y} C ${NODES.merge.x - 56} ${WT_Y}, ${NODES.merge.x - 40} ${MAIN_Y}, ${NODES.merge.x} ${MAIN_Y}`}
-            fill="none"
-            stroke="#34d399"
-            strokeWidth={3}
-            strokeLinecap="round"
-            initial={false}
-            animate={{ pathLength: step >= 7 ? 1 : 0, opacity: step >= 7 ? 1 : 0 }}
-            transition={{ duration: duration.reveal, ease: EASE_OUT }}
-          />
-          {/* main — aval, après le merge */}
-          <m.line
-            x1={NODES.merge.x}
-            y1={MAIN_Y}
-            x2={936}
-            y2={MAIN_Y}
-            stroke="#34d399"
-            strokeWidth={3}
-            strokeLinecap="round"
-            initial={false}
-            animate={{ opacity: step >= 7 ? 1 : 0 }}
-            transition={{ duration: duration.base }}
-          />
-
-          {/* labels de voie */}
-          <text x={24} y={MAIN_Y - 18} className="fill-zinc-500 font-mono text-[13px]">
-            main
-          </text>
-          <m.text
-            x={NODES.deps.x - 64}
-            y={WT_Y + 30}
-            className="fill-zinc-500 font-mono text-[13px]"
-            initial={false}
-            animate={{ opacity: step >= 2 ? 1 : 0 }}
-            transition={{ duration: duration.base }}
-          >
-            worktree
-          </m.text>
-
-          {/* nœuds (commits) */}
-          {MARKERS.map((mk) => {
-            const n = NODES[mk.key]
-            const on = step >= mk.at
-            const current = HEAD[step] && step === mk.at
-            const accent =
-              mk.key === 'guard' ? '#fbbf24' : mk.key === 'merge' ? '#34d399' : '#ffffff'
-            return (
-              <g key={mk.key}>
-                {/* halo */}
-                <m.circle
-                  cx={n.x}
-                  cy={n.y}
-                  r={16}
-                  fill={accent}
-                  initial={false}
-                  animate={{ opacity: current ? 0.16 : 0, scale: current ? 1 : 0.4 }}
-                  style={{ transformOrigin: `${n.x}px ${n.y}px` }}
-                  transition={spring.smooth}
-                />
-                <m.circle
-                  cx={n.x}
-                  cy={n.y}
-                  r={6.5}
-                  initial={false}
-                  animate={{
-                    fill: on ? accent : '#141414',
-                    stroke: on ? accent : '#3a3a3a',
-                    scale: on ? 1 : 0.78,
-                  }}
-                  strokeWidth={2.5}
-                  style={{ transformOrigin: `${n.x}px ${n.y}px` }}
-                  transition={spring.snappy}
-                />
-              </g>
-            )
-          })}
-
-          {/* tête de lecture */}
-          <m.g
-            initial={false}
-            animate={{ x: hx, y: hy }}
-            transition={{ ...spring.smooth, stiffness: 220, damping: 26 }}
-          >
-            <m.circle
-              r={13}
-              fill={headTone}
-              initial={false}
-              animate={{ opacity: [0.12, 0.28, 0.12], scale: [0.9, 1.15, 0.9] }}
-              transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-            />
-            <circle r={4.5} fill={headTone} />
-          </m.g>
-        </svg>
-
-        {/* repères texte sous les nœuds (overlay HTML, alignés sur le viewBox) */}
-        {MARKERS.map((mk) => {
-          const n = NODES[mk.key]
-          const on = step >= mk.at
-          const below = n.y === WT_Y
-          const Icon = mk.icon
-          return (
-            <m.div
-              key={mk.key}
-              className="pointer-events-none absolute flex w-16 -translate-x-1/2 flex-col items-center gap-1 sm:w-24"
-              style={{
-                left: pct(n.x, VBW),
-                top: pct(below ? n.y + 30 : n.y - 64, VBH),
-              }}
-              initial={false}
-              animate={{ opacity: on ? 1 : 0.32, y: 0 }}
-              transition={{ duration: duration.base, ease: EASE_OUT }}
+          {/* Le graphe — scrollable sur mobile (trop dense en dessous de sm) */}
+          <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:overflow-visible sm:px-0">
+            <div
+              className="relative w-full min-w-[680px] sm:min-w-0"
+              style={{ aspectRatio: `${VBW} / ${VBH}` }}
             >
-              <Icon
-                className={`size-4 ${on ? (mk.key === 'guard' ? 'text-amber-300' : mk.key === 'merge' ? 'text-emerald-300' : 'text-white') : 'text-zinc-600'}`}
+              <svg
+                viewBox={`0 0 ${VBW} ${VBH}`}
+                className="absolute inset-0 h-full w-full overflow-visible"
                 aria-hidden
-              />
-              <span
-                className={`font-mono text-[11px] ${on ? 'text-zinc-300' : 'text-zinc-600'}`}
               >
-                {mk.label}
-              </span>
-            </m.div>
-          )
-        })}
-      </div>
-      </div>
+                {/* main — segment amont (solide) */}
+                <line x1={24} y1={MAIN_Y} x2={NODES.guard.x} y2={MAIN_Y} stroke="#3a3a3a" strokeWidth={3} strokeLinecap="round" />
 
-      {/* Spotlight — le bénéfice du temps courant */}
-      <div className="relative mt-6 min-h-[148px] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 sm:p-6">
-        <AnimatePresence mode="wait">
-          <m.div
-            key={step}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: duration.base, ease: EASE_OUT }}
-            className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center"
-          >
-            <div>
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-1 font-mono text-[11px] ring-1 ${TONE_RING[beat.tone]} ${TONE_TEXT[beat.tone]}`}
-              >
-                {beat.ev}
-              </span>
-              <h3 className="mt-3 text-lg font-semibold text-white sm:text-xl">{beat.head}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">{beat.sub}</p>
-              <p className="mt-3 font-mono text-[11px] leading-relaxed text-zinc-600">{beat.hooks}</p>
+                {/* main — chemin direct INTERDIT (pointillé, vire à l'amber au blocage) */}
+                <m.line
+                  x1={NODES.guard.x}
+                  y1={MAIN_Y}
+                  x2={NODES.merge.x}
+                  y2={MAIN_Y}
+                  strokeWidth={2}
+                  strokeDasharray="2 9"
+                  strokeLinecap="round"
+                  initial={false}
+                  animate={{ stroke: s >= 1 ? 'rgba(251,191,36,0.45)' : '#272727' }}
+                  transition={{ duration: duration.base }}
+                />
+
+                {/* embranchement main → worktree */}
+                <m.path
+                  d={`M${NODES.guard.x} ${MAIN_Y} C ${NODES.guard.x + 34} ${MAIN_Y}, ${NODES.deps.x - 90} ${WT_Y}, ${NODES.deps.x - 64} ${WT_Y}`}
+                  fill="none"
+                  stroke="#e7e7e7"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  initial={false}
+                  animate={{ pathLength: s >= 2 ? 1 : 0, opacity: s >= 2 ? 1 : 0 }}
+                  transition={{ duration: duration.reveal, ease: EASE_OUT }}
+                />
+
+                {/* ligne du worktree */}
+                <m.line
+                  x1={NODES.deps.x - 64}
+                  y1={WT_Y}
+                  x2={NODES.tests.x + 30}
+                  y2={WT_Y}
+                  stroke="#e7e7e7"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  initial={false}
+                  animate={{ pathLength: s >= 2 ? 1 : 0, opacity: s >= 2 ? 1 : 0 }}
+                  transition={{ duration: duration.reveal, ease: EASE_OUT }}
+                />
+
+                {/* merge worktree → main */}
+                <m.path
+                  d={`M${NODES.tests.x + 30} ${WT_Y} C ${NODES.merge.x - 56} ${WT_Y}, ${NODES.merge.x - 40} ${MAIN_Y}, ${NODES.merge.x} ${MAIN_Y}`}
+                  fill="none"
+                  stroke="#34d399"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  initial={false}
+                  animate={{ pathLength: s >= 7 ? 1 : 0, opacity: s >= 7 ? 1 : 0 }}
+                  transition={{ duration: duration.reveal, ease: EASE_OUT }}
+                />
+
+                {/* main — aval, après le merge */}
+                <m.line
+                  x1={NODES.merge.x}
+                  y1={MAIN_Y}
+                  x2={936}
+                  y2={MAIN_Y}
+                  stroke="#34d399"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  initial={false}
+                  animate={{ opacity: s >= 7 ? 1 : 0 }}
+                  transition={{ duration: duration.base }}
+                />
+
+                {/* labels de voie */}
+                <text x={24} y={MAIN_Y - 18} className="fill-zinc-500 font-mono text-[13px]">
+                  main
+                </text>
+                <m.text
+                  x={NODES.deps.x - 64}
+                  y={WT_Y + 30}
+                  className="fill-zinc-500 font-mono text-[13px]"
+                  initial={false}
+                  animate={{ opacity: s >= 2 ? 1 : 0 }}
+                  transition={{ duration: duration.base }}
+                >
+                  worktree
+                </m.text>
+
+                {/* nœuds (commits) */}
+                {MARKERS.map((mk) => {
+                  const n = NODES[mk.key]
+                  const on = s >= mk.at
+                  const current = s === mk.at
+                  const accent =
+                    mk.key === 'guard' ? '#fbbf24' : mk.key === 'merge' ? '#34d399' : '#ffffff'
+                  return (
+                    <g key={mk.key}>
+                      {/* halo */}
+                      <m.circle
+                        cx={n.x}
+                        cy={n.y}
+                        r={16}
+                        fill={accent}
+                        initial={false}
+                        animate={{ opacity: current ? 0.16 : 0, scale: current ? 1 : 0.4 }}
+                        style={{ transformOrigin: `${n.x}px ${n.y}px` }}
+                        transition={spring.smooth}
+                      />
+                      <m.circle
+                        cx={n.x}
+                        cy={n.y}
+                        r={6.5}
+                        initial={false}
+                        animate={{
+                          fill: on ? accent : '#141414',
+                          stroke: on ? accent : '#3a3a3a',
+                          scale: on ? 1 : 0.78,
+                        }}
+                        strokeWidth={2.5}
+                        style={{ transformOrigin: `${n.x}px ${n.y}px` }}
+                        transition={spring.snappy}
+                      />
+                    </g>
+                  )
+                })}
+
+                {/* tête de lecture */}
+                <m.g
+                  initial={false}
+                  animate={{ x: hx, y: hy }}
+                  transition={{ ...spring.smooth, stiffness: 220, damping: 26 }}
+                >
+                  <m.circle
+                    r={13}
+                    fill={headTone}
+                    initial={false}
+                    animate={{ opacity: [0.12, 0.28, 0.12], scale: [0.9, 1.15, 0.9] }}
+                    transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                  <circle r={4.5} fill={headTone} />
+                </m.g>
+              </svg>
+
+              {/* repères texte sous les nœuds (overlay HTML, alignés sur le viewBox) */}
+              {MARKERS.map((mk) => {
+                const n = NODES[mk.key]
+                const on = s >= mk.at
+                const below = n.y === WT_Y
+                const Icon = mk.icon
+                return (
+                  <m.div
+                    key={mk.key}
+                    className="pointer-events-none absolute flex w-16 -translate-x-1/2 flex-col items-center gap-1 sm:w-24"
+                    style={{
+                      left: pct(n.x, VBW),
+                      top: pct(below ? n.y + 30 : n.y - 64, VBH),
+                    }}
+                    initial={false}
+                    animate={{ opacity: on ? 1 : 0.32, y: 0 }}
+                    transition={{ duration: duration.base, ease: EASE_OUT }}
+                  >
+                    <Icon
+                      className={`size-4 ${on ? (mk.key === 'guard' ? 'text-amber-300' : mk.key === 'merge' ? 'text-emerald-300' : 'text-white') : 'text-zinc-600'}`}
+                      aria-hidden
+                    />
+                    <span className={`font-mono text-[11px] ${on ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                      {mk.label}
+                    </span>
+                  </m.div>
+                )
+              })}
             </div>
-            <Proof step={step} />
-          </m.div>
-        </AnimatePresence>
-      </div>
+          </div>
 
-      {/* Progress + replay */}
-      <div className="mt-4 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          {BEATS.map((_, i) => (
+          {/* Spotlight — le bénéfice du temps courant */}
+          <div className="relative mt-6 min-h-[148px] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 sm:p-6">
+            <AnimatePresence mode="wait">
+              <m.div
+                key={s}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: duration.base, ease: EASE_OUT }}
+                className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center"
+              >
+                <div>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-1 font-mono text-[11px] ring-1 ${TONE_RING[beat.tone]} ${TONE_TEXT[beat.tone]}`}
+                  >
+                    {beat.ev}
+                  </span>
+                  <h3 className="mt-3 text-lg font-semibold text-white sm:text-xl">{beat.head}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">{beat.sub}</p>
+                  <p className="mt-3 font-mono text-[11px] leading-relaxed text-zinc-600">{beat.hooks}</p>
+                </div>
+                <Proof step={s} />
+              </m.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Progress + retour au début */}
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              {BEATS.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={`Étape ${i + 1}`}
+                  onClick={() => scrollToStep(i)}
+                  className="group p-1"
+                >
+                  <span
+                    className={`block h-1.5 rounded-full transition-all ${i === s ? 'w-6 bg-white' : i < s ? 'w-1.5 bg-zinc-500' : 'w-1.5 bg-zinc-700 group-hover:bg-zinc-500'}`}
+                  />
+                </button>
+              ))}
+            </div>
             <button
-              key={i}
               type="button"
-              aria-label={`Step ${i + 1}`}
-              onClick={() => {
-                setPlaying(false)
-                setStep(i)
-              }}
-              className="group p-1"
+              onClick={() => scrollToStep(0)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white"
             >
-              <span
-                className={`block h-1.5 rounded-full transition-all ${i === step ? 'w-6 bg-white' : i < step ? 'w-1.5 bg-zinc-500' : 'w-1.5 bg-zinc-700 group-hover:bg-zinc-500'}`}
-              />
+              <RotateCcw className="size-3.5" aria-hidden /> Back to start
             </button>
-          ))}
+          </div>
+
         </div>
-        <button
-          type="button"
-          onClick={replay}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white"
-        >
-          <RotateCcw className="size-3.5" aria-hidden /> Replay
-        </button>
       </div>
     </div>
   )
@@ -591,7 +593,7 @@ function Proof({ step }: { step: number }) {
   return (
     <div className={box}>
       <div className="rounded-xl bg-white/5 px-3 py-2">
-        <p className="font-mono text-[11px] text-zinc-300">“Add Stripe checkout”</p>
+        <p className="font-mono text-[11px] text-zinc-300">"Add Stripe checkout"</p>
       </div>
     </div>
   )
