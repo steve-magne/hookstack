@@ -195,13 +195,14 @@ export default async function HomePage() {
           </p>
         </section>
 
+        {/* StickyInstallBanner — dynamic, reflects live selection */}
+        <StickyInstallBanner />
+        
         {/* HooksFlowSection — animated explainer: what hooks bring to a project */}
         <section data-component="HooksFlowSection" className="pt-4 pb-16">
           <HooksFlow />
         </section>
 
-        {/* StickyInstallBanner — dynamic, reflects live selection */}
-        <StickyInstallBanner />
 
         {/* FineTuneSection */}
         <section data-component="FineTuneSection" className="pt-6">
