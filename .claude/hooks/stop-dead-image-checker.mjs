@@ -12,6 +12,15 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'ou
 // Capture ![alt](src) — uniquement les images (le ! est obligatoire)
 const IMAGE_RE = /!\[([^\]]*)\]\(([^)]+)\)/g;
 
+function stripCode(content) {
+  // Supprime les blocs de code clôturés (``` ou ~~~) — multiline
+  content = content.replace(/^```[\s\S]*?^```\s*$/gm, '');
+  content = content.replace(/^~~~[\s\S]*?^~~~\s*$/gm, '');
+  // Supprime les spans de code inline
+  content = content.replace(/`[^`\n]+`/g, '``');
+  return content;
+}
+
 function isExternal(src) {
   return src.startsWith('http') || src.startsWith('data:') || src.startsWith('//');
 }
@@ -42,7 +51,7 @@ export function run(_input, {
     let content;
     try { content = readFile(file, 'utf8'); } catch { continue; }
 
-    for (const [, , src] of content.matchAll(IMAGE_RE)) {
+    for (const [, , src] of stripCode(content).matchAll(IMAGE_RE)) {
       if (isExternal(src)) continue;
 
       let abs;

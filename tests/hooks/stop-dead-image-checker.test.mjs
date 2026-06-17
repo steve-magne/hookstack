@@ -147,6 +147,20 @@ describe('stop-dead-image-checker', () => {
     expect(dirs).not.toContain('/proj/.claude');
   });
 
+  it('ignore les images dans les blocs de code clôturés (```)', () => {
+    const deps = makeFs({
+      files: { '/proj/README.md': '```\n![cassé](./missing.png)\n```' },
+    });
+    expect(run({}, deps)).toBeNull();
+  });
+
+  it('ignore les images dans les spans de code inline (`)', () => {
+    const deps = makeFs({
+      files: { '/proj/README.md': 'Syntaxe : `![alt](src)` dans les Markdown' },
+    });
+    expect(run({}, deps)).toBeNull();
+  });
+
   it('signale plusieurs images cassées dans plusieurs fichiers', () => {
     const deps = makeFs({
       files: {
