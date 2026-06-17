@@ -1,5 +1,5 @@
 {
-  "total": 100,
+  "total": 101,
   "firstDate": "2026-05-29",
   "lastDate": "2026-06-13",
   "byDay": {
@@ -14,7 +14,7 @@
     "2026-06-10": 9,
     "2026-06-11": 1,
     "2026-06-12": 5,
-    "2026-06-13": 12
+    "2026-06-13": 13
   },
   "hooks": [
     {
@@ -561,6 +561,12 @@
       "slug": "pre-bash-block-curl-pipe-sh",
       "name": "Block remote script piped to shell",
       "category": "security",
+      "date": "2026-06-13"
+    },
+    {
+      "slug": "stop-dead-image-checker",
+      "name": "Dead image checker",
+      "category": "documentation",
       "date": "2026-06-13"
     },
     {

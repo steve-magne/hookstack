@@ -39,7 +39,7 @@ That's it. The CLI walks you through picking hooks, writes the `.mjs` scripts, a
 
 ## The HookStack evolution
 
-**100 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+**101 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">
