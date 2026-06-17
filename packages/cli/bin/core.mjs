@@ -265,6 +265,7 @@ export function buildSummaryRows(hooks, { root }) {
 // Keep as a plain object so it's trivially testable without any async/fetch.
 export const PREREQ_HINTS = {
   'stop-duplication-check': 'Requires jscpd:  pnpm add -D jscpd  (or npm install -g jscpd)',
+  'notification-sound':     'Optional: brew install terminal-notifier  (enables click-to-focus — opens your terminal or Claude app when notification fires)',
 }
 
 // Returns one hint entry per installed hook that has an external prerequisite.

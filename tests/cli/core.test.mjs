@@ -327,7 +327,25 @@ describe('buildPostInstallHints', () => {
     expect(hints[0].slug).toBe('stop-duplication-check')
   })
 
-  it('PREREQ_HINTS contient une commande pnpm ou npm', () => {
+  it('PREREQ_HINTS contient une commande pnpm ou npm pour jscpd', () => {
     expect(PREREQ_HINTS['stop-duplication-check']).toMatch(/pnpm|npm/)
+  })
+
+  it('retourne un hint pour notification-sound avec brew', () => {
+    const hints = buildPostInstallHints([{ slug: 'notification-sound' }])
+    expect(hints).toHaveLength(1)
+    expect(hints[0].slug).toBe('notification-sound')
+    expect(hints[0].hint).toContain('brew install terminal-notifier')
+  })
+
+  it('hint notification-sound mentionne le bénéfice click-to-focus', () => {
+    expect(PREREQ_HINTS['notification-sound']).toMatch(/click-to-focus/)
+  })
+
+  it('retourne les deux hints si les deux hooks sont présents', () => {
+    const hooks = [{ slug: 'stop-duplication-check' }, { slug: 'notification-sound' }]
+    const hints = buildPostInstallHints(hooks)
+    expect(hints).toHaveLength(2)
+    expect(hints.map(h => h.slug)).toEqual(['stop-duplication-check', 'notification-sound'])
   })
 })
