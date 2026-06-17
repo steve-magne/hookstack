@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // Redirect old locale-prefixed URLs to root
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const match = pathname.match(/^\/(fr|en)(\/.*)?$/)
   if (match) {

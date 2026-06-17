@@ -6,6 +6,7 @@ name: CI
 #     (champ requis manquant, énumération invalide, champ inconnu)
 #   - sync-hooks --check : échoue si registry.json a dérivé des .mjs sur disque
 #     (les .mjs sont la source de vérité du code ; code_snippet en dérive)
+#   - ci-check-content : liens relatifs cassés + images manquantes dans tous les .md/.mdx
 
 on:
   push:
@@ -52,3 +53,6 @@ jobs:
 
       - name: Hooks timeline drift guard
         run: node .claude/hooks-timeline.mjs --check
+
+      - name: Dead link & image check (full repo)
+        run: node scripts/ci-check-content.mjs
