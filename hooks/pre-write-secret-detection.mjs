@@ -1,1 +1,0 @@
-../.claude/hooks/pre-write-secret-detection.mjs

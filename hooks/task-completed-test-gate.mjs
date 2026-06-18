@@ -1,1 +1,0 @@
-../.claude/hooks/task-completed-test-gate.mjs

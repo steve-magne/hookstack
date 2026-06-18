@@ -1,1 +1,0 @@
-../.claude/hooks/stop-dead-link-checker.mjs

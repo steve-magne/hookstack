@@ -1,1 +1,0 @@
-../.claude/hooks/run-tests.mjs

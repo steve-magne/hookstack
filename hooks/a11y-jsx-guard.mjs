@@ -1,1 +1,0 @@
-../.claude/hooks/a11y-jsx-guard.mjs

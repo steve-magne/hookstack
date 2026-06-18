@@ -1,1 +1,0 @@
-../.claude/hooks/registry-auto-sync.mjs

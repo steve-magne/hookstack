@@ -1,1 +1,0 @@
-../.claude/hooks/worktree-remove-cleanup.mjs

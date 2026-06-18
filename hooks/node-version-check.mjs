@@ -1,1 +1,0 @@
-../.claude/hooks/node-version-check.mjs

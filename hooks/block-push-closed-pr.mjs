@@ -1,1 +1,0 @@
-../.claude/hooks/block-push-closed-pr.mjs

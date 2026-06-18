@@ -1,1 +1,0 @@
-../.claude/hooks/auto-allow-exit-plan.mjs

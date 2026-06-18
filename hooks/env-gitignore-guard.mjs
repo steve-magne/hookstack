@@ -1,1 +1,0 @@
-../.claude/hooks/env-gitignore-guard.mjs

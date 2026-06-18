@@ -1,1 +1,0 @@
-../.claude/hooks/post-tool-batch-typecheck.mjs

@@ -1,1 +1,0 @@
-../.claude/hooks/setup-worktree-env.mjs

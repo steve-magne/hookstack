@@ -1,1 +1,0 @@
-../.claude/hooks/stop-seo-structure-check.mjs

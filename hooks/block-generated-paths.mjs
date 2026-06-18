@@ -1,1 +1,0 @@
-../.claude/hooks/block-generated-paths.mjs

@@ -1,1 +1,0 @@
-../.claude/hooks/instructions-loaded-audit-log.mjs

@@ -1,1 +1,0 @@
-../.claude/hooks/tool-usage.mjs

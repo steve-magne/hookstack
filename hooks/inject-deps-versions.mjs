@@ -1,1 +1,0 @@
-../.claude/hooks/inject-deps-versions.mjs

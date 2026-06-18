@@ -1,1 +1,0 @@
-../.claude/hooks/post-compact-save-summary.mjs

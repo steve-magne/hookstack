@@ -1,1 +1,0 @@
-../.claude/hooks/eslint-check.mjs

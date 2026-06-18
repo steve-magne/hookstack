@@ -1,1 +1,0 @@
-../.claude/hooks/seo-next-image-guard.mjs

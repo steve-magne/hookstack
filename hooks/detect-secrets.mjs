@@ -1,1 +1,0 @@
-../.claude/hooks/detect-secrets.mjs

@@ -1,1 +1,0 @@
-../.claude/hooks/file-changed-docs-consistency.mjs

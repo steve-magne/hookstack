@@ -1,1 +1,0 @@
-../.claude/hooks/seo-page-metadata-guard.mjs

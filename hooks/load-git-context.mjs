@@ -1,1 +1,0 @@
-../.claude/hooks/load-git-context.mjs

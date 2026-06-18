@@ -1,1 +1,0 @@
-../.claude/hooks/file-changed-run-tests.mjs

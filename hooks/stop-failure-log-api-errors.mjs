@@ -1,1 +1,0 @@
-../.claude/hooks/stop-failure-log-api-errors.mjs

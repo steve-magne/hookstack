@@ -5,39 +5,39 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/detect-secrets.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/detect-secrets.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/block-destructive.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/block-destructive.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/guard-push-main.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/guard-push-main.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/enforce-package-managers.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/enforce-package-managers.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/enforce-uv.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/enforce-uv.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/block-push-closed-pr.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/block-push-closed-pr.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/block-curl-pipe-sh.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/block-curl-pipe-sh.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/guard-force-push-any.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/guard-force-push-any.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/warn-sudo.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/warn-sudo.mjs\""
         }
       ]
     },
@@ -46,27 +46,27 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/protect-paths.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/protect-paths.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/protect-lockfiles.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/protect-lockfiles.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/pre-write-main-guard.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/pre-write-main-guard.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/pre-write-secret-detection.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/pre-write-secret-detection.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/block-generated-paths.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/block-generated-paths.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/env-gitignore-guard.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/env-gitignore-guard.mjs\""
         }
       ]
     },
@@ -75,7 +75,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/worktree-guard.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/worktree-guard.mjs\""
         }
       ]
     },
@@ -84,7 +84,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/websearch-temporal-context.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/websearch-temporal-context.mjs\""
         }
       ]
     },
@@ -93,19 +93,19 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/file-to-markdown.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/file-to-markdown.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/pre-read-block-binary.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/pre-read-block-binary.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/pre-read-json-csv-compact.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/pre-read-json-csv-compact.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/pre-read-env-guard.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/pre-read-env-guard.mjs\""
         }
       ]
     },
@@ -114,7 +114,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/pre-webfetch-html-to-markdown.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/pre-webfetch-html-to-markdown.mjs\""
         }
       ]
     },
@@ -123,7 +123,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/block-huge-write.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/block-huge-write.mjs\""
         }
       ]
     }
@@ -133,7 +133,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/inject-conventions.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/inject-conventions.mjs\""
         }
       ]
     },
@@ -141,7 +141,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/inject-datetime.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/inject-datetime.mjs\""
         }
       ]
     },
@@ -149,7 +149,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/user-prompt-name-agent.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/user-prompt-name-agent.mjs\""
         }
       ]
     },
@@ -157,7 +157,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/inject-deps-versions.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/inject-deps-versions.mjs\""
         }
       ]
     }
@@ -167,7 +167,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/load-git-context.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/load-git-context.mjs\""
         }
       ]
     },
@@ -175,7 +175,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/setup-worktree-env.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/setup-worktree-env.mjs\""
         }
       ]
     },
@@ -183,7 +183,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/update-deps.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/update-deps.mjs\""
         }
       ]
     },
@@ -191,7 +191,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/setup-check-deps.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/setup-check-deps.mjs\""
         }
       ]
     },
@@ -200,7 +200,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/reinject-after-compact.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/reinject-after-compact.mjs\""
         }
       ]
     },
@@ -209,7 +209,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/setup-install-deps.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/setup-install-deps.mjs\""
         }
       ]
     },
@@ -217,7 +217,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/session-start-pull-if-main.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/session-start-pull-if-main.mjs\""
         }
       ]
     },
@@ -225,7 +225,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/session-start-worktree-if-main.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/session-start-worktree-if-main.mjs\""
         }
       ]
     },
@@ -233,7 +233,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/session-start-stash-warning.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/session-start-stash-warning.mjs\""
         }
       ]
     },
@@ -241,7 +241,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/agents-md-loader.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/agents-md-loader.mjs\""
         }
       ]
     },
@@ -249,7 +249,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/node-version-check.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/node-version-check.mjs\""
         }
       ]
     }
@@ -260,51 +260,51 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/autoformat.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/autoformat.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/eslint-check.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/eslint-check.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/typecheck.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/typecheck.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/ruff-format.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/ruff-format.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/ruff-check.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/ruff-check.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/pyright-check.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/pyright-check.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/post-edit-conflict-marker-check.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/post-edit-conflict-marker-check.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/seo-page-metadata-guard.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/seo-page-metadata-guard.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/seo-next-image-guard.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/seo-next-image-guard.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/seo-heading-hierarchy-guard.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/seo-heading-hierarchy-guard.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/a11y-jsx-guard.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/a11y-jsx-guard.mjs\""
         },
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/debug-statement-guard.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/debug-statement-guard.mjs\""
         }
       ]
     }
@@ -314,7 +314,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/run-tests.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/run-tests.mjs\""
         }
       ]
     },
@@ -322,7 +322,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/quality-check.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/quality-check.mjs\""
         }
       ]
     },
@@ -330,7 +330,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/missing-test-detection.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/missing-test-detection.mjs\""
         }
       ]
     },
@@ -338,7 +338,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/per-file-coverage.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/per-file-coverage.mjs\""
         }
       ]
     },
@@ -346,7 +346,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/per-file-lint.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/per-file-lint.mjs\""
         }
       ]
     },
@@ -354,7 +354,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/session-dedup-autodisable.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/session-dedup-autodisable.mjs\""
         }
       ]
     },
@@ -362,7 +362,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/stop-sound.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/stop-sound.mjs\""
         }
       ]
     },
@@ -370,7 +370,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/pytest.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/pytest.mjs\""
         }
       ]
     },
@@ -378,7 +378,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/stop-duplication-check.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/stop-duplication-check.mjs\""
         }
       ]
     },
@@ -386,7 +386,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/stop-seo-structure-check.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/stop-seo-structure-check.mjs\""
         }
       ]
     },
@@ -394,7 +394,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/stop-force-implementation-doc.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/stop-force-implementation-doc.mjs\""
         }
       ]
     },
@@ -402,7 +402,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/stop-dead-link-checker.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/stop-dead-link-checker.mjs\""
         }
       ]
     },
@@ -410,7 +410,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/stop-dead-image-checker.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/stop-dead-image-checker.mjs\""
         }
       ]
     }
@@ -420,7 +420,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/audit-log.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/audit-log.mjs\""
         }
       ]
     },
@@ -428,7 +428,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/session-end-cleanup.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/session-end-cleanup.mjs\""
         }
       ]
     }
@@ -438,7 +438,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/notification-sound.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/notification-sound.mjs\""
         }
       ]
     }
@@ -448,7 +448,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/pre-compact-backup.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/pre-compact-backup.mjs\""
         }
       ]
     }
@@ -458,7 +458,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/permission-auto-allow.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/permission-auto-allow.mjs\""
         }
       ]
     },
@@ -467,7 +467,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/auto-allow-exit-plan.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/auto-allow-exit-plan.mjs\""
         }
       ]
     }
@@ -477,7 +477,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/post-tool-failure-log.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/post-tool-failure-log.mjs\""
         }
       ]
     }
@@ -487,7 +487,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/config-audit-log.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/config-audit-log.mjs\""
         }
       ]
     }
@@ -497,7 +497,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/reload-direnv.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/reload-direnv.mjs\""
         }
       ]
     }
@@ -507,7 +507,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/post-tool-batch-typecheck.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/post-tool-batch-typecheck.mjs\""
         }
       ]
     }
@@ -518,7 +518,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/file-changed-reload-env.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/file-changed-reload-env.mjs\""
         }
       ]
     }
@@ -528,7 +528,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/worktree-remove-cleanup.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/worktree-remove-cleanup.mjs\""
         }
       ]
     }
@@ -538,7 +538,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/post-compact-save-summary.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/post-compact-save-summary.mjs\""
         }
       ]
     }
@@ -549,7 +549,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/stop-failure-rate-limit-alert.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/stop-failure-rate-limit-alert.mjs\""
         }
       ]
     },
@@ -557,7 +557,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/stop-failure-log-api-errors.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/stop-failure-log-api-errors.mjs\""
         }
       ]
     }
@@ -567,7 +567,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/task-completed-test-gate.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/task-completed-test-gate.mjs\""
         }
       ]
     }
@@ -577,7 +577,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/permission-denied-auto-mode-log.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/permission-denied-auto-mode-log.mjs\""
         }
       ]
     }
@@ -587,7 +587,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/message-display-redact-secrets.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/message-display-redact-secrets.mjs\""
         }
       ]
     },
@@ -595,7 +595,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/message-display-redact-pii.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/message-display-redact-pii.mjs\""
         }
       ]
     }
@@ -605,7 +605,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$PLUGIN_ROOT/hooks/instructions-loaded-audit-log.mjs\""
+          "command": "node \"$PLUGIN_ROOT/.claude/hooks/instructions-loaded-audit-log.mjs\""
         }
       ]
     }

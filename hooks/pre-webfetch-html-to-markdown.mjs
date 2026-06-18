@@ -1,1 +1,0 @@
-../.claude/hooks/pre-webfetch-html-to-markdown.mjs

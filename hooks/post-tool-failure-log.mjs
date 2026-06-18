@@ -1,1 +1,0 @@
-../.claude/hooks/post-tool-failure-log.mjs

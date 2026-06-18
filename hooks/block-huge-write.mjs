@@ -1,1 +1,0 @@
-../.claude/hooks/block-huge-write.mjs

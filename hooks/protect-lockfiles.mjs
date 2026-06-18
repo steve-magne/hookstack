@@ -1,1 +1,0 @@
-../.claude/hooks/protect-lockfiles.mjs

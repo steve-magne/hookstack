@@ -1,1 +1,0 @@
-../.claude/hooks/guard-push-main.mjs

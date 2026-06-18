@@ -1,1 +1,0 @@
-../.claude/hooks/per-file-coverage.mjs
