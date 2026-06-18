@@ -34,7 +34,7 @@ CHANGED=$(git diff --cached --name-only 2>/dev/null || true)
 
 if echo "$CHANGED" | grep -qE '(registry/registry\\.json|\\.claude/hooks/.*\\.mjs)'; then
   node .claude/sync-hooks.mjs
-  git add hooks/hooks.json .claude/settings.json
+  git add .claude/settings.json
 fi
 `;
 

@@ -23,7 +23,6 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
-import { createHash } from 'crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -32,7 +31,6 @@ const CHECK = process.argv.includes('--check');
 
 const REGISTRY_PATH = resolve(ROOT, 'registry/registry.json');
 const SETTINGS_PATH = resolve(ROOT, '.claude/settings.json');
-const PLUGIN_HOOKS_PATH = resolve(ROOT, 'hooks/hooks.json');
 
 // Stacks à exclure : si tous les éléments sont dans cette liste, le hook est exclu
 const EXCLUDED_STACKS = new Set(['python', 'java']);
@@ -297,65 +295,9 @@ events.forEach((evt) => {
   console.log(`  ${evt} : ${total} hook(s)`);
 });
 
-// ── Étape 3 : générer / vérifier hooks/hooks.json (plugin manifest) ──────────
-// hooks/hooks.json expose les 83 hooks default_on pour le système /plugin de
-// Claude Code, Codex et Copilot. Les chemins utilisent $PLUGIN_ROOT/.claude/hooks/
-// car le plugin est installé depuis le repo entier (scripts déjà présents).
-
-export function buildPluginHooks(reg) {
-  const byEvent = {};
-  for (const hook of reg) {
-    if (!hook.default_on) continue;
-    const ev = hook.hook_type;
-    const script = basename(hook.implementation.script_path);
-    const matcher = hook.trigger;
-    const command = `node "$PLUGIN_ROOT/.claude/hooks/${script}"`;
-
-    if (!byEvent[ev]) byEvent[ev] = [];
-    let group = byEvent[ev].find((g) => g.matcher === matcher);
-    if (!group) {
-      group = matcher && matcher !== '*' ? { matcher, hooks: [] } : { hooks: [] };
-      byEvent[ev].push(group);
-    }
-    group.hooks.push({ type: 'command', command });
-  }
-  return byEvent;
-}
-
-const generated = buildPluginHooks(registry);
-const generatedStr = JSON.stringify(generated, null, 2) + '\n';
-
-let pluginDrift = false;
-console.log('\n── hooks/hooks.json (plugin) ──');
-
-if (existsSync(PLUGIN_HOOKS_PATH)) {
-  const onDisk = readFileSync(PLUGIN_HOOKS_PATH, 'utf8');
-  const hashDisk = createHash('sha256').update(onDisk).digest('hex');
-  const hashGen = createHash('sha256').update(generatedStr).digest('hex');
-  if (hashDisk !== hashGen) {
-    pluginDrift = true;
-    const defaultOnCount = registry.filter((h) => h.default_on).length;
-    if (CHECK) {
-      console.error(`  ✗ hooks/hooks.json a dérivé du registre (${defaultOnCount} hooks default_on).`);
-    } else {
-      console.log(`  ${DRY_RUN ? '[dry] ' : ''}↻ hooks/hooks.json mis à jour (${defaultOnCount} hooks)`);
-    }
-  } else {
-    console.log(`  ✓ hooks/hooks.json synchrone`);
-  }
-} else {
-  pluginDrift = true;
-  if (CHECK) {
-    console.error('  ✗ hooks/hooks.json absent.');
-  } else {
-    const defaultOnCount = registry.filter((h) => h.default_on).length;
-    console.log(`  ${DRY_RUN ? '[dry] ' : ''}✎ hooks/hooks.json créé (${defaultOnCount} hooks)`);
-  }
-}
-
 // ── Mode --check : pas d'écriture, exit selon dérive ─────────────────────────
 if (CHECK) {
-  const totalDrift = drift + cmdDrift + (pluginDrift ? 1 : 0);
+  const totalDrift = drift + cmdDrift;
   if (totalDrift > 0) {
     if (drift > 0) {
       console.error(`\n✗ ${drift} dérive(s) entre registry.json et les .mjs sur disque.`);
@@ -363,14 +305,10 @@ if (CHECK) {
     if (cmdDrift > 0) {
       console.error(`\n✗ ${cmdDrift} commande(s) malformée(s) dans implementation.config (ex. "node bash …").`);
     }
-    if (pluginDrift) {
-      console.error('\n✗ hooks/hooks.json a dérivé du registre.');
-    }
     console.error("  Lancer 'node .claude/sync-hooks.mjs' pour resynchroniser.");
     process.exit(1);
   }
   console.log('\n✓ registry.json synchrone avec les scripts disque.');
-  console.log('✓ hooks/hooks.json synchrone avec le registre.');
   process.exit(0);
 }
 
@@ -386,10 +324,6 @@ if (!DRY_RUN) {
   }
   writeFileSync(SETTINGS_PATH, JSON.stringify(newSettings, null, 2) + '\n', 'utf8');
   console.log('✓ .claude/settings.json mis à jour');
-  if (pluginDrift) {
-    writeFileSync(PLUGIN_HOOKS_PATH, generatedStr, 'utf8');
-    console.log('✓ hooks/hooks.json mis à jour');
-  }
 } else {
   console.log('\n[dry-run] aucune écriture effectuée');
 }
