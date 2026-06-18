@@ -1,0 +1,1 @@
+../.claude/hooks/registry-validate-on-change.mjs

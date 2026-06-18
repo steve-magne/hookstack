@@ -1,0 +1,1 @@
+../.claude/hooks/enforce-uv.mjs

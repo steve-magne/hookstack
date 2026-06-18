@@ -1,0 +1,1 @@
+../.claude/hooks/seo-heading-hierarchy-guard.mjs

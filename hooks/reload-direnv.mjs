@@ -1,0 +1,1 @@
+../.claude/hooks/reload-direnv.mjs

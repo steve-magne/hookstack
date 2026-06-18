@@ -1,0 +1,1 @@
+../.claude/hooks/file-changed-reload-env.mjs

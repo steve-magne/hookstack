@@ -1,0 +1,1 @@
+../.claude/hooks/per-file-lint.mjs

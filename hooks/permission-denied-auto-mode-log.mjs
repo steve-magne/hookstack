@@ -1,0 +1,1 @@
+../.claude/hooks/permission-denied-auto-mode-log.mjs

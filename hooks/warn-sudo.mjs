@@ -1,0 +1,1 @@
+../.claude/hooks/warn-sudo.mjs

@@ -1,0 +1,1 @@
+../.claude/hooks/motion-rules-guard.mjs

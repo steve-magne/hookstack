@@ -1,0 +1,1 @@
+../.claude/hooks/pre-compact-backup.mjs

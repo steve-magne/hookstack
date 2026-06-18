@@ -1,0 +1,1 @@
+../.claude/hooks/pre-read-block-binary.mjs

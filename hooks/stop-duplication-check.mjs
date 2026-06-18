@@ -1,0 +1,1 @@
+../.claude/hooks/stop-duplication-check.mjs

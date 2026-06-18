@@ -1,0 +1,1 @@
+../.claude/hooks/worktree-guard.mjs

@@ -1,0 +1,1 @@
+../.claude/hooks/setup-install-deps.mjs

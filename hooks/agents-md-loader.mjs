@@ -1,0 +1,1 @@
+../.claude/hooks/agents-md-loader.mjs

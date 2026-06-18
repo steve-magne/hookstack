@@ -1,0 +1,1 @@
+../.claude/hooks/stop-dead-image-checker.mjs

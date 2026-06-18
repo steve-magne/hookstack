@@ -1,0 +1,613 @@
+{
+  "PreToolUse": [
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/detect-secrets.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/block-destructive.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/guard-push-main.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/enforce-package-managers.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/enforce-uv.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/block-push-closed-pr.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/block-curl-pipe-sh.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/guard-force-push-any.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/warn-sudo.mjs\""
+        }
+      ]
+    },
+    {
+      "matcher": "Write|Edit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/protect-paths.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/protect-lockfiles.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/pre-write-main-guard.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/pre-write-secret-detection.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/block-generated-paths.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/env-gitignore-guard.mjs\""
+        }
+      ]
+    },
+    {
+      "matcher": "Edit|Write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/worktree-guard.mjs\""
+        }
+      ]
+    },
+    {
+      "matcher": "WebSearch",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/websearch-temporal-context.mjs\""
+        }
+      ]
+    },
+    {
+      "matcher": "Read",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/file-to-markdown.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/pre-read-block-binary.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/pre-read-json-csv-compact.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/pre-read-env-guard.mjs\""
+        }
+      ]
+    },
+    {
+      "matcher": "WebFetch",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/pre-webfetch-html-to-markdown.mjs\""
+        }
+      ]
+    },
+    {
+      "matcher": "Write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/block-huge-write.mjs\""
+        }
+      ]
+    }
+  ],
+  "UserPromptSubmit": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/inject-conventions.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/inject-datetime.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/user-prompt-name-agent.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/inject-deps-versions.mjs\""
+        }
+      ]
+    }
+  ],
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/load-git-context.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/setup-worktree-env.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/update-deps.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/setup-check-deps.mjs\""
+        }
+      ]
+    },
+    {
+      "matcher": "compact",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/reinject-after-compact.mjs\""
+        }
+      ]
+    },
+    {
+      "matcher": "startup",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/setup-install-deps.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/session-start-pull-if-main.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/session-start-worktree-if-main.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/session-start-stash-warning.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/agents-md-loader.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/node-version-check.mjs\""
+        }
+      ]
+    }
+  ],
+  "PostToolUse": [
+    {
+      "matcher": "Write|Edit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/autoformat.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/eslint-check.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/typecheck.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/ruff-format.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/ruff-check.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/pyright-check.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/post-edit-conflict-marker-check.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/seo-page-metadata-guard.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/seo-next-image-guard.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/seo-heading-hierarchy-guard.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/a11y-jsx-guard.mjs\""
+        },
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/debug-statement-guard.mjs\""
+        }
+      ]
+    }
+  ],
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/run-tests.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/quality-check.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/missing-test-detection.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/per-file-coverage.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/per-file-lint.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/session-dedup-autodisable.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/stop-sound.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/pytest.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/stop-duplication-check.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/stop-seo-structure-check.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/stop-force-implementation-doc.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/stop-dead-link-checker.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/stop-dead-image-checker.mjs\""
+        }
+      ]
+    }
+  ],
+  "SessionEnd": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/audit-log.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/session-end-cleanup.mjs\""
+        }
+      ]
+    }
+  ],
+  "Notification": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/notification-sound.mjs\""
+        }
+      ]
+    }
+  ],
+  "PreCompact": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/pre-compact-backup.mjs\""
+        }
+      ]
+    }
+  ],
+  "PermissionRequest": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/permission-auto-allow.mjs\""
+        }
+      ]
+    },
+    {
+      "matcher": "ExitPlanMode",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/auto-allow-exit-plan.mjs\""
+        }
+      ]
+    }
+  ],
+  "PostToolUseFailure": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/post-tool-failure-log.mjs\""
+        }
+      ]
+    }
+  ],
+  "ConfigChange": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/config-audit-log.mjs\""
+        }
+      ]
+    }
+  ],
+  "CwdChanged": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/reload-direnv.mjs\""
+        }
+      ]
+    }
+  ],
+  "PostToolBatch": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/post-tool-batch-typecheck.mjs\""
+        }
+      ]
+    }
+  ],
+  "FileChanged": [
+    {
+      "matcher": ".env|.env.local|.envrc",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/file-changed-reload-env.mjs\""
+        }
+      ]
+    }
+  ],
+  "WorktreeRemove": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/worktree-remove-cleanup.mjs\""
+        }
+      ]
+    }
+  ],
+  "PostCompact": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/post-compact-save-summary.mjs\""
+        }
+      ]
+    }
+  ],
+  "StopFailure": [
+    {
+      "matcher": "rate_limit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/stop-failure-rate-limit-alert.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/stop-failure-log-api-errors.mjs\""
+        }
+      ]
+    }
+  ],
+  "TaskCompleted": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/task-completed-test-gate.mjs\""
+        }
+      ]
+    }
+  ],
+  "PermissionDenied": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/permission-denied-auto-mode-log.mjs\""
+        }
+      ]
+    }
+  ],
+  "MessageDisplay": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/message-display-redact-secrets.mjs\""
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/message-display-redact-pii.mjs\""
+        }
+      ]
+    }
+  ],
+  "InstructionsLoaded": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$PLUGIN_ROOT/hooks/instructions-loaded-audit-log.mjs\""
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+../.claude/hooks/session-start-pull-if-main.mjs

@@ -1,0 +1,1 @@
+../.claude/hooks/guard-force-push-any.mjs

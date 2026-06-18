@@ -1,0 +1,1 @@
+../.claude/hooks/post-edit-conflict-marker-check.mjs

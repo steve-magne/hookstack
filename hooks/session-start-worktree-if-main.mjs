@@ -1,0 +1,1 @@
+../.claude/hooks/session-start-worktree-if-main.mjs

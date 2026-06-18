@@ -1,0 +1,1 @@
+../.claude/hooks/notify-slack.mjs

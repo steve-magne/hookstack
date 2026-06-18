@@ -1,0 +1,1 @@
+../.claude/hooks/pre-read-env-guard.mjs

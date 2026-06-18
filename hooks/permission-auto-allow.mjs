@@ -1,0 +1,1 @@
+../.claude/hooks/permission-auto-allow.mjs

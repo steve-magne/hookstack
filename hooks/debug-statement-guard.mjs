@@ -1,0 +1,1 @@
+../.claude/hooks/debug-statement-guard.mjs

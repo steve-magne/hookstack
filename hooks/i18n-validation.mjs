@@ -1,0 +1,1 @@
+../.claude/hooks/i18n-validation.mjs

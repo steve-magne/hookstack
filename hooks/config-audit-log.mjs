@@ -1,0 +1,1 @@
+../.claude/hooks/config-audit-log.mjs

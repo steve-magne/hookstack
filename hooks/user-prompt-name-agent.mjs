@@ -1,0 +1,1 @@
+../.claude/hooks/user-prompt-name-agent.mjs

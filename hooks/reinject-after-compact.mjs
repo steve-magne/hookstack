@@ -1,0 +1,1 @@
+../.claude/hooks/reinject-after-compact.mjs

@@ -1,0 +1,1 @@
+../.claude/hooks/block-curl-pipe-sh.mjs
