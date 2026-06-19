@@ -33,6 +33,50 @@ npx hookstack-cli@latest install
 That's it. The CLI walks you through picking hooks, writes the `.mjs` scripts, and patches the right config file — no manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent.
 
 >Want to fine-tune your Hookstack? Go to **[hookstack.app](https://www.hookstack.app)** — browse the full catalogue, select exactly what you need, copy the generated command and paste it in your terminal
+
+---
+
+## Install via /plugin
+
+Prefer your agent's native plugin command? Hookstack ships a plugin manifest for Claude Code, Codex, and GitHub Copilot.
+
+### Claude Code
+
+```bash
+/plugin install hookstack@steve-magne
+```
+
+Or via the CLI:
+
+```bash
+claude plugin install hookstack@steve-magne
+```
+
+### OpenAI Codex
+
+```bash
+/plugin install hookstack@steve-magne
+```
+
+Or via the CLI:
+
+```bash
+codex plugin install hookstack@steve-magne
+```
+
+### GitHub Copilot
+
+Add the Hookstack marketplace, then install:
+
+```bash
+copilot plugin marketplace add steve-magne/hookstack
+copilot plugin install hookstack
+```
+
+---
+
+**What you get either way:** the same 83 production-ready hooks, wired into your agent lifecycle automatically. The `/plugin` path keeps the scripts inside your agent's plugin directory rather than your project — ideal for global installs or when you don't want hook files checked into your repo.
+
 ---
 
 <!-- HOOKS_TIMELINE:START -->
