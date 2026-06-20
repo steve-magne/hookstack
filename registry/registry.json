@@ -4455,6 +4455,52 @@
     ]
   },
   {
+    "slug": "post-edit-visual-check",
+    "name": "Front-end visual check reminder",
+    "benefit": "Never ship UI you only saw in the diff",
+    "category": "workflow",
+    "default_on": false,
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "description": "After editing any front-end file — styles (css/scss/less…), markup (html), or components (tsx/jsx/vue/svelte/astro) — injects a reminder to verify the change actually renders in the browser. Detects the file kind by extension and tells the agent to load it in the preview, screenshot/snapshot it, check the console, and test the affected interaction or responsive state instead of assuming the diff looks right. Universal: fires on any project, no stack required.",
+    "use_cases": [
+      "Catch layout, spacing, or color regressions the diff hides",
+      "Stop the agent from marking a UI change done without looking at it",
+      "Prompt a browser preview + screenshot on every css/html/component edit"
+    ],
+    "implementation": {
+      "type": "settings_json",
+      "script_path": ".claude/hooks/post-edit-visual-check.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// @hookstack post-edit-visual-check\n// Rappelle de vérifier le rendu UI après l'édition d'un fichier front-end\n// (PostToolUse Write|Edit). Détecte le type de fichier par extension — styles\n// (css/scss…), markup (html), composants (tsx/jsx/vue/svelte/astro) — et injecte\n// un additionalContext demandant à l'agent de constater le rendu dans le\n// navigateur (preview/screenshot) plutôt que de supposer que ça marche.\nimport { readFileSync } from 'fs';\nimport { fileURLToPath } from 'url';\n\n// Famille de fichiers front-end → libellé du type de changement à vérifier.\nconst FRONTEND_KINDS = [\n  { re: /\\.(css|scss|sass|less|styl|pcss)$/i, kind: 'styles' },\n  { re: /\\.(html?|svelte|vue|astro)$/i, kind: 'markup/component' },\n  { re: /\\.[jt]sx$/i, kind: 'component' },\n];\n\nexport function run(input) {\n  const filePath = input.tool_input?.file_path ?? '';\n  const match = FRONTEND_KINDS.find(({ re }) => re.test(filePath));\n  if (!match) return null;\n\n  const name = filePath.split('/').pop();\n  return {\n    hookSpecificOutput: {\n      hookEventName: 'PostToolUse',\n      additionalContext:\n        `You edited a front-end file (${name} — ${match.kind}). ` +\n        'Before considering this done, verify the change actually renders correctly in the browser: ' +\n        'load it in the preview and inspect it (snapshot/screenshot, check the console for errors, ' +\n        'and test the affected interaction/responsive state). ' +\n        'Do not assume the UI looks right from the diff alone — look at it.',\n    },\n  };\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n  const input = JSON.parse(readFileSync(0, 'utf8'));\n  const result = run(input);\n  if (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "Write|Edit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-edit-visual-check.mjs"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "test_snippet": "// @vitest-environment node\nimport { describe, it, expect } from 'vitest';\nimport { run } from '../../.claude/hooks/post-edit-visual-check.mjs';\n\nconst inp = (file_path) => ({ tool_input: { file_path } });\nconst ctx = (file_path) => run(inp(file_path))?.hookSpecificOutput?.additionalContext;\n\ndescribe('post-edit-visual-check', () => {\n  it('laisse passer si tool_input absent', () => {\n    expect(run({ tool_name: 'Write' })).toBeNull();\n  });\n\n  it('ignore un fichier non front-end (.ts logique)', () => {\n    expect(run(inp('/p/src/lib/utils.ts'))).toBeNull();\n  });\n\n  it('ignore un fichier serveur (.mjs)', () => {\n    expect(run(inp('/p/.claude/hooks/foo.mjs'))).toBeNull();\n  });\n\n  it('ignore un fichier sans extension', () => {\n    expect(run(inp('/p/Makefile'))).toBeNull();\n  });\n\n  it('déclenche sur un composant .tsx', () => {\n    expect(ctx('/p/src/components/Card.tsx')).toContain('component');\n  });\n\n  it('déclenche sur un composant .jsx', () => {\n    expect(ctx('/p/src/components/Btn.jsx')).toMatch(/component/);\n  });\n\n  it('déclenche sur une feuille de style .css', () => {\n    expect(ctx('/p/src/app/globals.css')).toContain('styles');\n  });\n\n  it('déclenche sur du .scss', () => {\n    expect(ctx('/p/styles/main.scss')).toContain('styles');\n  });\n\n  it('déclenche sur du .html', () => {\n    expect(ctx('/p/public/index.html')).toContain('markup');\n  });\n\n  it('déclenche sur un composant .vue', () => {\n    expect(ctx('/p/src/App.vue')).toContain('markup');\n  });\n\n  it('déclenche sur du .svelte', () => {\n    expect(ctx('/p/src/App.svelte')).toBeTruthy();\n  });\n\n  it('mentionne le nom du fichier et invite à constater le rendu', () => {\n    const c = ctx('/p/src/components/Hero.tsx');\n    expect(c).toContain('Hero.tsx');\n    expect(c).toContain('preview');\n    expect(c).toContain('look at it');\n  });\n\n  it('cible le bon événement', () => {\n    expect(run(inp('/p/x.css'))?.hookSpecificOutput?.hookEventName).toBe('PostToolUse');\n  });\n});\n"
+    },
+    "tags": [
+      "frontend",
+      "ui",
+      "visual",
+      "preview",
+      "verification",
+      "css",
+      "html",
+      "tsx"
+    ]
+  },
+  {
     "benefit": "Open PRs and CI status loaded before you ask",
     "category": "context",
     "default_on": false,

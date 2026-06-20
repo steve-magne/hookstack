@@ -1,7 +1,7 @@
 {
-  "total": 101,
+  "total": 102,
   "firstDate": "2026-05-29",
-  "lastDate": "2026-06-13",
+  "lastDate": "2026-06-19",
   "byDay": {
     "2026-05-29": 16,
     "2026-05-30": 1,
@@ -14,7 +14,8 @@
     "2026-06-10": 9,
     "2026-06-11": 1,
     "2026-06-12": 5,
-    "2026-06-13": 13
+    "2026-06-13": 13,
+    "2026-06-19": 1
   },
   "hooks": [
     {
@@ -622,6 +623,12 @@
       "name": "Sudo usage warning",
       "category": "security",
       "date": "2026-06-13"
+    },
+    {
+      "slug": "post-edit-visual-check",
+      "name": "Front-end visual check reminder",
+      "category": "workflow",
+      "date": "2026-06-19"
     }
   ]
 }
