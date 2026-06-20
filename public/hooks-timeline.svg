@@ -1,33 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="680" height="200" viewBox="0 0 680 200" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" role="img" aria-label="HookStack evolution — 101 hooks since 2026-05-29">
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="200" viewBox="0 0 680 200" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" role="img" aria-label="HookStack evolution — 102 hooks since 2026-05-29">
   <rect width="680" height="200" fill="#0a0a0a"/>
   <line x1="40" y1="164.0" x2="660" y2="164.0" stroke="#27272a" stroke-width="1"/>
-  <line x1="40" y1="128.4" x2="660" y2="128.4" stroke="#27272a" stroke-width="1"/>
-  <line x1="40" y1="91.3" x2="660" y2="91.3" stroke="#27272a" stroke-width="1"/>
-  <line x1="40" y1="55.6" x2="660" y2="55.6" stroke="#27272a" stroke-width="1"/>
+  <line x1="40" y1="127.3" x2="660" y2="127.3" stroke="#27272a" stroke-width="1"/>
+  <line x1="40" y1="92.0" x2="660" y2="92.0" stroke="#27272a" stroke-width="1"/>
+  <line x1="40" y1="55.3" x2="660" y2="55.3" stroke="#27272a" stroke-width="1"/>
   <line x1="40" y1="20.0" x2="660" y2="20.0" stroke="#27272a" stroke-width="1"/>
   <text x="34" y="168.0" fill="#52525b" font-size="10" text-anchor="end">0</text>
-  <text x="34" y="132.4" fill="#52525b" font-size="10" text-anchor="end">25</text>
-  <text x="34" y="95.3" fill="#52525b" font-size="10" text-anchor="end">51</text>
-  <text x="34" y="59.6" fill="#52525b" font-size="10" text-anchor="end">76</text>
-  <text x="34" y="24.0" fill="#52525b" font-size="10" text-anchor="end">101</text>
-  <path d="M40.0,164.0 L40.0,141.2 L81.3,139.8 L122.7,102.7 L164.0,75.6 L205.3,74.2 L246.7,74.2 L288.0,69.9 L329.3,69.9 L370.7,69.9 L412.0,65.6 L453.3,59.9 L494.7,59.9 L536.0,47.1 L577.3,45.7 L618.7,38.5 L660.0,20.0 L660.0,164.0 Z" fill="white" fill-opacity="0.07"/>
-  <polyline points="40.0,141.2 81.3,139.8 122.7,102.7 164.0,75.6 205.3,74.2 246.7,74.2 288.0,69.9 329.3,69.9 370.7,69.9 412.0,65.6 453.3,59.9 494.7,59.9 536.0,47.1 577.3,45.7 618.7,38.5 660.0,20.0" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-  <circle cx="40.0" cy="141.2" r="3" fill="white"/>
-  <circle cx="81.3" cy="139.8" r="3" fill="white"/>
-  <circle cx="122.7" cy="102.7" r="3" fill="white"/>
-  <circle cx="164.0" cy="75.6" r="3" fill="white"/>
-  <circle cx="205.3" cy="74.2" r="3" fill="white"/>
-  <circle cx="288.0" cy="69.9" r="3" fill="white"/>
-  <circle cx="412.0" cy="65.6" r="3" fill="white"/>
-  <circle cx="453.3" cy="59.9" r="3" fill="white"/>
-  <circle cx="536.0" cy="47.1" r="3" fill="white"/>
-  <circle cx="577.3" cy="45.7" r="3" fill="white"/>
-  <circle cx="618.7" cy="38.5" r="3" fill="white"/>
+  <text x="34" y="131.3" fill="#52525b" font-size="10" text-anchor="end">26</text>
+  <text x="34" y="96.0" fill="#52525b" font-size="10" text-anchor="end">51</text>
+  <text x="34" y="59.3" fill="#52525b" font-size="10" text-anchor="end">77</text>
+  <text x="34" y="24.0" fill="#52525b" font-size="10" text-anchor="end">102</text>
+  <path d="M40.0,164.0 L40.0,141.4 L69.5,140.0 L99.0,103.3 L128.6,76.5 L158.1,75.1 L187.6,75.1 L217.1,70.8 L246.7,70.8 L276.2,70.8 L305.7,66.6 L335.2,60.9 L364.8,60.9 L394.3,48.2 L423.8,46.8 L453.3,39.8 L482.9,21.4 L512.4,21.4 L541.9,21.4 L571.4,21.4 L601.0,21.4 L630.5,21.4 L660.0,20.0 L660.0,164.0 Z" fill="white" fill-opacity="0.07"/>
+  <polyline points="40.0,141.4 69.5,140.0 99.0,103.3 128.6,76.5 158.1,75.1 187.6,75.1 217.1,70.8 246.7,70.8 276.2,70.8 305.7,66.6 335.2,60.9 364.8,60.9 394.3,48.2 423.8,46.8 453.3,39.8 482.9,21.4 512.4,21.4 541.9,21.4 571.4,21.4 601.0,21.4 630.5,21.4 660.0,20.0" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="40.0" cy="141.4" r="3" fill="white"/>
+  <circle cx="69.5" cy="140.0" r="3" fill="white"/>
+  <circle cx="99.0" cy="103.3" r="3" fill="white"/>
+  <circle cx="128.6" cy="76.5" r="3" fill="white"/>
+  <circle cx="158.1" cy="75.1" r="3" fill="white"/>
+  <circle cx="217.1" cy="70.8" r="3" fill="white"/>
+  <circle cx="305.7" cy="66.6" r="3" fill="white"/>
+  <circle cx="335.2" cy="60.9" r="3" fill="white"/>
+  <circle cx="394.3" cy="48.2" r="3" fill="white"/>
+  <circle cx="423.8" cy="46.8" r="3" fill="white"/>
+  <circle cx="453.3" cy="39.8" r="3" fill="white"/>
+  <circle cx="482.9" cy="21.4" r="3" fill="white"/>
   <circle cx="660.0" cy="20.0" r="3" fill="white"/>
   <text x="40.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">May 29</text>
-  <text x="164.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 1</text>
-  <text x="288.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 4</text>
-  <text x="412.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 7</text>
-  <text x="536.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 10</text>
-  <text x="660.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 13</text>
+  <text x="187.6" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 3</text>
+  <text x="335.2" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 8</text>
+  <text x="482.9" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 13</text>
+  <text x="630.5" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 18</text>
+  <text x="660.0" y="180" fill="#52525b" font-size="10" text-anchor="middle">Jun 19</text>
 </svg>
