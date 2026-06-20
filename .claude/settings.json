@@ -253,6 +253,10 @@
           },
           {
             "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-edit-visual-check.mjs"
+          },
+          {
+            "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/seo-page-metadata-guard.mjs"
           },
           {
