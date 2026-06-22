@@ -237,7 +237,7 @@
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/eslint-check.mjs"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/biome-check.mjs"
           },
           {
             "type": "command",

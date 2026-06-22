@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // @hookstack stop-per-file-lint
-// Lint ESLint chaque fichier .js/.ts modifié depuis la merge base (Stop)
+// Lint Biome chaque fichier .js/.ts modifié depuis la merge base (Stop)
 import { readFileSync, existsSync, writeFileSync, unlinkSync } from 'fs';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -11,21 +11,21 @@ function defaultExec(cmd) {
   try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }
 }
 
-// Signatures indiquant qu'ESLint n'a pas pu DÉMARRER (config absente, mauvaise version,
-// binaire introuvable) — à distinguer d'une vraie violation de lint. Dans ce cas on traite
-// ESLint comme un outil indisponible et on ne fait PAS échouer le hook (évite les faux positifs).
-const ESLINT_UNAVAILABLE =
-  /Oops! Something went wrong|could ?n'?t find an? eslint\.config|eslint\.config\.\(|migration guide|Cannot find module|could not determine executable|command not found|ENOENT/i;
+// Signatures indiquant que Biome n'a pas pu DÉMARRER (binaire introuvable, mauvaise
+// installation) — à distinguer d'une vraie violation de lint. Biome n'a pas besoin de
+// fichier de config pour fonctionner (règles recommandées par défaut), donc une sortie
+// vide ou un crash signale un outil indisponible, pas une absence de config.
+const BIOME_UNAVAILABLE = /Cannot find module|could not determine executable|command not found|ENOENT/i;
 
-export function isEslintUnavailable(output) {
-  return !output || ESLINT_UNAVAILABLE.test(output);
+export function isBiomeUnavailable(output) {
+  return !output || BIOME_UNAVAILABLE.test(output);
 }
 
-// Retourne null si le fichier passe ESLint (ou si ESLint est indisponible), sinon la sortie d'erreur.
+// Retourne null si le fichier passe Biome (ou si Biome est indisponible), sinon la sortie d'erreur.
 /* v8 ignore next 14 */
 function defaultLint(file) {
   try {
-    execSync(`npx --no-install eslint --max-warnings=0 "${file}"`, {
+    execSync(`npx --no-install biome lint --error-on-warnings "${file}"`, {
       encoding: 'utf8',
       stdio: 'pipe',
       timeout: 15_000,
@@ -33,7 +33,7 @@ function defaultLint(file) {
     return null;
   } catch (err) {
     const out = `${err.stdout ?? ''}\n${err.stderr ?? ''}`.trim();
-    if (isEslintUnavailable(out)) return null; // ESLint n'a pas démarré → skip, pas un échec
+    if (isBiomeUnavailable(out)) return null; // Biome n'a pas démarré → skip, pas un échec
     return out || 'lint error';
   }
 }
@@ -71,7 +71,7 @@ export function run({
 
   if (!failed.length) {
     try { unlink(counterFile); } catch {}
-    return { exitCode: 0, message: checked ? `✓ ESLint: no issues (${checked} file${checked > 1 ? 's' : ''})\n` : '✓ ESLint: nothing to check\n' };
+    return { exitCode: 0, message: checked ? `✓ Biome: no issues (${checked} file${checked > 1 ? 's' : ''})\n` : '✓ Biome: nothing to check\n' };
   }
 
   let count = 0;
@@ -79,7 +79,7 @@ export function run({
   count++;
   writeFile(counterFile, String(count));
 
-  let msg = `[FAIL] ESLint signale des problèmes sur les fichiers modifiés :\n${failed.map(({ f }) => `  - ${f}`).join('\n')}\n→ Corriger les erreurs de lint (ou \`eslint --fix\`).\n`;
+  let msg = `[FAIL] Biome signale des problèmes sur les fichiers modifiés :\n${failed.map(({ f }) => `  - ${f}`).join('\n')}\n→ Corriger les erreurs de lint (ou \`biome lint --write\`).\n`;
   if (count >= 3) {
     writeFile(disableFile, '');
     msg += `[AUTO-DISABLE] hook suspendu après ${count} échecs. rm '${disableFile}' pour réactiver.\n`;

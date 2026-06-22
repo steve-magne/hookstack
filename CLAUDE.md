@@ -125,7 +125,7 @@ pnpm dev             # Serveur de développement Next.js (port 3000)
 pnpm build           # Build de production Next.js
 pnpm start           # Serveur de production
 pnpm typecheck       # Vérification TypeScript sans émission
-pnpm lint            # ESLint via next lint
+pnpm lint            # Biome lint
 ```
 
 ## Mémoire produit & vision
@@ -277,5 +277,5 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
 **Hooks actifs** : voir `.claude/settings.json` (généré par sync). 72 hooks du catalogue sont actifs sur ce projet, chacun avec un test dans `tests/hooks/`. Pour consulter la liste complète : `node .claude/sync-hooks.mjs --dry-run`. Certains hooks du catalogue sont volontairement **exclus localement** (doublons fonctionnels — ex. `post-edit-typecheck`, couvert par `post-tool-batch-typecheck`) : la liste vit dans `EXCLUDED_SLUGS` de [`.claude/sync-hooks.mjs`](.claude/sync-hooks.mjs).
 
-**Garde-fous CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) : sur chaque PR, `pnpm typecheck` + `pnpm test` + `pnpm validate:registry` (valide `registry.json` contre [`registry/registry.schema.json`](registry/registry.schema.json) — champ requis manquant, énumération invalide ou champ inconnu = échec) + `node .claude/sync-hooks.mjs --check` (échoue si le registre a dérivé des `.mjs`) + `node .claude/hooks-timeline.mjs --check` (échoue si la timeline d'évolution a dérivé de l'historique git — voir [« Timeline d'évolution »](#timeline-dévolution-evolution)). Le schéma a `additionalProperties: false` au niveau du hook : tout champ non consommé par le code (ex. anciens `id`/`votes`) est rejeté — il doit rester aligné avec `src/types/hook.ts`. Côté session, `stop-per-file-coverage` (Stop, patron auto-désactivable) vérifie la couverture ≥80 % des fichiers modifiés ; le lint immédiat est assuré par `post-write-eslint` et le bilan par `stop-quality-check` (`stop-per-file-lint` est exclu localement, doublon). `stop-registry-drift-check` (Stop) rejoue `sync-hooks --check` en filet de sécurité avant la CI.
+**Garde-fous CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) : sur chaque PR, `pnpm typecheck` + `pnpm test` + `pnpm validate:registry` (valide `registry.json` contre [`registry/registry.schema.json`](registry/registry.schema.json) — champ requis manquant, énumération invalide ou champ inconnu = échec) + `node .claude/sync-hooks.mjs --check` (échoue si le registre a dérivé des `.mjs`) + `node .claude/hooks-timeline.mjs --check` (échoue si la timeline d'évolution a dérivé de l'historique git — voir [« Timeline d'évolution »](#timeline-dévolution-evolution)). Le schéma a `additionalProperties: false` au niveau du hook : tout champ non consommé par le code (ex. anciens `id`/`votes`) est rejeté — il doit rester aligné avec `src/types/hook.ts`. Côté session, `stop-per-file-coverage` (Stop, patron auto-désactivable) vérifie la couverture ≥80 % des fichiers modifiés ; le lint immédiat est assuré par `post-write-biome` et le bilan par `stop-quality-check` (`stop-per-file-lint` est exclu localement, doublon). `stop-registry-drift-check` (Stop) rejoue `sync-hooks --check` en filet de sécurité avant la CI.
 

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
-import { run, isEslintUnavailable } from '../../.claude/hooks/per-file-lint.mjs';
+import { run, isBiomeUnavailable } from '../../.claude/hooks/per-file-lint.mjs';
 
 const COUNTER = '/tmp/.test-lint-counter';
 const DISABLE = '/tmp/.test-lint-disable';
@@ -44,11 +44,11 @@ describe('per-file-lint', () => {
     expect(r.exitCode).toBe(0);
   });
 
-  it('exitCode 0 si ESLint passe', () => {
+  it('exitCode 0 si Biome passe', () => {
     expect(run(makeOpts({ exec: diffExec('src/a.ts'), lint: () => null })).exitCode).toBe(0);
   });
 
-  it('exitCode 2 si ESLint échoue', () => {
+  it('exitCode 2 si Biome échoue', () => {
     const r = run(makeOpts({ exec: diffExec('src/a.ts'), lint: () => '1:1 error no-unused' }));
     expect(r.exitCode).toBe(2);
     expect(r.message).toContain('src/a.ts');
@@ -81,26 +81,19 @@ describe('per-file-lint', () => {
   });
 });
 
-describe('isEslintUnavailable', () => {
-  it('détecte une config plate manquante (ESLint ≥ 9)', () => {
-    expect(isEslintUnavailable("ESLint couldn't find an eslint.config.(js|mjs|cjs) file.")).toBe(true);
-  });
-
-  it('détecte le crash générique "Oops"', () => {
-    expect(isEslintUnavailable('Oops! Something went wrong! :(')).toBe(true);
-  });
-
+describe('isBiomeUnavailable', () => {
   it('détecte un binaire/module introuvable', () => {
-    expect(isEslintUnavailable('Cannot find module eslint')).toBe(true);
-    expect(isEslintUnavailable('npm error could not determine executable to run')).toBe(true);
+    expect(isBiomeUnavailable('Cannot find module biome')).toBe(true);
+    expect(isBiomeUnavailable('npm error could not determine executable to run')).toBe(true);
+    expect(isBiomeUnavailable('/bin/sh: biome: command not found')).toBe(true);
   });
 
   it('traite une sortie vide comme indisponible (skip prudent)', () => {
-    expect(isEslintUnavailable('')).toBe(true);
-    expect(isEslintUnavailable(undefined)).toBe(true);
+    expect(isBiomeUnavailable('')).toBe(true);
+    expect(isBiomeUnavailable(undefined)).toBe(true);
   });
 
   it("ne masque PAS une vraie violation de lint", () => {
-    expect(isEslintUnavailable("/src/a.ts\n  1:1  error  'x' is assigned but never used  no-unused-vars")).toBe(false);
+    expect(isBiomeUnavailable("/src/a.ts:1:1 lint/correctness/noUnusedVariables  'x' is unused")).toBe(false);
   });
 });

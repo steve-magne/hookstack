@@ -2,93 +2,39 @@
 // @hookstack a11y-jsx-guard
 // Garde d'accessibilité JSX sur les composants src/**/*.tsx|jsx (PostToolUse Write|Edit).
 // Progressive enhancement :
-//   • eslint-plugin-jsx-a11y installé → ESLint v8/v9 (12 règles WCAG, config temp /tmp/)
-//   • plugin absent               → vérifications statiques (4 règles regex, zéro dépendance)
+//   • Biome installé → règles a11y natives (lint/a11y/*, aucun plugin requis)
+//   • Biome absent   → vérifications statiques (4 règles regex, zéro dépendance)
 // Non bloquant : cumule les violations dans un message.
-import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 
-// ── Chemin ESLint ──────────────────────────────────────────────────────────────
-
-const A11Y_RULES = {
-  'jsx-a11y/alt-text': 'error',
-  'jsx-a11y/aria-props': 'error',
-  'jsx-a11y/aria-proptypes': 'error',
-  'jsx-a11y/aria-role': 'error',
-  'jsx-a11y/aria-unsupported-elements': 'error',
-  'jsx-a11y/click-events-have-key-events': 'warn',
-  'jsx-a11y/heading-has-content': 'error',
-  'jsx-a11y/interactive-supports-focus': 'warn',
-  'jsx-a11y/label-has-associated-control': 'warn',
-  'jsx-a11y/no-positive-tabindex': 'error',
-  'jsx-a11y/role-has-required-aria-props': 'error',
-  'jsx-a11y/role-supports-aria-props': 'error',
-};
+// ── Chemin Biome ───────────────────────────────────────────────────────────────
 
 function defaultExec(cmd) {
   return execSync(cmd, { stdio: 'pipe', timeout: 20_000, encoding: 'utf8' });
 }
 
-function defaultUnlink(p) {
-  try { unlinkSync(p); } catch { /* silencieux */ }
-}
-
-function runEslint(filePath, { exec, writeFile, unlink, readFile, projectDir }) {
-  let eslintMajor;
+function runBiome(filePath, { exec }) {
   try {
-    const pkg = JSON.parse(readFile(join(projectDir, 'node_modules/eslint/package.json'), 'utf8'));
-    eslintMajor = parseInt(pkg.version.split('.')[0], 10);
-  } catch {
-    return null;
-  }
-
-  const ext = eslintMajor >= 9 ? 'mjs' : 'json';
-  const configPath = `/tmp/hookstack-a11y-${process.pid}.${ext}`;
-
-  if (eslintMajor >= 9) {
-    const pluginPath = join(projectDir, 'node_modules/eslint-plugin-jsx-a11y/index.js');
-    const rulesStr = Object.entries(A11Y_RULES)
-      .map(([k, v]) => `    '${k}': '${v}'`).join(',\n');
-    writeFile(
-      configPath,
-      `import plugin from '${pluginPath}';\n` +
-      `export default [{ plugins: { 'jsx-a11y': plugin }, rules: {\n${rulesStr}\n} }];\n`,
-    );
-  } else {
-    writeFile(configPath, JSON.stringify({
-      plugins: ['jsx-a11y'],
-      rules: A11Y_RULES,
-      parserOptions: { ecmaVersion: 2020, sourceType: 'module', ecmaFeatures: { jsx: true } },
-    }));
-  }
-
-  try {
-    const configFlag = eslintMajor >= 9
-      ? `--no-config-lookup --config "${configPath}"`
-      : `--no-eslintrc -c "${configPath}" --resolve-plugins-relative-to "${projectDir}"`;
-    exec(`npx --no-install eslint ${configFlag} --format json "${filePath}"`);
+    exec(`npx --no-install biome lint --only=a11y --reporter=rdjson "${filePath}"`);
     return null;
   } catch (err) {
     const raw = err.stdout?.toString() ?? '';
-    let results;
-    try { results = JSON.parse(raw); } catch { return null; }
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch { return null; }
 
-    const msgs = results
-      .flatMap((r) => r.messages ?? [])
-      .filter((m) => m.ruleId?.startsWith('jsx-a11y/'));
+    const msgs = (parsed.diagnostics ?? []).filter((d) => d.code?.value?.startsWith('lint/a11y/'));
     if (!msgs.length) return null;
 
     return {
       message:
         `[a11y] ${filePath.split('/').pop()} accessibility violations:\n` +
         msgs.map((m) =>
-          `  ${m.severity === 2 ? '✗' : '⚠'} ${m.ruleId}: ${m.message} (line ${m.line})`,
+          `  ✗ ${m.code.value}: ${m.message} (line ${m.location?.range?.start?.line ?? '?'})`,
         ).join('\n') + '\n',
     };
-  } finally {
-    unlink(configPath);
   }
 }
 
@@ -171,16 +117,14 @@ function runStatic(filePath, { readFile }) {
 export function run(input, {
   exec = defaultExec,
   exists = existsSync,
-  writeFile = writeFileSync,
-  unlink = defaultUnlink,
   readFile = readFileSync,
   projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
 } = {}) {
   const filePath = input.tool_input?.file_path ?? '';
   if (!/\/src\/.*\.[jt]sx$/.test(filePath)) return null;
 
-  if (exists(join(projectDir, 'node_modules/eslint-plugin-jsx-a11y'))) {
-    return runEslint(filePath, { exec, writeFile, unlink, readFile, projectDir });
+  if (exists(join(projectDir, 'node_modules/@biomejs/biome'))) {
+    return runBiome(filePath, { exec });
   }
 
   return runStatic(filePath, { readFile });

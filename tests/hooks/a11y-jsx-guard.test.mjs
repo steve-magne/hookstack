@@ -7,26 +7,26 @@ const inp = (file_path) => ({ tool_input: { file_path } });
 const FILE = '/p/src/components/Card.tsx';
 
 // exists: () => false force le chemin statique (zéro-dépendance)
-const noPlugin = { exists: () => false };
-const r = (code) => run(inp(FILE), { ...noPlugin, readFile: () => code });
+const noBiome = { exists: () => false };
+const r = (code) => run(inp(FILE), { ...noBiome, readFile: () => code });
 
-// ── Chemin statique (eslint-plugin-jsx-a11y absent) ───────────────────────────
+// ── Chemin statique (Biome absent) ────────────────────────────────────────────
 
 describe('a11y-jsx-guard — statique (fallback)', () => {
   it('ignore les fichiers hors src/', () => {
-    expect(run(inp('/p/x.tsx'), { ...noPlugin, readFile: () => '<Image src={x} />' })).toBeNull();
+    expect(run(inp('/p/x.tsx'), { ...noBiome, readFile: () => '<Image src={x} />' })).toBeNull();
   });
 
   it('ignore un fichier .ts (pas du JSX)', () => {
-    expect(run(inp('/p/src/lib/utils.ts'), { ...noPlugin, readFile: () => 'export const x = 1;' })).toBeNull();
+    expect(run(inp('/p/src/lib/utils.ts'), { ...noBiome, readFile: () => 'export const x = 1;' })).toBeNull();
   });
 
   it('accepte les fichiers .jsx', () => {
-    expect(run(inp('/p/src/components/Btn.jsx'), { ...noPlugin, readFile: () => '<Image src={x} />' })?.message).toContain('alt');
+    expect(run(inp('/p/src/components/Btn.jsx'), { ...noBiome, readFile: () => '<Image src={x} />' })?.message).toContain('alt');
   });
 
   it('ignore un fichier illisible', () => {
-    expect(run(inp(FILE), { ...noPlugin, readFile: () => { throw new Error('ENOENT'); } })).toBeNull();
+    expect(run(inp(FILE), { ...noBiome, readFile: () => { throw new Error('ENOENT'); } })).toBeNull();
   });
 
   it('silencieux sur un composant conforme', () => {
@@ -81,74 +81,52 @@ describe('a11y-jsx-guard — statique (fallback)', () => {
   });
 });
 
-// ── Chemin ESLint (eslint-plugin-jsx-a11y présent) ────────────────────────────
+// ── Chemin Biome (a11y natif, aucun plugin requis) ────────────────────────────
 
 const FILE_TSX = '/p/src/components/Foo.tsx';
 
-function eslintJson(ruleId, message, line = 1, severity = 2) {
-  return JSON.stringify([{ filePath: FILE_TSX, messages: [{ ruleId, message, line, severity }] }]);
+function rdjson(ruleId, message, line = 1) {
+  return JSON.stringify({
+    diagnostics: [{ code: { value: ruleId }, message, location: { range: { start: { line } } } }],
+  });
 }
 
-function eslintDeps(execOverride, eslintVersion = '8.57.0') {
+function biomeDeps(execOverride) {
   return {
     exec: execOverride ?? vi.fn(() => ''),
     exists: () => true,
-    writeFile: vi.fn(),
-    unlink: vi.fn(),
-    readFile: () => JSON.stringify({ version: eslintVersion }),
     projectDir: '/p',
   };
 }
 
-describe('a11y-jsx-guard — ESLint (plugin disponible)', () => {
-  it('silencieux si ESLint ne retourne aucune violation', () => {
-    expect(run(inp(FILE_TSX), eslintDeps())).toBeNull();
-  });
-
-  it('no-op si eslint/package.json est illisible', () => {
-    const deps = { ...eslintDeps(), readFile: () => { throw new Error('ENOENT'); } };
-    expect(run(inp(FILE_TSX), deps)).toBeNull();
+describe('a11y-jsx-guard — Biome (installé)', () => {
+  it('silencieux si Biome ne retourne aucune violation', () => {
+    expect(run(inp(FILE_TSX), biomeDeps())).toBeNull();
   });
 
   it('silencieux si la sortie n\'est pas du JSON valide', () => {
-    expect(run(inp(FILE_TSX), eslintDeps(makeExecFail('eslint: command not found')))).toBeNull();
+    expect(run(inp(FILE_TSX), biomeDeps(makeExecFail('biome: command not found')))).toBeNull();
   });
 
-  it('silencieux si les violations ne sont pas jsx-a11y', () => {
-    const json = JSON.stringify([{ messages: [{ ruleId: 'no-console', message: 'msg', line: 1, severity: 2 }] }]);
-    expect(run(inp(FILE_TSX), eslintDeps(makeExecFail(json)))).toBeNull();
+  it('silencieux si les violations ne sont pas a11y', () => {
+    const json = JSON.stringify({ diagnostics: [{ code: { value: 'lint/correctness/noUnusedImports' }, message: 'unused', location: { range: { start: { line: 1 } } } }] });
+    expect(run(inp(FILE_TSX), biomeDeps(makeExecFail(json)))).toBeNull();
   });
 
-  it('reporte une violation error (✗)', () => {
-    const r = run(inp(FILE_TSX), eslintDeps(makeExecFail(eslintJson('jsx-a11y/alt-text', 'img needs alt', 5))));
-    expect(r?.message).toContain('✗ jsx-a11y/alt-text');
+  it('reporte une violation', () => {
+    const r = run(inp(FILE_TSX), biomeDeps(makeExecFail(rdjson('lint/a11y/useAltText', 'img needs alt', 5))));
+    expect(r?.message).toContain('✗ lint/a11y/useAltText');
     expect(r?.message).toContain('line 5');
   });
 
-  it('reporte une violation warn (⚠)', () => {
-    const r = run(inp(FILE_TSX), eslintDeps(makeExecFail(eslintJson('jsx-a11y/click-events-have-key-events', 'needs key', 3, 1))));
-    expect(r?.message).toContain('⚠ jsx-a11y/click-events-have-key-events');
-  });
-
-  it('crée une config JSON (no-eslintrc) pour ESLint v8', () => {
-    const writeFile = vi.fn();
-    run(inp(FILE_TSX), { ...eslintDeps(), writeFile });
-    const [path, content] = writeFile.mock.calls[0];
-    expect(path).toMatch(/\.json$/);
-    expect(JSON.parse(content).plugins).toContain('jsx-a11y');
-  });
-
-  it('crée une flat config .mjs pour ESLint v9', () => {
-    const writeFile = vi.fn();
-    run(inp(FILE_TSX), { ...eslintDeps(undefined, '9.5.0'), writeFile });
-    const [path, content] = writeFile.mock.calls[0];
-    expect(path).toMatch(/\.mjs$/);
-    expect(content).toContain('export default');
-  });
-
-  it('nettoie le fichier config temp dans tous les cas', () => {
-    const unlink = vi.fn();
-    run(inp(FILE_TSX), { ...eslintDeps(makeExecFail(eslintJson('jsx-a11y/alt-text', 'missing', 1))), unlink });
-    expect(unlink).toHaveBeenCalledOnce();
+  it('cumule plusieurs violations', () => {
+    const json = JSON.stringify({
+      diagnostics: [
+        { code: { value: 'lint/a11y/useAltText' }, message: 'img needs alt', location: { range: { start: { line: 1 } } } },
+        { code: { value: 'lint/a11y/useKeyWithClickEvents' }, message: 'needs key', location: { range: { start: { line: 3 } } } },
+      ],
+    });
+    const r = run(inp(FILE_TSX), biomeDeps(makeExecFail(json)));
+    expect(r?.message.match(/^ {2}✗ /gm)?.length).toBe(2);
   });
 });

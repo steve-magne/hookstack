@@ -11,7 +11,7 @@
     "dev": "NODE_OPTIONS=--no-deprecation next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "biome lint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "validate:registry": "node registry/validate-registry.mjs",
@@ -28,6 +28,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.5",

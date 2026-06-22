@@ -42,7 +42,7 @@ Mapping volontairement fidèle au registre (les slugs affichés existent) :
 | 2 | Rerouté dans un worktree isolé | `session-start-worktree-if-main`, `pre-edit-worktree-guard` |
 | 3 | `pnpm install` automatique (barre de progression) | `worktree-create-update-deps`, `setup-install-deps` |
 | 4 | Conventions + contexte injectés (chips) | `user-prompt-inject-conventions`, `session-start-agents-md` |
-| 5 | Chaque fichier formaté/lint/typé + **secret bloqué** | `post-write-autoformat`, `post-write-eslint`, `post-edit-typecheck`, `pre-write-secret-detection` |
+| 5 | Chaque fichier formaté/lint/typé + **secret bloqué** | `post-write-autoformat`, `post-write-biome`, `post-edit-typecheck`, `pre-write-secret-detection` |
 | 6 | Tests forcés au vert (6 points → 18 passed) | `stop-run-tests`, `stop-quality-check` |
 | 7 | **Merge sûr sur `main`** (courbe emerald) | la stack complète |
 

@@ -4,14 +4,14 @@ import { run } from '../../.claude/hooks/quality-check.mjs';
 
 const PROJECT_DIR = '/fake/project';
 
-function makeOpts({ hasPkg = true, hasTsConfig = true, hasEslintConfig = false, execResults = {} } = {}) {
+function makeOpts({ hasPkg = true, hasTsConfig = true, hasBiomeConfig = false, execResults = {} } = {}) {
   return {
     projectDir: PROJECT_DIR,
     changed: ['src/foo.ts'],
     exists: (p) => {
       if (p.endsWith('package.json')) return hasPkg;
       if (p.endsWith('tsconfig.json')) return hasTsConfig;
-      if (p.endsWith('eslint.config.js')) return hasEslintConfig;
+      if (p.endsWith('biome.json')) return hasBiomeConfig;
       return false;
     },
     exec: vi.fn((cmd) => {
@@ -49,22 +49,16 @@ describe('quality-check', () => {
     expect(result.message).toContain('Tous les contrôles qualité passent');
   });
 
-  it('n\'inclut pas ESLint si pas de fichier de config ESLint', () => {
-    const opts = makeOpts({ hasEslintConfig: false });
+  it('n\'inclut pas Biome si pas de fichier de config Biome', () => {
+    const opts = makeOpts({ hasBiomeConfig: false });
     run(opts);
-    expect(opts.exec).not.toHaveBeenCalledWith(expect.stringContaining('eslint'));
+    expect(opts.exec).not.toHaveBeenCalledWith(expect.stringContaining('biome'));
   });
 
-  it('inclut ESLint si eslint.config.js existe', () => {
-    const opts = makeOpts({ hasEslintConfig: true });
+  it('inclut Biome si biome.json existe', () => {
+    const opts = makeOpts({ hasBiomeConfig: true });
     run(opts);
-    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('eslint'));
-  });
-
-  it('ESLint utilise le cache pour accélérer les runs suivants', () => {
-    const opts = makeOpts({ hasEslintConfig: true });
-    run(opts);
-    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('--cache'));
+    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('biome'));
   });
 
   it('TypeScript tourne en incrémental (buildinfo) pour accélérer les runs suivants', () => {
@@ -75,7 +69,7 @@ describe('quality-check', () => {
   });
 
   it('ne lance plus les tests — couverts par run-tests.mjs au Stop', () => {
-    const opts = makeOpts({ hasEslintConfig: true });
+    const opts = makeOpts({ hasBiomeConfig: true });
     run(opts);
     for (const call of opts.exec.mock.calls) {
       expect(call[0]).not.toMatch(/\b(pnpm|yarn|npm|bun) test|vitest/);
@@ -89,21 +83,21 @@ describe('quality-check', () => {
     expect(result.message).toContain('✗ TypeScript');
   });
 
-  it('retourne failed>0 quand ESLint échoue', () => {
+  it('retourne failed>0 quand Biome échoue', () => {
     const err = Object.assign(new Error('lint error'), { stdout: Buffer.from('2 errors') });
-    const result = run(makeOpts({ hasEslintConfig: true, execResults: { eslint: err } }));
+    const result = run(makeOpts({ hasBiomeConfig: true, execResults: { biome: err } }));
     expect(result.failed).toBeGreaterThanOrEqual(1);
-    expect(result.message).toContain('✗ ESLint');
+    expect(result.message).toContain('✗ Biome');
   });
 
   it('affiche le nombre de vérifications échouées dans le message', () => {
     const err = Object.assign(new Error('fail'), { stdout: Buffer.from('') });
-    const result = run(makeOpts({ hasEslintConfig: true, execResults: { tsc: err, eslint: err } }));
+    const result = run(makeOpts({ hasBiomeConfig: true, execResults: { tsc: err, biome: err } }));
     expect(result.message).toContain('vérification(s) échouée(s)');
   });
 
   it('court-circuite (0 check, aucun exec) si aucun fichier JS/TS modifié', () => {
-    const opts = makeOpts({ hasEslintConfig: true });
+    const opts = makeOpts({ hasBiomeConfig: true });
     opts.changed = ['README.md', 'app/main.py'];
     const result = run(opts);
     expect(result.checks).toBe(0);
