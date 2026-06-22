@@ -25,6 +25,12 @@
       "date": "2026-05-29"
     },
     {
+      "slug": "post-write-biome",
+      "name": "Biome lint after write",
+      "category": "validation",
+      "date": "2026-05-29"
+    },
+    {
       "slug": "pre-bash-block-destructive",
       "name": "Destructive command blocking",
       "category": "security",
@@ -33,12 +39,6 @@
     {
       "slug": "pre-bash-enforce-package-managers",
       "name": "Enforce package managers",
-      "category": "validation",
-      "date": "2026-05-29"
-    },
-    {
-      "slug": "post-write-eslint",
-      "name": "ESLint lint after write",
       "category": "validation",
       "date": "2026-05-29"
     },

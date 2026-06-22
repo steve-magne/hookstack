@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 // Fichiers concernés par un typecheck/lint JS-TS. Une session qui ne touche que
 // du Markdown, du Python ou des assets n'a rien à vérifier ici.
 const JS_TS = /\.(ts|tsx|js|jsx|mjs|cjs|vue|svelte)$/;
-const QC_CFG = /(^|\/)(tsconfig.*\.json|package\.json|eslint\.config\.[a-z]+|\.eslintrc[^/]*)$/;
+const QC_CFG = /(^|\/)(tsconfig.*\.json|package\.json|biome\.jsonc?)$/;
 
 /** Fichiers modifiés en attente (staged + unstaged + untracked), ou null hors git. */
 function defaultChanged(cwd) {
@@ -32,7 +32,7 @@ export function run({
   projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
   changed = defaultChanged(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
 } = {}) {
-  // Aucun fichier JS/TS (ni config tsc/eslint) modifié → typecheck/lint inutiles.
+  // Aucun fichier JS/TS (ni config tsc/biome) modifié → typecheck/lint inutiles.
   if (changed && !changed.some((f) => JS_TS.test(f) || QC_CFG.test(f)))
     return { checks: 0, failed: 0, message: '' };
 
@@ -58,9 +58,9 @@ export function run({
     // --incremental + cache buildinfo : la 1re run reste froide, les suivantes ne
     // retypent que ce qui a bougé → fin de session quasi instantanée côté types.
     checks.push(['TypeScript', 'npx --no-install tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/stop-quality-check.tsbuildinfo']);
-  const eslintConfigs = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml', '.eslintrc'];
-  if (hasPkg && eslintConfigs.some((f) => exists(join(projectDir, f))))
-    checks.push(['ESLint', 'npx --no-install eslint --max-warnings=0 --cache --cache-location node_modules/.cache/eslint .']);
+  const biomeConfigs = ['biome.json', 'biome.jsonc'];
+  if (hasPkg && biomeConfigs.some((f) => exists(join(projectDir, f))))
+    checks.push(['Biome', 'npx --no-install biome lint --error-on-warnings .']);
 
   const results = checks.map(([label, cmd]) => check(label, cmd));
   const failed = results.filter((r) => !r).length;

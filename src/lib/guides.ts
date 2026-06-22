@@ -195,7 +195,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       { q: 'Where do hooks live in my project?', a: 'Scripts live in .claude/hooks/ and are referenced by event and matcher in .claude/settings.json, usually as "node $CLAUDE_PROJECT_DIR/.claude/hooks/<name>.mjs".' },
     ],
     related: ['write-your-first-claude-code-hook', 'claude-code-hooks-examples', 'pretooluse-vs-posttooluse', 'claude-code-hooks-vs-slash-commands', 'inject-context-claude-code-hooks'],
-    relatedHookSlugs: ['pre-bash-secret-detection', 'post-write-eslint', 'stop-run-tests', 'user-prompt-inject-conventions'],
+    relatedHookSlugs: ['pre-bash-secret-detection', 'post-write-biome', 'stop-run-tests', 'user-prompt-inject-conventions'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
   {
@@ -255,9 +255,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       {
         heading: 'What does a PostToolUse hook look like?',
         body: [
-          'A PostToolUse hook reacts to a completed change. This one lints a file right after it is written or edited, surfacing any problems on stderr so the next step can fix them. Note the extension filter — you do not want to launch ESLint on a Markdown file:',
+          'A PostToolUse hook reacts to a completed change. This one lints a file right after it is written or edited, surfacing any problems on stderr so the next step can fix them. Note the extension filter — you do not want to launch Biome on a Markdown file:',
           {
-            code: `// .claude/hooks/post-write-eslint.mjs
+            code: `// .claude/hooks/biome-check.mjs
 import { readFileSync } from 'fs'
 import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
@@ -267,11 +267,11 @@ export function run(input, { exec = (c) => execSync(c, { stdio: 'pipe', timeout:
   if (!filePath || !/\\.[cm]?[jt]sx?$/.test(filePath)) return null // only JS/TS files
 
   try {
-    exec(\`npx --no-install eslint --max-warnings=0 "\${filePath}"\`)
+    exec(\`npx --no-install biome lint --error-on-warnings "\${filePath}"\`)
     return null // clean
   } catch (err) {
     const output = err.stdout?.toString() ?? ''
-    return output ? { message: \`ESLint: \${output.trim()}\\n\` } : null
+    return output ? { message: \`Biome: \${output.trim()}\\n\` } : null
   }
 }
 
@@ -319,7 +319,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       {
         heading: 'Are PostToolUse hooks really non-blocking?',
         body: [
-          'Mostly yes — but be precise about why. By the time PostToolUse runs, the change already exists, so it cannot un-write a file. It can, however, still return a block decision that tells Claude to stop and reconsider. What makes HookStack’s PostToolUse hooks “non-blocking” is an implementation convention, not a runtime guarantee: they wrap external tools in a silent try/catch so a missing binary (ESLint not installed, for example) just exits quietly instead of breaking your session. If you write your own PostToolUse hook that throws or returns a block decision, it will interrupt the flow.',
+          'Mostly yes — but be precise about why. By the time PostToolUse runs, the change already exists, so it cannot un-write a file. It can, however, still return a block decision that tells Claude to stop and reconsider. What makes HookStack’s PostToolUse hooks “non-blocking” is an implementation convention, not a runtime guarantee: they wrap external tools in a silent try/catch so a missing binary (Biome not installed, for example) just exits quietly instead of breaking your session. If you write your own PostToolUse hook that throws or returns a block decision, it will interrupt the flow.',
         ],
       },
       {
@@ -337,7 +337,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       { q: 'Can I use both events together?', a: 'Yes, and it is a common combination — PreToolUse to guard, PostToolUse to format and check.' },
     ],
     related: ['what-are-claude-code-hooks', 'secure-claude-code-with-hooks', 'claude-code-hooks-not-working', 'write-your-first-claude-code-hook', 'automate-code-quality-claude-code-hooks'],
-    relatedHookSlugs: ['pre-bash-block-destructive', 'pre-bash-secret-detection', 'post-write-eslint', 'post-tool-batch-typecheck'],
+    relatedHookSlugs: ['pre-bash-block-destructive', 'pre-bash-secret-detection', 'post-write-biome', 'post-tool-batch-typecheck'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
   {
@@ -537,7 +537,7 @@ console.log('checking command…')`,
           {
             list: [
               'Set a timeout on every external command. An `execSync` without a `timeout` can hang forever if the tool prompts for input or waits on a network call. Always pass `{ timeout: 15_000 }`.',
-              'Filter before doing expensive work. Check the file extension or tool name first and return `null` early. Running ESLint on every file (including images and JSON) is slow and error-prone.',
+              'Filter before doing expensive work. Check the file extension or tool name first and return `null` early. Running Biome on every file (including images and JSON) is slow and error-prone.',
             ],
           },
           {
@@ -546,7 +546,7 @@ console.log('checking command…')`,
   if (!/\\.[cm]?[jt]sx?$/.test(filePath)) return null // skip non-JS/TS fast
 
   try {
-    execSync(\`npx --no-install eslint "\${filePath}"\`, { stdio: 'pipe', timeout: 15_000 })
+    execSync(\`npx --no-install biome lint "\${filePath}"\`, { stdio: 'pipe', timeout: 15_000 })
     return null
   } catch {
     return null // tool missing or lint failed — never break the session
@@ -583,7 +583,7 @@ console.log('checking command…')`,
       { q: 'Why does my hook work in the terminal but not in Claude Code?', a: 'Almost always a path issue. Reference the script with $CLAUDE_PROJECT_DIR (node $CLAUDE_PROJECT_DIR/.claude/hooks/x.mjs) instead of a relative path, because Claude Code may run from a different working directory.' },
     ],
     related: ['write-your-first-claude-code-hook', 'claude-code-settings-json', 'what-are-claude-code-hooks', 'pretooluse-vs-posttooluse'],
-    relatedHookSlugs: ['pre-bash-secret-detection', 'pre-bash-block-destructive', 'post-write-eslint', 'pre-write-main-guard'],
+    relatedHookSlugs: ['pre-bash-secret-detection', 'pre-bash-block-destructive', 'post-write-biome', 'pre-write-main-guard'],
     sources: [
       { label: 'Anthropic — Claude Code hooks documentation', url: DOCS },
       { label: 'Anthropic — Claude Code hooks reference (exit codes & output)', url: DOCS },
@@ -941,7 +941,7 @@ cat .claude/data/bash-log.jsonl
       {
         heading: 'Lint and fix every file the moment it is written',
         body: [
-          'This `PostToolUse` hook runs ESLint with `--fix` on each file the agent writes or edits, filtered to JavaScript and TypeScript extensions so it stays fast. Style and trivially fixable errors are corrected immediately, which means the agent works against already-clean files instead of accumulating a lint debt you discover at commit time. Being a `PostToolUse` hook, it is non-blocking: if ESLint is not installed, it stays silent.',
+          'This `PostToolUse` hook runs Biome on each file the agent writes or edits, filtered to JavaScript and TypeScript extensions so it stays fast. Errors surface immediately, which means the agent fixes them in the same loop instead of accumulating a lint debt you discover at commit time. Being a `PostToolUse` hook, it is non-blocking: if Biome is not installed, it stays silent.',
         ],
       },
       {
@@ -994,12 +994,12 @@ cat .claude/data/bash-log.jsonl
     ],
     faq: [
       { q: 'What are the best Claude Code hooks to start with?', a: 'Begin with the safety hooks — secret detection and destructive-command blocking on `PreToolUse` — because they prevent irreversible mistakes. Then add a `Stop` hook that runs your tests and a `PostToolUse` linter so quality is enforced automatically rather than reviewed manually.' },
-      { q: 'Do hooks slow down Claude Code?', a: 'Well-written hooks are negligible. `PreToolUse` hooks do cheap pattern matching, and `PostToolUse` tools like ESLint should filter by file extension so they only run on relevant files. Always set an explicit timeout so a hook can never hang the session.' },
+      { q: 'Do hooks slow down Claude Code?', a: 'Well-written hooks are negligible. `PreToolUse` hooks do cheap pattern matching, and `PostToolUse` tools like Biome should filter by file extension so they only run on relevant files. Always set an explicit timeout so a hook can never hang the session.' },
       { q: 'Can a hook actually stop Claude from doing something?', a: 'Yes, but only `PreToolUse` hooks. They run before a tool executes and can return `{ decision: \'block\', reason: \'…\' }` on stdout to reject the call. `PostToolUse`, `Stop`, and `SessionStart` hooks react or inject context but cannot retroactively undo a completed action.' },
       { q: 'Where do installed hooks live?', a: 'Scripts go in your project’s `.claude/hooks/` directory and are referenced from `.claude/settings.json` via `$CLAUDE_PROJECT_DIR`. The HookStack CLI writes both, so the script on disk and its registration stay in sync.' },
     ],
     related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'secure-claude-code-with-hooks', 'automate-code-quality-claude-code-hooks', 'claude-code-seo-accessibility-nextjs-hooks', 'claude-code-hooks-python'],
-    relatedHookSlugs: ['pre-bash-secret-detection', 'pre-write-main-guard', 'post-write-eslint', 'stop-run-tests', 'user-prompt-inject-conventions', 'session-start-load-git-context', 'notification-slack', 'pre-bash-block-destructive'],
+    relatedHookSlugs: ['pre-bash-secret-detection', 'pre-write-main-guard', 'post-write-biome', 'stop-run-tests', 'user-prompt-inject-conventions', 'session-start-load-git-context', 'notification-slack', 'pre-bash-block-destructive'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
   {
@@ -1247,9 +1247,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       {
         heading: 'How do you lint and auto-fix every file automatically?',
         body: [
-          'The ESLint hook follows the same shape — PostToolUse, `Write|Edit` matcher, extension filter — but it surfaces unfixable errors to Claude instead of staying fully silent. The lint report goes to stderr so the model reads it and can correct the remaining issues on the next edit.',
+          'The Biome hook follows the same shape — PostToolUse, `Write|Edit` matcher, extension filter — but it surfaces unfixable errors to Claude instead of staying fully silent. The lint report goes to stderr so the model reads it and can correct the remaining issues on the next edit.',
           {
-            code: `// .claude/hooks/post-write-eslint.mjs
+            code: `// .claude/hooks/biome-check.mjs
 import { readFileSync } from 'fs'
 import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
@@ -1263,11 +1263,11 @@ export function run(input, { exec = defaultExec } = {}) {
   if (!filePath || !/\\.[cm]?[jt]sx?$/.test(filePath)) return null
 
   try {
-    exec(\`npx --no-install eslint --max-warnings=0 "\${filePath}"\`)
+    exec(\`npx --no-install biome lint --error-on-warnings "\${filePath}"\`)
     return null
   } catch (err) {
     const output = err.stdout?.toString() ?? ''
-    return output ? { message: \`ESLint: \${output.trim()}\\n\` } : null
+    return output ? { message: \`Biome: \${output.trim()}\\n\` } : null
   }
 }
 
@@ -1278,7 +1278,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (result?.message) process.stderr.write(result.message)
 }`,
           },
-          'Stack both hooks under the same `Write|Edit` matcher group in `settings.json` — the formatter runs first so ESLint sees the already-formatted file.',
+          'Stack both hooks under the same `Write|Edit` matcher group in `settings.json` — the formatter runs first so Biome sees the already-formatted file.',
         ],
       },
       {
@@ -1403,7 +1403,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         "matcher": "Write|Edit",
         "hooks": [
           { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-autoformat.mjs" },
-          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-eslint.mjs" }
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/biome-check.mjs" }
         ]
       }
     ],
@@ -1437,7 +1437,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       { q: 'Can I auto-format files in Claude Code without writing a hook myself?', a: 'Yes. Install the post-write-autoformat hook from the HookStack catalogue with npx hookstack-cli@latest install. The CLI writes the script and registers it in settings.json so Prettier runs on every file the agent writes without any manual setup.' },
     ],
     related: ['pretooluse-vs-posttooluse', 'claude-code-hooks-examples', 'write-your-first-claude-code-hook'],
-    relatedHookSlugs: ['post-write-autoformat', 'post-write-eslint', 'post-edit-typecheck', 'post-tool-batch-typecheck', 'stop-run-tests', 'stop-quality-check', 'stop-missing-test-detection', 'file-changed-run-tests'],
+    relatedHookSlugs: ['post-write-autoformat', 'post-write-biome', 'post-edit-typecheck', 'post-tool-batch-typecheck', 'stop-run-tests', 'stop-quality-check', 'stop-missing-test-detection', 'file-changed-run-tests'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
   {
@@ -1834,7 +1834,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         heading: 'How do you catch WCAG violations in the JSX?',
         body: [
           'Accessibility violations in JSX fall into two categories: missing semantics (no alt text on an image, a button without a visible label) and incorrect structure (an interactive element that is not keyboard-focusable). Both slip through when an agent generates components at speed.',
-          'The a11y-jsx-guard hook uses eslint-plugin-jsx-a11y when the plugin is installed, and falls back to a small set of static regex checks when it is not. Either way it catches the most common violations — missing alt, empty headings, positive tabIndex — immediately after the write:',
+          'The a11y-jsx-guard hook uses Biome’s native a11y lint rules when Biome is installed — no plugin needed — and falls back to a small set of static regex checks when it is not. Either way it catches the most common violations — missing alt, empty headings, positive tabIndex — immediately after the write:',
           {
             code: `// .claude/hooks/a11y-jsx-guard.mjs (static fallback shown)
 import { readFileSync } from 'fs'
@@ -1868,7 +1868,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (result?.message) process.stderr.write(result.message)
 }`,
           },
-          'When eslint-plugin-jsx-a11y is available the full hook switches to ESLint (12 WCAG rules, 20-second timeout). The static fallback ensures the highest-signal checks run even in a bare project with no dev dependencies installed — one hook covers both environments.',
+          'When Biome is available the full hook switches to it (built-in a11y rules, 20-second timeout, no plugin to install). The static fallback ensures the highest-signal checks run even in a bare project with no dev dependencies installed — one hook covers both environments.',
         ],
       },
       {

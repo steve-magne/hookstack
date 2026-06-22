@@ -45,7 +45,7 @@ L'interface `Guide` impose :
 | 6 | How do you prevent any SEO regression at end of session? | `stop-seo-structure-check` |
 | 7 | How do you install the full SEO and a11y stack? | `npx hookstack-cli@latest install` |
 
-Les blocs de code dans le guide sont des versions simplifiées des hooks réels — ils illustrent le pattern (fonction pure `run()` + garde d'entrée) sans inclure la complexité du fallback ESLint dynamique (config `/tmp/`, détection version majeure). La logique complète reste dans `.claude/hooks/a11y-jsx-guard.mjs`.
+Les blocs de code dans le guide sont des versions simplifiées des hooks réels — ils illustrent le pattern (fonction pure `run()` + garde d'entrée) sans inclure la complexité du parsing JSON (`--reporter=rdjson`) côté Biome. La logique complète reste dans `.claude/hooks/a11y-jsx-guard.mjs`.
 
 ### Maillage interne
 

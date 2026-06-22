@@ -155,7 +155,7 @@ Fires *before* any tool executes and can block it outright. The right place for 
 
 **3. PostToolUse — observe and react**
 
-Fires *after* a tool completes, non-blocking. Run ESLint + Prettier after every file write. Record what the agent touched. Validate that the file it wrote actually parses. The agent keeps moving; the hook handles the cleanup.
+Fires *after* a tool completes, non-blocking. Run Biome + Prettier after every file write. Record what the agent touched. Validate that the file it wrote actually parses. The agent keeps moving; the hook handles the cleanup.
 
 **4. Stop / StopFailure — close the loop**
 
@@ -188,7 +188,7 @@ Fires when a new worktree is created. Copy `.env`, assign a free port, run `pnpm
 ### Validation
 
 - **stop-per-file-coverage** — After each session, flags any file touched without test coverage ≥ 80 %
-- **stop-per-file-lint** — ESLint runs on every file the agent modified before Stop fires
+- **stop-per-file-lint** — Biome runs on every file the agent modified before Stop fires
 - **post-write-autoformat** — Prettier auto-formats silently after every Write or Edit
 - **pre-bash-enforce-package-managers** — Blocks `npm` or `yarn` commands when the project uses `pnpm`
 - **post-edit-typecheck** — Runs `tsc --noEmit` on touched TypeScript files right after an edit
@@ -216,7 +216,7 @@ Fires when a new worktree is created. Copy `.env`, assign a free port, run `pnpm
 
 - **Hooks are not plugins.** They are ordinary shell scripts. No SDK, no agent modification — just events and `settings.json`.
 - **Block early, not late.** A `PreToolUse` hook that stops a bad command costs nothing. A runaway `rm -rf` costs everything.
-- **Zero overhead by default.** Hooks that don't match exit in milliseconds. A `PostToolUse` hook that can't find ESLint is silent, not crashing.
+- **Zero overhead by default.** Hooks that don't match exit in milliseconds. A `PostToolUse` hook that can't find Biome is silent, not crashing.
 - **Tested like production code.** Every hook in the catalogue ships with a Vitest unit test. The CI gate rejects any hook without coverage ≥ 80 %.
 - **Dogfooded.** The hooks in this catalogue are active on this very repository. They run on every Claude Code session that touches `hookstack`. Bugs surface fast.
 

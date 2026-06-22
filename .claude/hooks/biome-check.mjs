@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// @hookstack post-write-eslint
-// Vérifie le fichier avec ESLint après écriture (PostToolUse Write|Edit)
+// @hookstack post-write-biome
+// Vérifie le fichier avec Biome après écriture (PostToolUse Write|Edit)
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -14,11 +14,11 @@ export function run(input, { exec = defaultExec } = {}) {
   if (!filePath || !/\.[cm]?[jt]sx?$/.test(filePath)) return null;
 
   try {
-    exec(`npx --no-install eslint --max-warnings=0 "${filePath}"`);
+    exec(`npx --no-install biome lint --error-on-warnings "${filePath}"`);
     return null;
   } catch (err) {
     const output = err.stdout?.toString() ?? '';
-    return output ? { message: `ESLint: ${output.trim()}\n` } : null;
+    return output ? { message: `Biome: ${output.trim()}\n` } : null;
   }
 }
 

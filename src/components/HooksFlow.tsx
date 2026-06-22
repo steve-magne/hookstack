@@ -116,7 +116,7 @@ const BEATS: Beat[] = [
     ev: 'PostToolUse',
     head: 'Every file: formatted · linted · typed',
     sub: 'Each save is auto-fixed in the same loop — and a leaked API key is caught before it lands.',
-    hooks: 'post-write-autoformat · post-write-eslint · post-edit-typecheck · pre-write-secret-detection',
+    hooks: 'post-write-autoformat · post-write-biome · post-edit-typecheck · pre-write-secret-detection',
     tone: 'neutral',
   },
   {
