@@ -2542,6 +2542,127 @@ npx hookstack-cli@latest install`,
     relatedHookSlugs: ['post-write-ruff-format', 'post-write-ruff-check', 'post-edit-pyright', 'stop-pytest', 'pre-bash-enforce-uv'],
     sources: [{ label: 'Anthropic — Claude Code hooks documentation', url: DOCS }],
   },
+  {
+    slug: 'openai-codex-hooks',
+    title: 'OpenAI Codex Hooks: Setup, Config, and Examples',
+    metaTitle: 'OpenAI Codex Hooks: Complete Setup Guide',
+    description:
+      'OpenAI Codex hooks run commands at lifecycle events, just like Claude Code. See the .codex/hooks.json format, how it differs from Claude Code, and a working hook you can install in one command.',
+    datePublished: '2026-06-22',
+    dateModified: '2026-06-22',
+    readingMinutes: 6,
+    intro: [
+      'OpenAI Codex supports lifecycle hooks — commands that run automatically before a tool executes, after a file is written, or when the agent stops. They give you the same deterministic guardrails that Claude Code hooks do, and because Codex reuses the same lifecycle event names, the hook scripts themselves are identical between the two agents.',
+      'This guide shows what a Codex hook is, the exact `.codex/hooks.json` format, the one thing that differs from Claude Code, a complete working hook, and how to install a whole stack of production-ready Codex hooks in a single command.',
+    ],
+    sections: [
+      {
+        heading: 'What is an OpenAI Codex hook?',
+        body: [
+          'A Codex hook is an executable command bound to a point in the agent’s lifecycle. When Codex is about to run a tool, finishes writing a file, or stops, it runs your command in a separate process, passes it context as JSON on stdin, and reads its stdout and exit code. The model never runs the hook and cannot skip it — that is what makes a hook a guarantee rather than a request.',
+          'Codex and Claude Code share the same lifecycle event names — `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`, `SessionStart`, and so on. The JSON a hook receives on stdin follows the same shape too. The practical consequence: a hook script written for one agent runs unchanged on the other. Only the configuration file that registers it differs.',
+        ],
+      },
+      {
+        heading: 'How is the Codex config different from Claude Code?',
+        body: [
+          'There is exactly one structural difference. Claude Code registers hooks in `.claude/settings.json` under a top-level `hooks` key. Codex registers them in `.codex/hooks.json` with the event names at the **root** of the file — no `hooks` wrapper. The scripts also live in `.codex/hooks/` instead of `.claude/hooks/`.',
+          'Claude Code (`.claude/settings.json`):',
+          {
+            code: `{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/block-rm-rf.mjs" }
+        ]
+      }
+    ]
+  }
+}`,
+          },
+          'OpenAI Codex (`.codex/hooks.json`) — same events, no wrapper, paths point at `.codex/`:',
+          {
+            code: `{
+  "PreToolUse": [
+    {
+      "matcher": "Bash",
+      "hooks": [
+        { "type": "command", "command": "node .codex/hooks/block-rm-rf.mjs" }
+      ]
+    }
+  ]
+}`,
+          },
+          'Everything inside an event — the matcher, the `hooks` array, the `type` and `command` of each handler — is identical. You are moving the event up to the root of a different file and pointing the command at `.codex/` instead of `$CLAUDE_PROJECT_DIR/.claude/`. The hook script on disk does not change at all.',
+        ],
+      },
+      {
+        heading: 'What does a complete Codex hook look like?',
+        body: [
+          'Here is a full `PreToolUse` hook that blocks any Bash command containing `rm -rf /` and otherwise stays silent. This exact file works on both Codex and Claude Code — the runtime is Node.js, which both agents guarantee on every platform.',
+          {
+            code: `// .codex/hooks/block-rm-rf.mjs
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+export function run(input) {
+  if (input.tool_name !== 'Bash') return null
+  const command = input.tool_input?.command ?? ''
+  if (/rm\\s+-rf?\\s+\\/(?:\\s|$)/.test(command)) {
+    return { decision: 'block', reason: 'rm -rf / is blocked. Run it manually if intentional.' }
+  }
+  return null // null = allow, hook stays silent
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = JSON.parse(readFileSync(0, 'utf8')) // read stdin (fd 0)
+  const result = run(input)
+  if (result) process.stdout.write(JSON.stringify(result))
+}`,
+          },
+          'The script reads the stdin payload, decides whether to block, and only writes to stdout when it wants to stop the action. Returning nothing means “allow”. Keeping the logic in a pure `run()` function separate from the stdin marshalling is what makes the hook unit-testable — and it is the pattern every hook in the HookStack catalogue follows.',
+        ],
+      },
+      {
+        heading: 'How do I install Codex hooks in one command?',
+        body: [
+          'You can hand-write `.codex/hooks.json` and drop scripts into `.codex/hooks/`, or install production-ready hooks from HookStack and let the CLI generate the Codex-format config for you. Browse the catalogue, select your hooks, and run the command with the Codex scope:',
+          { code: 'npx hookstack-cli@latest install --codex-project' },
+          'The CLI writes the scripts to `.codex/hooks/`, builds `.codex/hooks.json` with the events at the root, and rewrites every command path from `.claude/` to `.codex/`. Use `--codex-profile` instead to install into your home-level `~/.codex/hooks.json` so the hooks apply across every project. The same hooks installed with no flag target Claude Code, and with `--copilot` target GitHub Copilot — one catalogue, three agents.',
+        ],
+      },
+      {
+        heading: 'Which Codex lifecycle events can I hook?',
+        body: [
+          'The events mirror Claude Code. The most useful:',
+          {
+            list: [
+              'PreToolUse — runs before a tool executes; the only event that can block an action by returning { "decision": "block", "reason": "…" }.',
+              'PostToolUse — runs after a tool completes, with the result available. Used for auto-format, lint, and type-check.',
+              'UserPromptSubmit — fires on each prompt; whatever it prints to stdout becomes extra context for that turn.',
+              'Stop — fires when the agent finishes. Used for tests, changelogs, and quality gates.',
+              'SessionStart / SessionEnd — fire at session boundaries, for context injection and audit logs.',
+            ],
+          },
+          'Because the event names and stdin payloads match Claude Code, any guide or example written for Claude Code hooks applies directly to Codex — only the config file format changes.',
+        ],
+      },
+    ],
+    faq: [
+      { q: 'Do OpenAI Codex hooks use the same scripts as Claude Code?', a: 'Yes. Codex and Claude Code share the same lifecycle event names and stdin payload shape, so the hook script (.mjs) is byte-for-byte identical. Only the config file differs: Claude Code uses .claude/settings.json with a top-level hooks key, Codex uses .codex/hooks.json with events at the root.' },
+      { q: 'Where does the Codex hooks config file live?', a: 'In .codex/hooks.json — either in your project root (per-project) or in ~/.codex/hooks.json (per-profile, applies to every project). Scripts live in .codex/hooks/.' },
+      { q: 'How do I install Codex hooks?', a: 'Run npx hookstack-cli@latest install --codex-project from your project root (or --codex-profile for the home-level config). The CLI writes the scripts and generates the Codex-format hooks.json for you.' },
+      { q: 'Can a Codex hook block the agent from running a command?', a: 'Yes — a PreToolUse hook writes { "decision": "block", "reason": "…" } to stdout before the tool runs, exactly as it does in Claude Code.' },
+    ],
+    related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'claude-code-settings-json', 'claude-code-hooks-examples'],
+    relatedHookSlugs: ['pre-bash-secret-detection', 'post-write-eslint', 'stop-run-tests', 'user-prompt-inject-conventions'],
+    sources: [
+      { label: 'Anthropic — Claude Code hooks documentation (shared lifecycle events)', url: DOCS },
+      { label: 'OpenAI Codex', url: 'https://openai.com/codex' },
+    ],
+  },
 ]
 
 export function getGuideBySlug(slug: string): Guide | undefined {
