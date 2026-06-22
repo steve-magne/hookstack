@@ -1,8 +1,8 @@
 # hookstack-cli
 
-**Install agentic hooks in one command — Claude Code, OpenAI Codex, or GitHub Copilot.**
+**Install Claude Code hooks in one command — also for OpenAI Codex and GitHub Copilot.**
 
-[hookstack.app](https://www.hookstack.app) — the community catalogue for agentic hooks. Browse, select, and wire them into your project with one command. The same hooks install for any of the three supported agents; only the config file format differs.
+[hookstack.app](https://www.hookstack.app) — the community catalogue of Claude Code hooks (and Codex & Copilot hooks). Browse, select, and wire them into your project with one command. The same hooks install for any of the three supported agents; only the config file format differs.
 
 ---
 
