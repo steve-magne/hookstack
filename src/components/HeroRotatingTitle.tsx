@@ -58,6 +58,11 @@ export function HeroRotatingTitle() {
         eager
         {...splitFlapHero}
       />
+      {/* SEO line — keeps the target query "Claude Code hooks" inside the <h1>.
+          Smaller + muted so the slogan stays the visual anchor. */}
+      <span className="mt-4 block text-balance text-lg font-medium tracking-normal text-zinc-400 sm:text-xl">
+        {T.heroTitleSeoLine}
+      </span>
     </h1>
   )
 }

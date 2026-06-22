@@ -1,11 +1,11 @@
 <div align="center">
 
-# HookStack
+# HookStack — Claude Code Hooks Catalogue
 
 **Your AI agent runs fast. Hooks keep it honest.**
 
-Production-ready hooks — for **Claude Code, OpenAI Codex, and GitHub Copilot**.  
-Only in one command — your agent gets guardrails in under a minute.
+A catalogue of production-ready **Claude Code hooks** — also for **OpenAI Codex** and **GitHub Copilot**.  
+Install them in one command — your agent gets guardrails in under a minute.
 
 [![Works with Claude Code](https://img.shields.io/badge/Claude_Code-compatible-CC785C?style=flat-square&logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code/overview)
 [![Works with OpenAI Codex](https://img.shields.io/badge/OpenAI_Codex-compatible-412991?style=flat-square&logo=openai&logoColor=white)](https://openai.com/codex)
