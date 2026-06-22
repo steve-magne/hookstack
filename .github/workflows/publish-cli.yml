@@ -48,7 +48,7 @@ jobs:
             pkg.version = maj + '.' + min + '.' + (patch + 1);
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
             console.log('new=' + pkg.version);
-          " >> \$GITHUB_OUTPUT
+          " >> $GITHUB_OUTPUT
 
       - name: Publish
         working-directory: packages/cli

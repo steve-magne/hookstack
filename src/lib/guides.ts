@@ -2657,7 +2657,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       { q: 'Can a Codex hook block the agent from running a command?', a: 'Yes — a PreToolUse hook writes { "decision": "block", "reason": "…" } to stdout before the tool runs, exactly as it does in Claude Code.' },
     ],
     related: ['what-are-claude-code-hooks', 'write-your-first-claude-code-hook', 'claude-code-settings-json', 'claude-code-hooks-examples'],
-    relatedHookSlugs: ['pre-bash-secret-detection', 'post-write-eslint', 'stop-run-tests', 'user-prompt-inject-conventions'],
+    relatedHookSlugs: ['pre-bash-secret-detection', 'post-write-biome', 'stop-run-tests', 'user-prompt-inject-conventions'],
     sources: [
       { label: 'Anthropic — Claude Code hooks documentation (shared lifecycle events)', url: DOCS },
       { label: 'OpenAI Codex', url: 'https://openai.com/codex' },
