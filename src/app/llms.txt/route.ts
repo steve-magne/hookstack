@@ -17,7 +17,8 @@ const CATEGORY_LABELS: Record<Category, string> = {
 
 export async function GET() {
   const byCategory = allHooks.reduce<Record<string, typeof allHooks>>((acc, hook) => {
-    ;(acc[hook.category] ??= []).push(hook)
+    acc[hook.category] ??= []
+    acc[hook.category].push(hook)
     return acc
   }, {})
 

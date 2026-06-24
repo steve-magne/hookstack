@@ -197,6 +197,7 @@ function GrowthCurve({
       {/* Axe X (temps) */}
       {xTicks.map((iso, i) => (
         <text
+          // biome-ignore lint/suspicious/noArrayIndexKey: iso can collide on short timelines, i keeps ticks unique; list is computed fresh and never reorders
           key={`x-${iso}-${i}`}
           x={x(iso)}
           y={H - 14}

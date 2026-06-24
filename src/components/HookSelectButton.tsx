@@ -11,6 +11,7 @@ export function HookSelectButton({ slug }: { slug: string }) {
 
   return (
     <button
+      type="button"
       onClick={() => toggle(slug)}
       className={`mb-8 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ${
         selected

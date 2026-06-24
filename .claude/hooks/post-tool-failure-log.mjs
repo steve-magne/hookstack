@@ -24,7 +24,7 @@ export function run(
     error: input.error ?? input.tool_response ?? null,
   };
 
-  append(join(logDir, 'tool-failures.jsonl'), JSON.stringify(entry) + '\n');
+  append(join(logDir, 'tool-failures.jsonl'), `${JSON.stringify(entry)}\n`);
   return { entry, message: `[post-tool-failure] Échec journalisé : ${entry.tool}\n` };
 }
 

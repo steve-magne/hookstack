@@ -180,7 +180,7 @@ describe('run', () => {
     const spawnCalls = [];
     const opts = {
       ...makeOpts({ hasNodeModules: false }),
-      spawn: (cmd, args, spawnOpts) => {
+      spawn: (_cmd, _args, spawnOpts) => {
         spawnCalls.push(spawnOpts.cwd);
         return { status: 0, stdout: 'ok', stderr: '' };
       },
@@ -193,7 +193,7 @@ describe('run', () => {
     const spawnCalls = [];
     const opts = {
       ...makeOpts({ hasNodeModules: true }),
-      spawn: (cmd, args, spawnOpts) => {
+      spawn: (_cmd, _args, spawnOpts) => {
         spawnCalls.push(spawnOpts.cwd);
         return { status: 0, stdout: 'ok', stderr: '' };
       },

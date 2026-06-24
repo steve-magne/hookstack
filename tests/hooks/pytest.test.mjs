@@ -11,7 +11,7 @@ function makeOpts({
   stdout = '',
   stderr = '',
 } = {}) {
-  const spawn = vi.fn((cmd, args) => {
+  const spawn = vi.fn((_cmd, args) => {
     // Premier appel : détection xdist
     if (args.includes('import xdist')) return { status: xdistInstalled ? 0 : 1, stdout: '', stderr: '' };
     // Deuxième appel : pytest

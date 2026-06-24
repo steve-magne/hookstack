@@ -66,10 +66,10 @@ console.log(`  Éligibles : ${eligible.length}`);
 const excludedByStack = excluded.filter((h) => !EXCLUDED_SLUGS.has(h.slug));
 const excludedBySlug = excluded.filter((h) => EXCLUDED_SLUGS.has(h.slug));
 console.log(`  Exclus (python/java only) : ${excludedByStack.length}`);
-excludedByStack.forEach((h) => console.log(`    - ${h.slug} [${h.stack}]`));
+excludedByStack.forEach((h) => { console.log(`    - ${h.slug} [${h.stack}]`); });
 if (excludedBySlug.length) {
   console.log(`  Exclus (remplacés localement) : ${excludedBySlug.length}`);
-  excludedBySlug.forEach((h) => console.log(`    - ${h.slug}`));
+  excludedBySlug.forEach((h) => { console.log(`    - ${h.slug}`); });
 }
 
 // ── Étape 1 : DISQUE -> code_snippet (le fichier .mjs est la vérité) ─────────
@@ -315,14 +315,14 @@ if (CHECK) {
 // ── Écritures ────────────────────────────────────────────────────────────────
 if (!DRY_RUN) {
   if (updated > 0 || cmdFixed > 0 || testsUpdated > 0) {
-    writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2) + '\n', 'utf8');
+    writeFileSync(REGISTRY_PATH, `${JSON.stringify(registry, null, 2)}\n`, 'utf8');
     const parts = [];
     if (updated > 0) parts.push(`${updated} code_snippet`);
     if (testsUpdated > 0) parts.push(`${testsUpdated} test_snippet`);
     if (cmdFixed > 0) parts.push(`${cmdFixed} commande(s) normalisée(s)`);
     console.log(`\n✓ registry.json mis à jour (${parts.join(', ')})`);
   }
-  writeFileSync(SETTINGS_PATH, JSON.stringify(newSettings, null, 2) + '\n', 'utf8');
+  writeFileSync(SETTINGS_PATH, `${JSON.stringify(newSettings, null, 2)}\n`, 'utf8');
   console.log('✓ .claude/settings.json mis à jour');
 } else {
   console.log('\n[dry-run] aucune écriture effectuée');

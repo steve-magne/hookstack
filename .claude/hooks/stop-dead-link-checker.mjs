@@ -51,7 +51,7 @@ export function run(_input, {
       if (!target) continue; // lien ancre pure (#section)
       const abs = resolve(dirname(file), target);
       if (!exists(abs)) {
-        broken.push(`${file.replace(projectDir + '/', '')}  →  ${href}`);
+        broken.push(`${file.replace(`${projectDir}/`, '')}  →  ${href}`);
       }
     }
   }

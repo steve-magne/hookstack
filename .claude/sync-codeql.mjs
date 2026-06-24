@@ -129,7 +129,7 @@ async function main(argv) {
     console.log('\n(dry-run) registry.json not written.')
     return
   }
-  writeFileSync(REGISTRY_PATH, JSON.stringify(data, null, 2) + '\n')
+  writeFileSync(REGISTRY_PATH, `${JSON.stringify(data, null, 2)}\n`)
   console.log('✓ registry.json updated.')
 }
 

@@ -11,12 +11,12 @@ const imageResult = checkImages({});
 let hasError = false;
 
 if (linkResult) {
-  process.stderr.write(linkResult.message + '\n');
+  process.stderr.write(`${linkResult.message}\n`);
   hasError = true;
 }
 
 if (imageResult) {
-  process.stderr.write(imageResult.message + '\n');
+  process.stderr.write(`${imageResult.message}\n`);
   hasError = true;
 }
 

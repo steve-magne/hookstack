@@ -25,7 +25,7 @@ export function run(
     change: input.change ?? input,
   };
 
-  append(join(logDir, 'config-changes.jsonl'), JSON.stringify(entry) + '\n');
+  append(join(logDir, 'config-changes.jsonl'), `${JSON.stringify(entry)}\n`);
   return { entry, message: '[config-audit] Changement journalise.\n' };
 }
 

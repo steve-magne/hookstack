@@ -47,7 +47,7 @@ export function run({
       return true;
     } catch (err) {
       const out = err.stdout?.toString()?.trim() ?? '';
-      messages.push(`[quality-check] ✗ ${label}\n${out ? out.slice(-500) + '\n' : ''}`);
+      messages.push(`[quality-check] ✗ ${label}\n${out ? `${out.slice(-500)}\n` : ''}`);
       return false;
     }
   }

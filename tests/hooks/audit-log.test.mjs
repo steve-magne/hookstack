@@ -10,6 +10,6 @@ describe('audit-log', () => {
     const deps = base();
     const e = run({ session_id: 's1', total_cost_usd: 0.5, num_turns: 3 }, deps);
     expect(e).toMatchObject({ timestamp: TS, project: 'proj', session_id: 's1', total_cost_usd: 0.5, num_turns: 3 });
-    expect(deps.append).toHaveBeenCalledWith('/home/.claude/audit-log.jsonl', JSON.stringify(e) + '\n');
+    expect(deps.append).toHaveBeenCalledWith('/home/.claude/audit-log.jsonl', `${JSON.stringify(e)}\n`);
   });
 });

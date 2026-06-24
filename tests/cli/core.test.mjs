@@ -198,7 +198,9 @@ describe('collectIncomingHooks', () => {
     const out = collectIncomingHooks(hooks, { scope: 'copilot' })
     expect(out.PreToolUse[0].hooks[0].command).toBe('node .claude/hooks/s.mjs')
   })
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell-style ${VAR} syntax under test, not JS interpolation
   it('copilot : retire aussi la forme ${CLAUDE_PROJECT_DIR}/', () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell-style ${VAR} syntax under test, not JS interpolation
     const h = [{ slug: 's', config: { hooks: { Stop: [{ hooks: [{ command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/s.mjs' }] }] } } }]
     const out = collectIncomingHooks(h, { scope: 'copilot' })
     expect(out.Stop[0].hooks[0].command).toBe('node .claude/hooks/s.mjs')
@@ -211,7 +213,9 @@ describe('collectIncomingHooks', () => {
     const out = collectIncomingHooks(hooks, { scope: 'codex-profile', globalRoot: '/home/u' })
     expect(out.PreToolUse[0].hooks[0].command).toBe('node /home/u/.codex/hooks/s.mjs')
   })
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell-style ${VAR} syntax under test, not JS interpolation
   it('codex : gère aussi la forme ${CLAUDE_PROJECT_DIR}/', () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell-style ${VAR} syntax under test, not JS interpolation
     const h = [{ slug: 's', config: { hooks: { Stop: [{ hooks: [{ command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/s.mjs' }] }] } } }]
     const out = collectIncomingHooks(h, { scope: 'codex-project' })
     expect(out.Stop[0].hooks[0].command).toBe('node .codex/hooks/s.mjs')

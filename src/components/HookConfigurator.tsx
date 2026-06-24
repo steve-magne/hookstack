@@ -17,20 +17,6 @@ export function HookConfigurator() {
     [selected]
   )
 
-  const defaultSlugs = useMemo(
-    () => new Set(allHooks.filter((h) => h.default_on).map((h) => h.slug)),
-    []
-  )
-
-  const isDefault = useMemo(() => {
-    if (selected.length !== defaultSlugs.size) return false
-    return selected.every((s) => defaultSlugs.has(s))
-  }, [selected, defaultSlugs])
-
-  const pluginCmd = isDefault
-    ? 'npx hookstack-cli@latest install'
-    : `npx hookstack-cli@latest install --hooks=${hooks.map((h) => h.slug).join(',')}`
-
   if (hooks.length === 0) {
     return (
       <m.div
@@ -41,11 +27,13 @@ export function HookConfigurator() {
       >
         {T.selectHooksPrompt.split('settings.json').map((part, i, arr) =>
           i < arr.length - 1 ? (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static split of fixed text, never reorders
             <span key={i}>
               {part}
               <code className="text-zinc-300">settings.json</code>
             </span>
           ) : (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static split of fixed text, never reorders
             <span key={i}>{part}</span>
           )
         )}

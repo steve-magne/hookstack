@@ -27,7 +27,7 @@ export function run(
     num_turns: input.num_turns ?? null,
   };
 
-  append(join(logDir, 'audit-log.jsonl'), JSON.stringify(entry) + '\n');
+  append(join(logDir, 'audit-log.jsonl'), `${JSON.stringify(entry)}\n`);
   return entry;
 }
 

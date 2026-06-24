@@ -20,6 +20,7 @@ export function Header() {
           <Link href="/about" className="hidden sm:block text-zinc-400 transition-colors hover:text-white">
             {T.navAbout}
           </Link>
+          {/* biome-ignore lint/a11y/useAnchorContent: aria-label provides the accessible name for this icon-only link */}
           <a
             href="https://github.com/steve-magne/hookstack"
             target="_blank"

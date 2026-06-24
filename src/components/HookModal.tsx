@@ -97,6 +97,7 @@ export function HookModal({ hook, onClose }: { hook: Hook; onClose: () => void }
 
         {/* HookModal-close */}
         <button
+          type="button"
           data-component="HookModal-close"
           onClick={onClose}
           aria-label={T.close}

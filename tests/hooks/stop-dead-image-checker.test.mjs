@@ -12,13 +12,13 @@ function makeFs({ files = {}, dirs = [], publicFiles = [] } = {}) {
     readdir: (dir) => {
       const entries = [];
       for (const [fp] of Object.entries(allFiles)) {
-        if (fp.startsWith(dir + '/')) {
+        if (fp.startsWith(`${dir}/`)) {
           const rel = fp.slice(dir.length + 1);
           if (!rel.includes('/')) entries.push({ name: rel, isDirectory: () => false });
         }
       }
       for (const d of dirs) {
-        if (d.startsWith(dir + '/') && !d.slice(dir.length + 1).includes('/')) {
+        if (d.startsWith(`${dir}/`) && !d.slice(dir.length + 1).includes('/')) {
           entries.push({ name: d.slice(dir.length + 1), isDirectory: () => true });
         }
       }

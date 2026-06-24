@@ -47,7 +47,7 @@ describe('liste statique racine', () => {
     const existing = new Set(['.env.local', '.env.development.local'].map(f => `${MAIN}/${f}`));
     const exists = (p) => existing.has(p);
     run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles: noScan });
-    const copied = copy.mock.calls.map(([src]) => src.replace(MAIN + '/', ''));
+    const copied = copy.mock.calls.map(([src]) => src.replace(`${MAIN}/`, ''));
     expect(copied).toContain('.env.local');
     expect(copied).toContain('.env.development.local');
     expect(copy).toHaveBeenCalledTimes(2);
@@ -87,7 +87,7 @@ describe('liste statique racine', () => {
     const existing = new Set(files.map(f => `${MAIN}/${f}`));
     const exists = (p) => existing.has(p);
     run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles: noScan });
-    const copied = copy.mock.calls.map(([src]) => src.replace(MAIN + '/', ''));
+    const copied = copy.mock.calls.map(([src]) => src.replace(`${MAIN}/`, ''));
     for (const f of files) expect(copied).toContain(f);
   });
 });
@@ -99,9 +99,9 @@ describe('scan monorepo (scanEnvFiles)', () => {
     const copy = vi.fn();
     const subFiles = ['apps/web/.env', 'apps/api/.env.local', 'packages/utils/.env'];
     const scanEnvFiles = () => subFiles;
-    const exists = (p) => p.startsWith(MAIN + '/');
+    const exists = (p) => p.startsWith(`${MAIN}/`);
     run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles });
-    const copied = copy.mock.calls.map(([src]) => src.replace(MAIN + '/', ''));
+    const copied = copy.mock.calls.map(([src]) => src.replace(`${MAIN}/`, ''));
     expect(copied).toContain('apps/web/.env');
     expect(copied).toContain('apps/api/.env.local');
     expect(copied).toContain('packages/utils/.env');
@@ -117,9 +117,9 @@ describe('scan monorepo (scanEnvFiles)', () => {
   it('déduplique si le scan retourne un fichier déjà dans ROOT_FILES', () => {
     const copy = vi.fn();
     const scanEnvFiles = () => ['.env', 'frontend/.env'];
-    const exists = (p) => p.startsWith(MAIN + '/');
+    const exists = (p) => p.startsWith(`${MAIN}/`);
     run({ exec: makeExec(), exists, copy, mkdir: vi.fn(), scanEnvFiles });
-    const copied = copy.mock.calls.map(([src]) => src.replace(MAIN + '/', ''));
+    const copied = copy.mock.calls.map(([src]) => src.replace(`${MAIN}/`, ''));
     expect(copied.filter(f => f === '.env')).toHaveLength(1);
     expect(copied).toContain('frontend/.env');
   });
@@ -128,7 +128,7 @@ describe('scan monorepo (scanEnvFiles)', () => {
     const copy = vi.fn();
     const mkdir = vi.fn();
     const scanEnvFiles = () => ['apps/web/.env'];
-    const exists = (p) => p.startsWith(MAIN + '/') && !p.startsWith(WORKTREE + '/');
+    const exists = (p) => p.startsWith(`${MAIN}/`) && !p.startsWith(`${WORKTREE}/`);
     run({ exec: makeExec(), exists, copy, mkdir, scanEnvFiles });
     expect(mkdir).toHaveBeenCalledWith(`${WORKTREE}/apps/web`, { recursive: true });
     expect(copy).toHaveBeenCalledWith(`${MAIN}/apps/web/.env`, `${WORKTREE}/apps/web/.env`);

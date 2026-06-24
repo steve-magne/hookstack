@@ -18,7 +18,7 @@ const bySlug = new Map(registry.map((h) => [h.slug, h]))
 let added = 0
 
 for (const hook of incoming) {
-  if (!hook || !hook.slug) continue
+  if (!hook?.slug) continue
   const example = {
     repo: repoUrl ?? hook.community_examples?.[0]?.repo ?? '',
     file_path: hook.implementation?.script_path ?? '',
@@ -39,6 +39,6 @@ for (const hook of incoming) {
   }
 }
 
-writeFileSync(registryFile, JSON.stringify(registry, null, 2) + '\n')
+writeFileSync(registryFile, `${JSON.stringify(registry, null, 2)}\n`)
 writeFileSync('/tmp/added-count.txt', String(added))
 console.log(`Merged: ${added} nouveau(x) hook(s), ${registry.length} au total.`)

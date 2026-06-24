@@ -4,7 +4,8 @@ import { getHookBySlug } from '@/lib/hooks'
 
 describe('getGuideBySlug', () => {
   it('finds an existing guide', () => {
-    const slug = guides[0]!.slug
+    const slug = guides[0]?.slug
+    expect(slug).toBeDefined()
     expect(getGuideBySlug(slug)?.slug).toBe(slug)
   })
 

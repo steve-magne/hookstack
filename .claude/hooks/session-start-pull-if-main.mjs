@@ -34,11 +34,11 @@ export function run({ exec = defaultExec, pull = defaultPull } = {}) {
 
   if (parseInt(ahead, 10) > 0) {
     // Divergence — ne pas pull automatiquement
-    return [
+    return `${[
       `## ⚠️  Branche \`${branch}\` diverge du remote`,
       `- ${behind} commit(s) en retard, ${ahead} commit(s) en avance.`,
       `- Résolvez la divergence avant de continuer (\`git pull --rebase\` ou merge manuel).`,
-    ].join('\n') + '\n';
+    ].join('\n')}\n`;
   }
 
   // Pull sans divergence
@@ -48,10 +48,10 @@ export function run({ exec = defaultExec, pull = defaultPull } = {}) {
     return `## ⚠️  \`git pull\` a échoué sur \`${branch}\` — synchronisez manuellement.\n`;
   }
 
-  return [
+  return `${[
     `## Dépôt synchronisé`,
     `- \`${behind}\` commit(s) récupéré(s) depuis le remote sur \`${branch}\`.`,
-  ].join('\n') + '\n';
+  ].join('\n')}\n`;
 }
 
 /* v8 ignore next 4 */

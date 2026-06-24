@@ -52,6 +52,7 @@ export function HookRow({ hook, groupBy, intro = false, introDelay = 0 }: Props)
       transition={spring.smooth}
     >
       {/* Ligne — clic = expand/collapse */}
+      {/* biome-ignore lint/a11y/useSemanticElements: a real <button> can't legally contain the nested interactive checkbox below; div+role+keydown is the valid pattern here */}
       <div
         onClick={() => setExpanded((v) => !v)}
         role="button"
@@ -99,6 +100,7 @@ export function HookRow({ hook, groupBy, intro = false, introDelay = 0 }: Props)
             {hook.stack?.map((s) => (
               <span
                 key={s}
+                role="img"
                 className={`grid size-4 shrink-0 place-items-center rounded-[4px] font-mono text-[9px] font-bold leading-none ${STACK_MONO_COLOR[s]}`}
                 aria-label={s}
                 title={s}
@@ -162,9 +164,9 @@ export function HookRow({ hook, groupBy, intro = false, introDelay = 0 }: Props)
                     {T.useCases}
                   </p>
                   <ul className="space-y-1">
-                    {hook.use_cases.slice(0, 3).map((uc, i) => (
+                    {hook.use_cases.slice(0, 3).map((uc) => (
                       <li
-                        key={i}
+                        key={uc}
                         className="flex items-start gap-1.5 text-[12px] leading-snug text-zinc-400"
                       >
                         <span className="mt-[3px] shrink-0 text-zinc-600">–</span>

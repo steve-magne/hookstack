@@ -275,7 +275,7 @@ export function renderLinechartSvg(timeline) {
   }
 
   lines.push(`</svg>`);
-  return lines.join('\n') + '\n';
+  return `${lines.join('\n')}\n`;
 }
 
 /** Rend le heatmap en SVG autonome (embarqué dans le README via <img>). */
@@ -391,14 +391,14 @@ export function injectReadme(readme, block) {
   // Première insertion : avant le premier "## " en début de ligne.
   const headingIdx = readme.search(/^## /m);
   if (headingIdx !== -1) {
-    return readme.slice(0, headingIdx) + block + '\n\n' + readme.slice(headingIdx);
+    return `${readme.slice(0, headingIdx) + block}\n\n${readme.slice(headingIdx)}`;
   }
-  return readme.trimEnd() + '\n\n' + block + '\n';
+  return `${readme.trimEnd()}\n\n${block}\n`;
 }
 
 /** Sérialisation déterministe de la timeline (clé d'écriture + comparaison `--check`). */
 export function serializeTimeline(timeline) {
-  return JSON.stringify(timeline, null, 2) + '\n';
+  return `${JSON.stringify(timeline, null, 2)}\n`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -438,7 +438,7 @@ function main() {
     if (readme !== nextReadme) drift.push('README.md (bloc HOOKS_TIMELINE)');
     if (drift.length) {
       console.error(`\n✗ ${drift.length} artefact(s) timeline désynchronisé(s) :`);
-      drift.forEach((d) => console.error(`    - ${d}`));
+      drift.forEach((d) => { console.error(`    - ${d}`); });
       console.error("  Lancer 'pnpm timeline' (ou 'node .claude/hooks-timeline.mjs') puis committer.");
       process.exit(1);
     }

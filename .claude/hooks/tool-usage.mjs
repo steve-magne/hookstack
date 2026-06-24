@@ -26,7 +26,7 @@ export function run(
     exit: input.tool_response?.exit_code ?? null,
   };
 
-  append(join(logDir, 'bash-history.jsonl'), JSON.stringify(entry) + '\n');
+  append(join(logDir, 'bash-history.jsonl'), `${JSON.stringify(entry)}\n`);
   return entry;
 }
 

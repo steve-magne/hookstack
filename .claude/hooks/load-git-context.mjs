@@ -20,7 +20,7 @@ export function run({ exec = defaultExec } = {}) {
   if (status) lines.push(`- Fichiers modifiés :\n${status.split('\n').map((l) => `  ${l}`).join('\n')}`);
   else lines.push('- Répertoire de travail propre');
 
-  return lines.join('\n') + '\n';
+  return `${lines.join('\n')}\n`;
 }
 
 /* v8 ignore next 4 */
