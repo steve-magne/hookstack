@@ -19,7 +19,8 @@ function makeHook(overrides: Partial<Hook> = {}): Hook {
 
 describe('getHookBySlug', () => {
   it('finds an existing hook from the registry', () => {
-    const slug = allHooks[0]!.slug
+    const slug = allHooks[0]?.slug
+    expect(slug).toBeDefined()
     expect(getHookBySlug(slug)?.slug).toBe(slug)
   })
 

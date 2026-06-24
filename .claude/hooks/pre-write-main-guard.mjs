@@ -21,14 +21,14 @@ export function run(input, { exec = defaultExec } = {}) {
   const filePath = input.tool_input?.file_path ?? '(fichier inconnu)';
 
   // Autoriser les écritures vers des fichiers hors du repo principal
-  if (filePath !== '(fichier inconnu)' && !filePath.startsWith(mainRoot + '/')) return null;
+  if (filePath !== '(fichier inconnu)' && !filePath.startsWith(`${mainRoot}/`)) return null;
 
   // Autoriser les écritures dans un worktree secondaire (ex: .claude/worktrees/session-xxx/…)
   const secondaryWorktrees = worktreeList.split('\n')
     .slice(1)
     .map(line => line.split(/\s+/)[0])
     .filter(Boolean);
-  if (secondaryWorktrees.some(wt => filePath.startsWith(wt + '/'))) return null;
+  if (secondaryWorktrees.some(wt => filePath.startsWith(`${wt}/`))) return null;
 
   return {
     decision: 'block',

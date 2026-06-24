@@ -92,7 +92,7 @@ for (const hook of hooks) {
 
   // — Overlay de traduction (catalogue multilingue, fallback FR si absent) —
   const en = hook.i18n?.en
-  if (!en || !en.name || !en.description || !Array.isArray(en.use_cases) || en.use_cases.length === 0) {
+  if (!en?.name || !en.description || !Array.isArray(en.use_cases) || en.use_cases.length === 0) {
     i18nNotices.push(`${hook.slug}: overlay i18n.en absent ou incomplet`)
   } else if (en.use_cases.length !== hook.use_cases.length) {
     i18nNotices.push(`${hook.slug}: i18n.en.use_cases (${en.use_cases.length}) ≠ use_cases (${hook.use_cases.length})`)
@@ -108,9 +108,9 @@ for (const hook of hooks) {
   if (isSafeForProject) recommended.push(hook)
 }
 
-writeFileSync('/tmp/hookstack-hooks-validated.json', JSON.stringify(validated, null, 2) + '\n')
-writeFileSync('/tmp/hookstack-hooks-rejected.json', JSON.stringify(rejected, null, 2) + '\n')
-writeFileSync('/tmp/hookstack-hooks-recommended.json', JSON.stringify(recommended, null, 2) + '\n')
+writeFileSync('/tmp/hookstack-hooks-validated.json', `${JSON.stringify(validated, null, 2)}\n`)
+writeFileSync('/tmp/hookstack-hooks-rejected.json', `${JSON.stringify(rejected, null, 2)}\n`)
+writeFileSync('/tmp/hookstack-hooks-recommended.json', `${JSON.stringify(recommended, null, 2)}\n`)
 writeFileSync('/tmp/hookstack-validation-count.txt', String(validated.length))
 
 const total = hooks.length

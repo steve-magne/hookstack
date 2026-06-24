@@ -67,6 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <p className="mt-1 text-zinc-600">Built &amp; maintained by {MAINTAINER.name} · MIT licensed</p>
           </footer>
           {/* GitHubFab */}
+          {/* biome-ignore lint/a11y/useAnchorContent: aria-label provides the accessible name for this icon-only link */}
           <a
             data-component="GitHubFab"
             href="https://github.com/steve-magne/hookstack"

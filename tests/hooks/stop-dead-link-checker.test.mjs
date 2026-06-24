@@ -7,10 +7,10 @@ function makeFs({ files = {}, dirs = [] } = {}) {
   return {
     projectDir: '/proj',
     exists: (p) => p in files || dirs.includes(p) || p === '/proj',
-    readdir: (dir, opts) => {
+    readdir: (dir, _opts) => {
       const entries = [];
       for (const [fp] of Object.entries(files)) {
-        if (fp.startsWith(dir + '/')) {
+        if (fp.startsWith(`${dir}/`)) {
           const rel = fp.slice(dir.length + 1);
           if (!rel.includes('/')) {
             entries.push({ name: rel, isDirectory: () => false });
@@ -18,7 +18,7 @@ function makeFs({ files = {}, dirs = [] } = {}) {
         }
       }
       for (const d of dirs) {
-        if (d.startsWith(dir + '/') && !d.slice(dir.length + 1).includes('/')) {
+        if (d.startsWith(`${dir}/`) && !d.slice(dir.length + 1).includes('/')) {
           const name = d.slice(dir.length + 1);
           entries.push({ name, isDirectory: () => true });
         }

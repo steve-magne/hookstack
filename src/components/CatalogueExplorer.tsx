@@ -90,6 +90,7 @@ function FilterDropdown({
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
@@ -124,6 +125,7 @@ function FilterDropdown({
                 const isSelected = selected.includes(opt.value)
                 return (
                   <button
+                    type="button"
                     key={opt.value}
                     onClick={() => onToggle(opt.value)}
                     className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors hover:bg-white/5"
@@ -146,6 +148,7 @@ function FilterDropdown({
             {hasSelection && (
               <div className="border-t border-zinc-700/50 px-3 py-1.5">
                 <button
+                  type="button"
                   onClick={() => {
                     onClear()
                     setOpen(false)
@@ -185,6 +188,7 @@ function GroupBySegmented({
           const active = value === val
           return (
             <button
+              type="button"
               key={val}
               onClick={() => onChange(val)}
               aria-pressed={active}
@@ -240,14 +244,14 @@ function buildGroups(
       const i = CATEGORY_ORDER.indexOf(k as Category)
       return i === -1 ? CATEGORY_ORDER.length : i
     }
-    return [...map.keys()]
-      .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
-      .map((key) => ({
+    return [...map.entries()]
+      .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
+      .map(([key, hooks]) => ({
         key,
         label: categoryLabels[key] ?? key,
-        count: map.get(key)!.length,
+        count: hooks.length,
         kind: 'category' as const,
-        hooks: map.get(key)!,
+        hooks,
       }))
   }
 
@@ -262,17 +266,20 @@ function buildGroups(
     }
     return order
       .filter((w) => map.has(w))
-      .map((w) => ({
-        key: w,
-        label: windowLabels[w],
-        count: map.get(w)!.length,
-        kind: 'date' as const,
-        hooks: map.get(w)!.sort((a, b) => {
+      .map((w) => {
+        const hooks = (map.get(w) ?? []).sort((a, b) => {
           const da = dateBySlug.get(a.slug) ?? ''
           const db = dateBySlug.get(b.slug) ?? ''
           return db.localeCompare(da) || a.name.localeCompare(b.name)
-        }),
-      }))
+        })
+        return {
+          key: w,
+          label: windowLabels[w],
+          count: hooks.length,
+          kind: 'date' as const,
+          hooks,
+        }
+      })
   }
 
   // groupBy === 'event'
@@ -287,14 +294,14 @@ function buildGroups(
     const i = order.indexOf(k)
     return i === -1 ? order.length : i
   }
-  return [...map.keys()]
-    .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
-    .map((key) => ({
+  return [...map.entries()]
+    .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
+    .map(([key, hooks]) => ({
       key,
       label: key,
-      count: map.get(key)!.length,
+      count: hooks.length,
       kind: 'event' as const,
-      hooks: map.get(key)!,
+      hooks,
     }))
 }
 
@@ -419,6 +426,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
   // L'intro split-flap rejoue au montage ET à chaque changement d'axe de
   // groupage (DESIGN ⑨c) — pas sur la frappe de recherche.
   const [intro, setIntro] = useState(true)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: groupBy n'est pas lu ici, il sert volontairement de trigger (voir commentaire ci-dessus)
   useEffect(() => {
     setIntro(true)
     const t = setTimeout(() => setIntro(false), 2600)
@@ -494,6 +502,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
             const isActive = selectedStacks.includes(s)
             return (
               <button
+                type="button"
                 key={s}
                 onClick={() => toggleStack(s)}
                 aria-pressed={isActive}
@@ -537,6 +546,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
           {/* Hide selected */}
           {selectedSlugs.length > 0 && (
             <button
+              type="button"
               onClick={() => setHideSelected((v) => !v)}
               aria-pressed={hideSelected}
               className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
@@ -554,6 +564,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
           {/* Clear all */}
           {hasActiveFilters && (
             <button
+              type="button"
               onClick={() => {
                 track('reset_all_filters', {
                   stacks: selectedStacks.length,

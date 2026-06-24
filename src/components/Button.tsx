@@ -1,4 +1,4 @@
-import { type ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes } from 'react'
 
 type Variant = 'ghost' | 'surface'
 type Size = 'sm' | 'md' | 'lg'

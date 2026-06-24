@@ -229,6 +229,7 @@ export function HooksFlow() {
               className="relative w-full min-w-[680px] sm:min-w-0"
               style={{ aspectRatio: `${VBW} / ${VBH}` }}
             >
+              {/* biome-ignore lint/a11y/noSvgWithoutTitle: purely decorative, aria-hidden already removes it from the a11y tree */}
               <svg
                 viewBox={`0 0 ${VBW} ${VBH}`}
                 className="absolute inset-0 h-full w-full overflow-visible"
@@ -435,6 +436,7 @@ export function HooksFlow() {
             <div className="flex items-center gap-1.5">
               {BEATS.map((_, i) => (
                 <button
+                  // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length decorative progress dots, never reorders
                   key={i}
                   type="button"
                   aria-label={`Étape ${i + 1}`}
@@ -559,6 +561,7 @@ function Proof({ step }: { step: number }) {
           <div className="mb-2 flex items-center justify-center gap-1.5">
             {Array.from({ length: 6 }).map((_, i) => (
               <m.span
+                // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length decorative dots, never reorders
                 key={i}
                 className="size-2.5 rounded-full bg-emerald-400"
                 initial={{ opacity: 0.15, scale: 0.7 }}

@@ -56,22 +56,22 @@ export function run({
   try {
     addWorktree(worktreePath, branchName);
   } catch {
-    return [
+    return `${[
       `## ⚠️  Session démarrée sur \`main\``,
       `- Impossible de créer un worktree automatiquement.`,
       `- Créez manuellement un worktree ou une branche avant de modifier des fichiers.`,
-    ].join('\n') + '\n';
+    ].join('\n')}\n`;
   }
 
   if (!exists(worktreePath)) return null;
 
-  return [
+  return `${[
     `## Worktree isolé créé automatiquement`,
     `- Session démarrée sur \`main\` : un worktree unique a été créé pour cette session.`,
     `- **Chemin** : \`${worktreePath}\``,
     `- **Branche** : \`${branchName}\``,
     `- Travaillez dans ce worktree — évitez de modifier des fichiers dans le dépôt principal.`,
-  ].join('\n') + '\n';
+  ].join('\n')}\n`;
 }
 
 /* v8 ignore next 4 */

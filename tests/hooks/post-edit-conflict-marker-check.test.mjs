@@ -5,9 +5,9 @@ import { makeFsDeps } from './_utils.mjs';
 
 // Marqueurs construits dynamiquement pour ne pas laisser de vrais marqueurs
 // de conflit dans ce fichier de test.
-const OPEN = '<'.repeat(7) + ' HEAD';
+const OPEN = `${'<'.repeat(7)} HEAD`;
 const SEP = '='.repeat(7);
-const CLOSE = '>'.repeat(7) + ' feature-branch';
+const CLOSE = `${'>'.repeat(7)} feature-branch`;
 const conflicted = ['const a = 1;', OPEN, 'const b = 2;', SEP, 'const b = 3;', CLOSE].join('\n');
 
 describe('post-edit-conflict-marker-check', () => {

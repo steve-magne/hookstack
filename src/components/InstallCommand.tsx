@@ -74,7 +74,7 @@ export function InstallCommand({ command, meta, mobileCopyPrompt, source = 'stic
               <span className="text-zinc-500">--hooks=</span>
               {slugs.length > 0 ? (
                 slugs.map((s, i) => (
-                  <span key={`${s}-${i}`}>
+                  <span key={s}>
                     <span className="text-zinc-300">{s}</span>
                     {i < slugs.length - 1 && <span className="text-zinc-600">,</span>}
                   </span>

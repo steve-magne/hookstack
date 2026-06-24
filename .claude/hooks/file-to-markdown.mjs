@@ -47,7 +47,7 @@ export function run(input, { exec = defaultExec, exists = existsSync } = {}) {
     return null;
   }
 
-  if (!markdown || !markdown.trim()) return null;
+  if (!markdown?.trim()) return null;
 
   let content = markdown.trim();
   let truncated = false;

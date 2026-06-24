@@ -40,7 +40,7 @@ export function run({ exec = defaultExec, now = () => Date.now() } = {}) {
 
   lines.push(`- Utilisez \`git stash list\` pour les voir, \`git stash pop\` ou \`git stash drop\` pour les gérer.`);
 
-  return lines.join('\n') + '\n';
+  return `${lines.join('\n')}\n`;
 }
 
 /* v8 ignore next 4 */

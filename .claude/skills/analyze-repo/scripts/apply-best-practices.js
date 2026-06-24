@@ -65,7 +65,7 @@ function hasEquivalentCommand(event, matcher, command) {
 // Applique un hook dans settings si sa commande n'est pas déjà présente.
 // writeScript : si true, normalise vers .mjs et crée le script local si absent.
 // Retourne le nom du hook si appliqué, null sinon.
-function applyHook(hook, source, writeScript = false) {
+function applyHook(hook, _source, writeScript = false) {
   const fragment = hook.implementation?.config?.hooks
   if (!fragment) return null
 
@@ -132,7 +132,7 @@ if (candidatesFile && existsSync(candidatesFile)) {
 }
 
 const totalApplied = appliedFromRegistry + appliedFromScan
-writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + '\n')
+writeFileSync(settingsFile, `${JSON.stringify(settings, null, 2)}\n`)
 writeFileSync('/tmp/applied-count.txt', String(totalApplied))
 writeFileSync('/tmp/applied-from-scan-count.txt', String(appliedFromScan))
 

@@ -37,7 +37,7 @@ export function run({
     return { written: false, message: '[session-changelog] CHANGELOG.md absent — entrée ignorée.\n' };
   }
 
-  append(changelogPath, entry + '\n');
+  append(changelogPath, `${entry}\n`);
   return { written: true, entry, message: '[session-changelog] ✓ Entrée ajoutée dans CHANGELOG.md\n' };
 }
 

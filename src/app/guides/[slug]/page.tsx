@@ -44,10 +44,12 @@ function Inline({ text }: { text: string }) {
     <>
       {parts.map((p, i) =>
         i % 2 === 1 ? (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static split of fixed text, never reorders
           <code key={i} className="rounded bg-white/10 px-1 py-0.5 text-[0.85em] text-zinc-200">
             {p}
           </code>
         ) : (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static split of fixed text, never reorders
           <span key={i}>{p}</span>
         ),
       )}
@@ -140,8 +142,11 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
 
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: server-rendered JSON-LD from our own data, never user input */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: server-rendered JSON-LD from our own data, never user input */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: server-rendered JSON-LD from our own data, never user input */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       {/* GuidePage */}
@@ -165,6 +170,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
           <section key={section.heading} className="mt-8">
             <h2 className="mb-3 text-xl font-semibold text-white">{section.heading}</h2>
             {section.body.map((block, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: static content, never reorders
               <Block key={i} block={block} />
             ))}
           </section>

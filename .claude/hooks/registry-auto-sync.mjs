@@ -53,5 +53,5 @@ export function run(input, { exec = defaultExec, projectDir = process.env.CLAUDE
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const input = JSON.parse(readFileSync(0, 'utf8'));
   const result = run(input);
-  if (result?.message) process.stderr.write(result.message + '\n');
+  if (result?.message) process.stderr.write(`${result.message}\n`);
 }

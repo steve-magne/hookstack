@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs'
 const [,, url, registryPath = 'registry/registry.json'] = process.argv
 
 if (!url) {
-  process.stdout.write(JSON.stringify({ error: 'Usage: fetch-doc-sources.mjs <url> [registry.json]' }) + '\n')
+  process.stdout.write(`${JSON.stringify({ error: 'Usage: fetch-doc-sources.mjs <url> [registry.json]' })}\n`)
   process.exit(0)
 }
 
@@ -20,8 +20,8 @@ function stripHtml(html) {
     .replace(/<footer[\s\S]*?<\/footer>/gi, '')
     .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<(h[1-6])[^>]*>([\s\S]*?)<\/\1>/gi, (_, tag, content) => '\n## ' + content.replace(/<[^>]+>/g, '') + '\n')
-    .replace(/<(pre|code)[^>]*>([\s\S]*?)<\/\1>/gi, (_, tag, content) => '\n```\n' + content.replace(/<[^>]+>/g, '') + '\n```\n')
+    .replace(/<(h[1-6])[^>]*>([\s\S]*?)<\/\1>/gi, (_, _tag, content) => `\n## ${content.replace(/<[^>]+>/g, '')}\n`)
+    .replace(/<(pre|code)[^>]*>([\s\S]*?)<\/\1>/gi, (_, _tag, content) => `\n\`\`\`\n${content.replace(/<[^>]+>/g, '')}\n\`\`\`\n`)
     .replace(/<li[^>]*>/gi, '\n- ')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<p[^>]*>/gi, '\n')
@@ -73,7 +73,7 @@ try {
   })
 
   if (!res.ok) {
-    process.stdout.write(JSON.stringify({ error: `HTTP ${res.status} pour ${url}` }) + '\n')
+    process.stdout.write(`${JSON.stringify({ error: `HTTP ${res.status} pour ${url}` })}\n`)
     process.exit(0)
   }
 
@@ -91,20 +91,20 @@ try {
 
   const MAX_CHARS = 50000
   const truncated = content.length > MAX_CHARS
-    ? content.slice(0, MAX_CHARS) + '\n\n[...contenu tronqué à 50 000 caractères]'
+    ? `${content.slice(0, MAX_CHARS)}\n\n[...contenu tronqué à 50 000 caractères]`
     : content
 
   let existingSlugs = []
   try { existingSlugs = JSON.parse(readFileSync(registryPath, 'utf8')).map(h => h.slug) } catch {}
 
-  process.stdout.write(JSON.stringify({
+  process.stdout.write(`${JSON.stringify({
     source_type: 'documentation',
     url,
     title,
     content: truncated,
     existing_slugs: existingSlugs,
-  }) + '\n')
+  })}\n`)
 } catch (err) {
-  process.stdout.write(JSON.stringify({ error: err.message }) + '\n')
+  process.stdout.write(`${JSON.stringify({ error: err.message })}\n`)
   process.exit(0)
 }

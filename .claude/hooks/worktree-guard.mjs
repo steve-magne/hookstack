@@ -29,9 +29,9 @@ export function run(input, { exec = defaultExec, home = homedir() } = {}) {
     const absFile = resolve(filePath);
 
     // Autoriser les répertoires internes des agents (plans, mémoire, config…)
-    if (AGENT_DIRS.some((d) => absFile.startsWith(resolve(home, d) + '/'))) return null;
+    if (AGENT_DIRS.some((d) => absFile.startsWith(`${resolve(home, d)}/`))) return null;
 
-    if (!absFile.startsWith(worktreeRoot + '/')) {
+    if (!absFile.startsWith(`${worktreeRoot}/`)) {
       return {
         decision: 'block',
         reason: `Écriture hors du worktree courant (${worktreeRoot}). Vérifiez le chemin cible.`,

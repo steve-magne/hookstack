@@ -47,8 +47,8 @@ function runBiome(filePath, { exec }) {
 function openingTags(content, tag) {
   const tags = [];
   const re = new RegExp(`<${tag}\\b`, 'g');
-  let m;
-  while ((m = re.exec(content))) {
+  let m = re.exec(content);
+  while (m) {
     let depth = 0;
     let quote = null;
     for (let j = m.index; j < content.length; j++) {
@@ -66,6 +66,7 @@ function openingTags(content, tag) {
         break;
       }
     }
+    m = re.exec(content);
   }
   return tags;
 }

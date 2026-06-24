@@ -35,4 +35,4 @@ if (idx >= 0) {
   console.log(`Ajout : ${name} (${entry.hooks_found} hooks trouvés, ${entry.hooks_added} ajoutés)`)
 }
 
-writeFileSync(scannedFile, JSON.stringify(repos, null, 2) + '\n')
+writeFileSync(scannedFile, `${JSON.stringify(repos, null, 2)}\n`)

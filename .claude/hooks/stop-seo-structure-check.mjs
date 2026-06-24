@@ -63,7 +63,7 @@ export function run(_input, deps = {}) {
   const pages = walkTsx(appDir).filter((p) => p.endsWith('page.tsx'));
   for (const page of pages) {
     if (!hasMetadata(read(page))) {
-      problems.push(`metadata missing (title + description) → ${page.replace(projectDir + '/', '')}`);
+      problems.push(`metadata missing (title + description) → ${page.replace(`${projectDir}/`, '')}`);
     }
   }
 
@@ -92,7 +92,7 @@ export function run(_input, deps = {}) {
       if (href === '/') continue; // racine
       const seg = href.split('/')[1];
       if (!seg || routes.has(seg)) continue; // ancre ou route connue
-      problems.push(`broken internal link "${href}" → unknown route in ${file.replace(projectDir + '/', '')}`);
+      problems.push(`broken internal link "${href}" → unknown route in ${file.replace(`${projectDir}/`, '')}`);
     }
   }
 

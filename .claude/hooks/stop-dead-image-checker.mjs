@@ -63,7 +63,7 @@ export function run(_input, {
       }
 
       if (!exists(abs)) {
-        broken.push(`${file.replace(projectDir + '/', '')}  →  ${src}`);
+        broken.push(`${file.replace(`${projectDir}/`, '')}  →  ${src}`);
       }
     }
   }
