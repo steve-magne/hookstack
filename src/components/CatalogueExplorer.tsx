@@ -603,7 +603,7 @@ export function CatalogueExplorer({ initialCategory, showConfigurator = true }: 
                 <span className="text-xs text-zinc-500">{grp.count}</span>
                 <div className="h-px flex-1 bg-[var(--color-border)]" />
               </div>
-              <div className="divide-y divide-[var(--color-border)]/50">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] items-start gap-3">
                 {grp.hooks.map((h) => (
                   <HookRow
                     key={h.slug}
