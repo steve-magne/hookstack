@@ -282,7 +282,7 @@ pnpm build        # Production build
 npx hookstack-cli@latest update
 ```
 
-The CLI re-fetches each installed hook from the registry and overwrites the local `.mjs`. Your `settings.json` is not touched unless the config fragment changed.
+No need to remember which hooks you picked — the CLI reads the `// @hookstack <slug>` fingerprint each installed `.mjs` already carries, re-fetches those exact hooks from the live registry, and overwrites only the scripts that changed. `settings.json` is re-merged but only actually touched if a hook's config fragment changed (the merge is idempotent). Installed somewhere other than the default project scope? Pass the same flag you installed with, e.g. `update --global` or `update --codex-project`. See [`packages/cli/README.md`](packages/cli/README.md#updating) for the full breakdown.
 
 ---
 

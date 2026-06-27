@@ -17,6 +17,10 @@ import {
   buildSecurityRows,
   buildPostInstallHints,
   PREREQ_HINTS,
+  extractFingerprint,
+  findInstalledSlugs,
+  detectScriptChanges,
+  doUpdateTests,
 } from '../../packages/cli/bin/core.mjs'
 
 const argv = (...a) => ['node', 'cli.mjs', ...a]
@@ -351,5 +355,95 @@ describe('buildPostInstallHints', () => {
     const hints = buildPostInstallHints(hooks)
     expect(hints).toHaveLength(2)
     expect(hints.map(h => h.slug)).toEqual(['stop-duplication-check', 'notification-sound'])
+  })
+})
+
+describe('extractFingerprint', () => {
+  it('lit le slug en ligne 2', () => {
+    expect(extractFingerprint('#!/usr/bin/env node\n// @hookstack my-hook\nconsole.log(1)')).toBe('my-hook')
+  })
+  it('retourne null si pas de fingerprint', () => {
+    expect(extractFingerprint('#!/usr/bin/env node\nconsole.log(1)')).toBeNull()
+  })
+  it('retourne null sur contenu vide', () => {
+    expect(extractFingerprint('')).toBeNull()
+    expect(extractFingerprint(undefined)).toBeNull()
+  })
+})
+
+describe('findInstalledSlugs', () => {
+  it('extrait les slugs des .mjs fingerprintés', () => {
+    const files = { 'a.mjs': '#!/usr/bin/env node\n// @hookstack hook-a\n', 'b.mjs': '#!/usr/bin/env node\n// @hookstack hook-b\n' }
+    const slugs = findInstalledSlugs('/proj/.claude/hooks', {
+      readdirSync: () => Object.keys(files),
+      readFileSync: p => files[p.split('/').pop()],
+    })
+    expect(slugs).toEqual(['hook-a', 'hook-b'])
+  })
+  it('ignore les fichiers non-.mjs et sans fingerprint', () => {
+    const files = { 'a.mjs': '#!/usr/bin/env node\nno fingerprint here\n', 'readme.txt': 'x' }
+    const slugs = findInstalledSlugs('/proj/.claude/hooks', {
+      readdirSync: () => Object.keys(files),
+      readFileSync: p => files[p.split('/').pop()],
+    })
+    expect(slugs).toEqual([])
+  })
+  it('retourne [] si le dossier n’existe pas', () => {
+    const slugs = findInstalledSlugs('/missing', {
+      readdirSync: () => { throw new Error('ENOENT') },
+      readFileSync: () => '',
+    })
+    expect(slugs).toEqual([])
+  })
+})
+
+describe('detectScriptChanges', () => {
+  it('classe en changed si le contenu disque diffère', () => {
+    const hooks = [{ slug: 'a', script_path: '.claude/hooks/a.mjs', code_snippet: 'new code' }]
+    const { changed, unchanged } = detectScriptChanges(hooks, 'project', '/proj', {
+      readFileSync: () => 'old code',
+    })
+    expect(changed).toEqual(['a'])
+    expect(unchanged).toEqual([])
+  })
+  it('classe en unchanged si le contenu disque est identique', () => {
+    const hooks = [{ slug: 'a', script_path: '.claude/hooks/a.mjs', code_snippet: 'same' }]
+    const { changed, unchanged } = detectScriptChanges(hooks, 'project', '/proj', {
+      readFileSync: () => 'same',
+    })
+    expect(changed).toEqual([])
+    expect(unchanged).toEqual(['a'])
+  })
+  it('traite un fichier absent comme changed', () => {
+    const hooks = [{ slug: 'a', script_path: '.claude/hooks/a.mjs', code_snippet: 'new' }]
+    const { changed } = detectScriptChanges(hooks, 'project', '/proj', {
+      readFileSync: () => { throw new Error('ENOENT') },
+    })
+    expect(changed).toEqual(['a'])
+  })
+  it('ignore les hooks settings-only (sans script)', () => {
+    const hooks = [{ slug: 'a' }]
+    const { changed, unchanged } = detectScriptChanges(hooks, 'project', '/proj', { readFileSync: () => '' })
+    expect(changed).toEqual([])
+    expect(unchanged).toEqual([])
+  })
+})
+
+describe('doUpdateTests', () => {
+  it('réécrit seulement les fichiers de test déjà présents', () => {
+    const written = {}
+    const hooks = [
+      { slug: 'has-test', test_snippet: 'test a' },
+      { slug: 'no-existing-file', test_snippet: 'test b' },
+      { slug: 'no-snippet' },
+    ]
+    const result = doUpdateTests(hooks, '/proj', {
+      existsSync: p => p.endsWith('has-test.test.mjs'),
+      writeFileSync: (p, content) => { written[p] = content },
+      join: (...parts) => parts.join('/'),
+    })
+    expect(result.testCount).toBe(1)
+    expect(written['/proj/tests/hooks/has-test.test.mjs']).toBe('test a')
+    expect(written['/proj/tests/hooks/no-existing-file.test.mjs']).toBeUndefined()
   })
 })
