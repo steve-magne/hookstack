@@ -244,6 +244,81 @@ export function doInstallTests(hooks, projectRoot, { mkdirSync, writeFileSync, j
   return { testCount }
 }
 
+// ── update ────────────────────────────────────────────────────────────────────
+// `update` re-fetches each already-installed hook from the live registry and
+// refreshes its .mjs in place — same overwrite as install, just without the
+// user having to remember which slugs they picked originally.
+
+// Matches the "// @hookstack <slug>" fingerprint sync-hooks.mjs writes on line 2
+// of every .mjs (see CLAUDE.md "Conventions hooks Claude Code").
+const FINGERPRINT_RE = /^\/\/\s*@hookstack\s+(\S+)/
+
+export function extractFingerprint(content) {
+  const line2 = (content ?? '').split('\n')[1] ?? ''
+  return FINGERPRINT_RE.exec(line2)?.[1] ?? null
+}
+
+// Scans a hooks directory for previously installed HookStack scripts, reading
+// each .mjs's fingerprint to recover its slug. Used by `update` so the user
+// doesn't have to retype --hooks=<slugs> for a re-install.
+export function findInstalledSlugs(hooksDir, { readdirSync, readFileSync }) {
+  let files
+  try {
+    files = readdirSync(hooksDir)
+  } catch {
+    return []
+  }
+  const slugs = []
+  for (const file of files) {
+    if (!file.endsWith('.mjs')) continue
+    let content
+    try {
+      content = readFileSync(join(hooksDir, file), 'utf8')
+    } catch {
+      continue
+    }
+    const slug = extractFingerprint(content)
+    if (slug) slugs.push(slug)
+  }
+  return slugs
+}
+
+// Splits freshly fetched hooks into those whose on-disk script differs from
+// the registry (will be overwritten) and those already up to date.
+export function detectScriptChanges(hooks, scope, root, { readFileSync }) {
+  const changed = []
+  const unchanged = []
+  for (const hook of hooks) {
+    if (!hook.script_path || !hook.code_snippet) continue
+    const target = resolveScriptPath(hook.script_path, scope)
+    const dest = join(root, target)
+    let existing = null
+    try {
+      existing = readFileSync(dest, 'utf8')
+    } catch {
+      // No file on disk yet — treat as changed so update can (re)write it.
+    }
+    ;(existing === hook.code_snippet ? unchanged : changed).push(hook.slug)
+  }
+  return { changed, unchanged }
+}
+
+// Refreshes existing test files for updated hooks. Unlike doInstallTests this
+// never creates a new test file — only hooks the user already opted into
+// testing (file present from a prior --with-tests install) get refreshed.
+export function doUpdateTests(hooks, projectRoot, { existsSync, writeFileSync, join }) {
+  const testsDir = join(projectRoot, 'tests', 'hooks')
+  let testCount = 0
+  for (const hook of hooks) {
+    if (!hook.test_snippet) continue
+    const dest = join(testsDir, `${hook.slug}.test.mjs`)
+    if (!existsSync(dest)) continue
+    writeFileSync(dest, hook.test_snippet, 'utf8')
+    testCount++
+  }
+  return { testCount }
+}
+
 // Display rows for the "Installation Summary" panel.
 export function buildSummaryRows(hooks, { root }) {
   return hooks.map(h => {

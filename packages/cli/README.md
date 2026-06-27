@@ -20,9 +20,10 @@ That's it. The CLI fetches the hooks, shows you what will be installed, and patc
 
 ```
 npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...
+npx hookstack-cli@latest update
 
 Options:
-  --hooks <slugs>    Comma-separated hook slugs (required)
+  --hooks <slugs>    Comma-separated hook slugs (install only — required)
   --project          Claude Code, this project — ./.claude (default)
   --global, -g       Claude Code, all projects — ~/.claude
   --codex-project    OpenAI Codex, this project — ./.codex/hooks.json (committed)
@@ -30,7 +31,7 @@ Options:
   --copilot          GitHub Copilot — ./.claude with paths adapted for Copilot
   --scope <s>        "project" (default), "global", "copilot",
                      "codex-project", or "codex-profile"
-  --with-tests       Also install vitest unit tests into tests/hooks/ (project scope only)
+  --with-tests       Also install vitest unit tests into tests/hooks/ (install, project scope only)
   --yes, -y          Skip prompts (non-interactive / CI)
   --version, -v      Print version
   --help, -h         Show help
@@ -86,6 +87,29 @@ For each hook the CLI:
 - Optionally writes vitest unit tests to `tests/hooks/` when `--with-tests` is passed (or confirmed interactively)
 
 The same hook `.mjs` is used regardless of agent — Claude Code and Codex share lifecycle event names, so only the config file format changes. No new dependencies are added to your project. Hooks are plain Node.js scripts — no SDK, no agent modification.
+
+---
+
+## Updating
+
+Hooks evolve — bug fixes, new options, the occasional rewrite. To pull the latest version of everything you've already installed:
+
+```bash
+npx hookstack-cli@latest update
+```
+
+No `--hooks` needed: the CLI scans the scripts directory for the target scope (`.claude/hooks/` by default), reads the `// @hookstack <slug>` fingerprint each script carries, and re-fetches exactly those hooks from the live registry. Each hook's metadata (code, config, tests) is served live from [hookstack.app](https://www.hookstack.app) — never bundled in the npm package — so `update` always gets what's currently on the catalogue, no CLI version bump required.
+
+- Scripts whose content changed are overwritten; unchanged ones are left alone and reported separately
+- `settings.json` (or `hooks.json` for Codex) is re-merged — it's only actually touched if a hook's config fragment changed, since the merge is idempotent
+- Existing test files under `tests/hooks/` are refreshed for hooks that already have one; `update` never creates new test files (use `--with-tests` on `install` for that)
+
+If you installed somewhere other than the default project scope, pass the same scope flag you used to install:
+
+```bash
+npx hookstack-cli@latest update --global          # ~/.claude
+npx hookstack-cli@latest update --codex-project    # ./.codex/hooks.json
+```
 
 ---
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync, mkdirSync, existsSync, realpathSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, realpathSync } from 'fs'
 import { join as pathJoin } from 'path'
 import { homedir } from 'os'
 import { join, dirname } from 'path'
@@ -16,6 +16,9 @@ import {
   buildSecurityRows,
   buildPostInstallHints,
   doInstallTests,
+  doUpdateTests,
+  findInstalledSlugs,
+  detectScriptChanges,
   isGlobalScope,
 } from './core.mjs'
 
@@ -327,25 +330,133 @@ async function directInstall(slugs, args) {
   console.log(`   Restart ${agent} to activate.\n`)
 }
 
+// ── update ───────────────────────────────────────────────────────────────────
+// Re-fetches every already-installed hook (recovered via its @hookstack
+// fingerprint) from the live registry and refreshes the local .mjs in place.
+// settings.json merge is idempotent, so it's only ever touched if a hook's
+// config fragment actually changed since install.
+
+function findUpdateTargets(dirs) {
+  const slugs = findInstalledSlugs(dirs.hooksDir, { readdirSync, readFileSync })
+  if (slugs.length === 0) return null
+  return slugs
+}
+
+async function interactiveUpdate(args) {
+  console.log('\n' + BANNER + '\n')
+  p.intro(pc.bold('hooks') + pc.dim(`  Update installed hooks · v${VERSION}`))
+
+  const dirs = resolveScopeRoot(args.scope, { cwd: process.cwd(), home: homedir() })
+  const slugs = findUpdateTargets(dirs)
+  if (!slugs) {
+    p.cancel(`No HookStack hooks found in ${dirs.hooksDir} — run install first.`)
+    process.exit(1)
+  }
+
+  const spin = p.spinner()
+  spin.start(`Checking ${plural(slugs.length, 'hook')} for updates…`)
+  let data
+  try {
+    data = await fetchHooks(slugs)
+  } catch (e) {
+    spin.stop(pc.red(`Fetch failed: ${e.message}`), 1)
+    process.exit(1)
+  }
+  const { hooks } = data
+  const { changed, unchanged } = detectScriptChanges(hooks, args.scope, dirs.root, { readFileSync })
+  spin.stop(changed.length > 0 ? `${plural(changed.length, 'hook')} can be updated` : 'Everything is already up to date')
+
+  if (changed.length === 0) {
+    p.outro(pc.green('✓ Already up to date.'))
+    return
+  }
+
+  p.note(changed.map(slug => pc.cyan(`  ${slug}`)).join('\n'), 'Hooks to update')
+
+  const scopeLabel = SCOPE_LABELS[args.scope] ?? './.claude'
+  const confirmed = await p.confirm({
+    message: `Update ${plural(changed.length, 'hook')} in ${pc.cyan(scopeLabel)}?`,
+  })
+  if (p.isCancel(confirmed) || !confirmed) return onCancel()
+
+  const spin2 = p.spinner()
+  spin2.start('Updating…')
+  let result
+  try {
+    result = doInstall(hooks, dirs, args.scope, { warn: m => p.log.warn(m) })
+  } catch (e) {
+    spin2.stop(pc.red(`Update failed: ${e.message}`), 1)
+    process.exit(1)
+  }
+  const testResult = doUpdateTests(hooks, process.cwd(), { existsSync, writeFileSync, join: pathJoin })
+  spin2.stop(`Updated ${pc.bold(String(changed.length))} hook${changed.length === 1 ? '' : 's'}`)
+
+  const resultLines = [
+    pc.green(`✓ ${result.scriptCount} script${result.scriptCount === 1 ? '' : 's'} refreshed in ${dirs.hooksDir}`),
+    unchanged.length > 0 ? pc.dim(`  ${plural(unchanged.length, 'hook')} already up to date`) : null,
+    testResult.testCount > 0 ? pc.green(`✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} refreshed`) : null,
+  ].filter(Boolean).join('\n')
+
+  p.note(resultLines, 'Update summary')
+  p.outro(pc.green('Done!') + pc.dim('  Restart your agent to pick up the changes.'))
+}
+
+async function directUpdate(args) {
+  const dirs = resolveScopeRoot(args.scope, { cwd: process.cwd(), home: homedir() })
+  const slugs = findUpdateTargets(dirs)
+  if (!slugs) {
+    console.error(`\n✗ No HookStack hooks found in ${dirs.hooksDir} — run install first.`)
+    process.exit(1)
+  }
+
+  console.log(`\nChecking ${plural(slugs.length, 'hook')} for updates…`)
+  let data
+  try {
+    data = await fetchHooks(slugs)
+  } catch (e) {
+    console.error(`\n✗ Failed: ${e.message}`)
+    process.exit(1)
+  }
+  const { hooks } = data
+  const { changed, unchanged } = detectScriptChanges(hooks, args.scope, dirs.root, { readFileSync })
+  if (changed.length === 0) {
+    console.log('✓ Already up to date.\n')
+    return
+  }
+
+  const result = doInstall(hooks, dirs, args.scope, { warn: m => console.warn(`  ! ${m}`) })
+  const testResult = doUpdateTests(hooks, process.cwd(), { existsSync, writeFileSync, join: pathJoin })
+  console.log(`  ✓ ${result.scriptCount} script${result.scriptCount === 1 ? '' : 's'} refreshed in ${dirs.hooksDir}`)
+  if (unchanged.length > 0) console.log(`  · ${plural(unchanged.length, 'hook')} already up to date`)
+  if (testResult.testCount > 0) console.log(`  ✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} refreshed`)
+  console.log(`\n✅ ${plural(changed.length, 'hook')} updated · restart your agent to pick up the changes.\n`)
+}
+
 const HELP = `
   hookstack — Claude Code hook installer
 
   Usage:
     npx hookstack-cli@latest install              # install the default HookStack
     npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...  # custom selection
+    npx hookstack-cli@latest update                # refresh already-installed hooks
 
   Options:
     --hooks <slugs>   Comma-separated list of hook slugs (omit for default set)
-    --global, -g      Install into ~/.claude instead of ./.claude
-    --copilot         Install into ./.claude with paths adapted for GitHub Copilot
-    --codex-project   Install into ./.codex/hooks.json (OpenAI Codex, this repo)
-    --codex-profile   Install into ~/.codex/hooks.json (OpenAI Codex, all projects)
+    --global, -g      Target ~/.claude instead of ./.claude
+    --copilot         Target ./.claude with paths adapted for GitHub Copilot
+    --codex-project   Target ./.codex/hooks.json (OpenAI Codex, this repo)
+    --codex-profile   Target ~/.codex/hooks.json (OpenAI Codex, all projects)
     --scope <s>       "project" (default), "global", "copilot",
                       "codex-project", or "codex-profile"
-    --with-tests      Also install vitest unit tests into tests/hooks/ (project scope only)
-    --yes, -y         Skip prompts (non-interactive install)
+    --with-tests      Also install vitest unit tests into tests/hooks/ (install, project scope only)
+    --yes, -y         Skip prompts (non-interactive)
     --version, -v     Show version
     --help, -h        Show this help
+
+  "update" re-fetches every already-installed hook (detected via its
+  @hookstack fingerprint) from the live registry and refreshes the local
+  .mjs. settings.json is only touched if a hook's config actually changed.
+  Use the same scope flag you installed with (--global, --codex-project…).
 
   Browse hooks at https://hookstack.vercel.app
 `
@@ -357,13 +468,20 @@ async function main() {
   if (args.help) { console.log(HELP); return }
 
   const command = args.command ?? 'install'
-  if (command !== 'install') {
+  if (command !== 'install' && command !== 'update') {
     console.error(`✗ Unknown command: ${command}`)
     console.error('  Run --help for usage.')
     process.exit(1)
   }
 
   const interactive = Boolean(process.stdout.isTTY) && !args.yes
+
+  if (command === 'update') {
+    if (interactive) await interactiveUpdate(args)
+    else await directUpdate(args)
+    return
+  }
+
   if (interactive) await interactiveInstall(args.hooks, args)
   else await directInstall(args.hooks, args)
 }
