@@ -59,8 +59,14 @@ export function run({
     // retypent que ce qui a bougé → fin de session quasi instantanée côté types.
     checks.push(['TypeScript', 'npx --no-install tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/stop-quality-check.tsbuildinfo']);
   const biomeConfigs = ['biome.json', 'biome.jsonc'];
-  if (hasPkg && biomeConfigs.some((f) => exists(join(projectDir, f))))
-    checks.push(['Biome', 'npx --no-install biome lint --error-on-warnings .']);
+  if (hasPkg && biomeConfigs.some((f) => exists(join(projectDir, f)))) {
+    // Limiter Biome aux fichiers JS/TS réellement modifiés : sinon --error-on-warnings
+    // fait échouer le check sur de la dette préexistante ailleurs dans le repo, sans
+    // rapport avec la session en cours. Hors git ou changement de config seul → repo entier.
+    const touched = changed ? changed.filter((f) => JS_TS.test(f)) : [];
+    const target = touched.length > 0 ? touched.map((f) => `"${f}"`).join(' ') : '.';
+    checks.push(['Biome', `npx --no-install biome lint --error-on-warnings ${target}`]);
+  }
 
   const results = checks.map(([label, cmd]) => check(label, cmd));
   const failed = results.filter((r) => !r).length;
