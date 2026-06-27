@@ -4,7 +4,7 @@
 // Les tests sont volontairement exclus : run-tests.mjs (Stop) les exécute déjà
 // avec un meilleur rapport d'erreur — les relancer ici doublerait la fin de session.
 import { execSync } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -26,9 +26,19 @@ function defaultChanged(cwd) {
   }
 }
 
+/** Scripts npm du package.json projet, ou {} si absent/illisible. */
+function defaultReadScripts(projectDir) {
+  try {
+    return JSON.parse(readFileSync(join(projectDir, 'package.json'), 'utf8')).scripts ?? {};
+  } catch {
+    return {};
+  }
+}
+
 export function run({
   exec,
   exists = existsSync,
+  readScripts = defaultReadScripts,
   projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
   changed = defaultChanged(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
 } = {}) {
@@ -62,10 +72,24 @@ export function run({
   if (hasPkg && biomeConfigs.some((f) => exists(join(projectDir, f)))) {
     // Limiter Biome aux fichiers JS/TS réellement modifiés : sinon --error-on-warnings
     // fait échouer le check sur de la dette préexistante ailleurs dans le repo, sans
-    // rapport avec la session en cours. Hors git ou changement de config seul → repo entier.
+    // rapport avec la session en cours.
     const touched = changed ? changed.filter((f) => JS_TS.test(f)) : [];
-    const target = touched.length > 0 ? touched.map((f) => `"${f}"`).join(' ') : '.';
-    checks.push(['Biome', `npx --no-install biome lint --error-on-warnings ${target}`]);
+    if (touched.length > 0) {
+      checks.push([
+        'Biome',
+        `npx --no-install biome lint --error-on-warnings ${touched.map((f) => `"${f}"`).join(' ')}`,
+      ]);
+    } else {
+      // Hors git ou changement de config seul → repo entier. Préférer le script `lint` du
+      // projet (le vrai gate CI) à un `biome lint .` direct : il respecte les exclusions de
+      // workspace (ex. un dossier mobile sous un gate ESLint séparé) qu'un appel biome brut ignore.
+      const scripts = readScripts(projectDir);
+      checks.push(
+        scripts.lint
+          ? ['Lint', 'pnpm run lint']
+          : ['Biome', 'npx --no-install biome lint --error-on-warnings .'],
+      );
+    }
   }
 
   const results = checks.map(([label, cmd]) => check(label, cmd));
