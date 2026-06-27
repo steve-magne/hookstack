@@ -21,6 +21,11 @@ import {
 
 const API_BASE = process.env.HOOKSTACK_API_BASE || 'https://hookstack.vercel.app'
 const REPO_URL = 'github.com/steve-magne/hookstack'
+
+// "Requires X" hints block the hook from working until installed; "Optional" ones just unlock extra behavior.
+const formatHint = h => h.hint.startsWith('Optional')
+  ? pc.dim(`○  ${h.slug}: ${h.hint}`)
+  : pc.yellow(`⚠  ${h.slug}: ${h.hint}`)
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const VERSION = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8')).version
 
@@ -273,7 +278,7 @@ async function interactiveInstall(slugs, args) {
       ? pc.green(`✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} written to tests/hooks/`)
       : null,
     hints.length > 0 ? '' : null,
-    ...hints.map(h => pc.yellow(`⚠  ${h.slug}: ${h.hint}`)),
+    ...hints.map(formatHint),
     '',
     `Browse more hooks  ${pc.cyan(`${API_BASE}/#catalogue`)}`,
     `⭐  Star us         ${pc.cyan(REPO_URL)}`,
@@ -315,7 +320,7 @@ async function directInstall(slugs, args) {
   }
   const hints = buildPostInstallHints(hooks)
   if (hints.length > 0) {
-    for (const h of hints) console.warn(`  ⚠  ${h.slug}: ${h.hint}`)
+    for (const h of hints) console.warn(`  ${formatHint(h)}`)
   }
   const agent = dirs.format === 'codex' ? 'Codex' : 'Claude Code'
   console.log(`\n✅ ${plural(result.hookCount, 'hook')} installed · star us → ${REPO_URL}`)

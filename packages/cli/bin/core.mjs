@@ -264,9 +264,9 @@ export function buildSummaryRows(hooks, { root }) {
 // Maps hook slugs to post-install hints about required external tools.
 // Keep as a plain object so it's trivially testable without any async/fetch.
 export const PREREQ_HINTS = {
-  'stop-duplication-check': 'Requires jscpd:  pnpm add -D jscpd  (or npm install -g jscpd)',
+  'stop-duplication-check': 'Requires jscpd:  pnpm add -D jscpd  (pnpm workspace? add -w · or npm install -g jscpd)',
   'notification-sound':     'Optional: brew install terminal-notifier  (enables click-to-focus — opens your terminal or Claude app when notification fires)',
-  'post-write-biome':       'Requires Biome:  pnpm add -D @biomejs/biome  (or npm install -D @biomejs/biome)',
+  'post-write-biome':       'Requires Biome:  pnpm add -D @biomejs/biome  (pnpm workspace? add -w · or npm install -D @biomejs/biome)',
 }
 
 // Returns one hint entry per installed hook that has an external prerequisite.
