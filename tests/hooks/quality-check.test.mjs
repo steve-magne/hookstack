@@ -126,10 +126,19 @@ describe('quality-check', () => {
     expect(opts.exec).not.toHaveBeenCalledWith(expect.stringMatching(/biome lint --error-on-warnings \.$/));
   });
 
-  it('Biome retombe sur le repo entier hors git ou si seule la config a changé', () => {
+  it('Biome retombe sur le repo entier hors git ou si seule la config a changé, sans script lint', () => {
     const opts = makeOpts({ hasBiomeConfig: true });
     opts.changed = ['tsconfig.json'];
     run(opts);
     expect(opts.exec).toHaveBeenCalledWith(expect.stringMatching(/biome lint --error-on-warnings \.$/));
+  });
+
+  it('utilise le script `lint` du projet plutôt que biome direct si seule la config a changé', () => {
+    const opts = makeOpts({ hasBiomeConfig: true });
+    opts.changed = ['tsconfig.json'];
+    opts.readScripts = () => ({ lint: 'biome lint --error-on-warnings .' });
+    run(opts);
+    expect(opts.exec).toHaveBeenCalledWith('pnpm run lint');
+    expect(opts.exec).not.toHaveBeenCalledWith(expect.stringContaining('biome lint --error-on-warnings .'));
   });
 });
