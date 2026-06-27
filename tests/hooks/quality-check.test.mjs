@@ -117,4 +117,19 @@ describe('quality-check', () => {
     run(opts);
     expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('tsc'));
   });
+
+  it('limite Biome aux fichiers JS/TS modifiés (pas tout le repo)', () => {
+    const opts = makeOpts({ hasBiomeConfig: true });
+    opts.changed = ['src/foo.ts', 'README.md'];
+    run(opts);
+    expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining('"src/foo.ts"'));
+    expect(opts.exec).not.toHaveBeenCalledWith(expect.stringMatching(/biome lint --error-on-warnings \.$/));
+  });
+
+  it('Biome retombe sur le repo entier hors git ou si seule la config a changé', () => {
+    const opts = makeOpts({ hasBiomeConfig: true });
+    opts.changed = ['tsconfig.json'];
+    run(opts);
+    expect(opts.exec).toHaveBeenCalledWith(expect.stringMatching(/biome lint --error-on-warnings \.$/));
+  });
 });
