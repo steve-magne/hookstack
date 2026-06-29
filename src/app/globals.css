@@ -1,54 +1,59 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @theme {
-  --color-bg: #0a0a0a;
-  --color-surface: #141414;
-  --color-surface-2: #1c1c1c;
-  --color-border: #2e2e2e;
-  --color-border-subtle: #222222;
-  --color-text: #f0f0f0;
-  --color-text-muted: #909090;
-  --color-brand: #ffffff;
-  --color-brand-2: #d4d4d4;
+	--color-bg: #0a0a0a;
+	--color-surface: #141414;
+	--color-surface-2: #1c1c1c;
+	--color-border: #2e2e2e;
+	--color-border-subtle: #222222;
+	--color-text: #f0f0f0;
+	--color-text-muted: #909090;
+	--color-brand: #ffffff;
+	--color-brand-2: #d4d4d4;
 }
 
 body {
-  margin: 0;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
+	margin: 0;
+	background: var(--color-bg);
+	color: var(--color-text);
+	font-family:
+		ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+		Arial, sans-serif;
+	-webkit-font-smoothing: antialiased;
 }
 
 body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(60% 40% at 50% 0%, rgba(255, 255, 255, 0.03), transparent 70%);
-  pointer-events: none;
-  z-index: 0;
+	content: "";
+	position: fixed;
+	inset: 0;
+	background: radial-gradient(
+		60% 40% at 50% 0%,
+		rgba(255, 255, 255, 0.03),
+		transparent 70%
+	);
+	pointer-events: none;
+	z-index: 0;
 }
 
 code,
 pre {
-  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+	font-family:
+		ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+	width: 8px;
+	height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-surface);
+	background: var(--color-surface);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 6px;
+	background: var(--color-border);
+	border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #484848;
+	background: #484848;
 }
 
 /*

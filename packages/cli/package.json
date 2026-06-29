@@ -1,32 +1,32 @@
 {
-  "name": "hookstack-cli",
-  "version": "0.1.19",
-  "description": "CLI installer for the Hookstack catalogue of Claude Code hooks",
-  "type": "module",
-  "bin": {
-    "hookstack-cli": "./bin/cli"
-  },
-  "files": [
-    "bin/",
-    "README.md"
-  ],
-  "engines": {
-    "node": ">=18"
-  },
-  "dependencies": {
-    "@clack/prompts": "^0.9.1",
-    "picocolors": "^1.1.1"
-  },
-  "keywords": [
-    "claude-code",
-    "hooks",
-    "ai",
-    "claude"
-  ],
-  "license": "MIT",
-  "homepage": "https://www.hookstack.app",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/steve-magne/hookstack.git"
-  }
+	"name": "hookstack-cli",
+	"version": "0.1.19",
+	"description": "CLI installer for the Hookstack catalogue of Claude Code hooks",
+	"type": "module",
+	"bin": {
+		"hookstack-cli": "./bin/cli"
+	},
+	"files": [
+		"bin/",
+		"README.md"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"dependencies": {
+		"@clack/prompts": "^0.9.1",
+		"picocolors": "^1.1.1"
+	},
+	"keywords": [
+		"claude-code",
+		"hooks",
+		"ai",
+		"claude"
+	],
+	"license": "MIT",
+	"homepage": "https://www.hookstack.app",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/steve-magne/hookstack.git"
+	}
 }

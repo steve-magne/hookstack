@@ -1,42 +1,45 @@
-import { allHooks } from '@/lib/hooks'
-import { guides } from '@/lib/guides'
-import { MAINTAINER, SITE, ISSUES_URL } from '@/lib/site'
-import type { Category } from '@/types/hook'
-import { NextResponse } from 'next/server'
+import { NextResponse } from "next/server";
+import { guides } from "@/lib/guides";
+import { allHooks } from "@/lib/hooks";
+import { ISSUES_URL, MAINTAINER, SITE } from "@/lib/site";
+import type { Category } from "@/types/hook";
 
-const BASE = 'https://www.hookstack.app'
+const BASE = "https://www.hookstack.app";
 
 const CATEGORY_LABELS: Record<Category, string> = {
-  security: 'Security',
-  context: 'Context & Memory',
-  validation: 'Validation & Quality',
-  notification: 'Notification',
-  workflow: 'Workflow',
-  documentation: 'Documentation',
-}
+	security: "Security",
+	context: "Context & Memory",
+	validation: "Validation & Quality",
+	notification: "Notification",
+	workflow: "Workflow",
+	documentation: "Documentation",
+};
 
 export async function GET() {
-  const byCategory = allHooks.reduce<Record<string, typeof allHooks>>((acc, hook) => {
-    acc[hook.category] ??= []
-    acc[hook.category].push(hook)
-    return acc
-  }, {})
+	const byCategory = allHooks.reduce<Record<string, typeof allHooks>>(
+		(acc, hook) => {
+			acc[hook.category] ??= [];
+			acc[hook.category].push(hook);
+			return acc;
+		},
+		{},
+	);
 
-  const hookSections = Object.entries(byCategory)
-    .map(([cat, hooks]) => {
-      const label = CATEGORY_LABELS[cat as Category] ?? cat
-      const lines = hooks
-        .map((h) => `- [${h.name}](${BASE}/hook/${h.slug}): ${h.description}`)
-        .join('\n')
-      return `### ${label} (${hooks.length})\n\n${lines}`
-    })
-    .join('\n\n')
+	const hookSections = Object.entries(byCategory)
+		.map(([cat, hooks]) => {
+			const label = CATEGORY_LABELS[cat as Category] ?? cat;
+			const lines = hooks
+				.map((h) => `- [${h.name}](${BASE}/hook/${h.slug}): ${h.description}`)
+				.join("\n");
+			return `### ${label} (${hooks.length})\n\n${lines}`;
+		})
+		.join("\n\n");
 
-  const guidesSection = guides
-    .map((g) => `- [${g.title}](${BASE}/guides/${g.slug}): ${g.description}`)
-    .join('\n')
+	const guidesSection = guides
+		.map((g) => `- [${g.title}](${BASE}/guides/${g.slug}): ${g.description}`)
+		.join("\n");
 
-  const content = `# HookStack
+	const content = `# HookStack
 
 > Open-source catalogue of Claude Code hooks. Browse ${allHooks.length} hooks and generate your settings.json in 2 minutes.
 
@@ -102,9 +105,9 @@ HookStack is created and maintained by ${MAINTAINER.name} (${MAINTAINER.github})
 ## Permissions for AI agents
 
 Crawling and summarizing this site is welcome. The registry data is open-source (MIT). Please attribute HookStack and link ${BASE} when referencing hook implementations.
-`
+`;
 
-  return new NextResponse(content, {
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-  })
+	return new NextResponse(content, {
+		headers: { "Content-Type": "text/plain; charset=utf-8" },
+	});
 }

@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { LazyMotion, domMax, MotionConfig } from 'motion/react'
+import { domMax, LazyMotion, MotionConfig } from "motion/react";
 
 /**
  * MotionProvider — racine de tout le motion du site.
@@ -13,11 +13,11 @@ import { LazyMotion, domMax, MotionConfig } from 'motion/react'
  *   aucune media query manuelle.
  */
 export function MotionProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <MotionConfig reducedMotion="user">
-      <LazyMotion features={domMax} strict>
-        {children}
-      </LazyMotion>
-    </MotionConfig>
-  )
+	return (
+		<MotionConfig reducedMotion="user">
+			<LazyMotion features={domMax} strict>
+				{children}
+			</LazyMotion>
+		</MotionConfig>
+	);
 }

@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { T, type Translations } from './i18n'
+import { T, type Translations } from "./i18n";
 
 export function useT(): Translations {
-  return T
+	return T;
 }
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+	return <>{children}</>;
 }
