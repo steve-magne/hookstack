@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // @hookstack stop-force-implementation-doc
 // Bloque la fin de session si du code source a été modifié sans qu'un fichier
-// doc/implementation/ ait été créé ou mis à jour. Garantit zéro dette de doc. (Stop)
+// okf/implementation/ ait été créé ou mis à jour. Garantit zéro dette de doc. (Stop)
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -21,7 +21,7 @@ function isSourceFile(p) {
 }
 
 function isImplDoc(p) {
-	return p.startsWith("doc/implementation/");
+	return p.startsWith("okf/implementation/");
 }
 
 export function run(
@@ -54,8 +54,8 @@ export function run(
 	return {
 		exitCode: 2,
 		message:
-			`[force-implementation-doc] Source code was modified but doc/implementation/ was not updated.\n` +
-			`→ Create or update doc/implementation/<feature-name>.md explaining your technical choices\n` +
+			`[force-implementation-doc] Source code was modified but okf/implementation/ was not updated.\n` +
+			`→ Create or update okf/implementation/<feature-name>.md explaining your technical choices\n` +
 			`  and the implementation before ending this session.\n`,
 	};
 }
