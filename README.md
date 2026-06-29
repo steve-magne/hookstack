@@ -36,6 +36,28 @@ That's it. The CLI walks you through picking hooks, writes the `.mjs` scripts, a
 
 ---
 
+## Updating
+
+```bash
+npx hookstack-cli@latest update
+```
+
+No need to remember which hooks you picked — the CLI reads the `// @hookstack <slug>` fingerprint each installed `.mjs` already carries, re-fetches those exact hooks from the live registry, and overwrites only the scripts that changed. `settings.json` is re-merged but only actually touched if a hook's config fragment changed (the merge is idempotent). Installed somewhere other than the default project scope? Pass the same flag you installed with, e.g. `update --global` or `update --codex-project`. See [`packages/cli/README.md`](packages/cli/README.md#updating) for the full breakdown.
+
+---
+
+## Contributing changes back
+
+Edited a hook in your own project and think the catalogue should have it too?
+
+```bash
+npx hookstack-cli@latest contribute
+```
+
+It finds the hooks you've locally modified, forks this repo, and opens a PR with your changes — no manual git/GitHub dance required. Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated. See [`packages/cli/README.md`](packages/cli/README.md#contributing-changes-back) for details.
+
+---
+
 ## Install via /plugin
 
 Prefer your agent's native plugin command? Hookstack ships a plugin manifest for Claude Code, Codex, and GitHub Copilot.
@@ -273,16 +295,6 @@ pnpm build        # Production build
 | Package manager | pnpm 9.x |
 
 </details>
-
----
-
-## Updating
-
-```bash
-npx hookstack-cli@latest update
-```
-
-No need to remember which hooks you picked — the CLI reads the `// @hookstack <slug>` fingerprint each installed `.mjs` already carries, re-fetches those exact hooks from the live registry, and overwrites only the scripts that changed. `settings.json` is re-merged but only actually touched if a hook's config fragment changed (the merge is idempotent). Installed somewhere other than the default project scope? Pass the same flag you installed with, e.g. `update --global` or `update --codex-project`. See [`packages/cli/README.md`](packages/cli/README.md#updating) for the full breakdown.
 
 ---
 

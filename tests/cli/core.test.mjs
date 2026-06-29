@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
 	analyzeSecurity,
 	assertSafeTarget,
+	buildContributionBranch,
+	buildContributionPr,
 	buildPostInstallHints,
 	buildSecurityRows,
 	buildSummaryRows,
@@ -610,5 +612,30 @@ describe("doUpdateTests", () => {
 		expect(
 			written["/proj/tests/hooks/no-existing-file.test.mjs"],
 		).toBeUndefined();
+	});
+});
+
+describe("buildContributionBranch", () => {
+	it("joint les slugs avec un préfixe stable", () => {
+		expect(buildContributionBranch(["pre-bash-secret-detection"])).toBe(
+			"hookstack-contrib/pre-bash-secret-detection",
+		);
+	});
+	it("joint plusieurs slugs avec des tirets", () => {
+		expect(buildContributionBranch(["a", "b"])).toBe("hookstack-contrib/a-b");
+	});
+});
+
+describe("buildContributionPr", () => {
+	it("titre singulier pour un seul hook", () => {
+		const { title } = buildContributionPr(["a"]);
+		expect(title).toBe("Update hook: a");
+	});
+	it("titre pluriel et corps listant chaque slug", () => {
+		const { title, body } = buildContributionPr(["a", "b"]);
+		expect(title).toBe("Update hooks: a, b");
+		expect(body).toContain("- `a`");
+		expect(body).toContain("- `b`");
+		expect(body).toContain("npx hookstack-cli@latest contribute");
 	});
 });

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, realpathSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, realpathSync, mkdtempSync, rmSync, copyFileSync } from 'fs'
 import { join as pathJoin } from 'path'
-import { homedir } from 'os'
+import { homedir, tmpdir } from 'os'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { execFileSync } from 'node:child_process'
 import pc from 'picocolors'
 import * as p from '@clack/prompts'
 import {
@@ -20,6 +21,8 @@ import {
   findInstalledSlugs,
   detectScriptChanges,
   isGlobalScope,
+  buildContributionBranch,
+  buildContributionPr,
 } from './core.mjs'
 
 const API_BASE = process.env.HOOKSTACK_API_BASE || 'https://hookstack.vercel.app'
@@ -432,6 +435,176 @@ async function directUpdate(args) {
   console.log(`\n✅ ${plural(changed.length, 'hook')} updated · restart your agent to pick up the changes.\n`)
 }
 
+// ── contribute ───────────────────────────────────────────────────────────────
+// Forks steve-magne/hookstack, pushes the user's locally edited hooks to a
+// branch, and opens a PR — so anyone who tweaked a hook in their own project
+// can hand the improvement back to the catalogue without leaving the CLI.
+
+const UPSTREAM_REPO = 'steve-magne/hookstack'
+
+function run(cmd, args, opts = {}) {
+  return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts })
+}
+
+function findContributionCandidates(dirs, slugFilter) {
+  const installed = findInstalledSlugs(dirs.hooksDir, { readdirSync, readFileSync })
+  return slugFilter && slugFilter.length > 0
+    ? installed.filter(s => slugFilter.includes(s))
+    : installed
+}
+
+async function loadChangedHooks(slugs, scope, root) {
+  const { hooks } = await fetchHooks(slugs)
+  const { changed } = detectScriptChanges(hooks, scope, root, { readFileSync })
+  return hooks.filter(h => changed.includes(h.slug))
+}
+
+// Forks the catalogue, clones it to a scratch dir, copies the modified .mjs
+// files in, and opens a PR. Returns the PR url, or null if the fork already
+// has byte-identical content (nothing to push).
+function pushContribution(slugs, dirs, log) {
+  try { run('gh', ['--version']) } catch {
+    throw new Error('GitHub CLI (gh) is required — install: https://cli.github.com')
+  }
+  try { run('gh', ['auth', 'status']) } catch {
+    throw new Error('Not authenticated with GitHub — run `gh auth login` first.')
+  }
+
+  const username = run('gh', ['api', 'user', '--jq', '.login']).trim()
+  const workDir = mkdtempSync(join(tmpdir(), 'hookstack-contrib-'))
+
+  try {
+    log.step(`Forking ${UPSTREAM_REPO} for ${username}…`)
+    run('gh', ['repo', 'fork', UPSTREAM_REPO], { cwd: workDir })
+
+    log.step('Cloning your fork…')
+    run('gh', ['repo', 'clone', `${username}/hookstack`, workDir])
+
+    const branch = buildContributionBranch(slugs)
+    run('git', ['checkout', '-b', branch], { cwd: workDir })
+
+    for (const slug of slugs) {
+      const dest = join(workDir, '.claude', 'hooks', `${slug}.mjs`)
+      mkdirSync(join(dest, '..'), { recursive: true })
+      copyFileSync(join(dirs.hooksDir, `${slug}.mjs`), dest)
+    }
+
+    run('git', ['add', '.claude/hooks'], { cwd: workDir })
+    let hasChanges = true
+    try {
+      run('git', ['diff', '--cached', '--quiet'], { cwd: workDir })
+      hasChanges = false
+    } catch {
+      hasChanges = true
+    }
+    if (!hasChanges) return null
+
+    const { title, body } = buildContributionPr(slugs)
+    run('git', ['commit', '-m', title], { cwd: workDir })
+
+    log.step('Pushing branch…')
+    run('git', ['push', '-u', 'origin', branch], { cwd: workDir })
+
+    log.step('Opening pull request…')
+    return run('gh', ['pr', 'create', '--repo', UPSTREAM_REPO, '--head', `${username}:${branch}`, '--title', title, '--body', body], { cwd: workDir }).trim()
+  } finally {
+    rmSync(workDir, { recursive: true, force: true })
+  }
+}
+
+async function interactiveContribute(args) {
+  console.log('\n' + BANNER + '\n')
+  p.intro(pc.bold('hooks') + pc.dim(`  Contribute local hook changes upstream · v${VERSION}`))
+
+  const dirs = resolveScopeRoot(args.scope, { cwd: process.cwd(), home: homedir() })
+  const candidates = findContributionCandidates(dirs, args.hooks)
+  if (candidates.length === 0) {
+    p.cancel(`No HookStack hooks found in ${dirs.hooksDir} — run install first.`)
+    process.exit(1)
+  }
+
+  const spin = p.spinner()
+  spin.start(`Comparing ${plural(candidates.length, 'hook')} against the catalogue…`)
+  let changedHooks
+  try {
+    changedHooks = await loadChangedHooks(candidates, args.scope, dirs.root)
+  } catch (e) {
+    spin.stop(pc.red(`Fetch failed: ${e.message}`), 1)
+    process.exit(1)
+  }
+  spin.stop(changedHooks.length > 0 ? `${plural(changedHooks.length, 'hook')} locally modified` : 'No local modifications found')
+
+  if (changedHooks.length === 0) {
+    p.outro(pc.dim('Nothing to contribute — your hooks match the published catalogue.'))
+    return
+  }
+
+  const selected = await p.multiselect({
+    message: 'Which modified hooks do you want to contribute?',
+    options: changedHooks.map(h => ({ value: h.slug, label: h.slug })),
+    initialValues: changedHooks.map(h => h.slug),
+  })
+  if (p.isCancel(selected) || selected.length === 0) return onCancel()
+
+  const confirmed = await p.confirm({
+    message: `Fork ${pc.cyan(UPSTREAM_REPO)} and open a PR for ${plural(selected.length, 'hook')}?`,
+  })
+  if (p.isCancel(confirmed) || !confirmed) return onCancel()
+
+  const spin2 = p.spinner()
+  spin2.start('Preparing contribution…')
+  let prUrl
+  try {
+    prUrl = pushContribution(selected, dirs, { step: m => spin2.message(m) })
+  } catch (e) {
+    spin2.stop(pc.red(`Contribution failed: ${e.message}`), 1)
+    process.exit(1)
+  }
+  if (!prUrl) {
+    spin2.stop(pc.yellow('Nothing to push — your fork already has this exact content.'))
+    return
+  }
+  spin2.stop('Pull request opened')
+  p.outro(pc.green('Done!') + pc.dim(`  ${prUrl}`))
+}
+
+async function directContribute(args) {
+  const dirs = resolveScopeRoot(args.scope, { cwd: process.cwd(), home: homedir() })
+  const candidates = findContributionCandidates(dirs, args.hooks)
+  if (candidates.length === 0) {
+    console.error(`\n✗ No HookStack hooks found in ${dirs.hooksDir} — run install first.`)
+    process.exit(1)
+  }
+
+  console.log(`\nComparing ${plural(candidates.length, 'hook')} against the catalogue…`)
+  let changedHooks
+  try {
+    changedHooks = await loadChangedHooks(candidates, args.scope, dirs.root)
+  } catch (e) {
+    console.error(`\n✗ Failed: ${e.message}`)
+    process.exit(1)
+  }
+  if (changedHooks.length === 0) {
+    console.log('✓ Nothing to contribute — your hooks match the published catalogue.\n')
+    return
+  }
+
+  const slugs = changedHooks.map(h => h.slug)
+  console.log(`  Found ${plural(slugs.length, 'modified hook')}: ${slugs.join(', ')}`)
+  let prUrl
+  try {
+    prUrl = pushContribution(slugs, dirs, { step: m => console.log(`  ${m}`) })
+  } catch (e) {
+    console.error(`\n✗ Contribution failed: ${e.message}`)
+    process.exit(1)
+  }
+  if (!prUrl) {
+    console.log('\n✓ Nothing to push — your fork already has this exact content.\n')
+    return
+  }
+  console.log(`\n✅ Pull request opened: ${prUrl}\n`)
+}
+
 const HELP = `
   hookstack — Claude Code hook installer
 
@@ -439,9 +612,11 @@ const HELP = `
     npx hookstack-cli@latest install              # install the default HookStack
     npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...  # custom selection
     npx hookstack-cli@latest update                # refresh already-installed hooks
+    npx hookstack-cli@latest contribute             # PR your local hook edits upstream
 
   Options:
-    --hooks <slugs>   Comma-separated list of hook slugs (omit for default set)
+    --hooks <slugs>   Comma-separated list of hook slugs (omit for default set,
+                      or to limit "contribute" to specific hooks)
     --global, -g      Target ~/.claude instead of ./.claude
     --copilot         Target ./.claude with paths adapted for GitHub Copilot
     --codex-project   Target ./.codex/hooks.json (OpenAI Codex, this repo)
@@ -458,6 +633,10 @@ const HELP = `
   .mjs. settings.json is only touched if a hook's config actually changed.
   Use the same scope flag you installed with (--global, --codex-project…).
 
+  "contribute" finds installed hooks whose local .mjs diverges from the live
+  registry, forks ${UPSTREAM_REPO} for you, and opens a PR with those
+  changes. Requires the GitHub CLI (gh), authenticated (\`gh auth login\`).
+
   Browse hooks at https://hookstack.vercel.app
 `
 
@@ -468,7 +647,7 @@ async function main() {
   if (args.help) { console.log(HELP); return }
 
   const command = args.command ?? 'install'
-  if (command !== 'install' && command !== 'update') {
+  if (command !== 'install' && command !== 'update' && command !== 'contribute') {
     console.error(`✗ Unknown command: ${command}`)
     console.error('  Run --help for usage.')
     process.exit(1)
@@ -479,6 +658,12 @@ async function main() {
   if (command === 'update') {
     if (interactive) await interactiveUpdate(args)
     else await directUpdate(args)
+    return
+  }
+
+  if (command === 'contribute') {
+    if (interactive) await interactiveContribute(args)
+    else await directContribute(args)
     return
   }
 
