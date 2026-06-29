@@ -12,4 +12,14 @@ describe('task-completed-test-gate', () => {
     expect(r.exitCode).toBe(2);
     expect(r.message).toContain('Ma tâche');
   });
+  it('utilise le gestionnaire de paquets détecté depuis le lockfile (pnpm)', () => {
+    const exec = vi.fn();
+    run({ task_subject: 'x' }, { exec, exists: (p) => p.endsWith('/pnpm-lock.yaml'), projectDir: '/repo' });
+    expect(exec).toHaveBeenCalledWith(expect.stringContaining('pnpm test --if-present'));
+  });
+  it('replie sur npm si aucun lockfile reconnu', () => {
+    const exec = vi.fn();
+    run({ task_subject: 'x' }, { exec, exists: () => false, projectDir: '/repo' });
+    expect(exec).toHaveBeenCalledWith(expect.stringContaining('npm test --if-present'));
+  });
 });

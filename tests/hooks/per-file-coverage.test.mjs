@@ -77,6 +77,26 @@ describe('per-file-coverage', () => {
     expect(result.exitCode).toBe(0);
   });
 
+  it('détecte la coverage basse dans un monorepo (src/ imbriqué)', () => {
+    const file = 'packages/shared/src/lib/hooks.ts';
+    const cov = makeCoverage({ [`${CWD}/${file}`]: { lines: { pct: 60 } } });
+    const exec = (cmd) => {
+      if (cmd.includes('merge-base')) return 'abc';
+      if (cmd.includes('rev-parse')) return 'def';
+      if (cmd.includes('diff')) return file;
+      return '';
+    };
+    const result = run(makeOpts({ exec, readFile: () => cov }));
+    expect(result.exitCode).toBe(2);
+    expect(result.message).toContain(file);
+  });
+
+  it('ignore src/types imbriqué dans un monorepo', () => {
+    const exec = (cmd) => cmd.includes('diff') ? 'apps/web/src/types/hook.ts' : '';
+    const result = run(makeOpts({ exec, readFile: () => '{}' }));
+    expect(result.exitCode).toBe(0);
+  });
+
   it('retourne exitCode 2 si coverage < 80%', () => {
     const file = 'src/lib/hooks.ts';
     const cov = makeCoverage({ [`${CWD}/${file}`]: { lines: { pct: 60 } } });
