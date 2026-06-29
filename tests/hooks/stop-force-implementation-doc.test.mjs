@@ -23,26 +23,26 @@ describe("stop-force-implementation-doc", () => {
 		expect(run({}, { exec, projectDir: "/p" })).toBeNull();
 	});
 
-	it("no-op quand le code ET un fichier doc/implementation/ sont modifiés", () => {
+	it("no-op quand le code ET un fichier okf/implementation/ sont modifiés", () => {
 		const exec = makeExec(
-			"src/app/page.tsx\ndoc/implementation/my-feature.md\n",
+			"src/app/page.tsx\nokf/implementation/my-feature.md\n",
 		);
 		expect(run({}, { exec, projectDir: "/p" })).toBeNull();
 	});
 
-	it("no-op si doc/implementation/ apparaît dans les untracked (nouveau fichier non stagé)", () => {
+	it("no-op si okf/implementation/ apparaît dans les untracked (nouveau fichier non stagé)", () => {
 		const exec = makeExec(
 			"src/app/page.tsx\n",
-			"doc/implementation/my-feature.md\n",
+			"okf/implementation/my-feature.md\n",
 		);
 		expect(run({}, { exec, projectDir: "/p" })).toBeNull();
 	});
 
-	it("bloque (exit 2) si fichier .tsx modifié sans doc/implementation/", () => {
+	it("bloque (exit 2) si fichier .tsx modifié sans okf/implementation/", () => {
 		const exec = makeExec("src/components/Header.tsx\nsrc/lib/hooks.ts\n");
 		const r = run({}, { exec, projectDir: "/p" });
 		expect(r?.exitCode).toBe(2);
-		expect(r?.message).toContain("doc/implementation/");
+		expect(r?.message).toContain("okf/implementation/");
 	});
 
 	it("bloque pour un fichier .mjs hors .claude/ (ex: packages/cli)", () => {
