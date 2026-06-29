@@ -68,6 +68,18 @@ describe('missing-test-detection', () => {
     expect(result.exitCode).toBe(0);
   });
 
+  it('détecte les fichiers manquants dans un monorepo (src/ imbriqué)', () => {
+    const exec = (cmd) => {
+      if (cmd.includes('merge-base')) return 'abc';
+      if (cmd.includes('rev-parse')) return 'def';
+      if (cmd.includes('diff')) return 'apps/web/src/lib/mymodule.ts';
+      return '';
+    };
+    const result = run(makeOpts({ exec }));
+    expect(result.exitCode).toBe(2);
+    expect(result.message).toContain('apps/web/src/lib/mymodule.ts');
+  });
+
   it('retourne exitCode 2 si un test est manquant', () => {
     const exec = (cmd) => {
       if (cmd.includes('merge-base')) return 'abc';

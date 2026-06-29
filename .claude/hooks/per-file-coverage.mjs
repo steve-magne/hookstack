@@ -11,7 +11,7 @@ function defaultExec(cmd) {
   try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }
 }
 
-const SKIP = /^src\/(types|constants|router|main)\//;
+const SKIP = /(^|\/)src\/(types|constants|router|main)\//;
 
 export function run({
   exec = defaultExec,
@@ -42,7 +42,7 @@ export function run({
 
   const lowCov = [];
   for (const f of raw.split('\n').filter(Boolean)) {
-    if (!/^src\/.*\.tsx?$/.test(f) || SKIP.test(f)) continue;
+    if (!/(^|\/)src\/.*\.tsx?$/.test(f) || SKIP.test(f)) continue;
     const pct = coverage[`${cwd}/${f}`]?.lines?.pct;
     if (pct != null && pct < 80) lowCov.push({ f, pct });
   }
