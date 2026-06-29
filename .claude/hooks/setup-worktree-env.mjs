@@ -4,10 +4,10 @@
 // les fichiers d'environnement et secrets locaux. Deux passes :
 //   1. Liste statique de fichiers racine connus (multi-écosystème)
 //   2. Scan récursif (find, profondeur 4) pour couvrir les monorepos (apps/web/.env…)
-import { execSync } from 'child_process';
-import { existsSync, copyFileSync, mkdirSync, readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { execSync } from 'node:child_process';
+import { existsSync, copyFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function defaultExec(cmd) {
   try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }

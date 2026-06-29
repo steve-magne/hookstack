@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack permission-request-auto-allow-exit-plan
 // Auto-autorise la sortie du mode plan (PermissionRequest)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 export function run(input) {
   const toolName = input.tool_name ?? input.tool ?? '';

@@ -4,10 +4,10 @@
 // Chaque session obtient un worktree frais avec un suffixe aléatoire — jamais de
 // réutilisation d'un worktree existant (un worktree désynchronisé provoquerait des conflits).
 // Le nettoyage reste manuel (`git worktree prune`).
-import { execSync } from 'child_process';
-import { existsSync } from 'fs';
-import { randomBytes } from 'crypto';
-import { fileURLToPath } from 'url';
+import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 
 function defaultExec(cmd) {
   try { return execSync(cmd, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return ''; }

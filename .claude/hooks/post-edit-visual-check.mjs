@@ -5,8 +5,8 @@
 // (css/scss…), markup (html), composants (tsx/jsx/vue/svelte/astro) — et injecte
 // un additionalContext demandant à l'agent de constater le rendu dans le
 // navigateur (preview/screenshot) plutôt que de supposer que ça marche.
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // Famille de fichiers front-end → libellé du type de changement à vérifier.
 const FRONTEND_KINDS = [

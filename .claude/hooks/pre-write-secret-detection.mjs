@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack pre-write-secret-detection
 // Bloque les écritures de fichiers contenant des secrets potentiels (PreToolUse Write|Edit)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const SECRET_PATTERNS = [
   /(?:ANTHROPIC|OPENAI|CLAUDE|GEMINI|GROQ)_API_KEY\s*=\s*['"]?\S{20,}/i,

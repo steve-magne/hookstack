@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack post-write-biome
 // Vérifie le fichier avec Biome après écriture (PostToolUse Write|Edit)
-import { readFileSync } from 'fs';
-import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 function defaultExec(cmd) {
   return execSync(cmd, { stdio: 'pipe', timeout: 15_000 });

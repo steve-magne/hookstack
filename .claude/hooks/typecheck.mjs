@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // @hookstack post-edit-typecheck
 // Vérifie les types TypeScript après écriture (PostToolUse Write|Edit)
-import { readFileSync } from 'fs';
-import { execSync } from 'child_process';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function makeDefaultExec(projectDir) {
   return (cmd) => execSync(cmd, { cwd: projectDir, stdio: 'pipe', timeout: 30_000 });

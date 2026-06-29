@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack pre-bash-guard-force-push-any
 // Bloque git push --force / -f sur toute branche, recommande --force-with-lease (PreToolUse Bash)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 function stripQuotedArgs(cmd) {
   return cmd.replace(/"(?:[^"\\]|\\.)*"/g, '""').replace(/'(?:[^'\\]|\\.)*'/g, "''");

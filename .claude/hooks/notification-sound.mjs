@@ -2,9 +2,9 @@
 // @hookstack notification-sound
 // Joue un son système quand Claude attend l'utilisateur (Notification)
 // Sur macOS, clic sur la notif ramène le bon contexte (terminal ou Claude app)
-import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // Bundle IDs des terminaux courants — clic ramène le bon contexte
 const TERMINAL_BUNDLE_IDS = {

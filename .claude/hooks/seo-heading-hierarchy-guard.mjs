@@ -6,8 +6,8 @@
 // un titre principal). La hiérarchie h2→h6 fine, elle, dépend du rendu cross-composant
 // → couverte au runtime par le skill seo-geo-aeo, pas en statique.
 // Non bloquant : signale le compte de <h1>.
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // <h1 …> ou <h1>, mais pas un composant <H1…>.
 const H1_RE = /<h1(?=[\s/>])/g;

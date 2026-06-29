@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack pre-compact-transcript-backup
 // Sauvegarde le résumé de compaction dans un fichier temporaire (PreCompact)
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export function run(
   input,

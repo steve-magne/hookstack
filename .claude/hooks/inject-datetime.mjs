@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // @hookstack user-prompt-inject-datetime
 // Injecte la date et l'heure courantes dans chaque prompt (UserPromptSubmit)
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from 'node:url';
 
 export function run({ now = new Date() } = {}) {
   const formatted = now.toLocaleString('fr-FR', {

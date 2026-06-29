@@ -4,8 +4,8 @@
 // Cible : src/**/*.tsx. Next.js fournit next/image (<Image>) qui optimise le LCP,
 // évite le CLS et sert des formats modernes — un <img> brut est une régression
 // perf/SEO. Non bloquant : signale chaque occurrence avec la correction.
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // <img …> mais pas <Image …> (next/image) ni un nom commençant par Img…
 const RAW_IMG_RE = /<img(?=[\s/>])/;

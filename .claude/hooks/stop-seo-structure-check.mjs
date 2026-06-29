@@ -8,9 +8,9 @@
 //   3. chaque <Link href="/…"> interne littéral pointe vers une route connue (broken-link)
 // Bloquant (exitCode 2) si une régression est trouvée ; silencieux sinon.
 // La validité runtime des schémas JSON-LD et des Core Web Vitals relève du skill seo-geo-aeo.
-import { readFileSync, existsSync, readdirSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function defaultWalkTsx(dir, { exists = existsSync, readdir = readdirSync } = {}) {
   if (!exists(dir)) return [];

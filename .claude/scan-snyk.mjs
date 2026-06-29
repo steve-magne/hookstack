@@ -7,11 +7,11 @@
 //   node .claude/scan-snyk.mjs --dry-run  # scan + print, no write
 //
 // The scan happens our side so `npx hookstack-cli` stays token-free for users.
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'fs'
-import { execFileSync } from 'child_process'
-import { tmpdir } from 'os'
-import { join, basename } from 'path'
-import { fileURLToPath } from 'url'
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import { join, basename } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const REGISTRY_PATH = new URL('../registry/registry.json', import.meta.url)
 

@@ -8,10 +8,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended",
-      "style": {
-        "useNodejsImportProtocol": "off"
-      }
+      "preset": "recommended"
     }
   }
 }

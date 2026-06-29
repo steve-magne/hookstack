@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // @hookstack stop-missing-test-detection
 // Détecte les fichiers sources modifiés sans test correspondant (Stop)
-import { readFileSync, existsSync, writeFileSync, unlinkSync } from 'fs';
-import { execSync } from 'child_process';
-import { basename } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync, writeFileSync, unlinkSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const pid = process.ppid ?? 'unknown';
 

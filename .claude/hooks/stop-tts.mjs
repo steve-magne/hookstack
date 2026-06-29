@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack stop-tts-completion
 // Annonce la fin de session Claude par TTS (Stop)
-import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 function defaultExec(cmd) {
   execSync(cmd, { timeout: 10_000, stdio: 'ignore', shell: true });

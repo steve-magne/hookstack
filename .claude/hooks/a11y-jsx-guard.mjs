@@ -5,10 +5,10 @@
 //   • Biome installé → règles a11y natives (lint/a11y/*, aucun plugin requis)
 //   • Biome absent   → vérifications statiques (4 règles regex, zéro dépendance)
 // Non bloquant : cumule les violations dans un message.
-import { readFileSync, existsSync } from 'fs';
-import { execSync } from 'child_process';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // ── Chemin Biome ───────────────────────────────────────────────────────────────
 

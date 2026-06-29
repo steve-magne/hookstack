@@ -2,7 +2,7 @@
 // Everything here is side-effect free and unit-tested in isolation; the
 // interactive I/O (clack/picocolors, fs, fetch) lives in cli.mjs. This mirrors
 // the project's "pure run() + thin I/O guard" hook convention.
-import { join, resolve, relative, isAbsolute } from 'path'
+import { join, resolve, relative, isAbsolute } from 'node:path'
 
 const BLOCKING_EVENTS = new Set([
   'PreToolUse',

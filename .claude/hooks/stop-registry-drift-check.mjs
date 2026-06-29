@@ -3,10 +3,10 @@
 // Filet de sécurité : vérifie au Stop que registry.json est synchrone avec les
 // .mjs sur disque (sync-hooks --check). Attrape une sync auto qui aurait échoué
 // silencieusement en cours de session, avant que la CI ne rejette la PR. (Stop)
-import { execSync } from 'child_process';
-import { existsSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function makeDefaultExec(projectDir) {
   return () =>

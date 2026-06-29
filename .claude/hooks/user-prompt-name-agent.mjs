@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // @hookstack user-prompt-llm-agent-name
 // Attribue un nom à l'agent pour la session courante (UserPromptSubmit)
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
-import { fileURLToPath } from 'url';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 
 const NAMES = ['Phoenix', 'Sage', 'Nova', 'Echo', 'Atlas', 'Cipher', 'Nexus', 'Oracle', 'Aurora', 'Vortex'];
 

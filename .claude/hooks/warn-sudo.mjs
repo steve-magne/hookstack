@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack pre-bash-warn-sudo
 // Avertit (sans bloquer) quand une commande Bash utilise sudo (PreToolUse Bash)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 function stripQuotedArgs(cmd) {
   return cmd.replace(/"(?:[^"\\]|\\.)*"/g, '""').replace(/'(?:[^'\\]|\\.)*'/g, "''");

@@ -2,9 +2,9 @@
 // @hookstack stop-force-implementation-doc
 // Bloque la fin de session si du code source a été modifié sans qu'un fichier
 // doc/implementation/ ait été créé ou mis à jour. Garantit zéro dette de doc. (Stop)
-import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 function defaultExec(cmd, opts) {
   return execSync(cmd, { encoding: 'utf8', timeout: 10_000, ...opts });

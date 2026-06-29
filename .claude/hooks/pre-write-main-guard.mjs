@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack pre-write-main-guard
 // PreToolUse Write|Edit: bloque la première écriture sur main si aucun worktree n'est actif
-import { readFileSync } from 'fs';
-import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 function defaultExec(cmd) {
   try { return execSync(cmd, { encoding: 'utf8', timeout: 5_000 }).trim(); } catch { return ''; }

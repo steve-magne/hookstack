@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack post-edit-conflict-marker-check
 // Signale les marqueurs de conflit git oubliés après une écriture (PostToolUse Write|Edit)
-import { readFileSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const OPEN_MARKER = /^<{7} /m;
 const CLOSE_MARKER = /^>{7} /m;

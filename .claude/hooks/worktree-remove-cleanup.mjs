@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // @hookstack worktree-remove-cleanup
 // Nettoie un worktree supprimé : docker compose down + node_modules (WorktreeRemove)
-import { readFileSync, existsSync, rmSync } from 'fs';
-import { execSync } from 'child_process';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync, rmSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function defaultExec(cmd) {
   execSync(cmd, { timeout: 30_000 });
