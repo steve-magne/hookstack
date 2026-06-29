@@ -383,6 +383,29 @@ export function doUpdateTests(
 	return { testCount };
 }
 
+// ── contribute ───────────────────────────────────────────────────────────────
+// `contribute` finds locally edited hooks (diverged from the live registry —
+// same comparison as `update`, just framed the other way round) and opens a
+// PR upstream from a fork. The git/gh plumbing lives in cli.mjs; only the
+// branch name and PR copy are pure enough to unit-test here.
+
+export function buildContributionBranch(slugs) {
+	return `hookstack-contrib/${slugs.join("-")}`;
+}
+
+export function buildContributionPr(slugs) {
+	const title =
+		slugs.length === 1
+			? `Update hook: ${slugs[0]}`
+			: `Update hooks: ${slugs.join(", ")}`;
+	const body = [
+		"Local changes to the following hook(s), submitted via `npx hookstack-cli@latest contribute`:",
+		"",
+		...slugs.map((s) => `- \`${s}\``),
+	].join("\n");
+	return { title, body };
+}
+
 // Display rows for the "Installation Summary" panel.
 export function buildSummaryRows(hooks, { root }) {
 	return hooks.map((h) => {

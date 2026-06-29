@@ -21,9 +21,10 @@ That's it. The CLI fetches the hooks, shows you what will be installed, and patc
 ```
 npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...
 npx hookstack-cli@latest update
+npx hookstack-cli@latest contribute
 
 Options:
-  --hooks <slugs>    Comma-separated hook slugs (install only — required)
+  --hooks <slugs>    Comma-separated hook slugs (install — required; contribute — optional filter)
   --project          Claude Code, this project — ./.claude (default)
   --global, -g       Claude Code, all projects — ~/.claude
   --codex-project    OpenAI Codex, this project — ./.codex/hooks.json (committed)
@@ -109,6 +110,25 @@ If you installed somewhere other than the default project scope, pass the same s
 ```bash
 npx hookstack-cli@latest update --global          # ~/.claude
 npx hookstack-cli@latest update --codex-project    # ./.codex/hooks.json
+```
+
+---
+
+## Contributing changes back
+
+Tweaked a hook locally and want the catalogue to have it? `contribute` turns that edit into a pull request:
+
+```bash
+npx hookstack-cli@latest contribute
+```
+
+It scans your installed hooks (same `@hookstack` fingerprint lookup as `update`), finds the ones whose local `.mjs` no longer matches the live registry, lets you pick which to send, then forks [steve-magne/hookstack](https://github.com/steve-magne/hookstack), pushes a branch with your version of those files, and opens the PR for you.
+
+Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated (`gh auth login`).
+
+```bash
+npx hookstack-cli@latest contribute --hooks=my-edited-hook   # only contribute specific hooks
+npx hookstack-cli@latest contribute --yes                    # non-interactive, sends every modified hook
 ```
 
 ---
