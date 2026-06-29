@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Installe les git hooks locaux. Lancé automatiquement par `pnpm install` via
 // le script "prepare" de package.json — pas besoin de l'appeler manuellement.
-import { writeFileSync, chmodSync, existsSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
+import { writeFileSync, chmodSync, existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 

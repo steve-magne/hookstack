@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack permission-denied-auto-mode-log
 // Journalise les permissions refusées (PermissionDenied)
-import { readFileSync, appendFileSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, appendFileSync, mkdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export function run(
   input,

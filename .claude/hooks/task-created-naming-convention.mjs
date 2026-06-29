@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack task-created-naming-convention
 // Impose une référence de ticket en tête du sujet d'une tâche (TaskCreated)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 export function run(input) {
   const subject = input.task_subject ?? '';

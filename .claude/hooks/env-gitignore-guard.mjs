@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack pre-write-env-gitignore-guard
 // Avertit si un fichier .env créé n'est pas couvert par .gitignore (PreToolUse Write|Edit)
-import { readFileSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, basename, join } from 'path';
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, basename, join } from 'node:path';
 
 // .env, .env.local, .env.production… mais PAS les modèles partagés (.env.example/.sample/.template).
 const ENV_FILE = /^\.env(?:\.[A-Za-z0-9_-]+)?$/;

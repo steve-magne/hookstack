@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack pre-bash-block-curl-pipe-sh
 // Bloque l'exécution de scripts distants non audités : curl|wget … | sh (PreToolUse Bash)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // Tuyau d'un téléchargeur vers un shell — le vecteur supply-chain n°1.
 // Testés sur la commande NETTOYÉE (le contenu entre guillemets est neutralisé)

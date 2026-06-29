@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack pre-bash-enforce-package-managers
 // Bloque npm et yarn, impose pnpm pour ce projet Node.js (PreToolUse Bash)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const FORBIDDEN = [
   { pattern: /(^|[;&|\s])npm(\s|$)/, replacement: 'pnpm' },

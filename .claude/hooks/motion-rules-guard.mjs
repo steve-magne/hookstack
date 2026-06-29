@@ -7,8 +7,8 @@
 //   - pas de media query prefers-reduced-motion manuelle (MotionConfig la gère)
 //   - jamais d'animation brute de width/height/top/left (transform/opacity only)
 // Non bloquant : signale les violations avec la correction attendue.
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const RULES = [
   [/from\s+['"]framer-motion['"]/, "import 'framer-motion' → use 'motion/react' (paquet `motion`)"],

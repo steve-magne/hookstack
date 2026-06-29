@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // @hookstack session-end-audit-log
 // Enregistre un résumé de session dans ~/.claude/audit-log.jsonl (SessionEnd)
-import { readFileSync, appendFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
-import { fileURLToPath } from 'url';
+import { readFileSync, appendFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 
 export function run(
   input,

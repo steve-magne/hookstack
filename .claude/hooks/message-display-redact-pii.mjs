@@ -3,8 +3,8 @@
 // Caviarde le hard-PII dans le contenu affiché (MessageDisplay) :
 // numéros de cartes, IBANs, SSNs — jamais présents dans du code légitime.
 // Les e-mails sont exclus volontairement (trop fréquents en contexte dev).
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // Numéros de carte Visa/MC/Amex/Discover — séparateurs optionnels espace ou tiret
 const CC_RE = /\b(?:4[0-9]{3}|5[1-5][0-9]{2}|3[47][0-9]{2}|6(?:011|5[0-9]{2}))[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{3,4}\b/g;

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack permission-request-auto-allow-readonly
 // Auto-autorise les outils lecture seule et les commandes Bash sûres (PermissionRequest)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const SAFE_BASH = [
   /^ls/, /^pwd/, /^echo/, /^cat(?!.*>)/, /^head/, /^tail/, /^wc/,

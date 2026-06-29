@@ -4,9 +4,9 @@
 // (FileChanged README.md). Quand un README change, liste les autres README du
 // repo (racine + packages/*) qui portent la même promesse produit et doivent
 // rester cohérents (exemples CLI, slugs, wording).
-import { readFileSync, existsSync, readdirSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // Trouve les README "surfaces produit" : racine + packages/*/README.md.
 export function findSiblingReadmes({

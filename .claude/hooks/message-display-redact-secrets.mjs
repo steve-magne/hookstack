@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack message-display-redact-secrets
 // Caviarde les secrets dans le contenu affiché (MessageDisplay)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 export function run(input) {
   const delta = input.delta ?? '';

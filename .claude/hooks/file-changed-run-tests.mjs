@@ -5,10 +5,10 @@
 // tests qui importent le fichier modifié (latence et tokens minimaux).
 // Sinon, repli sur le script `test` du gestionnaire de paquets du projet.
 // CI=true force le mode non-watch (évite un hook qui pend jusqu'au timeout).
-import { readFileSync, existsSync } from 'fs';
-import { execSync } from 'child_process';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function defaultExec(cmd) {
   return execSync(cmd, { timeout: 90_000, env: { ...process.env, CI: 'true' } });

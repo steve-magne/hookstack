@@ -25,10 +25,10 @@
  * `pnpm timeline` → committer les 3 artefacts mis à jour. La CI `--check` valide.
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
-import { execSync } from 'child_process';
-import { resolve, dirname, basename } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { resolve, dirname, basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');

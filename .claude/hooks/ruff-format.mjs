@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack post-write-ruff-format
 // Formate le fichier Python avec ruff après écriture (PostToolUse Write|Edit)
-import { readFileSync } from 'fs';
-import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 function defaultExec(cmd) {
   execSync(cmd, { stdio: 'ignore', timeout: 15_000 });

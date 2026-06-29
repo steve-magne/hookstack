@@ -8,9 +8,9 @@
 //
 // Requires GITHUB_TOKEN (read:security_events) in the environment.
 // Runs our side so `npx hookstack-cli` stays token-free for end users.
-import { readFileSync, writeFileSync } from 'fs'
-import { basename } from 'path'
-import { fileURLToPath } from 'url'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { basename } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const REGISTRY_PATH = new URL('../registry/registry.json', import.meta.url)
 const REPO = process.env.GITHUB_REPOSITORY ?? 'steve-magne/hookstack'

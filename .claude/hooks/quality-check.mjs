@@ -3,10 +3,10 @@
 // Bilan qualité à la fin d'une session : typecheck + lint (Stop)
 // Les tests sont volontairement exclus : run-tests.mjs (Stop) les exécute déjà
 // avec un meilleur rapport d'erreur — les relancer ici doublerait la fin de session.
-import { execSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { execSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // Fichiers concernés par un typecheck/lint JS-TS. Une session qui ne touche que
 // du Markdown, du Python ou des assets n'a rien à vérifier ici.

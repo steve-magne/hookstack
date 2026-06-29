@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack post-bash-cost-tracker
 // Journalise les commandes Bash avec leur durée (PostToolUse Bash)
-import { readFileSync, appendFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, appendFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export function run(
   input,

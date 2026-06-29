@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack pre-bash-secret-detection
 // Bloc les commandes Bash contenant des secrets potentiels (PreToolUse)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const SECRET_PATTERNS = [
   /(?:ANTHROPIC|OPENAI|CLAUDE|GEMINI|GROQ)_API_KEY\s*=\s*['"]?\S{20,}/i,

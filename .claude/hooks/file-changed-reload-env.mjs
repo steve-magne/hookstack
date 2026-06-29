@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack file-changed-reload-env
 // Recharge les variables d'env d'un fichier modifié dans CLAUDE_ENV_FILE (FileChanged)
-import { readFileSync, appendFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync, appendFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 export function run(
   input,

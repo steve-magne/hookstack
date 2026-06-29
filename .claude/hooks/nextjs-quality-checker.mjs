@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack post-write-nextjs-quality
 // Vérifie les patterns Next.js App Router après écriture (PostToolUse Write|Edit)
-import { readFileSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const INTERACTIVE_PATTERNS = [
   /\buseState\b/,

@@ -5,8 +5,8 @@
 // Règle : la page doit exporter `metadata` OU `generateMetadata`, et l'objet doit
 // porter un `title` ET une `description` (les deux leviers SEO de base).
 // Non bloquant : signale précisément ce qui manque.
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // Cible un fichier page.tsx sous un dossier app/ (App Router), racine incluse.
 const PAGE_RE = /\/app\/(?:.*\/)?page\.tsx$/;

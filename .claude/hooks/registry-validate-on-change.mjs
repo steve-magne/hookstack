@@ -2,9 +2,9 @@
 // @hookstack registry-validate-on-change
 // Valide registry.json contre son schéma dès qu'il change (FileChanged registry.json)
 // Feedback dans la session au lieu d'attendre l'échec de la CI.
-import { readFileSync } from 'fs';
-import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 function defaultExec(projectDir) {
   return execSync('node registry/validate-registry.mjs', {

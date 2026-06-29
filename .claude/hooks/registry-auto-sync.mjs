@@ -2,9 +2,9 @@
 // @hookstack registry-changed-auto-sync
 // Resynchronise registry.json depuis les scripts dogfoodés après édition d'un
 // hook .claude/hooks/*.mjs (ou du registre lui-même). (FileChanged *.mjs|registry.json)
-import { readFileSync } from 'fs';
-import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const SELF = 'registry-auto-sync.mjs';
 

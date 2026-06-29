@@ -5,9 +5,9 @@
 // démarrage de session, puis rend la main immédiatement.
 // NB : ce hook NE s'enregistre PAS sur WorktreeCreate — ce dernier remplace la création
 // du worktree, exige un chemin absolu sur stdout et ne supporte pas l'exécution async.
-import { execSync, spawn } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { execSync, spawn } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 /* v8 ignore next 3 */
 function defaultExec(cmd, opts = {}) {

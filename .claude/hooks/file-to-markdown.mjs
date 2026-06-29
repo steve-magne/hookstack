@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // @hookstack pre-read-file-to-markdown
 // Convertit PDF/DOCX/PPTX et autres fichiers binaires en Markdown avant lecture (PreToolUse Read)
-import { readFileSync, existsSync } from 'fs';
-import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
-import { extname, basename } from 'path';
+import { readFileSync, existsSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { extname, basename } from 'node:path';
 
 const MAX_CHARS = 50_000;
 

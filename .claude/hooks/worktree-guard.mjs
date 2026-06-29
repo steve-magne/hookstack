@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // @hookstack pre-edit-worktree-guard
 // Empêche l'édition de fichiers hors du worktree courant (PreToolUse Write|Edit)
-import { readFileSync } from 'fs';
-import { execSync } from 'child_process';
-import { resolve } from 'path';
-import { homedir } from 'os';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 
 // Répertoires internes des agents — légitimes hors worktree
 const AGENT_DIRS = ['.claude', '.codex'];

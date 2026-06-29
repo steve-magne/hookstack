@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack pre-bash-block-destructive
 // Bloc les commandes Bash destructives irréversibles (PreToolUse)
-import { readFileSync } from 'fs';
-import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const BLOCKED = [
   [/rm\s+-rf?\s+\/(?:\s|$)/, 'rm -rf / interdit'],

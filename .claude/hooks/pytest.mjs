@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack stop-pytest
 // Exécute pytest à la fin d'une session Python (Stop)
-import { existsSync } from 'fs';
-import { spawnSync, execSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { existsSync } from 'node:fs';
+import { spawnSync, execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const PYTHON_MARKERS = ['pyproject.toml', 'setup.py', 'pytest.ini', 'setup.cfg'];
 const PY = /\.py$/;

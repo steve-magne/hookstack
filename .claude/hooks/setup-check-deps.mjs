@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack setup-check-install-deps
 // Vérifie que les dépendances du projet sont à jour au démarrage de session (SessionStart)
-import { existsSync, statSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { existsSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const SPECS = [
   ['pnpm-lock.yaml', 'node_modules', 'pnpm install'],

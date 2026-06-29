@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack pre-edit-block-huge-write
 // Bloque l'écriture d'un fichier anormalement volumineux (PreToolUse Write)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // 500 Ko : au-delà, c'est presque toujours un dump, un blob généré ou un collage accidentel.
 const MAX_BYTES = 500_000;

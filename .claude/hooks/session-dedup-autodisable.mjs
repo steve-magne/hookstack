@@ -6,9 +6,9 @@
 // /tmp/claude-hook-counters/<slug>.counter à chaque échec (et le supprime en cas
 // de succès), puis vérifie l'absence de <slug>.disabled avant de s'exécuter.
 // Ce hook pose le marqueur .disabled dès que le compteur atteint MAX_FAILURES.
-import { readFileSync, existsSync, readdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync, readdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const MAX_FAILURES = 3;
 

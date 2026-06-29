@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack user-prompt-expansion-skill-context
 // Injecte du contexte additionnel lors de l'expansion de certains skills (UserPromptExpansion)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // Associe un nom de skill au contexte à injecter
 const CONTEXT_MAP = {

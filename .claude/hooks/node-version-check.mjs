@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack session-start-node-version-check
 // Avertit si la version de Node active ne correspond pas à celle attendue (SessionStart)
-import { readFileSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { join } from 'path';
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
 function major(v) {
   const m = String(v).match(/(\d+)/);

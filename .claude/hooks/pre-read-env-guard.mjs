@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack pre-read-env-guard
 // Bloque la lecture des fichiers .env — les secrets ne doivent pas entrer dans le contexte (PreToolUse Read)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { basename } from 'path';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { basename } from 'node:path';
 
 const SAFE_SUFFIXES = ['.example', '.sample', '.template', '.dist'];
 

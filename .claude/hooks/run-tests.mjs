@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // @hookstack stop-run-tests
 // Exécute la suite de tests à la fin d'une session (Stop)
-import { spawnSync, execSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { spawnSync, execSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // Fichiers purement documentaires/binaires : ne peuvent pas casser la suite de tests.
 const DOC_ONLY = /\.(md|mdx|markdown|txt|rst|adoc|svg|png|jpe?g|gif|webp|ico|pdf|lock)$|(^|\/)LICENSE/i;

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack session-end-cleanup-temp
 // Nettoie les fichiers temporaires Claude datant de plus de 24h (SessionEnd)
-import { readdirSync, statSync, unlinkSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { readdirSync, statSync, unlinkSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const MAX_AGE_MS = 24 * 60 * 60 * 1_000;
 const PREFIX = 'claude-';

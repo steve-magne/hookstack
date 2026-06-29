@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack session-start-agents-md
 // Charge AGENTS.md comme contexte supplémentaire au démarrage de session (SessionStart)
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export function run(
   _input,

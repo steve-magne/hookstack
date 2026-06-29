@@ -3,9 +3,9 @@
 // Installe les dépendances au démarrage si node_modules est absent (SessionStart/WorktreeCreate).
 // Dans un worktree distinct, update-deps.mjs gère l'install en mode détaché — ce hook
 // s'abstient pour éviter la race condition (deux pnpm install concurrents → ENOTEMPTY).
-import { readFileSync, existsSync } from 'fs';
-import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 export function run(input, { exec, exists = existsSync } = {}) {
   const cwd = input.cwd;

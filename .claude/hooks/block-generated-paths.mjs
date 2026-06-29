@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // @hookstack pre-edit-block-generated-paths
 // Bloque l'écriture dans un dossier généré (node_modules, dist, .next…) (PreToolUse Write|Edit)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // Segments de chemin qui ne contiennent que des artefacts générés : éditer ici = travail perdu.
 const GENERATED = /(?:^|\/)(node_modules|\.next|\.nuxt|\.svelte-kit|dist|build|out|coverage|\.turbo|\.cache|__pycache__|\.venv|\.pytest_cache|\.mypy_cache)(?:\/|$)/;

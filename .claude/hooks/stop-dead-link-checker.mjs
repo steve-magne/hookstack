@@ -3,9 +3,9 @@
 // Vérifie les liens relatifs cassés dans tous les fichiers Markdown du repo (Stop).
 // Scan complet — couvre la dette existante, pas seulement les fichiers de la session.
 // Purement Node.js (fs + path), sans réseau ni dépendance externe.
-import { readFileSync, existsSync, readdirSync } from 'fs';
-import { join, dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { join, dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'out', '.claude']);
 // Capture [text](href) — exclut les images ![alt](src) incluses dans la même syntaxe

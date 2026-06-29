@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack instructions-loaded-audit-log
 // Journalise le chargement d'instructions / mémoire (InstructionsLoaded)
-import { readFileSync, appendFileSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, appendFileSync, mkdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export function run(
   input,

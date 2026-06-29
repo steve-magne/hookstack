@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @hookstack user-prompt-inject-deps-versions
 // Injecte les versions réelles des dépendances dans chaque prompt (UserPromptSubmit)
-import { readFileSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { join } from 'path';
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
 const MAX_ENTRIES = 60; // borne le coût en tokens
 
