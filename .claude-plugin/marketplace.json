@@ -1,18 +1,18 @@
 {
-  "name": "hookstack",
-  "owner": {
-    "name": "steve-magne"
-  },
-  "metadata": {
-    "description": "Production-ready hooks for Claude Code, OpenAI Codex and GitHub Copilot — security, quality, context, and notifications in one install.",
-    "version": "1.0.0"
-  },
-  "plugins": [
-    {
-      "name": "hookstack",
-      "description": "Production-ready hooks for Claude Code — security, quality, context, and notifications in one install.",
-      "version": "1.0.0",
-      "source": "."
-    }
-  ]
+	"name": "hookstack",
+	"owner": {
+		"name": "steve-magne"
+	},
+	"metadata": {
+		"description": "Production-ready hooks for Claude Code, OpenAI Codex and GitHub Copilot — security, quality, context, and notifications in one install.",
+		"version": "1.0.0"
+	},
+	"plugins": [
+		{
+			"name": "hookstack",
+			"description": "Production-ready hooks for Claude Code — security, quality, context, and notifications in one install.",
+			"version": "1.0.0",
+			"source": "."
+		}
+	]
 }

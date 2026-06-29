@@ -1,14 +1,33 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.0/schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true, "defaultBranch": "main" },
-  "files": { "ignoreUnknown": true, "includes": ["**", "!.claude/skills/impeccable", "!public"] },
-  "formatter": { "enabled": false },
-  "assist": { "enabled": false },
-  "css": { "parser": { "tailwindDirectives": true } },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "preset": "recommended"
-    }
-  }
+	"$schema": "https://biomejs.dev/schemas/2.5.0/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true,
+		"defaultBranch": "main"
+	},
+	"files": {
+		"ignoreUnknown": true,
+		"includes": [
+			"**",
+			"!.claude/skills/impeccable",
+			"!public",
+			"!registry/registry.json",
+			"!registry/hooks-timeline.json",
+			"!registry/scanned-repos.json",
+			"!.claude/settings.json"
+		]
+	},
+	"formatter": { "enabled": true },
+	"assist": {
+		"enabled": true,
+		"actions": { "source": { "organizeImports": "on" } }
+	},
+	"css": { "parser": { "tailwindDirectives": true } },
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended"
+		}
+	}
 }

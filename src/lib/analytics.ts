@@ -27,28 +27,28 @@
  *  avec `link_domain` / `link_url`). Rien à instrumenter côté code.
  */
 
-type GtagParams = Record<string, string | number | boolean | undefined>
+type GtagParams = Record<string, string | number | boolean | undefined>;
 
 declare global {
-  interface Window {
-    gtag?: (command: 'event', eventName: string, params?: GtagParams) => void
-  }
+	interface Window {
+		gtag?: (command: "event", eventName: string, params?: GtagParams) => void;
+	}
 }
 
 /** Liste fermée des événements — garde-fou contre les typos et la dérive. */
 export type AnalyticsEvent =
-  | 'copy_install_command'
-  | 'select_hook'
-  | 'deselect_hook'
-  | 'copy_settings_fragment'
-  | 'view_hook_detail'
-  | 'view_full_page'
-  | 'filter_stack'
-  | 'filter_category'
-  | 'filter_event'
-  | 'reset_stack_filter'
-  | 'reset_all_filters'
-  | 'toggle_grouping'
+	| "copy_install_command"
+	| "select_hook"
+	| "deselect_hook"
+	| "copy_settings_fragment"
+	| "view_hook_detail"
+	| "view_full_page"
+	| "filter_stack"
+	| "filter_category"
+	| "filter_event"
+	| "reset_stack_filter"
+	| "reset_all_filters"
+	| "toggle_grouping";
 
 /**
  * Envoie un événement à GA4. No-op silencieux côté serveur ou si gtag n'est pas
@@ -56,6 +56,7 @@ export type AnalyticsEvent =
  * runtime côté utilisateur.
  */
 export function track(event: AnalyticsEvent, params: GtagParams = {}): void {
-  if (typeof window === 'undefined' || typeof window.gtag !== 'function') return
-  window.gtag('event', event, params)
+	if (typeof window === "undefined" || typeof window.gtag !== "function")
+		return;
+	window.gtag("event", event, params);
 }

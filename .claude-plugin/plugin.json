@@ -1,11 +1,11 @@
 {
-  "name": "hookstack",
-  "displayName": "HookStack",
-  "version": "1.0.0",
-  "description": "Production-ready hooks for Claude Code — security, quality, context, and notifications in one install.",
-  "author": "steve-magne",
-  "license": "MIT",
-  "homepage": "https://www.hookstack.app",
-  "repository": "https://github.com/steve-magne/hookstack",
-  "hooks": ".claude/settings.json"
+	"name": "hookstack",
+	"displayName": "HookStack",
+	"version": "1.0.0",
+	"description": "Production-ready hooks for Claude Code — security, quality, context, and notifications in one install.",
+	"author": "steve-magne",
+	"license": "MIT",
+	"homepage": "https://www.hookstack.app",
+	"repository": "https://github.com/steve-magne/hookstack",
+	"hooks": ".claude/settings.json"
 }

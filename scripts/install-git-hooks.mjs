@@ -1,30 +1,33 @@
 #!/usr/bin/env node
+import { execSync } from "node:child_process";
 // Installe les git hooks locaux. Lancé automatiquement par `pnpm install` via
 // le script "prepare" de package.json — pas besoin de l'appeler manuellement.
-import { writeFileSync, chmodSync, existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { execSync } from 'node:child_process';
+import { chmodSync, existsSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 // git rev-parse --git-common-dir gère worktrees ET repos classiques
 let commonDir;
 try {
-  commonDir = execSync('git rev-parse --git-common-dir', { cwd: ROOT, encoding: 'utf8' }).trim();
+	commonDir = execSync("git rev-parse --git-common-dir", {
+		cwd: ROOT,
+		encoding: "utf8",
+	}).trim();
 } catch {
-  // Pas dans un repo git (CI qui ne fait pas checkout, etc.) — skip silencieusement
-  process.exit(0);
+	// Pas dans un repo git (CI qui ne fait pas checkout, etc.) — skip silencieusement
+	process.exit(0);
 }
 
-const GIT_HOOKS_DIR = resolve(ROOT, commonDir, 'hooks');
+const GIT_HOOKS_DIR = resolve(ROOT, commonDir, "hooks");
 
 if (!existsSync(GIT_HOOKS_DIR)) {
-  // Hooks dir absent (rare) — on skip
-  process.exit(0);
+	// Hooks dir absent (rare) — on skip
+	process.exit(0);
 }
 
-const PRE_COMMIT = resolve(GIT_HOOKS_DIR, 'pre-commit');
+const PRE_COMMIT = resolve(GIT_HOOKS_DIR, "pre-commit");
 
 const script = `#!/bin/sh
 # Régénère hooks/hooks.json si le registre ou un script .mjs a changé dans le stage.
@@ -38,6 +41,6 @@ if echo "$CHANGED" | grep -qE '(registry/registry\\.json|\\.claude/hooks/.*\\.mj
 fi
 `;
 
-writeFileSync(PRE_COMMIT, script, 'utf8');
+writeFileSync(PRE_COMMIT, script, "utf8");
 chmodSync(PRE_COMMIT, 0o755);
-console.log('✓ git hook pre-commit installé (.git/hooks/pre-commit)');
+console.log("✓ git hook pre-commit installé (.git/hooks/pre-commit)");

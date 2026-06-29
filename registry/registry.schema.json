@@ -1,298 +1,273 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://www.hookstack.app/registry.schema.json",
-  "title": "Hookstack registry",
-  "description": "Source of truth for the Hookstack catalogue metadata. `additionalProperties: false` is intentional: it rejects any field the codebase does not consume, so dead metadata (e.g. legacy `id`/`votes`) cannot creep back in. Keep this schema in sync with src/types/hook.ts.",
-  "type": "array",
-  "minItems": 1,
-  "items": {
-    "$ref": "#/$defs/hook"
-  },
-  "$defs": {
-    "hook": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "slug",
-        "name",
-        "benefit",
-        "category",
-        "hook_type",
-        "trigger",
-        "description",
-        "use_cases",
-        "implementation",
-        "tags"
-      ],
-      "properties": {
-        "slug": {
-          "type": "string",
-          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
-          "description": "Stable kebab-case identifier and primary lookup key."
-        },
-        "name": {
-          "type": "string",
-          "minLength": 3
-        },
-        "benefit": {
-          "type": "string",
-          "minLength": 8,
-          "maxLength": 90,
-          "description": "One-line, outcome-framed payoff shown in the catalogue — the 'why install this'. Target ≤ ~60 chars; 90 is the hard cap."
-        },
-        "category": {
-          "type": "string",
-          "enum": [
-            "security",
-            "context",
-            "validation",
-            "notification",
-            "workflow",
-            "documentation"
-          ]
-        },
-        "hook_type": {
-          "type": "string",
-          "description": "Claude Code lifecycle event. Superset of the labelled subset in src/types/hook.ts (HOOK_TYPE_INFO): events not listed there simply render without a tooltip.",
-          "enum": [
-            "PreToolUse",
-            "PostToolUse",
-            "PostToolUseFailure",
-            "PostToolBatch",
-            "UserPromptSubmit",
-            "UserPromptExpansion",
-            "Notification",
-            "MessageDisplay",
-            "Stop",
-            "StopFailure",
-            "SubagentStart",
-            "SubagentStop",
-            "PreCompact",
-            "PostCompact",
-            "SessionStart",
-            "SessionEnd",
-            "WorktreeCreate",
-            "WorktreeRemove",
-            "PermissionRequest",
-            "PermissionDenied",
-            "CwdChanged",
-            "ConfigChange",
-            "FileChanged",
-            "InstructionsLoaded",
-            "TaskCreated",
-            "TaskCompleted",
-            "TeammateIdle",
-            "Setup"
-          ]
-        },
-        "trigger": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Tool matcher: '*', a single tool ('Bash'), or a pipe-union ('Write|Edit')."
-        },
-        "description": {
-          "type": "string",
-          "minLength": 10
-        },
-        "use_cases": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "tags": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "default_on": {
-          "type": "boolean",
-          "description": "Part of the recommended default stack (fast path)."
-        },
-        "stack": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "enum": [
-              "typescript",
-              "python"
-            ]
-          },
-          "description": "Ecosystem gate. Omit for universal hooks; present only for stack-specific ones."
-        },
-        "implementation": {
-          "$ref": "#/$defs/implementation"
-        }
-      }
-    },
-    "implementation": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "type",
-        "config",
-        "script_path"
-      ],
-      "properties": {
-        "type": {
-          "const": "settings_json"
-        },
-        "config": {
-          "$ref": "#/$defs/config"
-        },
-        "script_path": {
-          "type": "string",
-          "minLength": 1
-        },
-        "code_snippet": {
-          "type": "string",
-          "description": "Mirror of the .mjs on disk, populated by .claude/sync-hooks.mjs. Never hand-edited."
-        },
-        "test_snippet": {
-          "type": "string"
-        },
-        "security": {
-          "$ref": "#/$defs/security"
-        }
-      }
-    },
-    "config": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "hooks"
-      ],
-      "properties": {
-        "hooks": {
-          "type": "object",
-          "minProperties": 1,
-          "description": "Keyed by Claude Code event name; each value is a list of matcher groups.",
-          "additionalProperties": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/configEntry"
-            }
-          }
-        }
-      }
-    },
-    "configEntry": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "hooks"
-      ],
-      "properties": {
-        "matcher": {
-          "type": "string"
-        },
-        "hooks": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/commandHook"
-          }
-        }
-      }
-    },
-    "commandHook": {
-      "type": "object",
-      "description": "A single command invocation. Required keys are the stable Claude Code contract; extra keys (timeout, async, asyncRewake…) are tolerated as Claude Code config evolves.",
-      "required": [
-        "type",
-        "command"
-      ],
-      "properties": {
-        "type": {
-          "const": "command"
-        },
-        "command": {
-          "type": "string",
-          "minLength": 1
-        }
-      }
-    },
-    "snykScan": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "high",
-        "medium",
-        "low",
-        "scannedAt"
-      ],
-      "properties": {
-        "high": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "medium": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "low": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "scannedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      }
-    },
-    "codeqlScan": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "critical",
-        "high",
-        "medium",
-        "low",
-        "scannedAt"
-      ],
-      "properties": {
-        "critical": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "high": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "medium": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "low": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "scannedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      }
-    },
-    "security": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "Third-party SAST verdicts, populated by CI (see .claude/scan-snyk.mjs).",
-      "properties": {
-        "snyk": {
-          "$ref": "#/$defs/snykScan"
-        },
-        "codeql": {
-          "$ref": "#/$defs/codeqlScan"
-        }
-      }
-    }
-  }
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://www.hookstack.app/registry.schema.json",
+	"title": "Hookstack registry",
+	"description": "Source of truth for the Hookstack catalogue metadata. `additionalProperties: false` is intentional: it rejects any field the codebase does not consume, so dead metadata (e.g. legacy `id`/`votes`) cannot creep back in. Keep this schema in sync with src/types/hook.ts.",
+	"type": "array",
+	"minItems": 1,
+	"items": {
+		"$ref": "#/$defs/hook"
+	},
+	"$defs": {
+		"hook": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"slug",
+				"name",
+				"benefit",
+				"category",
+				"hook_type",
+				"trigger",
+				"description",
+				"use_cases",
+				"implementation",
+				"tags"
+			],
+			"properties": {
+				"slug": {
+					"type": "string",
+					"pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+					"description": "Stable kebab-case identifier and primary lookup key."
+				},
+				"name": {
+					"type": "string",
+					"minLength": 3
+				},
+				"benefit": {
+					"type": "string",
+					"minLength": 8,
+					"maxLength": 90,
+					"description": "One-line, outcome-framed payoff shown in the catalogue — the 'why install this'. Target ≤ ~60 chars; 90 is the hard cap."
+				},
+				"category": {
+					"type": "string",
+					"enum": [
+						"security",
+						"context",
+						"validation",
+						"notification",
+						"workflow",
+						"documentation"
+					]
+				},
+				"hook_type": {
+					"type": "string",
+					"description": "Claude Code lifecycle event. Superset of the labelled subset in src/types/hook.ts (HOOK_TYPE_INFO): events not listed there simply render without a tooltip.",
+					"enum": [
+						"PreToolUse",
+						"PostToolUse",
+						"PostToolUseFailure",
+						"PostToolBatch",
+						"UserPromptSubmit",
+						"UserPromptExpansion",
+						"Notification",
+						"MessageDisplay",
+						"Stop",
+						"StopFailure",
+						"SubagentStart",
+						"SubagentStop",
+						"PreCompact",
+						"PostCompact",
+						"SessionStart",
+						"SessionEnd",
+						"WorktreeCreate",
+						"WorktreeRemove",
+						"PermissionRequest",
+						"PermissionDenied",
+						"CwdChanged",
+						"ConfigChange",
+						"FileChanged",
+						"InstructionsLoaded",
+						"TaskCreated",
+						"TaskCompleted",
+						"TeammateIdle",
+						"Setup"
+					]
+				},
+				"trigger": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Tool matcher: '*', a single tool ('Bash'), or a pipe-union ('Write|Edit')."
+				},
+				"description": {
+					"type": "string",
+					"minLength": 10
+				},
+				"use_cases": {
+					"type": "array",
+					"minItems": 1,
+					"items": {
+						"type": "string",
+						"minLength": 1
+					}
+				},
+				"tags": {
+					"type": "array",
+					"minItems": 1,
+					"uniqueItems": true,
+					"items": {
+						"type": "string",
+						"minLength": 1
+					}
+				},
+				"default_on": {
+					"type": "boolean",
+					"description": "Part of the recommended default stack (fast path)."
+				},
+				"stack": {
+					"type": "array",
+					"minItems": 1,
+					"uniqueItems": true,
+					"items": {
+						"type": "string",
+						"enum": ["typescript", "python"]
+					},
+					"description": "Ecosystem gate. Omit for universal hooks; present only for stack-specific ones."
+				},
+				"implementation": {
+					"$ref": "#/$defs/implementation"
+				}
+			}
+		},
+		"implementation": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["type", "config", "script_path"],
+			"properties": {
+				"type": {
+					"const": "settings_json"
+				},
+				"config": {
+					"$ref": "#/$defs/config"
+				},
+				"script_path": {
+					"type": "string",
+					"minLength": 1
+				},
+				"code_snippet": {
+					"type": "string",
+					"description": "Mirror of the .mjs on disk, populated by .claude/sync-hooks.mjs. Never hand-edited."
+				},
+				"test_snippet": {
+					"type": "string"
+				},
+				"security": {
+					"$ref": "#/$defs/security"
+				}
+			}
+		},
+		"config": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["hooks"],
+			"properties": {
+				"hooks": {
+					"type": "object",
+					"minProperties": 1,
+					"description": "Keyed by Claude Code event name; each value is a list of matcher groups.",
+					"additionalProperties": {
+						"type": "array",
+						"items": {
+							"$ref": "#/$defs/configEntry"
+						}
+					}
+				}
+			}
+		},
+		"configEntry": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["hooks"],
+			"properties": {
+				"matcher": {
+					"type": "string"
+				},
+				"hooks": {
+					"type": "array",
+					"minItems": 1,
+					"items": {
+						"$ref": "#/$defs/commandHook"
+					}
+				}
+			}
+		},
+		"commandHook": {
+			"type": "object",
+			"description": "A single command invocation. Required keys are the stable Claude Code contract; extra keys (timeout, async, asyncRewake…) are tolerated as Claude Code config evolves.",
+			"required": ["type", "command"],
+			"properties": {
+				"type": {
+					"const": "command"
+				},
+				"command": {
+					"type": "string",
+					"minLength": 1
+				}
+			}
+		},
+		"snykScan": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["high", "medium", "low", "scannedAt"],
+			"properties": {
+				"high": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"medium": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"low": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"scannedAt": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
+		},
+		"codeqlScan": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["critical", "high", "medium", "low", "scannedAt"],
+			"properties": {
+				"critical": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"high": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"medium": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"low": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"scannedAt": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
+		},
+		"security": {
+			"type": "object",
+			"additionalProperties": false,
+			"description": "Third-party SAST verdicts, populated by CI (see .claude/scan-snyk.mjs).",
+			"properties": {
+				"snyk": {
+					"$ref": "#/$defs/snykScan"
+				},
+				"codeql": {
+					"$ref": "#/$defs/codeqlScan"
+				}
+			}
+		}
+	}
 }

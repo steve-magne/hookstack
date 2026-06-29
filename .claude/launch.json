@@ -1,12 +1,12 @@
 {
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "hookstack-dev",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev"],
-      "port": 3000,
-      "autoPort": true
-    }
-  ]
+	"version": "0.0.1",
+	"configurations": [
+		{
+			"name": "hookstack-dev",
+			"runtimeExecutable": "pnpm",
+			"runtimeArgs": ["dev"],
+			"port": 3000,
+			"autoPort": true
+		}
+	]
 }

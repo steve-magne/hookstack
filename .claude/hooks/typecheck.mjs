@@ -1,34 +1,39 @@
 #!/usr/bin/env node
 // @hookstack post-edit-typecheck
+import { execSync } from "node:child_process";
+// @hookstack post-edit-typecheck
 // Vérifie les types TypeScript après écriture (PostToolUse Write|Edit)
-import { readFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
-import { dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from "node:fs";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 function makeDefaultExec(projectDir) {
-  return (cmd) => execSync(cmd, { cwd: projectDir, stdio: 'pipe', timeout: 30_000 });
+	return (cmd) =>
+		execSync(cmd, { cwd: projectDir, stdio: "pipe", timeout: 30_000 });
 }
 
-export function run(input, { exec, projectDir = process.env.CLAUDE_PROJECT_DIR } = {}) {
-  const filePath = input.tool_input?.file_path ?? '';
-  if (!filePath || !/\.tsx?$/.test(filePath)) return null;
+export function run(
+	input,
+	{ exec, projectDir = process.env.CLAUDE_PROJECT_DIR } = {},
+) {
+	const filePath = input.tool_input?.file_path ?? "";
+	if (!filePath || !/\.tsx?$/.test(filePath)) return null;
 
-  const cwd = projectDir ?? dirname(filePath);
-  const doExec = exec ?? makeDefaultExec(cwd);
+	const cwd = projectDir ?? dirname(filePath);
+	const doExec = exec ?? makeDefaultExec(cwd);
 
-  try {
-    doExec('npx --no-install tsc --noEmit');
-    return null;
-  } catch (err) {
-    const output = err.stdout?.toString() ?? '';
-    return output ? { message: `TypeScript: ${output.trim()}\n` } : null;
-  }
+	try {
+		doExec("npx --no-install tsc --noEmit");
+		return null;
+	} catch (err) {
+		const output = err.stdout?.toString() ?? "";
+		return output ? { message: `TypeScript: ${output.trim()}\n` } : null;
+	}
 }
 
 /* v8 ignore next 5 */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const input = JSON.parse(readFileSync(0, 'utf8'));
-  const result = run(input);
-  if (result?.message) process.stderr.write(result.message);
+	const input = JSON.parse(readFileSync(0, "utf8"));
+	const result = run(input);
+	if (result?.message) process.stderr.write(result.message);
 }

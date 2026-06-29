@@ -1,88 +1,155 @@
-import type { Metadata } from 'next'
-import Script from 'next/script'
-import './globals.css'
-import Link from 'next/link'
-import { MotionProvider } from '@/components/MotionProvider'
-import { Header } from '@/components/Header'
-import { T, SEO_KEYWORDS } from '@/lib/i18n'
-import { MAINTAINER } from '@/lib/site'
+import type { Metadata } from "next";
+import Script from "next/script";
+import "./globals.css";
+import Link from "next/link";
+import { Header } from "@/components/Header";
+import { MotionProvider } from "@/components/MotionProvider";
+import { SEO_KEYWORDS, T } from "@/lib/i18n";
+import { MAINTAINER } from "@/lib/site";
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.hookstack.app'),
-  title: {
-    template: '%s | HookStack',
-    default: 'HookStack',
-  },
-  description: T.metaDescription,
-  keywords: SEO_KEYWORDS,
-  authors: [{ name: MAINTAINER.name, url: MAINTAINER.url }],
-  creator: MAINTAINER.name,
-  publisher: 'HookStack',
-  robots: { index: true, follow: true },
-  openGraph: {
-    siteName: 'HookStack',
-    locale: 'en_US',
-    type: 'website',
-  },
-  verification: {
-    google: '3oIn95TB_l6m5LWjbWkXFOO_GakuUZ68XQ2m0djhkbg',
-  },
-}
+	metadataBase: new URL("https://www.hookstack.app"),
+	title: {
+		template: "%s | HookStack",
+		default: "HookStack",
+	},
+	description: T.metaDescription,
+	keywords: SEO_KEYWORDS,
+	authors: [{ name: MAINTAINER.name, url: MAINTAINER.url }],
+	creator: MAINTAINER.name,
+	publisher: "HookStack",
+	robots: { index: true, follow: true },
+	openGraph: {
+		siteName: "HookStack",
+		locale: "en_US",
+		type: "website",
+	},
+	verification: {
+		google: "3oIn95TB_l6m5LWjbWkXFOO_GakuUZ68XQ2m0djhkbg",
+	},
+};
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="shortcut icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="manifest" href="/site.webmanifest" />
-        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-TX6095K45G" />
-        <Script id="google-analytics">
-          {`window.dataLayer = window.dataLayer || [];
+export default function RootLayout({
+	children,
+}: {
+	children: React.ReactNode;
+}) {
+	return (
+		<html lang="en" suppressHydrationWarning>
+			<head>
+				<link
+					rel="icon"
+					type="image/png"
+					href="/favicon-96x96.png"
+					sizes="96x96"
+				/>
+				<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+				<link rel="shortcut icon" href="/favicon.ico" />
+				<link
+					rel="apple-touch-icon"
+					sizes="180x180"
+					href="/apple-touch-icon.png"
+				/>
+				<link rel="manifest" href="/site.webmanifest" />
+				<Script
+					async
+					src="https://www.googletagmanager.com/gtag/js?id=G-TX6095K45G"
+				/>
+				<Script id="google-analytics">
+					{`window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'G-TX6095K45G');`}
-        </Script>
-      </head>
-      {/* RootLayout */}
-      <body suppressHydrationWarning data-component="RootLayout" className="min-h-screen flex flex-col" style={{ position: 'relative', zIndex: 1 }}>
-        <MotionProvider>
-          {/* Header */}
-          <Header />
-          {/* PageContent */}
-          <main data-component="PageContent" className="flex-1">{children}</main>
-          {/* Footer */}
-          <footer data-component="Footer" className="border-t border-[var(--color-border)] py-8 text-center text-sm text-zinc-500">
-            <nav data-component="FooterNav" className="mb-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-              <Link href="/#catalogue" className="hover:text-zinc-300">Catalogue</Link>
-              <Link href="/guides" className="hover:text-zinc-300">Guides</Link>
-              <Link href="/about" className="hover:text-zinc-300">About</Link>
-              <a href="https://github.com/steve-magne/hookstack" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300">GitHub</a>
-              <a href="https://www.npmjs.com/package/hookstack-cli" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300">npm</a>
-              <a href={MAINTAINER.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300">LinkedIn</a>
-            </nav>
-            <p>{T.footerText}</p>
-            <p className="mt-1 text-zinc-600">Built &amp; maintained by {MAINTAINER.name} · MIT licensed</p>
-          </footer>
-          {/* GitHubFab */}
-          {/* biome-ignore lint/a11y/useAnchorContent: aria-label provides the accessible name for this icon-only link */}
-          <a
-            data-component="GitHubFab"
-            href="https://github.com/steve-magne/hookstack"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="View source on GitHub"
-            style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}
-            className="fixed bottom-5 right-5 z-50 flex items-center justify-center w-10 h-10 rounded-full hover:scale-110 hover:border-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all duration-150"
-          >
-            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
-              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z" />
-            </svg>
-          </a>
-        </MotionProvider>
-      </body>
-    </html>
-  )
+				</Script>
+			</head>
+			{/* RootLayout */}
+			<body
+				suppressHydrationWarning
+				data-component="RootLayout"
+				className="min-h-screen flex flex-col"
+				style={{ position: "relative", zIndex: 1 }}
+			>
+				<MotionProvider>
+					{/* Header */}
+					<Header />
+					{/* PageContent */}
+					<main data-component="PageContent" className="flex-1">
+						{children}
+					</main>
+					{/* Footer */}
+					<footer
+						data-component="Footer"
+						className="border-t border-[var(--color-border)] py-8 text-center text-sm text-zinc-500"
+					>
+						<nav
+							data-component="FooterNav"
+							className="mb-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2"
+						>
+							<Link href="/#catalogue" className="hover:text-zinc-300">
+								Catalogue
+							</Link>
+							<Link href="/guides" className="hover:text-zinc-300">
+								Guides
+							</Link>
+							<Link href="/about" className="hover:text-zinc-300">
+								About
+							</Link>
+							<a
+								href="https://github.com/steve-magne/hookstack"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="hover:text-zinc-300"
+							>
+								GitHub
+							</a>
+							<a
+								href="https://www.npmjs.com/package/hookstack-cli"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="hover:text-zinc-300"
+							>
+								npm
+							</a>
+							<a
+								href={MAINTAINER.linkedin}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="hover:text-zinc-300"
+							>
+								LinkedIn
+							</a>
+						</nav>
+						<p>{T.footerText}</p>
+						<p className="mt-1 text-zinc-600">
+							Built &amp; maintained by {MAINTAINER.name} · MIT licensed
+						</p>
+					</footer>
+					{/* GitHubFab */}
+					{/* biome-ignore lint/a11y/useAnchorContent: aria-label provides the accessible name for this icon-only link */}
+					<a
+						data-component="GitHubFab"
+						href="https://github.com/steve-magne/hookstack"
+						target="_blank"
+						rel="noopener noreferrer"
+						aria-label="View source on GitHub"
+						style={{
+							background: "var(--color-surface-2)",
+							border: "1px solid var(--color-border)",
+							color: "var(--color-text-muted)",
+						}}
+						className="fixed bottom-5 right-5 z-50 flex items-center justify-center w-10 h-10 rounded-full hover:scale-110 hover:border-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all duration-150"
+					>
+						<svg
+							viewBox="0 0 24 24"
+							className="w-5 h-5"
+							fill="currentColor"
+							aria-hidden="true"
+						>
+							<path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z" />
+						</svg>
+					</a>
+				</MotionProvider>
+			</body>
+		</html>
+	);
 }

@@ -1,18 +1,18 @@
-import { defineConfig, configDefaults } from 'vitest/config'
-import path from 'node:path'
+import path from "node:path";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'src'),
-    },
-  },
-  test: {
-    environment: 'node',
-    // Les worktrees de session (.claude/worktrees/*) sont des copies isolées :
-    // leurs tests résoudraient l'alias '@' vers le src/ de ce checkout et
-    // planteraient. On les exclut pour que `pnpm test` ne collecte que les
-    // tests du checkout courant.
-    exclude: [...configDefaults.exclude, '**/.claude/worktrees/**'],
-  },
-})
+	resolve: {
+		alias: {
+			"@": path.resolve(__dirname, "src"),
+		},
+	},
+	test: {
+		environment: "node",
+		// Les worktrees de session (.claude/worktrees/*) sont des copies isolées :
+		// leurs tests résoudraient l'alias '@' vers le src/ de ce checkout et
+		// planteraient. On les exclut pour que `pnpm test` ne collecte que les
+		// tests du checkout courant.
+		exclude: [...configDefaults.exclude, "**/.claude/worktrees/**"],
+	},
+});
