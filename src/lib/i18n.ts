@@ -95,6 +95,8 @@ export const T = {
 	filterCategory: "Category",
 	filterProvider: "Provider",
 	filterEvent: "Event",
+	filterThemes: "Themes",
+	themesHint: "Browse by what you're trying to solve",
 	groupByEvent: "By event type",
 	groupByCategory: "By category",
 	groupByLabel: "Group by",

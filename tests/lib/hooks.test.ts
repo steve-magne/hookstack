@@ -49,6 +49,7 @@ describe("filterHooks", () => {
 		categories: [] as Hook["category"][],
 		events: [] as Hook["hook_type"][],
 		stacks: [] as import("@/types/hook").Stack[],
+		themes: [] as string[],
 	};
 
 	it("returns everything with no active filter", () => {
@@ -58,6 +59,13 @@ describe("filterHooks", () => {
 	it("filters by category", () => {
 		const result = filterHooks(hooks, { ...empty, categories: ["security"] });
 		expect(result.map((h) => h.slug)).toEqual(["b"]);
+	});
+
+	it("filters by theme (OR semantics)", () => {
+		// "format" tag → "quality" theme via matchThemes; unknown theme "x" is
+		// OR'd in but matches nothing on its own.
+		const result = filterHooks(hooks, { ...empty, themes: ["quality", "x"] });
+		expect(result.map((h) => h.slug)).toEqual(["a"]);
 	});
 
 	it("filters by text search (case-insensitive)", () => {
