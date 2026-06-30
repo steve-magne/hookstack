@@ -136,4 +136,35 @@ describe("stop-dead-link-checker", () => {
 		expect(dirs).not.toContain("/proj/.git");
 		expect(dirs).not.toContain("/proj/.claude");
 	});
+
+	it("résout un lien '/...' relatif à la racine du bundle okf/ (convention OKF v0.1)", () => {
+		const deps = makeFs({
+			files: {
+				"/proj/okf/vision/mission.md": "[personas](/vision/personas.md)",
+				"/proj/okf/vision/personas.md": "# Personas",
+			},
+			dirs: ["/proj/okf", "/proj/okf/vision"],
+		});
+		expect(run({}, deps)).toBeNull();
+	});
+
+	it("signale un lien '/...' qui ne correspond à aucun fichier sous okf/", () => {
+		const deps = makeFs({
+			files: { "/proj/okf/meta/porting.md": "[x](/chemin-inexistant.md)" },
+			dirs: ["/proj/okf", "/proj/okf/meta"],
+		});
+		const r = run({}, deps);
+		expect(r?.message).toContain("/chemin-inexistant.md");
+	});
+
+	it("ignore les liens d'exemple à l'intérieur d'un bloc de code", () => {
+		const deps = makeFs({
+			files: {
+				"/proj/okf/meta/porting.md":
+					"```markdown\nLier via [texte](/chemin.md).\n```\n",
+			},
+			dirs: ["/proj/okf", "/proj/okf/meta"],
+		});
+		expect(run({}, deps)).toBeNull();
+	});
 });
