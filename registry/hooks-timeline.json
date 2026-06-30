@@ -1,7 +1,7 @@
 {
-  "total": 102,
+  "total": 105,
   "firstDate": "2026-05-29",
-  "lastDate": "2026-06-20",
+  "lastDate": "2026-06-30",
   "byDay": {
     "2026-05-29": 16,
     "2026-05-30": 1,
@@ -15,7 +15,8 @@
     "2026-06-11": 1,
     "2026-06-12": 5,
     "2026-06-13": 13,
-    "2026-06-20": 1
+    "2026-06-20": 1,
+    "2026-06-30": 3
   },
   "hooks": [
     {
@@ -629,6 +630,24 @@
       "name": "Front-end visual check reminder",
       "category": "workflow",
       "date": "2026-06-20"
+    },
+    {
+      "slug": "stop-okf-staleness-check",
+      "name": "OKF bundle staleness reminder at stop",
+      "category": "documentation",
+      "date": "2026-06-30"
+    },
+    {
+      "slug": "session-start-okf-staleness",
+      "name": "OKF bundle staleness reminder on session start",
+      "category": "documentation",
+      "date": "2026-06-30"
+    },
+    {
+      "slug": "okf-validate-on-change",
+      "name": "Validate OKF bundle on edit",
+      "category": "validation",
+      "date": "2026-06-30"
     }
   ]
 }
