@@ -156,6 +156,22 @@ Objectif : `steve-magne/hookstack` → **5000 ⭐** + trafic sur `hookstack.app`
 
 Backlog = **GitHub Issues** dans ce repo (label `growth` + `content`/`outreach`/`spike`/`seo`/`idea`) — c'est le pont entre les décisions marketing et les changements produit. Métriques : `node .claude/skills/growth-coach/scripts/metrics.mjs` (snapshot stars/downloads, auto chaque lundi via `.github/workflows/growth-metrics.yml`).
 
+## Harness d'implémentation (`/implement`)
+
+Pour toute feature nécessitant analyse + décision d'implémentation, utiliser la commande **`/implement`** (`.claude/commands/implement.md`). Pattern à 3 rôles séparés (anti-biais d'auto-éval) : **Planner** (Contrat d'implémentation vérifiable) → **Generator** (sous-agent du domaine) → **Evaluator** (`qa-engineer`, agent séparé, verdict PASS/FAIL/RETRY). Cadrage OKF déterministe en étape 0 (~0 token), Design Brief multi-lentilles pour les features user-facing, boucle Generator↔Evaluator jusqu'à PASS (max 3 tours). Deux modes : idée libre (`/implement "..."`) ou issue GitHub (`/implement <N>`).
+
+Sous-agents du domaine (`.claude/agents/`) vers lesquels le Generator route — **1 livrable = 1 agent, contexte isolé** :
+
+| Agent | Domaine |
+|---|---|
+| `frontend-engineer` | Next.js 15 App Router, Tailwind v4, Motion (`m.*`, tokens `motion.ts`), catalogue, a11y |
+| `hook-author` | Hooks `.claude/hooks/*.mjs` (pattern `run()`+DI+test), sync, registre, timeline |
+| `cli-engineer` | CLI `packages/cli/` (5 scopes multi-agent, `core.mjs`, PREREQ_HINTS) |
+| `qa-engineer` | Evaluator : `pnpm test/typecheck/lint`, `validate:registry`, `sync --check`, `timeline --check`, coverage ≥80 % |
+| `okf-librarian` | Consultation du bundle OKF (synthèse courte, contexte isolé) |
+
+> Complémentaire de la skill `/tour-de-controle` (orchestration générique par tier de modèle) : `/implement` est **spécialisé domaine** et piloté par Contrat.
+
 ## Architecture
 
 Hookstack est un catalogue de hooks agentiques pour Claude Code. Next.js 15 (App Router) + TypeScript + Tailwind v4.
