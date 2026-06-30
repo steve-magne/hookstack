@@ -7,6 +7,7 @@ import { track } from "@/lib/analytics";
 import { allHooks, filterHooks } from "@/lib/hooks";
 import { useT } from "@/lib/locale-context";
 import { splitFlap, spring } from "@/lib/motion";
+import { themeLabel, THEMES, matchThemes } from "@/lib/themes";
 import { timeline } from "@/lib/timeline";
 import { useSelection } from "@/store/selection";
 import {
@@ -336,7 +337,7 @@ export function CatalogueExplorer({
 	const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
 	const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
 	const [selectedStacks, setSelectedStacks] = useState<Stack[]>([]);
-	const [selectedTags, setSelectedTags] = useState<string[]>([]);
+	const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
 	const [hideSelected, setHideSelected] = useState(false);
 	const [active, setActive] = useState<Hook | null>(null);
 
@@ -391,26 +392,23 @@ export function CatalogueExplorer({
 			.map(([key, count]) => ({ value: key, label: key, count }));
 	}, [eventTypeCounts]);
 
-	// Thematic chips: derived from registry tags. We exclude names that are
-	// already categories (redundant with the Category dropdown) and keep only
-	// tags with enough presence to be meaningful — the rest is long-tail noise
-	// the text search already covers.
-	const categoryNames = useMemo(() => new Set<string>(CATEGORY_ORDER), []);
+	// Thematic chips: a curated, need-oriented projection of the catalogue.
+	// Each hook is mapped to 0..n themes via matchThemes (tags + slug + benefit);
+	// we count, then surface every theme that matches at least one hook. Curated
+	// labels (not raw kebab-case) — the long tail stays covered by text search.
 	const themeOptions: FilterOption[] = useMemo(() => {
-		const map: Record<string, number> = {};
+		const counts = new Map<string, number>();
 		for (const h of allHooks)
-			for (const t of h.tags)
-				if (!categoryNames.has(t)) map[t] = (map[t] ?? 0) + 1;
-		return Object.entries(map)
-			.filter(([, c]) => c >= 3)
-			.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-			.slice(0, 18)
-			.map(([value, count]) => ({
-				value,
-				label: value,
-				count,
-			}));
-	}, [categoryNames]);
+			for (const id of matchThemes(h))
+				counts.set(id, (counts.get(id) ?? 0) + 1);
+		return THEMES.filter((t) => (counts.get(t.id) ?? 0) > 0)
+			.map((t) => ({
+				value: t.id,
+				label: themeLabel(t.id),
+				count: counts.get(t.id) ?? 0,
+			}))
+			.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+	}, []);
 
 	const toggleStack = useCallback(
 		(s: Stack) => {
@@ -438,10 +436,10 @@ export function CatalogueExplorer({
 		);
 	}, []);
 
-	const toggleTag = useCallback((tag: string) => {
-		track("filter_tag", { tag });
-		setSelectedTags((prev) =>
-			prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag],
+	const toggleTheme = useCallback((id: string) => {
+		track("filter_theme", { theme: id });
+		setSelectedThemes((prev) =>
+			prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
 		);
 	}, []);
 
@@ -456,7 +454,7 @@ export function CatalogueExplorer({
 			categories: initialCategory ? [initialCategory] : selectedCategories,
 			events: selectedEventTypes as HookType[],
 			stacks: selectedStacks,
-			tags: selectedTags,
+			themes: selectedThemes,
 		});
 		if (hideSelected && selectedSlugs.length > 0) {
 			return filtered.filter((h) => !selectedSlugs.includes(h.slug));
@@ -468,7 +466,7 @@ export function CatalogueExplorer({
 		selectedCategories,
 		selectedEventTypes,
 		selectedStacks,
-		selectedTags,
+		selectedThemes,
 		hideSelected,
 		selectedSlugs,
 	]);
@@ -521,7 +519,7 @@ export function CatalogueExplorer({
 
 	const hasActiveFilters =
 		selectedStacks.length > 0 ||
-		selectedTags.length > 0 ||
+		selectedThemes.length > 0 ||
 		selectedCategories.length > 0 ||
 		selectedEventTypes.length > 0;
 
@@ -578,12 +576,12 @@ export function CatalogueExplorer({
 						</span>
 						<div className="flex flex-wrap gap-1.5">
 							{themeOptions.map((opt) => {
-								const isActive = selectedTags.includes(opt.value);
+								const isActive = selectedThemes.includes(opt.value);
 								return (
 									<m.button
 										type="button"
 										key={opt.value}
-										onClick={() => toggleTag(opt.value)}
+										onClick={() => toggleTheme(opt.value)}
 										aria-pressed={isActive}
 										whileTap={{ scale: 0.95 }}
 										className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
@@ -690,12 +688,12 @@ export function CatalogueExplorer({
 									stacks: selectedStacks.length,
 									categories: selectedCategories.length,
 									events: selectedEventTypes.length,
-									tags: selectedTags.length,
+									themes: selectedThemes.length,
 								});
 								setSelectedStacks([]);
 								setSelectedCategories([]);
 								setSelectedEventTypes([]);
-								setSelectedTags([]);
+								setSelectedThemes([]);
 							}}
 							className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
 						>

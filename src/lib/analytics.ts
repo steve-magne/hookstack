@@ -46,7 +46,7 @@ export type AnalyticsEvent =
 	| "filter_stack"
 	| "filter_category"
 	| "filter_event"
-	| "filter_tag"
+	| "filter_theme"
 	| "reset_stack_filter"
 	| "reset_all_filters"
 	| "toggle_grouping";
