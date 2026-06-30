@@ -187,6 +187,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-start-github-context.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/okf-staleness-check.mjs"
           }
         ]
       },
@@ -339,6 +343,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-force-implementation-doc.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-okf-staleness-check.mjs"
           },
           {
             "type": "command",
@@ -515,6 +523,14 @@
           }
         ],
         "matcher": "README.md"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/okf-validate-on-change.mjs"
+          }
+        ]
       }
     ],
     "WorktreeRemove": [

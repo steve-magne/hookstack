@@ -31,6 +31,29 @@ function stripAnchor(href) {
 	return href.split("#")[0].trim();
 }
 
+// Ignore les liens d'exemple à l'intérieur des blocs de code (```...```), ce ne sont
+// pas de vrais liens à résoudre (ex. templates documentant la syntaxe).
+function stripFences(text) {
+	let inFence = false;
+	return text
+		.split("\n")
+		.filter((line) => {
+			if (/^(```|~~~)/.test(line.trim())) {
+				inFence = !inFence;
+				return false;
+			}
+			return !inFence;
+		})
+		.join("\n");
+}
+
+// Liens commençant par "/" : convention OKF v0.1, relatifs à la racine du bundle okf/
+// (même résolution que resolveTarget() dans scripts/okf.mjs), pas au système de fichiers.
+function resolveAbs(file, target, projectDir) {
+	if (target.startsWith("/")) return join(projectDir, "okf", target.slice(1));
+	return resolve(dirname(file), target);
+}
+
 function walkMd(dir, { readdir = readdirSync, exists = existsSync } = {}) {
 	if (!exists(dir)) return [];
 	const results = [];
@@ -64,11 +87,11 @@ export function run(
 			continue;
 		}
 
-		for (const [, , href] of content.matchAll(LINK_RE)) {
+		for (const [, , href] of stripFences(content).matchAll(LINK_RE)) {
 			if (!isRelative(href)) continue;
 			const target = stripAnchor(href);
 			if (!target) continue; // lien ancre pure (#section)
-			const abs = resolve(dirname(file), target);
+			const abs = resolveAbs(file, target, projectDir);
 			if (!exists(abs)) {
 				broken.push(`${file.replace(`${projectDir}/`, "")}  →  ${href}`);
 			}

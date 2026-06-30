@@ -105,7 +105,7 @@ copilot plugin install hookstack
 
 ## The HookStack evolution
 
-**102 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+**105 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">
@@ -113,7 +113,7 @@ copilot plugin install hookstack
   </a>
 </p>
 
-<sub>First hook 2026-05-29 · latest 2026-06-20 · explore the live timeline → <a href="https://www.hookstack.app/evolution"><b>hookstack.app/evolution</b></a></sub>
+<sub>First hook 2026-05-29 · latest 2026-06-30 · explore the live timeline → <a href="https://www.hookstack.app/evolution"><b>hookstack.app/evolution</b></a></sub>
 
 <!-- HOOKS_TIMELINE:END -->
 

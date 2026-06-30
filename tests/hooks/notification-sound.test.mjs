@@ -52,6 +52,9 @@ describe("notification-sound", () => {
 	});
 
 	it("utilise terminal-notifier avec Claude app si pas de TERM_PROGRAM", () => {
+		// Isoler TERM_PROGRAM : passer termProgram: undefined déclenche le default param
+		// qui lit process.env.TERM_PROGRAM réel (fuite d'environnement — ex: ghostty).
+		vi.stubEnv("TERM_PROGRAM", "");
 		const exec = vi.fn();
 		run(
 			{},

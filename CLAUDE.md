@@ -18,6 +18,19 @@ Arrive  →  Stack prédéfinie (fast path)  →  npx hookstack-cli@latest insta
 
 Le projet est son propre cobaye. Les hooks de la collection (`.claude/hooks/*.mjs`) sont actifs sur ce dépôt via `.claude/settings.json` — ils sont exécutés à chaque session Claude Code sur ce projet, ce qui les valide en conditions réelles. Quand un `.mjs` est modifié, le hook `registry-auto-sync.mjs` (FileChanged) relance automatiquement `node .claude/sync-hooks.mjs` pour propager le code dans `registry/registry.json` (`code_snippet`). **Le `.mjs` sur disque est la source de vérité du code** ; le registre en est le reflet.
 
+### Source de connaissance — OKF (à consulter en premier)
+
+Le bundle [`okf/`](okf/index.md) est la **source de vérité** (vision, architecture, produit, business, marketing, roadmap, conventions) — format [OKF v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md). Seedé depuis `doc/product/` + ce fichier.
+
+**Pour économiser des tokens, ne pas charger le bundle entier dans le contexte principal :**
+- Consulter via le sous-agent **`okf-librarian`** (il lit dans son propre contexte, renvoie une synthèse), ou la skill `/okf`.
+- Retrieval déterministe (~0 token) : `node scripts/okf.mjs query <termes>` · `map` · `validate` · `stale` · `index` · `graph`.
+
+Maintenir le bundle à jour selon [`okf/meta/self-improvement.md`](okf/meta/self-improvement.md) (auto-bonification) :
+- **Périodique** : passe d'enrichissement si `node scripts/okf.mjs stale` renvoie STALE (les hooks `session-start-okf-staleness` / `stop-okf-staleness-check` le rappellent automatiquement).
+- **Test de relecture** : si tu as dû **lire le code** pour comprendre une feature/contrainte que l'OKF aurait dû contenir, capture-la avant de clore — *seulement* si elle est durable, réutilisable et absente (`node scripts/okf.mjs query <termes>` avant d'écrire ; compléter le concept proche plutôt que dupliquer). Sinon, ne rien documenter (anti-over-doc).
+- **Notes d'implémentation** : tout changement de code source doit s'accompagner d'une note dans `okf/implementation/` (garanti par le hook `stop-force-implementation-doc`).
+
 ### Points d'entrée utilisateurs — cohérence obligatoire
 
 Les utilisateurs découvrent le projet par trois canaux. Le message, le flow et les exemples de commandes doivent rester **strictement cohérents** entre eux :
@@ -38,6 +51,7 @@ Les utilisateurs découvrent le projet par trois canaux. Le message, le flow et 
 | [`/packages/cli/`](packages/cli/) | Package npm public `hookstack-cli` — CLI installé par les utilisateurs via `npx` |
 | [`/registry/`](registry/) | `registry.json` — source de vérité des **métadonnées** du catalogue (`name`, `benefit`, `description`, `config`…) ; `code_snippet` dérivé automatiquement des `.mjs` |
 | [`/doc/product/`](doc/product/) | Vision produit, marketing, brainstorm, positionnement (ne pas modifier sans raison) |
+| [`/okf/`](okf/index.md) | Bundle de connaissance agentique OKF v0.1 — source de vérité (vision, architecture, produit, business, roadmap). Consulter via `okf-librarian` ou `node scripts/okf.mjs query` |
 | [`/README.md`](README.md) | README vendeur GitHub — destiné aux early adopters et contributeurs |
 
 ### Règle d'or : propagation des changements
