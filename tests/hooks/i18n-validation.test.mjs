@@ -22,4 +22,12 @@ describe("i18n-validation", () => {
 		const r = run({ exec, readFile, projectDir: "/p" });
 		expect(r.issues).toHaveLength(0);
 	});
+	it("rend la main silencieusement si le find timeout (ETIMEDOUT)", () => {
+		// Un Stop hook non bloquant ne doit pas crasher sur un find qui expire
+		// (ex: node_modules de worktrees énormes). On rend null sans bruit.
+		const exec = () => {
+			throw new Error("spawnSync /bin/sh ETIMEDOUT");
+		};
+		expect(run({ exec, projectDir: "/p" })).toBeNull();
+	});
 });
