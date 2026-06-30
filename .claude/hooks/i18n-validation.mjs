@@ -21,14 +21,24 @@ export function run({
 				cwd: projectDir,
 			}).trim());
 
-	// Cherche les fichiers de traduction JSON (ex: locales/fr.json, messages/en.json)
-	const i18nFiles = doExec(
-		'find . -path ./node_modules -prune -o -name "*.json" -print',
-	)
-		.split("\n")
-		.filter(
-			(f) => /\/(locales?|messages?|i18n)\//i.test(f) && f.endsWith(".json"),
-		);
+	// Cherche les fichiers de traduction JSON (ex: locales/fr.json, messages/en.json).
+	// On prune node_modules (à toute profondeur — un repo peut en contenir plusieurs,
+	// dont sous .claude/worktrees/), .git et .claude/worktrees (copies de travail :
+	// des milliers de JSON en double qui font expirer le find en ETIMEDOUT).
+	// Ponytail: try/catch — un find qui timeout ou échoue ne doit pas faire crasher
+	// un Stop hook non bloquant ; on rend la main silencieusement.
+	let i18nFiles = [];
+	try {
+		i18nFiles = doExec(
+			'find . \\( -name node_modules -o -name .git -o -path "./.claude/worktrees" \\) -prune -o -name "*.json" -print',
+		)
+			.split("\n")
+			.filter(
+				(f) => /\/(locales?|messages?|i18n)\//i.test(f) && f.endsWith(".json"),
+			);
+	} catch {
+		return null;
+	}
 
 	if (i18nFiles.length < 2) return null;
 

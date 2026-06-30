@@ -2,3 +2,4 @@
 
 * [CLI contribute — renvoyer un hook modifié en PR](cli-contribute-command.md) - Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR.
 * [OKF Knowledge Bundle — Implémentation](okf-knowledge-bundle.md) - Mise en place de la base de connaissance agentique OKF v0.1 sur Hookstack (bundle, scripts/okf.mjs, sous-agent librarian, skill /okf, hooks catalogue).
+* [i18n-validation — find qui timeout sur les worktrees](fix-i18n-hook-timeout.md) - Le hook Stop explosait en ETIMEDOUT à chaque session (find parcourant les node_modules des worktrees). Prune complet + silence défensif.
