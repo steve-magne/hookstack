@@ -54,5 +54,8 @@ jobs:
       - name: Hooks timeline drift guard
         run: node .claude/hooks-timeline.mjs --check
 
+      - name: OKF bundle conformance guard
+        run: node scripts/okf.mjs validate --strict
+
       - name: Dead link & image check (full repo)
         run: node scripts/ci-check-content.mjs

@@ -1,3 +1,11 @@
+---
+type: Playbook
+title: CLI contribute — renvoyer un hook modifié en PR
+description: Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR.
+tags: [implementation, cli, contribution, git]
+timestamp: 2026-06-29T00:00:00Z
+---
+
 # CLI `contribute` command
 
 ## What
