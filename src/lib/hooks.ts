@@ -12,6 +12,7 @@ export interface HookFilters {
 	categories: Category[];
 	events: HookType[];
 	stacks: Stack[];
+	tags: string[];
 }
 
 export const emptyFilters: HookFilters = {
@@ -19,6 +20,7 @@ export const emptyFilters: HookFilters = {
 	categories: [],
 	events: [],
 	stacks: [],
+	tags: [],
 };
 
 export function filterHooks(hooks: Hook[], filters: HookFilters): Hook[] {
@@ -27,6 +29,10 @@ export function filterHooks(hooks: Hook[], filters: HookFilters): Hook[] {
 		if (filters.categories.length && !filters.categories.includes(h.category))
 			return false;
 		if (filters.events.length && !filters.events.includes(h.hook_type))
+			return false;
+		// Thematic filter (OR): a hook matches if it carries at least one of
+		// the selected tags. Multiple themes widen the net.
+		if (filters.tags.length && !h.tags.some((t) => filters.tags.includes(t)))
 			return false;
 		// Stack filter: universal hooks (no stack) always pass; tech-specific hooks
 		// are only shown when their stack overlaps with the selection.

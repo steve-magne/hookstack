@@ -49,6 +49,7 @@ describe("filterHooks", () => {
 		categories: [] as Hook["category"][],
 		events: [] as Hook["hook_type"][],
 		stacks: [] as import("@/types/hook").Stack[],
+		tags: [] as string[],
 	};
 
 	it("returns everything with no active filter", () => {
@@ -58,6 +59,11 @@ describe("filterHooks", () => {
 	it("filters by category", () => {
 		const result = filterHooks(hooks, { ...empty, categories: ["security"] });
 		expect(result.map((h) => h.slug)).toEqual(["b"]);
+	});
+
+	it("filters by theme (OR semantics)", () => {
+		const result = filterHooks(hooks, { ...empty, tags: ["format", "x"] });
+		expect(result.map((h) => h.slug)).toEqual(["a"]);
 	});
 
 	it("filters by text search (case-insensitive)", () => {

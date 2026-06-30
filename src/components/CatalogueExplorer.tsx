@@ -336,6 +336,7 @@ export function CatalogueExplorer({
 	const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
 	const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
 	const [selectedStacks, setSelectedStacks] = useState<Stack[]>([]);
+	const [selectedTags, setSelectedTags] = useState<string[]>([]);
 	const [hideSelected, setHideSelected] = useState(false);
 	const [active, setActive] = useState<Hook | null>(null);
 
@@ -390,6 +391,27 @@ export function CatalogueExplorer({
 			.map(([key, count]) => ({ value: key, label: key, count }));
 	}, [eventTypeCounts]);
 
+	// Thematic chips: derived from registry tags. We exclude names that are
+	// already categories (redundant with the Category dropdown) and keep only
+	// tags with enough presence to be meaningful — the rest is long-tail noise
+	// the text search already covers.
+	const categoryNames = useMemo(() => new Set<string>(CATEGORY_ORDER), []);
+	const themeOptions: FilterOption[] = useMemo(() => {
+		const map: Record<string, number> = {};
+		for (const h of allHooks)
+			for (const t of h.tags)
+				if (!categoryNames.has(t)) map[t] = (map[t] ?? 0) + 1;
+		return Object.entries(map)
+			.filter(([, c]) => c >= 3)
+			.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+			.slice(0, 18)
+			.map(([value, count]) => ({
+				value,
+				label: value,
+				count,
+			}));
+	}, [categoryNames]);
+
 	const toggleStack = useCallback(
 		(s: Stack) => {
 			track("filter_stack", { stack: s, active: !selectedStacks.includes(s) });
@@ -416,6 +438,13 @@ export function CatalogueExplorer({
 		);
 	}, []);
 
+	const toggleTag = useCallback((tag: string) => {
+		track("filter_tag", { tag });
+		setSelectedTags((prev) =>
+			prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag],
+		);
+	}, []);
+
 	const changeGroupBy = useCallback((g: GroupBy) => {
 		track("toggle_grouping", { mode: g });
 		setGroupBy(g);
@@ -427,6 +456,7 @@ export function CatalogueExplorer({
 			categories: initialCategory ? [initialCategory] : selectedCategories,
 			events: selectedEventTypes as HookType[],
 			stacks: selectedStacks,
+			tags: selectedTags,
 		});
 		if (hideSelected && selectedSlugs.length > 0) {
 			return filtered.filter((h) => !selectedSlugs.includes(h.slug));
@@ -438,6 +468,7 @@ export function CatalogueExplorer({
 		selectedCategories,
 		selectedEventTypes,
 		selectedStacks,
+		selectedTags,
 		hideSelected,
 		selectedSlugs,
 	]);
@@ -490,6 +521,7 @@ export function CatalogueExplorer({
 
 	const hasActiveFilters =
 		selectedStacks.length > 0 ||
+		selectedTags.length > 0 ||
 		selectedCategories.length > 0 ||
 		selectedEventTypes.length > 0;
 
@@ -537,6 +569,42 @@ export function CatalogueExplorer({
 						</span>
 					)}
 				</div>
+
+				{/* Thematic chips — browse by what you're trying to solve */}
+				{themeOptions.length > 0 && (
+					<div className="flex items-start gap-2.5">
+						<span className="hidden shrink-0 pt-1 text-xs text-zinc-500 sm:inline">
+							{T.filterThemes}
+						</span>
+						<div className="flex flex-wrap gap-1.5">
+							{themeOptions.map((opt) => {
+								const isActive = selectedTags.includes(opt.value);
+								return (
+									<m.button
+										type="button"
+										key={opt.value}
+										onClick={() => toggleTag(opt.value)}
+										aria-pressed={isActive}
+										whileTap={{ scale: 0.95 }}
+										className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+											isActive
+												? "border-white bg-white text-zinc-900"
+												: "border-zinc-700/70 bg-zinc-800/40 text-zinc-300 hover:border-zinc-500 hover:text-white"
+										}`}
+									>
+										{isActive && <Check className="size-3" strokeWidth={3} />}
+										<span>{opt.label}</span>
+										<span
+											className={`font-mono text-[10px] ${isActive ? "text-zinc-400" : "text-zinc-500"}`}
+										>
+											{opt.count}
+										</span>
+									</m.button>
+								);
+							})}
+						</div>
+					</div>
+				)}
 
 				{/* Ligne 2 — groupage (gauche) + filtres (droite) */}
 				<div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
@@ -622,10 +690,12 @@ export function CatalogueExplorer({
 									stacks: selectedStacks.length,
 									categories: selectedCategories.length,
 									events: selectedEventTypes.length,
+									tags: selectedTags.length,
 								});
 								setSelectedStacks([]);
 								setSelectedCategories([]);
 								setSelectedEventTypes([]);
+								setSelectedTags([]);
 							}}
 							className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
 						>
