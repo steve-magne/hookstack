@@ -7,6 +7,7 @@ import { track } from "@/lib/analytics";
 import { allHooks, filterHooks } from "@/lib/hooks";
 import { useT } from "@/lib/locale-context";
 import { splitFlap, spring } from "@/lib/motion";
+import { themeLabel, THEMES, matchThemes } from "@/lib/themes";
 import { timeline } from "@/lib/timeline";
 import { useSelection } from "@/store/selection";
 import {
@@ -336,6 +337,7 @@ export function CatalogueExplorer({
 	const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
 	const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
 	const [selectedStacks, setSelectedStacks] = useState<Stack[]>([]);
+	const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
 	const [hideSelected, setHideSelected] = useState(false);
 	const [active, setActive] = useState<Hook | null>(null);
 
@@ -390,6 +392,24 @@ export function CatalogueExplorer({
 			.map(([key, count]) => ({ value: key, label: key, count }));
 	}, [eventTypeCounts]);
 
+	// Thematic chips: a curated, need-oriented projection of the catalogue.
+	// Each hook is mapped to 0..n themes via matchThemes (tags + slug + benefit);
+	// we count, then surface every theme that matches at least one hook. Curated
+	// labels (not raw kebab-case) — the long tail stays covered by text search.
+	const themeOptions: FilterOption[] = useMemo(() => {
+		const counts = new Map<string, number>();
+		for (const h of allHooks)
+			for (const id of matchThemes(h))
+				counts.set(id, (counts.get(id) ?? 0) + 1);
+		return THEMES.filter((t) => (counts.get(t.id) ?? 0) > 0)
+			.map((t) => ({
+				value: t.id,
+				label: themeLabel(t.id),
+				count: counts.get(t.id) ?? 0,
+			}))
+			.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+	}, []);
+
 	const toggleStack = useCallback(
 		(s: Stack) => {
 			track("filter_stack", { stack: s, active: !selectedStacks.includes(s) });
@@ -416,6 +436,13 @@ export function CatalogueExplorer({
 		);
 	}, []);
 
+	const toggleTheme = useCallback((id: string) => {
+		track("filter_theme", { theme: id });
+		setSelectedThemes((prev) =>
+			prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+		);
+	}, []);
+
 	const changeGroupBy = useCallback((g: GroupBy) => {
 		track("toggle_grouping", { mode: g });
 		setGroupBy(g);
@@ -427,6 +454,7 @@ export function CatalogueExplorer({
 			categories: initialCategory ? [initialCategory] : selectedCategories,
 			events: selectedEventTypes as HookType[],
 			stacks: selectedStacks,
+			themes: selectedThemes,
 		});
 		if (hideSelected && selectedSlugs.length > 0) {
 			return filtered.filter((h) => !selectedSlugs.includes(h.slug));
@@ -438,6 +466,7 @@ export function CatalogueExplorer({
 		selectedCategories,
 		selectedEventTypes,
 		selectedStacks,
+		selectedThemes,
 		hideSelected,
 		selectedSlugs,
 	]);
@@ -490,6 +519,7 @@ export function CatalogueExplorer({
 
 	const hasActiveFilters =
 		selectedStacks.length > 0 ||
+		selectedThemes.length > 0 ||
 		selectedCategories.length > 0 ||
 		selectedEventTypes.length > 0;
 
@@ -537,6 +567,42 @@ export function CatalogueExplorer({
 						</span>
 					)}
 				</div>
+
+				{/* Thematic chips — browse by what you're trying to solve */}
+				{themeOptions.length > 0 && (
+					<div className="flex items-start gap-2.5">
+						<span className="hidden shrink-0 pt-1 text-xs text-zinc-500 sm:inline">
+							{T.filterThemes}
+						</span>
+						<div className="flex flex-wrap gap-1.5">
+							{themeOptions.map((opt) => {
+								const isActive = selectedThemes.includes(opt.value);
+								return (
+									<m.button
+										type="button"
+										key={opt.value}
+										onClick={() => toggleTheme(opt.value)}
+										aria-pressed={isActive}
+										whileTap={{ scale: 0.95 }}
+										className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+											isActive
+												? "border-white bg-white text-zinc-900"
+												: "border-zinc-700/70 bg-zinc-800/40 text-zinc-300 hover:border-zinc-500 hover:text-white"
+										}`}
+									>
+										{isActive && <Check className="size-3" strokeWidth={3} />}
+										<span>{opt.label}</span>
+										<span
+											className={`font-mono text-[10px] ${isActive ? "text-zinc-400" : "text-zinc-500"}`}
+										>
+											{opt.count}
+										</span>
+									</m.button>
+								);
+							})}
+						</div>
+					</div>
+				)}
 
 				{/* Ligne 2 — groupage (gauche) + filtres (droite) */}
 				<div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
@@ -622,10 +688,12 @@ export function CatalogueExplorer({
 									stacks: selectedStacks.length,
 									categories: selectedCategories.length,
 									events: selectedEventTypes.length,
+									themes: selectedThemes.length,
 								});
 								setSelectedStacks([]);
 								setSelectedCategories([]);
 								setSelectedEventTypes([]);
+								setSelectedThemes([]);
 							}}
 							className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
 						>

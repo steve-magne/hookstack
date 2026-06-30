@@ -1,5 +1,6 @@
 import type { Category, Hook, HookType, Stack } from "@/types/hook";
 import registry from "../../registry/registry.json";
+import { matchThemes } from "./themes";
 
 export const allHooks = registry as Hook[];
 
@@ -12,6 +13,7 @@ export interface HookFilters {
 	categories: Category[];
 	events: HookType[];
 	stacks: Stack[];
+	themes: string[];
 }
 
 export const emptyFilters: HookFilters = {
@@ -19,6 +21,7 @@ export const emptyFilters: HookFilters = {
 	categories: [],
 	events: [],
 	stacks: [],
+	themes: [],
 };
 
 export function filterHooks(hooks: Hook[], filters: HookFilters): Hook[] {
@@ -27,6 +30,13 @@ export function filterHooks(hooks: Hook[], filters: HookFilters): Hook[] {
 		if (filters.categories.length && !filters.categories.includes(h.category))
 			return false;
 		if (filters.events.length && !filters.events.includes(h.hook_type))
+			return false;
+		// Thematic filter (OR): a hook matches if it carries at least one of
+		// the selected themes. Multiple themes widen the net.
+		if (
+			filters.themes.length &&
+			!matchThemes(h).some((t) => filters.themes.includes(t))
+		)
 			return false;
 		// Stack filter: universal hooks (no stack) always pass; tech-specific hooks
 		// are only shown when their stack overlaps with the selection.
