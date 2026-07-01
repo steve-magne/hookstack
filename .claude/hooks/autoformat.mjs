@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 // @hookstack post-write-autoformat
+// Formate le fichier avec Biome après écriture (PostToolUse Write|Edit)
 import { execSync } from "node:child_process";
-// @hookstack post-write-autoformat
-// Formate le fichier avec prettier après écriture (PostToolUse Write|Edit)
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -15,10 +14,10 @@ export function run(input, { exec = defaultExec } = {}) {
 	if (!filePath) return null;
 
 	try {
-		exec(`npx --no-install prettier --write "${filePath}"`);
+		exec(`npx --no-install biome check --write "${filePath}"`);
 		return { formatted: filePath };
 	} catch {
-		// prettier absent ou erreur de format — non bloquant
+		// biome absent, fichier hors périmètre, ou erreurs non auto-fixables — non bloquant
 		return null;
 	}
 }
