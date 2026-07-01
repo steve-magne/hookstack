@@ -1,41 +1,71 @@
 #!/usr/bin/env node
 // @hookstack stop-i18n-validation
-import { execSync } from "node:child_process";
-// @hookstack stop-i18n-validation
 // Valide la cohérence des fichiers de traduction (Stop)
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+
+// Répertoires exclus du parcours : lourds et sans traduction.
+// `.claude` contient les worktrees (copies complètes du repo) — principal coupable du timeout.
+const SKIP_DIRS = new Set([
+	"node_modules",
+	".git",
+	".claude",
+	".next",
+	".turbo",
+	".sveltekit",
+	"dist",
+	"build",
+	".cache",
+	"coverage",
+	".worktrees",
+]);
+
+// Un fichier est i18n s'il vit sous un dossier locales/messages/i18n.
+const I18N_PATH = /(?:^|[\\/])(?:locales?|messages?|i18n)[\\/]/i;
+
+// Parcours natif (pas de spawn de shell) : rapide même sur un gros monorepo.
+export function findI18nJson(projectDir) {
+	const out = [];
+	const walk = (dir) => {
+		let ents;
+		try {
+			ents = readdirSync(dir, { withFileTypes: true });
+		} catch {
+			return;
+		}
+		for (const ent of ents) {
+			if (ent.isDirectory()) {
+				if (SKIP_DIRS.has(ent.name)) continue;
+				walk(join(dir, ent.name));
+			} else if (ent.isFile() && ent.name.endsWith(".json")) {
+				const rel = relative(projectDir, join(dir, ent.name))
+					.split(sep)
+					.join("/");
+				if (I18N_PATH.test(rel)) out.push(`./${rel}`);
+			}
+		}
+	};
+	walk(projectDir);
+	return out;
+}
 
 export function run({
 	exec,
 	readFile = readFileSync,
 	projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
 } = {}) {
-	const doExec =
-		exec ??
-		((cmd) =>
-			execSync(cmd, {
-				encoding: "utf8",
-				timeout: 5_000,
-				cwd: projectDir,
-			}).trim());
-
-	// Cherche les fichiers de traduction JSON (ex: locales/fr.json, messages/en.json).
-	// On prune node_modules (à toute profondeur — un repo peut en contenir plusieurs,
-	// dont sous .claude/worktrees/), .git et .claude/worktrees (copies de travail :
-	// des milliers de JSON en double qui font expirer le find en ETIMEDOUT).
-	// Ponytail: try/catch — un find qui timeout ou échoue ne doit pas faire crasher
-	// un Stop hook non bloquant ; on rend la main silencieusement.
-	let i18nFiles = [];
+	// `exec` n'est utilisé que par les tests (mock) ; en production, parcours natif
+	// (plus de spawn shell, donc plus de risque d'ETIMEDOUT sur un gros monorepo).
+	// Ponytail: try/catch conservé — un mock qui throw ne doit pas crasher un Stop
+	// hook non bloquant ; on rend la main silencieusement.
+	let i18nFiles;
 	try {
-		i18nFiles = doExec(
-			'find . \\( -name node_modules -o -name .git -o -path "./.claude/worktrees" \\) -prune -o -name "*.json" -print',
-		)
-			.split("\n")
-			.filter(
-				(f) => /\/(locales?|messages?|i18n)\//i.test(f) && f.endsWith(".json"),
-			);
+		i18nFiles = exec
+			? exec('find . -name "*.json" -print')
+					.split("\n")
+					.filter((f) => I18N_PATH.test(f) && f.endsWith(".json"))
+			: findI18nJson(projectDir);
 	} catch {
 		return null;
 	}
