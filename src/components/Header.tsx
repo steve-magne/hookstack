@@ -34,6 +34,12 @@ export function Header() {
 					className="flex items-center gap-3 text-sm sm:gap-4"
 				>
 					<Link
+						href="/#catalogue"
+						className="text-zinc-400 transition-colors hover:text-white"
+					>
+						{T.navCatalogue}
+					</Link>
+					<Link
 						href="/guides"
 						className="text-zinc-400 transition-colors hover:text-white"
 					>
