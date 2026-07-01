@@ -11,7 +11,7 @@ function defaultExec(cmd) {
 
 export function run(input, { exec = defaultExec } = {}) {
 	const filePath = input.tool_input?.file_path ?? "";
-	if (!filePath || !/\.[cm]?[jt]sx?$/.test(filePath)) return null;
+	if (!filePath || !/\.([cm]?[jt]sx?|jsonc?)$/.test(filePath)) return null;
 
 	try {
 		// `biome check` (et non `biome lint`) pour matcher le CI qui lance

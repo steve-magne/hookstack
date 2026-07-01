@@ -10,13 +10,13 @@ describe("autoformat", () => {
 			run({ tool_input: { file_path: "a.ts" } }, { exec })?.formatted,
 		).toBe("a.ts");
 		expect(exec).toHaveBeenCalledWith(
-			expect.stringContaining('prettier --write "a.ts"'),
+			expect.stringContaining('biome check --write "a.ts"'),
 		);
 	});
 	it("ignore l'absence de fichier", () => {
 		expect(run({ tool_input: {} }, { exec: vi.fn() })).toBeNull();
 	});
-	it("avale une erreur prettier", () => {
+	it("avale une erreur biome", () => {
 		expect(
 			run({ tool_input: { file_path: "a.ts" } }, { exec: makeExecFail("") }),
 		).toBeNull();
