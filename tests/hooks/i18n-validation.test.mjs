@@ -1,8 +1,55 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest";
-import { run } from "../../.claude/hooks/i18n-validation.mjs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { findI18nJson, run } from "../../.claude/hooks/i18n-validation.mjs";
 
 describe("i18n-validation", () => {
+	describe("findI18nJson (parcours natif)", () => {
+		let dir;
+		beforeEach(() => {
+			dir = mkdtempSync(join(tmpdir(), "i18n-"));
+		});
+		afterEach(() => {
+			dir = undefined;
+		});
+
+		it("ignore node_modules, .git et .claude/worktrees (cause du timeout)", () => {
+			mkdirSync(join(dir, "src", "locales"), { recursive: true });
+			writeFileSync(join(dir, "src", "locales", "fr.json"), '{"a":1}');
+			writeFileSync(join(dir, "src", "locales", "en.json"), '{"a":1}');
+			mkdirSync(join(dir, "node_modules", "pkg", "locales"), {
+				recursive: true,
+			});
+			writeFileSync(
+				join(dir, "node_modules", "pkg", "locales", "fr.json"),
+				'{"a":1}',
+			);
+			mkdirSync(join(dir, ".claude", "worktrees", "x", "src", "locales"), {
+				recursive: true,
+			});
+			writeFileSync(
+				join(dir, ".claude", "worktrees", "x", "src", "locales", "fr.json"),
+				'{"a":1}',
+			);
+			mkdirSync(join(dir, ".git", "messages"), { recursive: true });
+			writeFileSync(join(dir, ".git", "messages", "en.json"), '{"a":1}');
+
+			const found = findI18nJson(dir);
+			expect(found).toContain("./src/locales/fr.json");
+			expect(found).toContain("./src/locales/en.json");
+			expect(found).not.toContain("./node_modules/pkg/locales/fr.json");
+			expect(found.some((f) => f.includes(".claude"))).toBe(false);
+			expect(found.some((f) => f.includes(".git"))).toBe(false);
+		});
+
+		it("ne remonte rien hors d'un dossier locales/messages/i18n", () => {
+			writeFileSync(join(dir, "package.json"), '{"a":1}');
+			expect(findI18nJson(dir)).toHaveLength(0);
+		});
+	});
+
 	it("retourne null si moins de 2 fichiers i18n", () => {
 		expect(
 			run({ exec: () => "./locales/fr.json", projectDir: "/p" }),

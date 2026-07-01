@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 // @hookstack post-write-biome
-import { execSync } from "node:child_process";
-// @hookstack post-write-biome
 // Vérifie le fichier avec Biome après écriture (PostToolUse Write|Edit)
+import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -15,7 +14,9 @@ export function run(input, { exec = defaultExec } = {}) {
 	if (!filePath || !/\.[cm]?[jt]sx?$/.test(filePath)) return null;
 
 	try {
-		exec(`npx --no-install biome lint --error-on-warnings "${filePath}"`);
+		// `biome check` (et non `biome lint`) pour matcher le CI qui lance
+		// `biome check .` (lint + format + organize imports) — sinon divergence.
+		exec(`npx --no-install biome check --error-on-warnings "${filePath}"`);
 		return null;
 	} catch (err) {
 		const output = err.stdout?.toString() ?? "";
