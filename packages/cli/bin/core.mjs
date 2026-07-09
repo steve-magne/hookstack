@@ -387,7 +387,21 @@ export function doUpdateTests(
 // `contribute` finds locally edited hooks (diverged from the live registry —
 // same comparison as `update`, just framed the other way round) and opens a
 // PR upstream from a fork. The git/gh plumbing lives in cli.mjs; only the
-// branch name and PR copy are pure enough to unit-test here.
+// branch name, PR copy, and fork/owner decision are pure enough to unit-test
+// here.
+
+// `gh repo fork` errors out when the authenticated user already owns the
+// upstream repo (GitHub won't let you fork your own repo). When that's the
+// case, contribute as a normal branch + PR against the upstream repo itself
+// instead of forking.
+export function resolveContributionTarget(username, upstreamRepo) {
+	const [owner, name] = upstreamRepo.split("/");
+	const isOwner = username.toLowerCase() === owner.toLowerCase();
+	return {
+		isOwner,
+		cloneRepo: isOwner ? upstreamRepo : `${username}/${name}`,
+	};
+}
 
 export function buildContributionBranch(slugs) {
 	return `hookstack-contrib/${slugs.join("-")}`;

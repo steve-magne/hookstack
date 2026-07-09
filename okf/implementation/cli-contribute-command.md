@@ -55,6 +55,29 @@ for a v1.
   changes back" section mirroring the existing "Updating" section, per this
   repo's rule that the two READMEs must stay in sync.
 
+## Update — owner-of-upstream edge case (2026-07-09)
+
+`gh repo fork steve-magne/hookstack` fails when the authenticated `gh` user
+*is* `steve-magne` — GitHub's API rejects forking a repo you already own. The
+maintainer running `contribute` on their own machine hit this immediately.
+
+Fix: `core.mjs` gained `resolveContributionTarget(username, upstreamRepo)`, a
+pure function comparing `username` (case-insensitively) against the repo
+owner parsed from `owner/name`. It returns `{ isOwner, cloneRepo }`.
+`pushContribution` in `cli` branches on `isOwner`:
+
+- Owner: skip `gh repo fork` entirely, `gh repo clone` the upstream repo
+  directly into the scratch dir, and open the PR with `--head <branch>`
+  (same-repo branch, no `username:` prefix).
+- Non-owner: unchanged — fork, clone the fork, PR with `--head
+  username:branch`.
+
+Kept the fork/no-fork decision as a pure, unit-tested function (3 cases in
+`tests/cli/core.test.mjs`: owner, non-owner, case-insensitive login) rather
+than inlining the string comparison in `cli`, consistent with this repo's
+split between pure/testable logic (`core.mjs`) and untestable git/gh I/O
+(`cli`).
+
 ## Explicitly out of scope (v1)
 
 - No pre-check for "does a fork already exist" — `gh repo fork` is already

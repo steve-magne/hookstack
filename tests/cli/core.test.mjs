@@ -19,6 +19,7 @@ import {
 	mergeHooks,
 	PREREQ_HINTS,
 	parseArgs,
+	resolveContributionTarget,
 	resolveScopeRoot,
 	resolveScriptPath,
 	shortRepo,
@@ -623,6 +624,36 @@ describe("buildContributionBranch", () => {
 	});
 	it("joint plusieurs slugs avec des tirets", () => {
 		expect(buildContributionBranch(["a", "b"])).toBe("hookstack-contrib/a-b");
+	});
+});
+
+describe("resolveContributionTarget", () => {
+	it("clone la propre fork quand l'utilisateur n'est pas le owner", () => {
+		const result = resolveContributionTarget(
+			"contributor",
+			"steve-magne/hookstack",
+		);
+		expect(result).toEqual({
+			isOwner: false,
+			cloneRepo: "contributor/hookstack",
+		});
+	});
+	it("clone le repo upstream directement quand l'utilisateur est le owner", () => {
+		const result = resolveContributionTarget(
+			"steve-magne",
+			"steve-magne/hookstack",
+		);
+		expect(result).toEqual({
+			isOwner: true,
+			cloneRepo: "steve-magne/hookstack",
+		});
+	});
+	it("compare le login insensible à la casse", () => {
+		const result = resolveContributionTarget(
+			"Steve-Magne",
+			"steve-magne/hookstack",
+		);
+		expect(result.isOwner).toBe(true);
 	});
 });
 
