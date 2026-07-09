@@ -23,6 +23,7 @@ import {
   isGlobalScope,
   buildContributionBranch,
   buildContributionPr,
+  resolveContributionTarget,
 } from './core.mjs'
 
 const API_BASE = process.env.HOOKSTACK_API_BASE || 'https://hookstack.vercel.app'
@@ -471,14 +472,20 @@ function pushContribution(slugs, dirs, log) {
   }
 
   const username = run('gh', ['api', 'user', '--jq', '.login']).trim()
+  const { isOwner, cloneRepo } = resolveContributionTarget(username, UPSTREAM_REPO)
   const workDir = mkdtempSync(join(tmpdir(), 'hookstack-contrib-'))
 
   try {
-    log.step(`Forking ${UPSTREAM_REPO} for ${username}…`)
-    run('gh', ['repo', 'fork', UPSTREAM_REPO], { cwd: workDir })
+    if (isOwner) {
+      log.step(`Cloning ${UPSTREAM_REPO}…`)
+      run('gh', ['repo', 'clone', UPSTREAM_REPO, workDir])
+    } else {
+      log.step(`Forking ${UPSTREAM_REPO} for ${username}…`)
+      run('gh', ['repo', 'fork', UPSTREAM_REPO], { cwd: workDir })
 
-    log.step('Cloning your fork…')
-    run('gh', ['repo', 'clone', `${username}/hookstack`, workDir])
+      log.step('Cloning your fork…')
+      run('gh', ['repo', 'clone', cloneRepo, workDir])
+    }
 
     const branch = buildContributionBranch(slugs)
     run('git', ['checkout', '-b', branch], { cwd: workDir })
@@ -506,7 +513,8 @@ function pushContribution(slugs, dirs, log) {
     run('git', ['push', '-u', 'origin', branch], { cwd: workDir })
 
     log.step('Opening pull request…')
-    return run('gh', ['pr', 'create', '--repo', UPSTREAM_REPO, '--head', `${username}:${branch}`, '--title', title, '--body', body], { cwd: workDir }).trim()
+    const head = isOwner ? branch : `${username}:${branch}`
+    return run('gh', ['pr', 'create', '--repo', UPSTREAM_REPO, '--head', head, '--title', title, '--body', body], { cwd: workDir }).trim()
   } finally {
     rmSync(workDir, { recursive: true, force: true })
   }
@@ -634,8 +642,9 @@ const HELP = `
   Use the same scope flag you installed with (--global, --codex-project…).
 
   "contribute" finds installed hooks whose local .mjs diverges from the live
-  registry, forks ${UPSTREAM_REPO} for you, and opens a PR with those
-  changes. Requires the GitHub CLI (gh), authenticated (\`gh auth login\`).
+  registry, forks ${UPSTREAM_REPO} for you (or branches directly if you own
+  it), and opens a PR with those changes. Requires the GitHub CLI (gh),
+  authenticated (\`gh auth login\`).
 
   Browse hooks at https://hookstack.vercel.app
 `
