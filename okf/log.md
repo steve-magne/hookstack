@@ -3,6 +3,9 @@
 Historique des changements du bundle OKF. Date la plus récente en haut.
 Toute session qui enrichit le bundle ajoute une entrée ici (voir [self-improvement](meta/self-improvement.md)).
 
+## 2026-08-05
+* **Update**: [implementation/cli-contribute-renamed-files](implementation/cli-contribute-renamed-files.md) — fix du `contribute` CLI qui échouait en ENOENT quand l'utilisateur renommait un hook `.mjs` installé (`post-write-biome.mjs` → `biome-check.mjs`) : `scanInstalledHooks` retourne `{ slug, file }` (le fingerprint est la source de vérité, pas le nom de fichier), `detectScriptChanges` accepte un override `fileBySlug`, et `pushContribution` copie depuis le fichier réel vers le nom canonique `<slug>.mjs` dans la PR.
+
 ## 2026-08-04
 * **Update**: [product/features-catalog](product/features-catalog.md) — le mode **Event** du catalogue utilise désormais des sections façon Vercel `/eve` (`EventSections`, pin-and-scroll + filet de progression) ; le mode `Date` groupe par récence alimentée par les dates git de premier ajout. Le composant explicateur scroll-piloté `HooksFlow` a été retiré de la home (dead code nettoyé).
 
