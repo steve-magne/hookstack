@@ -460,19 +460,27 @@ async function loadChangedHooks(slugs, scope, root) {
   return hooks.filter(h => changed.includes(h.slug))
 }
 
-// Forks the catalogue, clones it to a scratch dir, copies the modified .mjs
-// files in, and opens a PR. Returns the PR url, or null if the fork already
-// has byte-identical content (nothing to push).
-function pushContribution(slugs, dirs, log) {
+// Resolves the authenticated gh user's login, failing fast with a friendly
+// message when the GitHub CLI is missing or not authenticated.
+function requireGhUsername() {
   try { run('gh', ['--version']) } catch {
     throw new Error('GitHub CLI (gh) is required — install: https://cli.github.com')
   }
   try { run('gh', ['auth', 'status']) } catch {
     throw new Error('Not authenticated with GitHub — run `gh auth login` first.')
   }
+  return run('gh', ['api', 'user', '--jq', '.login']).trim()
+}
 
-  const username = run('gh', ['api', 'user', '--jq', '.login']).trim()
-  const { isOwner, cloneRepo } = resolveContributionTarget(username, UPSTREAM_REPO)
+// Forks the catalogue (or clones it directly when the user owns it), copies
+// the modified .mjs files into a scratch dir, and opens a PR. Returns the PR
+// url, or null if the remote already has byte-identical content (nothing to
+// push). `target` may be pre-resolved by the interactive flow (so the confirm
+// prompt can already know whether the user owns the repo); when omitted, the
+// owner/no-fork decision is made here from the authenticated gh user.
+function pushContribution(slugs, dirs, log, target) {
+  const { isOwner, cloneRepo } =
+    target ?? resolveContributionTarget(requireGhUsername(), UPSTREAM_REPO)
   const workDir = mkdtempSync(join(tmpdir(), 'hookstack-contrib-'))
 
   try {
@@ -480,7 +488,7 @@ function pushContribution(slugs, dirs, log) {
       log.step(`Cloning ${UPSTREAM_REPO}…`)
       run('gh', ['repo', 'clone', UPSTREAM_REPO, workDir])
     } else {
-      log.step(`Forking ${UPSTREAM_REPO} for ${username}…`)
+      log.step(`Forking ${UPSTREAM_REPO}…`)
       run('gh', ['repo', 'fork', UPSTREAM_REPO], { cwd: workDir })
 
       log.step('Cloning your fork…')
@@ -554,8 +562,21 @@ async function interactiveContribute(args) {
   })
   if (p.isCancel(selected) || selected.length === 0) return onCancel()
 
+  // Resolve the owner/no-fork decision before the confirm so the prompt tells
+  // the truth: owners of the catalogue don't fork, they branch straight to it.
+  let target
+  try {
+    target = resolveContributionTarget(requireGhUsername(), UPSTREAM_REPO)
+  } catch (e) {
+    p.cancel(e.message)
+    process.exit(1)
+  }
+
+  const repo = pc.cyan(UPSTREAM_REPO)
   const confirmed = await p.confirm({
-    message: `Fork ${pc.cyan(UPSTREAM_REPO)} and open a PR for ${plural(selected.length, 'hook')}?`,
+    message: target.isOwner
+      ? `Open a PR against ${repo} for ${plural(selected.length, 'hook')}?`
+      : `Fork ${repo} and open a PR for ${plural(selected.length, 'hook')}?`,
   })
   if (p.isCancel(confirmed) || !confirmed) return onCancel()
 
@@ -563,7 +584,7 @@ async function interactiveContribute(args) {
   spin2.start('Preparing contribution…')
   let prUrl
   try {
-    prUrl = pushContribution(selected, dirs, { step: m => spin2.message(m) })
+    prUrl = pushContribution(selected, dirs, { step: m => spin2.message(m) }, target)
   } catch (e) {
     spin2.stop(pc.red(`Contribution failed: ${e.message}`), 1)
     process.exit(1)

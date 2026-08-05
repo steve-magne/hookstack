@@ -54,7 +54,7 @@ Edited a hook in your own project and think the catalogue should have it too?
 npx hookstack-cli@latest contribute
 ```
 
-It finds the hooks you've locally modified, forks this repo, and opens a PR with your changes — no manual git/GitHub dance required. Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated. See [`packages/cli/README.md`](packages/cli/README.md#contributing-changes-back) for details.
+It finds the hooks you've locally modified and opens a PR with your changes — forking this repo for you, or pushing a branch straight to it when your `gh` account owns it (no fork needed). No manual git/GitHub dance required. Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated. See [`packages/cli/README.md`](packages/cli/README.md#contributing-changes-back) for details.
 
 ---
 
