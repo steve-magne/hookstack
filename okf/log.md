@@ -4,6 +4,7 @@ Historique des changements du bundle OKF. Date la plus récente en haut.
 Toute session qui enrichit le bundle ajoute une entrée ici (voir [self-improvement](meta/self-improvement.md)).
 
 ## 2026-08-05
+* **Update**: [implementation/canonical-hook-filenames](implementation/canonical-hook-filenames.md) — PR #228 transformée en renommage canonique des 3 hooks (`biome-check.mjs` → `post-write-biome.mjs`, `quality-check.mjs` → `stop-quality-check.mjs`, `update-deps.mjs` → `worktree-create-update-deps.mjs`) : script_path + commandes config + tests + settings.json (sync) + artefacts timeline régénérés. Élimine les doublons de la PR contribute auto-générée et réaligne le dépôt sur la convention `<slug>.mjs`.
 * **Update**: [implementation/cli-contribute-renamed-files](implementation/cli-contribute-renamed-files.md) — fix du `contribute` CLI qui échouait en ENOENT quand l'utilisateur renommait un hook `.mjs` installé (`post-write-biome.mjs` → `biome-check.mjs`) : `scanInstalledHooks` retourne `{ slug, file }` (le fingerprint est la source de vérité, pas le nom de fichier), `detectScriptChanges` accepte un override `fileBySlug`, et `pushContribution` copie depuis le fichier réel vers le nom canonique `<slug>.mjs` dans la PR.
 
 ## 2026-08-04
