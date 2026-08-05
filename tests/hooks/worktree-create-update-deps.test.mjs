@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { run } from "../../.claude/hooks/update-deps.mjs";
+import { run } from "../../.claude/hooks/worktree-create-update-deps.mjs";
 
 const MAIN = "/repos/hookstack";
 const WORKTREE = "/repos/hookstack-wt";
@@ -16,7 +16,7 @@ function makeExec(wt = WORKTREE, main = MAIN, pnpm = "/usr/local/bin/pnpm") {
 	};
 }
 
-describe("update-deps", () => {
+describe("worktree-create-update-deps", () => {
 	it("ne fait rien si git rev-parse échoue", () => {
 		const detach = vi.fn();
 		run({ exec: () => "", exists: () => true, detach });
