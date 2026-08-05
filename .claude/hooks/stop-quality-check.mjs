@@ -1,17 +1,20 @@
 #!/usr/bin/env node
 // @hookstack stop-quality-check
-// Bilan qualité à la fin d'une session : typecheck + lint (Stop)
+// Bilan qualité à la fin d'une session : typecheck (Stop)
+// Lint Biome n'est volontairement PAS refait ici : per-file-lint.mjs (Stop) couvre déjà
+// les mêmes fichiers, avec un garde-fou auto-disable après échecs répétés — le dupliquer
+// ici ferait tourner le même lint deux fois et doublerait le bruit en cas d'échec.
 // Les tests sont volontairement exclus : run-tests.mjs (Stop) les exécute déjà
 // avec un meilleur rapport d'erreur — les relancer ici doublerait la fin de session.
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Fichiers concernés par un typecheck/lint JS-TS. Une session qui ne touche que
+// Fichiers concernés par un typecheck JS-TS. Une session qui ne touche que
 // du Markdown, du Python ou des assets n'a rien à vérifier ici.
 const JS_TS = /\.(ts|tsx|js|jsx|mjs|cjs|vue|svelte)$/;
-const QC_CFG = /(^|\/)(tsconfig.*\.json|package\.json|biome\.jsonc?)$/;
+const QC_CFG = /(^|\/)(tsconfig.*\.json|package\.json)$/;
 
 /** Fichiers modifiés en attente (staged + unstaged + untracked), ou null hors git. */
 function defaultChanged(cwd) {
@@ -33,22 +36,9 @@ function defaultChanged(cwd) {
 	}
 }
 
-/** Scripts npm du package.json projet, ou {} si absent/illisible. */
-function defaultReadScripts(projectDir) {
-	try {
-		return (
-			JSON.parse(readFileSync(join(projectDir, "package.json"), "utf8"))
-				.scripts ?? {}
-		);
-	} catch {
-		return {};
-	}
-}
-
 export function run({
 	exec,
 	exists = existsSync,
-	readScripts = defaultReadScripts,
 	projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
 	changed = defaultChanged(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
 } = {}) {
@@ -85,29 +75,6 @@ export function run({
 			"TypeScript",
 			"npx --no-install tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/stop-quality-check.tsbuildinfo",
 		]);
-	const biomeConfigs = ["biome.json", "biome.jsonc"];
-	if (hasPkg && biomeConfigs.some((f) => exists(join(projectDir, f)))) {
-		// Limiter Biome aux fichiers JS/TS réellement modifiés : sinon --error-on-warnings
-		// fait échouer le check sur de la dette préexistante ailleurs dans le repo, sans
-		// rapport avec la session en cours.
-		const touched = changed ? changed.filter((f) => JS_TS.test(f)) : [];
-		if (touched.length > 0) {
-			checks.push([
-				"Biome",
-				`npx --no-install biome lint --error-on-warnings ${touched.map((f) => `"${f}"`).join(" ")}`,
-			]);
-		} else {
-			// Hors git ou changement de config seul → repo entier. Préférer le script `lint` du
-			// projet (le vrai gate CI) à un `biome lint .` direct : il respecte les exclusions de
-			// workspace (ex. un dossier mobile sous un gate ESLint séparé) qu'un appel biome brut ignore.
-			const scripts = readScripts(projectDir);
-			checks.push(
-				scripts.lint
-					? ["Lint", "pnpm run lint"]
-					: ["Biome", "npx --no-install biome lint --error-on-warnings ."],
-			);
-		}
-	}
 
 	const results = checks.map(([label, cmd]) => check(label, cmd));
 	const failed = results.filter((r) => !r).length;
