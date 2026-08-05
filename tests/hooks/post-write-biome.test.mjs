@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { run } from "../../.claude/hooks/biome-check.mjs";
+import { run } from "../../.claude/hooks/post-write-biome.mjs";
 import { makeExecFail } from "./_utils.mjs";
 
-describe("biome-check", () => {
+describe("post-write-biome", () => {
 	it("ignore les fichiers non-JS/TS/JSON", () => {
 		expect(
 			run({ tool_input: { file_path: "a.css" } }, { exec: vi.fn() }),

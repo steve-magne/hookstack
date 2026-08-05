@@ -30,8 +30,10 @@ des fichiers markdown + frontmatter YAML, lisibles sans outillage, versionnés d
 
 ## Implementation
 
+* [CLI contribute — noms de fichiers canoniques des hooks](implementation/canonical-hook-filenames.md) - PR contribute auto-générée ajoutant des doublons <slug>.mjs byte-identiques aux hooks renommés sur main — résolue par un renommage canonique (git mv + script_path + config + tests + settings + timeline).
 * [Catalogue — filtre par thématiques](implementation/catalogue-theme-filter.md) - Barre de chips thématiques sur la home pour filtrer le catalogue par cas d'usage, projetées depuis le registre vers une allowlist curée orientée besoin.
 * [CLI contribute — renvoyer un hook modifié en PR](implementation/cli-contribute-command.md) - Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR, tests unitaires associés inclus.
+* [CLI contribute — hooks renommés localement (fichier ≠ slug)](implementation/cli-contribute-renamed-files.md) - Le contribute du CLI échouait en ENOENT quand l'utilisateur renommait un hook .mjs installé — la copie partait de <slug>.mjs au lieu du fichier réel portant le fingerprint.
 * [Badge de coverage du README — générateur déterministe + drift guard CI](implementation/coverage-badge.md) - scripts/coverage-badge.mjs rend le badge 4 métriques (lines/statements/branches/functions) depuis coverage-summary.json, l'insère dans le README et le CI vérifie sa fraîcheur via --check.
 * [i18n-validation — find qui timeout sur les worktrees](implementation/fix-i18n-hook-timeout.md) - Le hook Stop i18n-validation explosait en ETIMEDOUT à chaque session car son find parcourait les node_modules des .claude/worktrees. Correction du prune + silence défensif.
 * [Lien "Catalogue" dans la navbar — Implémentation](implementation/navbar-catalogue-link.md) - Ajout d'un lien de navigation qui scrolle vers la section catalogue de la home.

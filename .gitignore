@@ -39,3 +39,6 @@ pnpm-debug.log*
 
 # Private local context
 .claude/CLAUDE.local.md
+
+# Freebuff desktop app (local database)
+.freebuff/

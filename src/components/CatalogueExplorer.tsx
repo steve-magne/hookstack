@@ -19,6 +19,7 @@ import {
 	STACK_LABELS,
 	type Stack,
 } from "@/types/hook";
+import { EventSections } from "./EventSections";
 import { HookConfigurator } from "./HookConfigurator";
 import { HookModal } from "./HookModal";
 import { type GroupBy, HookRow } from "./HookRow";
@@ -703,43 +704,52 @@ export function CatalogueExplorer({
 				</div>
 			</div>
 
-			{/* Grouped list */}
+			{/* Grouped list — le mode Event utilise les sections façon Vercel /eve
+					(EventSections) ; Category et Date gardent la liste classique. */}
 			{results.length > 0 ? (
-				<div
-					data-component="CatalogueExplorer-grouped-list"
-					className="space-y-8"
-				>
-					{groups.map((grp) => (
-						<section key={`${grp.kind}:${grp.key}`}>
-							<div className="sticky top-[138px] z-20 mb-1 flex items-center gap-3 bg-[#0a0a0a] px-3 pt-2 pb-1 [box-shadow:0_-8px_0_0_#0a0a0a]">
-								<h3
-									className={`cursor-default text-sm font-semibold text-zinc-300 transition-colors hover:text-white ${
-										grp.kind === "event" ? "font-mono" : "font-sans"
-									}`}
-								>
-									<SplitFlap
-										text={grp.label}
-										play={intro}
-										delay={introDelays.get(`grp:${grp.key}`) ?? 0}
-									/>
-								</h3>
-								<span className="text-xs text-zinc-500">{grp.count}</span>
-								<div className="h-px flex-1 bg-[var(--color-border)]" />
-							</div>
-							<div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] items-start gap-3">
-								{grp.hooks.map((h) => (
-									<HookRow
-										key={h.slug}
-										hook={h}
-										groupBy={grp.kind}
-										intro={intro}
-										introDelay={introDelays.get(h.slug) ?? 0}
-									/>
-								))}
-							</div>
-						</section>
-					))}
-				</div>
+				groupBy === "event" ? (
+					<EventSections
+						groups={groups}
+						intro={intro}
+						introDelays={introDelays}
+					/>
+				) : (
+					<div
+						data-component="CatalogueExplorer-grouped-list"
+						className="space-y-8"
+					>
+						{groups.map((grp) => (
+							<section key={`${grp.kind}:${grp.key}`}>
+								<div className="sticky top-[138px] z-20 mb-1 flex items-center gap-3 bg-[#0a0a0a] px-3 pt-2 pb-1 [box-shadow:0_-8px_0_0_#0a0a0a]">
+									<h3
+										className={`cursor-default text-sm font-semibold text-zinc-300 transition-colors hover:text-white ${
+											grp.kind === "event" ? "font-mono" : "font-sans"
+										}`}
+									>
+										<SplitFlap
+											text={grp.label}
+											play={intro}
+											delay={introDelays.get(`grp:${grp.key}`) ?? 0}
+										/>
+									</h3>
+									<span className="text-xs text-zinc-500">{grp.count}</span>
+									<div className="h-px flex-1 bg-[var(--color-border)]" />
+								</div>
+								<div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] items-start gap-3">
+									{grp.hooks.map((h) => (
+										<HookRow
+											key={h.slug}
+											hook={h}
+											groupBy={grp.kind}
+											intro={intro}
+											introDelay={introDelays.get(h.slug) ?? 0}
+										/>
+									))}
+								</div>
+							</section>
+						))}
+					</div>
+				)
 			) : (
 				<m.div
 					initial={{ opacity: 0, y: 8 }}

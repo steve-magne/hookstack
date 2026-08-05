@@ -31,8 +31,6 @@ export const spring = {
 
 /** Durées de référence (en secondes). */
 export const duration = {
-	micro: 0.15,
-	base: 0.3,
 	reveal: 0.4,
 } as const;
 
@@ -83,23 +81,5 @@ export const staggerContainer: Variants = {
 	hidden: {},
 	show: {
 		transition: { staggerChildren: 0.04, delayChildren: 0.05 },
-	},
-};
-
-/**
- * Révélation d'une section : la section s'éclaircit *et* orchestre la cascade
- * de ses lignes (stagger serré). Un seul token pour un comportement composite.
- */
-export const sectionReveal: Variants = {
-	hidden: { opacity: 0, y: 12 },
-	show: {
-		opacity: 1,
-		y: 0,
-		transition: {
-			duration: duration.reveal,
-			ease: EASE_OUT,
-			staggerChildren: 0.025,
-			delayChildren: 0.04,
-		},
 	},
 };

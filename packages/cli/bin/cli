@@ -19,6 +19,7 @@ import {
   doInstallTests,
   doUpdateTests,
   findInstalledSlugs,
+  scanInstalledHooks,
   detectScriptChanges,
   isGlobalScope,
   buildContributionBranch,
@@ -449,34 +450,57 @@ function run(cmd, args, opts = {}) {
   return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts })
 }
 
+// Contribution candidates carry the ACTUAL file each slug's @hookstack
+// fingerprint lives in — the user may have renamed the .mjs after installing
+// (e.g. `post-write-biome.mjs` → `biome-check.mjs`), and the copy step must
+// read that file, not `<slug>.mjs`.
 function findContributionCandidates(dirs, slugFilter) {
-  const installed = findInstalledSlugs(dirs.hooksDir, { readdirSync, readFileSync })
+  const installed = scanInstalledHooks(dirs.hooksDir, { readdirSync, readFileSync })
+    .map(({ slug, file }) => ({ slug, file: join(dirs.hooksDir, file) }))
   return slugFilter && slugFilter.length > 0
-    ? installed.filter(s => slugFilter.includes(s))
+    ? installed.filter(({ slug }) => slugFilter.includes(slug))
     : installed
 }
 
-async function loadChangedHooks(slugs, scope, root) {
+async function loadChangedHooks(candidates, scope, root) {
+  const slugs = candidates.map(c => c.slug)
   const { hooks } = await fetchHooks(slugs)
-  const { changed } = detectScriptChanges(hooks, scope, root, { readFileSync })
-  return hooks.filter(h => changed.includes(h.slug))
+  const fileBySlug = Object.fromEntries(candidates.map(c => [c.slug, c.file]))
+  const { changed } = detectScriptChanges(hooks, scope, root, { readFileSync, fileBySlug })
+  const changedSet = new Set(changed)
+  // Fusion : les hooks du registre (test_snippet, script_path — utilisés par la
+  // copie des tests) + le fichier réellement installé (peut être renommé).
+  const bySlug = new Map(hooks.map(h => [h.slug, h]))
+  return candidates
+    .filter(c => changedSet.has(c.slug))
+    .map(c => ({ ...(bySlug.get(c.slug) ?? {}), file: c.file }))
 }
 
-// Forks the catalogue, clones it to a scratch dir, copies the modified .mjs
-// files (and their locally modified unit tests) in, and opens a PR. Returns
-// the PR url, or null if the fork already has byte-identical content (nothing
-// to push).
-function pushContribution(hooks, dirs, log) {
+// Resolves the authenticated gh user's login, failing fast with a friendly
+// message when the GitHub CLI is missing or not authenticated.
+function requireGhUsername() {
   try { run('gh', ['--version']) } catch {
     throw new Error('GitHub CLI (gh) is required — install: https://cli.github.com')
   }
   try { run('gh', ['auth', 'status']) } catch {
     throw new Error('Not authenticated with GitHub — run `gh auth login` first.')
   }
+  return run('gh', ['api', 'user', '--jq', '.login']).trim()
+}
 
-  const slugs = hooks.map(h => h.slug)
-  const username = run('gh', ['api', 'user', '--jq', '.login']).trim()
-  const { isOwner, cloneRepo } = resolveContributionTarget(username, UPSTREAM_REPO)
+// Forks the catalogue (or clones it directly when the user owns it), copies
+// the modified .mjs files (and their locally modified unit tests) into a
+// scratch dir, and opens a PR. Returns the PR url, or null if the remote
+// already has byte-identical content (nothing to push). `sources` is the
+// [{ slug, file }] list from findContributionCandidates — the copy reads each
+// hook's actual file but writes it under its canonical `<slug>.mjs` name in
+// the PR. `target` may be pre-resolved by the interactive flow (so the confirm
+// prompt can already know whether the user owns the repo); when omitted, the
+// owner/no-fork decision is made here from the authenticated gh user.
+function pushContribution(sources, dirs, log, target) {
+  const username = requireGhUsername()
+  const { isOwner, cloneRepo } =
+    target ?? resolveContributionTarget(username, UPSTREAM_REPO)
   const workDir = mkdtempSync(join(tmpdir(), 'hookstack-contrib-'))
 
   try {
@@ -484,20 +508,21 @@ function pushContribution(hooks, dirs, log) {
       log.step(`Cloning ${UPSTREAM_REPO}…`)
       run('gh', ['repo', 'clone', UPSTREAM_REPO, workDir])
     } else {
-      log.step(`Forking ${UPSTREAM_REPO} for ${username}…`)
+      log.step(`Forking ${UPSTREAM_REPO}…`)
       run('gh', ['repo', 'fork', UPSTREAM_REPO], { cwd: workDir })
 
       log.step('Cloning your fork…')
       run('gh', ['repo', 'clone', cloneRepo, workDir])
     }
 
+    const slugs = sources.map(s => s.slug)
     const branch = buildContributionBranch(slugs)
     run('git', ['checkout', '-b', branch], { cwd: workDir })
 
-    for (const hook of hooks) {
-      const dest = join(workDir, '.claude', 'hooks', `${hook.slug}.mjs`)
+    for (const { slug, file } of sources) {
+      const dest = join(workDir, '.claude', 'hooks', `${slug}.mjs`)
       mkdirSync(join(dest, '..'), { recursive: true })
-      copyFileSync(join(dirs.hooksDir, `${hook.slug}.mjs`), dest)
+      copyFileSync(file, dest)
     }
 
     // Locally modified unit tests ride along with their hook — the PR keeps
@@ -505,11 +530,11 @@ function pushContribution(hooks, dirs, log) {
     // The fork may store the test under its script basename (upstream names ~half
     // of them that way), so we overwrite the existing file rather than add a
     // duplicate slug-named copy.
-    const testsChanged = detectTestChanges(hooks, process.cwd(), { readFileSync })
+    const testsChanged = detectTestChanges(sources, process.cwd(), { readFileSync })
     if (testsChanged.length > 0) log.step(`Including ${plural(testsChanged.length, 'modified test')}…`)
     const testPaths = []
     for (const slug of testsChanged) {
-      const hook = hooks.find(h => h.slug === slug)
+      const hook = sources.find(s => s.slug === slug)
       const src = resolveTestDest(hook, process.cwd(), { existsSync })
       const dest = resolveTestDest(hook, workDir, { existsSync })
       mkdirSync(dirname(dest), { recursive: true })
@@ -575,17 +600,30 @@ async function interactiveContribute(args) {
   })
   if (p.isCancel(selected) || selected.length === 0) return onCancel()
 
-  const selectedHooks = changedHooks.filter(h => selected.includes(h.slug))
+  // Resolve the owner/no-fork decision before the confirm so the prompt tells
+  // the truth: owners of the catalogue don't fork, they branch straight to it.
+  let target
+  try {
+    target = resolveContributionTarget(requireGhUsername(), UPSTREAM_REPO)
+  } catch (e) {
+    p.cancel(e.message)
+    process.exit(1)
+  }
+
+  const repo = pc.cyan(UPSTREAM_REPO)
   const confirmed = await p.confirm({
-    message: `Fork ${pc.cyan(UPSTREAM_REPO)} and open a PR for ${plural(selected.length, 'hook')}?`,
+    message: target.isOwner
+      ? `Open a PR against ${repo} for ${plural(selected.length, 'hook')}?`
+      : `Fork ${repo} and open a PR for ${plural(selected.length, 'hook')}?`,
   })
   if (p.isCancel(confirmed) || !confirmed) return onCancel()
 
+  const selectedSources = changedHooks.filter(h => selected.includes(h.slug))
   const spin2 = p.spinner()
   spin2.start('Preparing contribution…')
   let prUrl
   try {
-    prUrl = pushContribution(selectedHooks, dirs, { step: m => spin2.message(m) })
+    prUrl = pushContribution(selectedSources, dirs, { step: m => spin2.message(m) }, target)
   } catch (e) {
     spin2.stop(pc.red(`Contribution failed: ${e.message}`), 1)
     process.exit(1)

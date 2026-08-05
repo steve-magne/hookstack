@@ -94,6 +94,22 @@ than inlining the string comparison in `cli`, consistent with this repo's
 split between pure/testable logic (`core.mjs`) and untestable git/gh I/O
 (`cli`).
 
+## Update — publish failure + owner UX polish (2026-08-05)
+
+Two follow-ups after the owner fix landed:
+
+- The publish workflow (`npm publish --provenance`) failed on the runner with
+  `MODULE_NOT_FOUND: sigstore` right after the `npm install -g npm@latest`
+  step (Node 24 runner default), so the owner fix never reached npm — users
+  on `npx hookstack-cli@latest` still hit the fork error. The workflow now
+  installs `sigstore` globally before publishing.
+- The interactive `contribute` confirm still said "Fork steve-magne/hookstack
+  and open a PR…" even for repo owners (who don't fork). The flow now
+  resolves the gh login *before* the confirm and shows "Open a PR against
+  steve-magne/hookstack…" for owners. The gh checks were extracted into
+  `requireGhUsername()` (cli) and `pushContribution` accepts a pre-resolved
+  `target` so the interactive flow doesn't re-query `gh api user`.
+
 ## Explicitly out of scope (v1)
 
 - No pre-check for "does a fork already exist" — `gh repo fork` is already
