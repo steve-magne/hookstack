@@ -319,16 +319,19 @@ export function extractFingerprint(content) {
 }
 
 // Scans a hooks directory for previously installed HookStack scripts, reading
-// each .mjs's fingerprint to recover its slug. Used by `update` so the user
-// doesn't have to retype --hooks=<slugs> for a re-install.
-export function findInstalledSlugs(hooksDir, { readdirSync, readFileSync }) {
+// each .mjs's fingerprint to recover its slug alongside the ACTUAL filename
+// that carries it. The on-disk file may have been renamed by the user (e.g.
+// `post-write-biome.mjs` → `biome-check.mjs`) — the fingerprint is the source
+// of truth, not the filename. Used by `update` (slugs) and `contribute`
+// (slug + file, so the copy reads the file wherever it actually lives).
+export function scanInstalledHooks(hooksDir, { readdirSync, readFileSync }) {
 	let files;
 	try {
 		files = readdirSync(hooksDir);
 	} catch {
 		return [];
 	}
-	const slugs = [];
+	const found = new Map();
 	for (const file of files) {
 		if (!file.endsWith(".mjs")) continue;
 		let content;
@@ -338,20 +341,41 @@ export function findInstalledSlugs(hooksDir, { readdirSync, readFileSync }) {
 			continue;
 		}
 		const slug = extractFingerprint(content);
-		if (slug) slugs.push(slug);
+		if (!slug) continue;
+		// Dédup par slug. Si le fichier canonique <slug>.mjs existe en plus d'un
+		// fichier renommé, le canonique gagne — c'est celui qui porte l'identité
+		// attendue par le registre.
+		const existing = found.get(slug);
+		const canonical = `${slug}.mjs`;
+		if (!existing || (file === canonical && existing.file !== canonical)) {
+			found.set(slug, { slug, file });
+		}
 	}
-	return slugs;
+	return [...found.values()];
+}
+
+// Slugs only — enough for `update`, which re-fetches by slug. `contribute`
+// prefers scanInstalledHooks to keep the actual file path.
+export function findInstalledSlugs(hooksDir, deps) {
+	return scanInstalledHooks(hooksDir, deps).map(({ slug }) => slug);
 }
 
 // Splits freshly fetched hooks into those whose on-disk script differs from
 // the registry (will be overwritten) and those already up to date.
-export function detectScriptChanges(hooks, scope, root, { readFileSync }) {
+// `fileBySlug` lets callers (contribute) point at the ACTUAL file a slug lives
+// in when the user renamed it — read that path instead of script_path.
+export function detectScriptChanges(
+	hooks,
+	scope,
+	root,
+	{ readFileSync, fileBySlug = {} },
+) {
 	const changed = [];
 	const unchanged = [];
 	for (const hook of hooks) {
 		if (!hook.script_path || !hook.code_snippet) continue;
-		const target = resolveScriptPath(hook.script_path, scope);
-		const dest = join(root, target);
+		const dest =
+			fileBySlug[hook.slug] ?? join(root, resolveScriptPath(hook.script_path, scope));
 		let existing = null;
 		try {
 			existing = readFileSync(dest, "utf8");

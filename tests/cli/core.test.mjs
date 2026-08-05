@@ -13,6 +13,7 @@ import {
 	doUpdateTests,
 	extractFingerprint,
 	findInstalledSlugs,
+	scanInstalledHooks,
 	isBlockingEvent,
 	isCodexScope,
 	isGlobalScope,
@@ -532,9 +533,72 @@ describe("findInstalledSlugs", () => {
 		});
 		expect(slugs).toEqual([]);
 	});
-});
+});	describe("scanInstalledHooks", () => {
+		it("retourne slug + nom de fichier réel, même renommé", () => {
+			const files = {
+				"biome-check.mjs":
+					"#!/usr/bin/env node\n// @hookstack post-write-biome\n",
+				"quality-check.mjs":
+					"#!/usr/bin/env node\n// @hookstack stop-quality-check\n",
+			};
+			const hooks = scanInstalledHooks("/proj/.claude/hooks", {
+				readdirSync: () => Object.keys(files),
+				readFileSync: (p) => files[p.split("/").pop()],
+			});
+			expect(hooks).toEqual([
+				{ slug: "post-write-biome", file: "biome-check.mjs" },
+				{ slug: "stop-quality-check", file: "quality-check.mjs" },
+			]);
+		});
+		it("déduplique par slug (premier fichier gagne)", () => {
+			const files = {
+				"a.mjs": "#!/usr/bin/env node\n// @hookstack dup\n",
+				"b.mjs": "#!/usr/bin/env node\n// @hookstack dup\n",
+			};
+			const hooks = scanInstalledHooks("/proj/.claude/hooks", {
+				readdirSync: () => Object.keys(files),
+				readFileSync: (p) => files[p.split("/").pop()],
+			});
+			expect(hooks).toEqual([{ slug: "dup", file: "a.mjs" }]);
+		});
+		it("le fichier canonique <slug>.mjs gagne sur un fichier renommé", () => {
+			const files = {
+				"biome-check.mjs":
+					"#!/usr/bin/env node\n// @hookstack post-write-biome\n",
+				"post-write-biome.mjs":
+					"#!/usr/bin/env node\n// @hookstack post-write-biome\n",
+			};
+			const hooks = scanInstalledHooks("/proj/.claude/hooks", {
+				readdirSync: () => Object.keys(files),
+				readFileSync: (p) => files[p.split("/").pop()],
+			});
+			expect(hooks).toEqual([
+				{ slug: "post-write-biome", file: "post-write-biome.mjs" },
+			]);
+		});
+		it("ignore les fichiers non-.mjs et sans fingerprint", () => {
+			const files = {
+				"plain.mjs": "#!/usr/bin/env node\nno fingerprint here\n",
+				"readme.txt": "x",
+			};
+			const hooks = scanInstalledHooks("/proj/.claude/hooks", {
+				readdirSync: () => Object.keys(files),
+				readFileSync: (p) => files[p.split("/").pop()],
+			});
+			expect(hooks).toEqual([]);
+		});
+		it("retourne [] si le dossier n'existe pas", () => {
+			const hooks = scanInstalledHooks("/missing", {
+				readdirSync: () => {
+					throw new Error("ENOENT");
+				},
+				readFileSync: () => "",
+			});
+			expect(hooks).toEqual([]);
+		});
+	});
 
-describe("detectScriptChanges", () => {
+	describe("detectScriptChanges", () => {
 	it("classe en changed si le contenu disque diffère", () => {
 		const hooks = [
 			{
@@ -590,6 +654,49 @@ describe("detectScriptChanges", () => {
 		);
 		expect(changed).toEqual([]);
 		expect(unchanged).toEqual([]);
+	});
+	it("fileBySlug : lit le fichier réel quand le hook a été renommé", () => {
+		const hooks = [
+			{
+				slug: "post-write-biome",
+				script_path: ".claude/hooks/post-write-biome.mjs",
+				code_snippet: "renamed content",
+			},
+		];
+		const { changed, unchanged } = detectScriptChanges(
+			hooks,
+			"project",
+			"/proj",
+			{
+				readFileSync: (p) => {
+					if (p.endsWith("biome-check.mjs")) return "renamed content";
+					throw new Error("ENOENT");
+				},
+				fileBySlug: { "post-write-biome": "/proj/.claude/hooks/biome-check.mjs" },
+			},
+		);
+		expect(changed).toEqual([]);
+		expect(unchanged).toEqual(["post-write-biome"]);
+	});
+	it("fileBySlug : classé changed si le fichier renommé diverge", () => {
+		const hooks = [
+			{
+				slug: "post-write-biome",
+				script_path: ".claude/hooks/post-write-biome.mjs",
+				code_snippet: "registry version",
+			},
+		];
+		const { changed } = detectScriptChanges(
+			hooks,
+			"project",
+			"/proj",
+			{
+				readFileSync: (p) =>
+					p.endsWith("biome-check.mjs") ? "my local edits" : "registry version",
+				fileBySlug: { "post-write-biome": "/proj/.claude/hooks/biome-check.mjs" },
+			},
+		);
+		expect(changed).toEqual(["post-write-biome"]);
 	});
 });
 

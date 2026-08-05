@@ -122,7 +122,7 @@ Tweaked a hook locally and want the catalogue to have it? `contribute` turns tha
 npx hookstack-cli@latest contribute
 ```
 
-It scans your installed hooks (same `@hookstack` fingerprint lookup as `update`), finds the ones whose local `.mjs` no longer matches the live registry, lets you pick which to send, then opens a PR with your version of those files — forking [steve-magne/hookstack](https://github.com/steve-magne/hookstack) for you, or pushing a branch straight to it when your `gh` account owns the repo (no fork needed).
+It scans your installed hooks (same `@hookstack` fingerprint lookup as `update`), finds the ones whose local `.mjs` no longer matches the live registry, lets you pick which to send, then opens a PR with your version of those files — forking [steve-magne/hookstack](https://github.com/steve-magne/hookstack) for you, or pushing a branch straight to it when your `gh` account owns the repo (no fork needed). Renamed hook files work too — detection follows the fingerprint, not the filename.
 
 Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated (`gh auth login`).
 

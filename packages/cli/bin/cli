@@ -19,6 +19,7 @@ import {
   doInstallTests,
   doUpdateTests,
   findInstalledSlugs,
+  scanInstalledHooks,
   detectScriptChanges,
   isGlobalScope,
   buildContributionBranch,
@@ -447,17 +448,25 @@ function run(cmd, args, opts = {}) {
   return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts })
 }
 
+// Contribution candidates carry the ACTUAL file each slug's @hookstack
+// fingerprint lives in — the user may have renamed the .mjs after installing
+// (e.g. `post-write-biome.mjs` → `biome-check.mjs`), and the copy step must
+// read that file, not `<slug>.mjs`.
 function findContributionCandidates(dirs, slugFilter) {
-  const installed = findInstalledSlugs(dirs.hooksDir, { readdirSync, readFileSync })
+  const installed = scanInstalledHooks(dirs.hooksDir, { readdirSync, readFileSync })
+    .map(({ slug, file }) => ({ slug, file: join(dirs.hooksDir, file) }))
   return slugFilter && slugFilter.length > 0
-    ? installed.filter(s => slugFilter.includes(s))
+    ? installed.filter(({ slug }) => slugFilter.includes(slug))
     : installed
 }
 
-async function loadChangedHooks(slugs, scope, root) {
+async function loadChangedHooks(candidates, scope, root) {
+  const slugs = candidates.map(c => c.slug)
   const { hooks } = await fetchHooks(slugs)
-  const { changed } = detectScriptChanges(hooks, scope, root, { readFileSync })
-  return hooks.filter(h => changed.includes(h.slug))
+  const fileBySlug = Object.fromEntries(candidates.map(c => [c.slug, c.file]))
+  const { changed } = detectScriptChanges(hooks, scope, root, { readFileSync, fileBySlug })
+  const changedSet = new Set(changed)
+  return candidates.filter(c => changedSet.has(c.slug))
 }
 
 // Resolves the authenticated gh user's login, failing fast with a friendly
@@ -475,12 +484,16 @@ function requireGhUsername() {
 // Forks the catalogue (or clones it directly when the user owns it), copies
 // the modified .mjs files into a scratch dir, and opens a PR. Returns the PR
 // url, or null if the remote already has byte-identical content (nothing to
-// push). `target` may be pre-resolved by the interactive flow (so the confirm
-// prompt can already know whether the user owns the repo); when omitted, the
-// owner/no-fork decision is made here from the authenticated gh user.
-function pushContribution(slugs, dirs, log, target) {
+// push). `sources` is the [{ slug, file }] list from findContributionCandidates
+// — the copy reads each hook's actual file but writes it under its canonical
+// `<slug>.mjs` name in the PR. `target` may be pre-resolved by the interactive
+// flow (so the confirm prompt can already know whether the user owns the repo);
+// when omitted, the owner/no-fork decision is made here from the authenticated
+// gh user.
+function pushContribution(sources, dirs, log, target) {
+  const username = requireGhUsername()
   const { isOwner, cloneRepo } =
-    target ?? resolveContributionTarget(requireGhUsername(), UPSTREAM_REPO)
+    target ?? resolveContributionTarget(username, UPSTREAM_REPO)
   const workDir = mkdtempSync(join(tmpdir(), 'hookstack-contrib-'))
 
   try {
@@ -495,13 +508,14 @@ function pushContribution(slugs, dirs, log, target) {
       run('gh', ['repo', 'clone', cloneRepo, workDir])
     }
 
+    const slugs = sources.map(s => s.slug)
     const branch = buildContributionBranch(slugs)
     run('git', ['checkout', '-b', branch], { cwd: workDir })
 
-    for (const slug of slugs) {
+    for (const { slug, file } of sources) {
       const dest = join(workDir, '.claude', 'hooks', `${slug}.mjs`)
       mkdirSync(join(dest, '..'), { recursive: true })
-      copyFileSync(join(dirs.hooksDir, `${slug}.mjs`), dest)
+      copyFileSync(file, dest)
     }
 
     run('git', ['add', '.claude/hooks'], { cwd: workDir })
@@ -580,11 +594,12 @@ async function interactiveContribute(args) {
   })
   if (p.isCancel(confirmed) || !confirmed) return onCancel()
 
+  const selectedSources = changedHooks.filter(h => selected.includes(h.slug))
   const spin2 = p.spinner()
   spin2.start('Preparing contribution…')
   let prUrl
   try {
-    prUrl = pushContribution(selected, dirs, { step: m => spin2.message(m) }, target)
+    prUrl = pushContribution(selectedSources, dirs, { step: m => spin2.message(m) }, target)
   } catch (e) {
     spin2.stop(pc.red(`Contribution failed: ${e.message}`), 1)
     process.exit(1)
@@ -622,7 +637,7 @@ async function directContribute(args) {
   console.log(`  Found ${plural(slugs.length, 'modified hook')}: ${slugs.join(', ')}`)
   let prUrl
   try {
-    prUrl = pushContribution(slugs, dirs, { step: m => console.log(`  ${m}`) })
+    prUrl = pushContribution(changedHooks, dirs, { step: m => console.log(`  ${m}`) })
   } catch (e) {
     console.error(`\n✗ Contribution failed: ${e.message}`)
     process.exit(1)
