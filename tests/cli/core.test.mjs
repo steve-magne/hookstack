@@ -10,6 +10,8 @@ import {
 	buildSummaryRows,
 	collectIncomingHooks,
 	detectScriptChanges,
+	detectTestChanges,
+	resolveTestDest,
 	doUpdateTests,
 	extractFingerprint,
 	findInstalledSlugs,
@@ -668,5 +670,89 @@ describe("buildContributionPr", () => {
 		expect(body).toContain("- `a`");
 		expect(body).toContain("- `b`");
 		expect(body).toContain("npx hookstack-cli@latest contribute");
+	});
+	it("liste les tests inclus quand withTests est fourni", () => {
+		const { body } = buildContributionPr(["a", "b"], {
+			withTests: ["tests/hooks/a.test.mjs"],
+		});
+		expect(body).toContain("Unit tests updated:");
+		expect(body).toContain("- `tests/hooks/a.test.mjs`");
+		expect(body).not.toContain("- `tests/hooks/b.test.mjs`");
+	});
+	it("n'ajoute pas de section tests par défaut", () => {
+		const { body } = buildContributionPr(["a"]);
+		expect(body).not.toContain("Unit tests updated:");
+	});
+});
+
+describe("detectTestChanges", () => {
+	it("signale un test local qui diffère du registre", () => {
+		const hooks = [{ slug: "a", test_snippet: "published test" }];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: () => "edited test",
+		});
+		expect(changed).toEqual(["a"]);
+	});
+	it("ignore un test identique au registre", () => {
+		const hooks = [{ slug: "a", test_snippet: "same" }];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: () => "same",
+		});
+		expect(changed).toEqual([]);
+	});
+	it("ignore un hook sans test local", () => {
+		const hooks = [{ slug: "a", test_snippet: "published" }];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: () => {
+				throw new Error("ENOENT");
+			},
+		});
+		expect(changed).toEqual([]);
+	});
+	it("signale un test local quand le registre n'en a pas", () => {
+		const hooks = [{ slug: "a" }];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: () => "brand new test",
+		});
+		expect(changed).toEqual(["a"]);
+	});
+	it("trouve un test nommé d'après le basename du script", () => {
+		const hooks = [
+			{
+				slug: "pre-bash-secret-detection",
+				script_path: ".claude/hooks/detect-secrets.mjs",
+				test_snippet: "published",
+			},
+		];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: (p) => {
+				if (p.endsWith("detect-secrets.test.mjs")) return "edited";
+				throw new Error("ENOENT");
+			},
+		});
+		expect(changed).toEqual(["pre-bash-secret-detection"]);
+	});
+});
+
+describe("resolveTestDest", () => {
+	const hook = {
+		slug: "pre-bash-secret-detection",
+		script_path: ".claude/hooks/detect-secrets.mjs",
+	};
+	it("préfère le test nommé par slug", () => {
+		const dest = resolveTestDest(hook, "/proj", {
+			existsSync: (p) => p.endsWith("pre-bash-secret-detection.test.mjs"),
+		});
+		expect(dest).toBe("/proj/tests/hooks/pre-bash-secret-detection.test.mjs");
+	});
+	it("retombe sur le test nommé par basename", () => {
+		const dest = resolveTestDest(hook, "/proj", {
+			existsSync: (p) => p.endsWith("detect-secrets.test.mjs"),
+		});
+		expect(dest).toBe("/proj/tests/hooks/detect-secrets.test.mjs");
+	});
+	it("retourne le chemin slug si aucun test n'existe (création)", () => {
+		const dest = resolveTestDest(hook, "/proj", { existsSync: () => false });
+		expect(dest).toBe("/proj/tests/hooks/pre-bash-secret-detection.test.mjs");
 	});
 });

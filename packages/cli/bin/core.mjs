@@ -2,7 +2,7 @@
 // Everything here is side-effect free and unit-tested in isolation; the
 // interactive I/O (clack/picocolors, fs, fetch) lives in cli.mjs. This mirrors
 // the project's "pure run() + thin I/O guard" hook convention.
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { basename, isAbsolute, join, relative, resolve } from "node:path";
 
 const BLOCKING_EVENTS = new Set([
 	"PreToolUse",
@@ -407,7 +407,9 @@ export function buildContributionBranch(slugs) {
 	return `hookstack-contrib/${slugs.join("-")}`;
 }
 
-export function buildContributionPr(slugs) {
+// `withTests` lists the test file paths (repo-relative, e.g.
+// "tests/hooks/detect-secrets.test.mjs") included in the PR.
+export function buildContributionPr(slugs, { withTests = [] } = {}) {
 	const title =
 		slugs.length === 1
 			? `Update hook: ${slugs[0]}`
@@ -416,8 +418,55 @@ export function buildContributionPr(slugs) {
 		"Local changes to the following hook(s), submitted via `npx hookstack-cli@latest contribute`:",
 		"",
 		...slugs.map((s) => `- \`${s}\``),
-	].join("\n");
-	return { title, body };
+	];
+	if (withTests.length > 0) {
+		body.push("", "Unit tests updated:", "", ...withTests.map((p) => `- \`${p}\``));
+	}
+	return { title, body: body.join("\n") };
+}
+
+// Candidate test paths for a hook under `<dir>/tests/hooks/`, slug-based first
+// then script-basename-based — the upstream repo names ~half its tests after
+// the script file (e.g. detect-secrets.test.mjs for slug
+// pre-bash-secret-detection). Mirrors the lookup in .claude/sync-hooks.mjs.
+function testPathCandidates(hook, dir) {
+	const base = hook.script_path ? basename(hook.script_path, ".mjs") : null;
+	const candidates = [join(dir, "tests", "hooks", `${hook.slug}.test.mjs`)];
+	if (base && base !== hook.slug) {
+		candidates.push(join(dir, "tests", "hooks", `${base}.test.mjs`));
+	}
+	return candidates;
+}
+
+// Resolves where a hook's unit test lives in `dir`: the first candidate that
+// already exists (slug- or basename-named), else the slug-based path (the
+// naming the CLI uses when installing tests with --with-tests).
+export function resolveTestDest(hook, dir, { existsSync }) {
+	const candidates = testPathCandidates(hook, dir);
+	return candidates.find((p) => existsSync(p)) ?? candidates[0];
+}
+
+// Compares local unit test files under tests/hooks/ against the registry's
+// test_snippet for each hook, returning the slugs whose local test differs
+// from the published one (edited locally, or written for a hook that ships no
+// test at all). Mirrors detectScriptChanges for the .mjs scripts: a difference
+// means the user's version is a candidate to contribute upstream.
+export function detectTestChanges(hooks, projectRoot, { readFileSync }) {
+	const changed = [];
+	for (const hook of hooks) {
+		let existing = null;
+		for (const dest of testPathCandidates(hook, projectRoot)) {
+			try {
+				existing = readFileSync(dest, "utf8");
+				break;
+			} catch {
+				// Try the next candidate (basename-named test).
+			}
+		}
+		if (existing === null) continue;
+		if (existing !== (hook.test_snippet ?? "")) changed.push(hook.slug);
+	}
+	return changed;
 }
 
 // Display rows for the "Installation Summary" panel.

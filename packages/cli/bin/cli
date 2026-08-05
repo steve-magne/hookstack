@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, realpathSync, mkdtempSync, rmSync, copyFileSync } from 'fs'
 import { join as pathJoin } from 'path'
 import { homedir, tmpdir } from 'os'
-import { join, dirname } from 'path'
+import { join, dirname, relative } from 'path'
 import { fileURLToPath } from 'url'
 import { execFileSync } from 'node:child_process'
 import pc from 'picocolors'
@@ -24,6 +24,8 @@ import {
   buildContributionBranch,
   buildContributionPr,
   resolveContributionTarget,
+  detectTestChanges,
+  resolveTestDest,
 } from './core.mjs'
 
 const API_BASE = process.env.HOOKSTACK_API_BASE || 'https://hookstack.vercel.app'
@@ -461,9 +463,10 @@ async function loadChangedHooks(slugs, scope, root) {
 }
 
 // Forks the catalogue, clones it to a scratch dir, copies the modified .mjs
-// files in, and opens a PR. Returns the PR url, or null if the fork already
-// has byte-identical content (nothing to push).
-function pushContribution(slugs, dirs, log) {
+// files (and their locally modified unit tests) in, and opens a PR. Returns
+// the PR url, or null if the fork already has byte-identical content (nothing
+// to push).
+function pushContribution(hooks, dirs, log) {
   try { run('gh', ['--version']) } catch {
     throw new Error('GitHub CLI (gh) is required — install: https://cli.github.com')
   }
@@ -471,6 +474,7 @@ function pushContribution(slugs, dirs, log) {
     throw new Error('Not authenticated with GitHub — run `gh auth login` first.')
   }
 
+  const slugs = hooks.map(h => h.slug)
   const username = run('gh', ['api', 'user', '--jq', '.login']).trim()
   const { isOwner, cloneRepo } = resolveContributionTarget(username, UPSTREAM_REPO)
   const workDir = mkdtempSync(join(tmpdir(), 'hookstack-contrib-'))
@@ -490,13 +494,30 @@ function pushContribution(slugs, dirs, log) {
     const branch = buildContributionBranch(slugs)
     run('git', ['checkout', '-b', branch], { cwd: workDir })
 
-    for (const slug of slugs) {
-      const dest = join(workDir, '.claude', 'hooks', `${slug}.mjs`)
+    for (const hook of hooks) {
+      const dest = join(workDir, '.claude', 'hooks', `${hook.slug}.mjs`)
       mkdirSync(join(dest, '..'), { recursive: true })
-      copyFileSync(join(dirs.hooksDir, `${slug}.mjs`), dest)
+      copyFileSync(join(dirs.hooksDir, `${hook.slug}.mjs`), dest)
     }
 
-    run('git', ['add', '.claude/hooks'], { cwd: workDir })
+    // Locally modified unit tests ride along with their hook — the PR keeps
+    // the test in sync with the contributed script (CI coverage gate ≥ 80 %).
+    // The fork may store the test under its script basename (upstream names ~half
+    // of them that way), so we overwrite the existing file rather than add a
+    // duplicate slug-named copy.
+    const testsChanged = detectTestChanges(hooks, process.cwd(), { readFileSync })
+    if (testsChanged.length > 0) log.step(`Including ${plural(testsChanged.length, 'modified test')}…`)
+    const testPaths = []
+    for (const slug of testsChanged) {
+      const hook = hooks.find(h => h.slug === slug)
+      const src = resolveTestDest(hook, process.cwd(), { existsSync })
+      const dest = resolveTestDest(hook, workDir, { existsSync })
+      mkdirSync(dirname(dest), { recursive: true })
+      copyFileSync(src, dest)
+      testPaths.push(relative(workDir, dest))
+    }
+
+    run('git', ['add', '.claude/hooks', 'tests/hooks'], { cwd: workDir })
     let hasChanges = true
     try {
       run('git', ['diff', '--cached', '--quiet'], { cwd: workDir })
@@ -506,7 +527,7 @@ function pushContribution(slugs, dirs, log) {
     }
     if (!hasChanges) return null
 
-    const { title, body } = buildContributionPr(slugs)
+    const { title, body } = buildContributionPr(slugs, { withTests: testPaths })
     run('git', ['commit', '-m', title], { cwd: workDir })
 
     log.step('Pushing branch…')
@@ -554,6 +575,7 @@ async function interactiveContribute(args) {
   })
   if (p.isCancel(selected) || selected.length === 0) return onCancel()
 
+  const selectedHooks = changedHooks.filter(h => selected.includes(h.slug))
   const confirmed = await p.confirm({
     message: `Fork ${pc.cyan(UPSTREAM_REPO)} and open a PR for ${plural(selected.length, 'hook')}?`,
   })
@@ -563,7 +585,7 @@ async function interactiveContribute(args) {
   spin2.start('Preparing contribution…')
   let prUrl
   try {
-    prUrl = pushContribution(selected, dirs, { step: m => spin2.message(m) })
+    prUrl = pushContribution(selectedHooks, dirs, { step: m => spin2.message(m) })
   } catch (e) {
     spin2.stop(pc.red(`Contribution failed: ${e.message}`), 1)
     process.exit(1)
@@ -601,7 +623,7 @@ async function directContribute(args) {
   console.log(`  Found ${plural(slugs.length, 'modified hook')}: ${slugs.join(', ')}`)
   let prUrl
   try {
-    prUrl = pushContribution(slugs, dirs, { step: m => console.log(`  ${m}`) })
+    prUrl = pushContribution(changedHooks, dirs, { step: m => console.log(`  ${m}`) })
   } catch (e) {
     console.error(`\n✗ Contribution failed: ${e.message}`)
     process.exit(1)
@@ -643,7 +665,8 @@ const HELP = `
 
   "contribute" finds installed hooks whose local .mjs diverges from the live
   registry, forks ${UPSTREAM_REPO} for you (or branches directly if you own
-  it), and opens a PR with those changes. Requires the GitHub CLI (gh),
+  it), and opens a PR with those changes. Locally modified unit tests under
+  tests/hooks/ ride along with their hook. Requires the GitHub CLI (gh),
   authenticated (\`gh auth login\`).
 
   Browse hooks at https://hookstack.vercel.app

@@ -18,6 +18,16 @@ Install them in one command — your agent gets guardrails in under a minute.
 [![Known Vulnerabilities](https://snyk.io/test/github/steve-magne/hookstack/badge.svg?style=flat-square)](https://snyk.io/test/github/steve-magne/hookstack)
 
 
+<!-- COVERAGE_BADGE:START -->
+
+<p align="center">
+  <img src="public/coverage-badge.svg" alt="HookStack coverage — lines 91% · statements 90% · branches 87% · functions 81%"/>
+</p>
+
+<sub>Unit-test coverage (agrégat) · gate CI : lines/statements/branches ≥ 80 %, functions ≥ 75 %</sub>
+
+<!-- COVERAGE_BADGE:END -->
+
 <img src="public/demo-hookstack.gif" alt="HookStack Mode Demo" width="600"/>
 
 </div>
@@ -54,7 +64,7 @@ Edited a hook in your own project and think the catalogue should have it too?
 npx hookstack-cli@latest contribute
 ```
 
-It finds the hooks you've locally modified, forks this repo, and opens a PR with your changes — no manual git/GitHub dance required. Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated. See [`packages/cli/README.md`](packages/cli/README.md#contributing-changes-back) for details.
+It finds the hooks you've locally modified, forks this repo, and opens a PR with your changes — locally edited unit tests (`tests/hooks/`) ride along with their hook so the contribution keeps the CI coverage gate green. No manual git/GitHub dance required. Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated. See [`packages/cli/README.md`](packages/cli/README.md#contributing-changes-back) for details.
 
 ---
 

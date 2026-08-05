@@ -30,8 +30,13 @@ des fichiers markdown + frontmatter YAML, lisibles sans outillage, versionnés d
 
 ## Implementation
 
-* [CLI contribute — renvoyer un hook modifié en PR](implementation/cli-contribute-command.md) - Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR.
+* [Catalogue — filtre par thématiques](implementation/catalogue-theme-filter.md) - Barre de chips thématiques sur la home pour filtrer le catalogue par cas d'usage, projetées depuis le registre vers une allowlist curée orientée besoin.
+* [CLI contribute — renvoyer un hook modifié en PR](implementation/cli-contribute-command.md) - Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR, tests unitaires associés inclus.
+* [Badge de coverage du README — générateur déterministe + drift guard CI](implementation/coverage-badge.md) - scripts/coverage-badge.mjs rend le badge 4 métriques (lines/statements/branches/functions) depuis coverage-summary.json, l'insère dans le README et le CI vérifie sa fraîcheur via --check.
+* [i18n-validation — find qui timeout sur les worktrees](implementation/fix-i18n-hook-timeout.md) - Le hook Stop i18n-validation explosait en ETIMEDOUT à chaque session car son find parcourait les node_modules des .claude/worktrees. Correction du prune + silence défensif.
+* [Lien "Catalogue" dans la navbar — Implémentation](implementation/navbar-catalogue-link.md) - Ajout d'un lien de navigation qui scrolle vers la section catalogue de la home.
 * [OKF Knowledge Bundle — Implémentation](implementation/okf-knowledge-bundle.md) - Mise en place de la base de connaissance agentique OKF v0.1 sur Hookstack (bundle, scripts/okf.mjs, sous-agent librarian, skill /okf, hooks catalogue).
+* [Gate CI — couverture lignes ≥ 80 % par hook individuel](implementation/per-hook-coverage-gate.md) - En complément du seuil agrégé de vitest, scripts/check-hook-coverage.mjs bloque tout hook dont la couverture lignes < 80 %, avec une liste d'exceptions pour les hooks hérités.
 
 ## Marketing
 

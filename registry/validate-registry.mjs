@@ -6,15 +6,17 @@
 // empêche la réintroduction de métadonnées mortes type `id`/`votes`).
 //
 // Usage : node registry/validate-registry.mjs   (exit ≠ 0 si invalide)
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Ajv from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 
 const here = dirname(fileURLToPath(import.meta.url));
+const root = join(here, "..");
 const schemaPath = join(here, "registry.schema.json");
 const registryPath = join(here, "registry.json");
+const testsDir = join(root, "tests", "hooks");
 
 const schema = JSON.parse(readFileSync(schemaPath, "utf8"));
 const registry = JSON.parse(readFileSync(registryPath, "utf8"));
@@ -43,6 +45,31 @@ if (ok) {
 			console.log(`  ${h.slug} (${h.benefit.length}) : ${h.benefit}`);
 		}
 	}
+
+	// Bloquant : chaque hook dogfoodé (script .mjs présent sur disque) doit avoir un
+	// test unitaire. Vitest ne mesure que les fichiers importés par les tests — un
+	// hook sans test échapperait silencieusement au gate de coverage CI. Le test peut
+	// être nommé par slug ou par basename du script (convention du repo).
+	const untested = registry.filter((h) => {
+		const script = h.implementation?.script_path;
+		if (!script || !existsSync(join(root, script))) return false;
+		const base = basename(script, ".mjs");
+		return (
+			!existsSync(join(testsDir, `${h.slug}.test.mjs`)) &&
+			!existsSync(join(testsDir, `${base}.test.mjs`))
+		);
+	});
+	if (untested.length) {
+		console.error(
+			`\n✗ ${untested.length} hook(s) dogfoodé(s) sans test unitaire (tests/hooks/<slug>.test.mjs ou <basename>.test.mjs) :`,
+		);
+		for (const h of untested) console.error(`  · ${h.slug} → ${h.implementation.script_path}`);
+		console.error(
+			"  Un hook sans test échappe au gate de coverage CI — ajouter un test avant de fusionner.",
+		);
+		process.exit(1);
+	}
+
 	process.exit(0);
 }
 

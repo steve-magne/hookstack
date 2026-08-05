@@ -124,6 +124,8 @@ npx hookstack-cli@latest contribute
 
 It scans your installed hooks (same `@hookstack` fingerprint lookup as `update`), finds the ones whose local `.mjs` no longer matches the live registry, lets you pick which to send, then forks [steve-magne/hookstack](https://github.com/steve-magne/hookstack), pushes a branch with your version of those files, and opens the PR for you.
 
+**Unit tests ride along.** If you installed with `--with-tests` and edited the matching `tests/hooks/<slug>.test.mjs` (or wrote one where the catalogue ships none), the modified test file is pushed with its hook — the PR body lists every test included. The upstream repo's CI gate requires ≥ 80 % coverage, so shipping the test with the script is what makes a contribution mergeable.
+
 Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated (`gh auth login`).
 
 ```bash
