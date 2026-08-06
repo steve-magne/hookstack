@@ -1,9 +1,9 @@
 ---
 type: Playbook
 title: CLI contribute — renvoyer un hook modifié en PR
-description: Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR.
-tags: [implementation, cli, contribution, git]
-timestamp: 2026-06-29T00:00:00Z
+description: Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR, tests unitaires associés inclus.
+tags: [implementation, cli, contribution, git, tests]
+timestamp: 2026-08-05T00:00:00Z
 ---
 
 # CLI `contribute` command
@@ -54,6 +54,22 @@ for a v1.
 - Both README files (root + `packages/cli/README.md`) got a "Contributing
   changes back" section mirroring the existing "Updating" section, per this
   repo's rule that the two READMEs must stay in sync.
+
+## Update — contribute pousse aussi les tests unitaires (2026-08-05)
+
+`pushContribution` copie désormais, en plus des `.mjs` modifiés, les fichiers de
+**test unitaire localement modifiés** (`tests/hooks/<slug>.test.mjs`) dans la
+branche de la PR. Nouvelle fonction pure `detectTestChanges(hooks,
+projectRoot, { readFileSync })` dans `core.mjs` — miroir de
+`detectScriptChanges` pour les tests : elle renvoie les slugs dont le test
+local diffère du `test_snippet` du registre (édité localement, ou écrit pour
+un hook qui ne publie pas de test). Les tests voyagent automatiquement avec
+leur hook (pas de prompt supplémentaire) ; le corps de la PR les liste via
+`buildContributionPr(slugs, { withTests })`.
+
+Pourquoi : un hook contribué sans son test à jour échoue le gate de coverage
+CI (≥ 80 %) du repo — pousser le test avec le script est ce qui rend la
+contribution fusionnable.
 
 ## Update — owner-of-upstream edge case (2026-07-09)
 

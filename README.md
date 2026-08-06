@@ -18,6 +18,16 @@ Install them in one command — your agent gets guardrails in under a minute.
 [![Known Vulnerabilities](https://snyk.io/test/github/steve-magne/hookstack/badge.svg?style=flat-square)](https://snyk.io/test/github/steve-magne/hookstack)
 
 
+<!-- COVERAGE_BADGE:START -->
+
+<p align="center">
+  <img src="public/coverage-badge.svg" alt="HookStack coverage — lines 91% · statements 90% · branches 87% · functions 81%"/>
+</p>
+
+<sub>Unit-test coverage (agrégat) · gate CI : lines/statements/branches ≥ 80 %, functions ≥ 75 %</sub>
+
+<!-- COVERAGE_BADGE:END -->
+
 <img src="public/demo-hookstack.gif" alt="HookStack Mode Demo" width="600"/>
 
 </div>
@@ -54,7 +64,7 @@ Edited a hook in your own project and think the catalogue should have it too?
 npx hookstack-cli@latest contribute
 ```
 
-It finds the hooks you've locally modified and opens a PR with your changes — forking this repo for you, or pushing a branch straight to it when your `gh` account owns it (no fork needed). Hooks are detected by their `@hookstack` fingerprint, so even renamed local files get contributed under their canonical name. No manual git/GitHub dance required. Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated. See [`packages/cli/README.md`](packages/cli/README.md#contributing-changes-back) for details.
+It finds the hooks you've locally modified and opens a PR with your changes — forking this repo for you, or pushing a branch straight to it when your `gh` account owns it (no fork needed). Hooks are detected by their `@hookstack` fingerprint, so even renamed local files get contributed under their canonical name, and locally edited unit tests (`tests/hooks/`) ride along with their hook so the contribution keeps the CI coverage gate green. No manual git/GitHub dance required. Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated. See [`packages/cli/README.md`](packages/cli/README.md#contributing-changes-back) for details.
 
 ---
 
@@ -105,7 +115,7 @@ copilot plugin install hookstack
 
 ## The HookStack evolution
 
-**105 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+**102 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">

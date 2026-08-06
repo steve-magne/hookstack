@@ -1,10 +1,11 @@
 # Implementation
 
+* [CLI contribute — noms de fichiers canoniques des hooks](canonical-hook-filenames.md) - PR contribute auto-générée ajoutant des doublons <slug>.mjs byte-identiques aux hooks renommés sur main — résolue par un renommage canonique (git mv + script_path + config + tests + settings + timeline).
 * [Catalogue — filtre par thématiques](catalogue-theme-filter.md) - Barre de chips thématiques sur la home pour filtrer le catalogue par cas d'usage, projetées depuis le registre vers une allowlist curée orientée besoin.
-* [CLI contribute — renvoyer un hook modifié en PR](cli-contribute-command.md) - Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR.
+* [CLI contribute — renvoyer un hook modifié en PR](cli-contribute-command.md) - Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR, tests unitaires associés inclus.
+* [CLI contribute — hooks renommés localement (fichier ≠ slug)](cli-contribute-renamed-files.md) - Le contribute du CLI échouait en ENOENT quand l'utilisateur renommait un hook .mjs installé — la copie partait de <slug>.mjs au lieu du fichier réel portant le fingerprint.
+* [Badge de coverage du README — générateur déterministe + drift guard CI](coverage-badge.md) - scripts/coverage-badge.mjs rend le badge 4 métriques (lines/statements/branches/functions) depuis coverage-summary.json, l'insère dans le README et le CI vérifie sa fraîcheur via --check.
 * [i18n-validation — find qui timeout sur les worktrees](fix-i18n-hook-timeout.md) - Le hook Stop i18n-validation explosait en ETIMEDOUT à chaque session car son find parcourait les node_modules des .claude/worktrees. Correction du prune + silence défensif.
 * [Lien "Catalogue" dans la navbar — Implémentation](navbar-catalogue-link.md) - Ajout d'un lien de navigation qui scrolle vers la section catalogue de la home.
-* [CLI contribute — hooks renommés localement](cli-contribute-renamed-files.md)
-* [CLI contribute — noms de fichiers canoniques](canonical-hook-filenames.md) - Renommage git mv des hooks post-write-biome / stop-quality-check / worktree-create-update-deps vers <slug>.mjs (script_path + config + tests + settings + timeline), pour éliminer les doublons introduits par une PR contribute.
- - contribute échouait en ENOENT quand l'utilisateur renommait un hook .mjs installé : la copie partait de <slug>.mjs au lieu du fichier réel portant le fingerprint.
 * [OKF Knowledge Bundle — Implémentation](okf-knowledge-bundle.md) - Mise en place de la base de connaissance agentique OKF v0.1 sur Hookstack (bundle, scripts/okf.mjs, sous-agent librarian, skill /okf, hooks catalogue).
+* [Gate CI — couverture lignes ≥ 80 % par hook individuel](per-hook-coverage-gate.md) - En complément du seuil agrégé de vitest, scripts/check-hook-coverage.mjs bloque tout hook dont la couverture lignes < 80 %, avec une liste d'exceptions pour les hooks hérités.

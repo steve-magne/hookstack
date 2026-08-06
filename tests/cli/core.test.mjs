@@ -10,10 +10,10 @@ import {
 	buildSummaryRows,
 	collectIncomingHooks,
 	detectScriptChanges,
+	detectTestChanges,
 	doUpdateTests,
 	extractFingerprint,
 	findInstalledSlugs,
-	scanInstalledHooks,
 	isBlockingEvent,
 	isCodexScope,
 	isGlobalScope,
@@ -23,6 +23,8 @@ import {
 	resolveContributionTarget,
 	resolveScopeRoot,
 	resolveScriptPath,
+	resolveTestDest,
+	scanInstalledHooks,
 	shortRepo,
 	snykVerdict,
 } from "../../packages/cli/bin/core.mjs";
@@ -533,72 +535,73 @@ describe("findInstalledSlugs", () => {
 		});
 		expect(slugs).toEqual([]);
 	});
-});	describe("scanInstalledHooks", () => {
-		it("retourne slug + nom de fichier réel, même renommé", () => {
-			const files = {
-				"biome-check.mjs":
-					"#!/usr/bin/env node\n// @hookstack post-write-biome\n",
-				"quality-check.mjs":
-					"#!/usr/bin/env node\n// @hookstack stop-quality-check\n",
-			};
-			const hooks = scanInstalledHooks("/proj/.claude/hooks", {
-				readdirSync: () => Object.keys(files),
-				readFileSync: (p) => files[p.split("/").pop()],
-			});
-			expect(hooks).toEqual([
-				{ slug: "post-write-biome", file: "biome-check.mjs" },
-				{ slug: "stop-quality-check", file: "quality-check.mjs" },
-			]);
+});
+describe("scanInstalledHooks", () => {
+	it("retourne slug + nom de fichier réel, même renommé", () => {
+		const files = {
+			"biome-check.mjs":
+				"#!/usr/bin/env node\n// @hookstack post-write-biome\n",
+			"quality-check.mjs":
+				"#!/usr/bin/env node\n// @hookstack stop-quality-check\n",
+		};
+		const hooks = scanInstalledHooks("/proj/.claude/hooks", {
+			readdirSync: () => Object.keys(files),
+			readFileSync: (p) => files[p.split("/").pop()],
 		});
-		it("déduplique par slug (premier fichier gagne)", () => {
-			const files = {
-				"a.mjs": "#!/usr/bin/env node\n// @hookstack dup\n",
-				"b.mjs": "#!/usr/bin/env node\n// @hookstack dup\n",
-			};
-			const hooks = scanInstalledHooks("/proj/.claude/hooks", {
-				readdirSync: () => Object.keys(files),
-				readFileSync: (p) => files[p.split("/").pop()],
-			});
-			expect(hooks).toEqual([{ slug: "dup", file: "a.mjs" }]);
-		});
-		it("le fichier canonique <slug>.mjs gagne sur un fichier renommé", () => {
-			const files = {
-				"biome-check.mjs":
-					"#!/usr/bin/env node\n// @hookstack post-write-biome\n",
-				"post-write-biome.mjs":
-					"#!/usr/bin/env node\n// @hookstack post-write-biome\n",
-			};
-			const hooks = scanInstalledHooks("/proj/.claude/hooks", {
-				readdirSync: () => Object.keys(files),
-				readFileSync: (p) => files[p.split("/").pop()],
-			});
-			expect(hooks).toEqual([
-				{ slug: "post-write-biome", file: "post-write-biome.mjs" },
-			]);
-		});
-		it("ignore les fichiers non-.mjs et sans fingerprint", () => {
-			const files = {
-				"plain.mjs": "#!/usr/bin/env node\nno fingerprint here\n",
-				"readme.txt": "x",
-			};
-			const hooks = scanInstalledHooks("/proj/.claude/hooks", {
-				readdirSync: () => Object.keys(files),
-				readFileSync: (p) => files[p.split("/").pop()],
-			});
-			expect(hooks).toEqual([]);
-		});
-		it("retourne [] si le dossier n'existe pas", () => {
-			const hooks = scanInstalledHooks("/missing", {
-				readdirSync: () => {
-					throw new Error("ENOENT");
-				},
-				readFileSync: () => "",
-			});
-			expect(hooks).toEqual([]);
-		});
+		expect(hooks).toEqual([
+			{ slug: "post-write-biome", file: "biome-check.mjs" },
+			{ slug: "stop-quality-check", file: "quality-check.mjs" },
+		]);
 	});
+	it("déduplique par slug (premier fichier gagne)", () => {
+		const files = {
+			"a.mjs": "#!/usr/bin/env node\n// @hookstack dup\n",
+			"b.mjs": "#!/usr/bin/env node\n// @hookstack dup\n",
+		};
+		const hooks = scanInstalledHooks("/proj/.claude/hooks", {
+			readdirSync: () => Object.keys(files),
+			readFileSync: (p) => files[p.split("/").pop()],
+		});
+		expect(hooks).toEqual([{ slug: "dup", file: "a.mjs" }]);
+	});
+	it("le fichier canonique <slug>.mjs gagne sur un fichier renommé", () => {
+		const files = {
+			"biome-check.mjs":
+				"#!/usr/bin/env node\n// @hookstack post-write-biome\n",
+			"post-write-biome.mjs":
+				"#!/usr/bin/env node\n// @hookstack post-write-biome\n",
+		};
+		const hooks = scanInstalledHooks("/proj/.claude/hooks", {
+			readdirSync: () => Object.keys(files),
+			readFileSync: (p) => files[p.split("/").pop()],
+		});
+		expect(hooks).toEqual([
+			{ slug: "post-write-biome", file: "post-write-biome.mjs" },
+		]);
+	});
+	it("ignore les fichiers non-.mjs et sans fingerprint", () => {
+		const files = {
+			"plain.mjs": "#!/usr/bin/env node\nno fingerprint here\n",
+			"readme.txt": "x",
+		};
+		const hooks = scanInstalledHooks("/proj/.claude/hooks", {
+			readdirSync: () => Object.keys(files),
+			readFileSync: (p) => files[p.split("/").pop()],
+		});
+		expect(hooks).toEqual([]);
+	});
+	it("retourne [] si le dossier n'existe pas", () => {
+		const hooks = scanInstalledHooks("/missing", {
+			readdirSync: () => {
+				throw new Error("ENOENT");
+			},
+			readFileSync: () => "",
+		});
+		expect(hooks).toEqual([]);
+	});
+});
 
-	describe("detectScriptChanges", () => {
+describe("detectScriptChanges", () => {
 	it("classe en changed si le contenu disque diffère", () => {
 		const hooks = [
 			{
@@ -672,7 +675,9 @@ describe("findInstalledSlugs", () => {
 					if (p.endsWith("biome-check.mjs")) return "renamed content";
 					throw new Error("ENOENT");
 				},
-				fileBySlug: { "post-write-biome": "/proj/.claude/hooks/biome-check.mjs" },
+				fileBySlug: {
+					"post-write-biome": "/proj/.claude/hooks/biome-check.mjs",
+				},
 			},
 		);
 		expect(changed).toEqual([]);
@@ -686,16 +691,11 @@ describe("findInstalledSlugs", () => {
 				code_snippet: "registry version",
 			},
 		];
-		const { changed } = detectScriptChanges(
-			hooks,
-			"project",
-			"/proj",
-			{
-				readFileSync: (p) =>
-					p.endsWith("biome-check.mjs") ? "my local edits" : "registry version",
-				fileBySlug: { "post-write-biome": "/proj/.claude/hooks/biome-check.mjs" },
-			},
-		);
+		const { changed } = detectScriptChanges(hooks, "project", "/proj", {
+			readFileSync: (p) =>
+				p.endsWith("biome-check.mjs") ? "my local edits" : "registry version",
+			fileBySlug: { "post-write-biome": "/proj/.claude/hooks/biome-check.mjs" },
+		});
 		expect(changed).toEqual(["post-write-biome"]);
 	});
 });
@@ -775,5 +775,121 @@ describe("buildContributionPr", () => {
 		expect(body).toContain("- `a`");
 		expect(body).toContain("- `b`");
 		expect(body).toContain("npx hookstack-cli@latest contribute");
+	});
+	it("liste les tests inclus quand withTests est fourni", () => {
+		const { body } = buildContributionPr(["a", "b"], {
+			withTests: ["tests/hooks/a.test.mjs"],
+		});
+		expect(body).toContain("Unit tests updated:");
+		expect(body).toContain("- `tests/hooks/a.test.mjs`");
+		expect(body).not.toContain("- `tests/hooks/b.test.mjs`");
+	});
+	it("n'ajoute pas de section tests par défaut", () => {
+		const { body } = buildContributionPr(["a"]);
+		expect(body).not.toContain("Unit tests updated:");
+	});
+});
+
+describe("detectTestChanges", () => {
+	it("signale un test local qui diffère du registre", () => {
+		const hooks = [{ slug: "a", test_snippet: "published test" }];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: () => "edited test",
+		});
+		expect(changed).toEqual(["a"]);
+	});
+	it("ignore un test identique au registre", () => {
+		const hooks = [{ slug: "a", test_snippet: "same" }];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: () => "same",
+		});
+		expect(changed).toEqual([]);
+	});
+	it("ignore un hook sans test local", () => {
+		const hooks = [{ slug: "a", test_snippet: "published" }];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: () => {
+				throw new Error("ENOENT");
+			},
+		});
+		expect(changed).toEqual([]);
+	});
+	it("signale un test local quand le registre n'en a pas", () => {
+		const hooks = [{ slug: "a" }];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: () => "brand new test",
+		});
+		expect(changed).toEqual(["a"]);
+	});
+	it("trouve un test nommé d'après le basename du script", () => {
+		const hooks = [
+			{
+				slug: "pre-bash-secret-detection",
+				script_path: ".claude/hooks/detect-secrets.mjs",
+				test_snippet: "published",
+			},
+		];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: (p) => {
+				if (p.endsWith("detect-secrets.test.mjs")) return "edited";
+				throw new Error("ENOENT");
+			},
+		});
+		expect(changed).toEqual(["pre-bash-secret-detection"]);
+	});
+
+	it("trouve un test nommé d'après le fichier réellement installé (renommé)", () => {
+		// Miroir test du fix #227 : quand l'utilisateur renomme le hook .mjs installé
+		// (post-write-biome.mjs → biome-check.mjs) et son test avec, le fingerprint
+		// reste la source de vérité et le test renommé doit être détecté via hook.file.
+		const hooks = [
+			{
+				slug: "post-write-biome",
+				script_path: ".claude/hooks/post-write-biome.mjs",
+				file: "/proj/.claude/hooks/biome-check.mjs",
+				test_snippet: "published",
+			},
+		];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: (p) => {
+				if (p.endsWith("biome-check.test.mjs")) return "edited";
+				throw new Error("ENOENT");
+			},
+		});
+		expect(changed).toEqual(["post-write-biome"]);
+	});
+});
+
+describe("resolveTestDest", () => {
+	const hook = {
+		slug: "pre-bash-secret-detection",
+		script_path: ".claude/hooks/detect-secrets.mjs",
+	};
+	it("préfère le test nommé par slug", () => {
+		const dest = resolveTestDest(hook, "/proj", {
+			existsSync: (p) => p.endsWith("pre-bash-secret-detection.test.mjs"),
+		});
+		expect(dest).toBe("/proj/tests/hooks/pre-bash-secret-detection.test.mjs");
+	});
+	it("retombe sur le test nommé par basename", () => {
+		const dest = resolveTestDest(hook, "/proj", {
+			existsSync: (p) => p.endsWith("detect-secrets.test.mjs"),
+		});
+		expect(dest).toBe("/proj/tests/hooks/detect-secrets.test.mjs");
+	});
+	it("retourne le chemin slug si aucun test n'existe (création)", () => {
+		const dest = resolveTestDest(hook, "/proj", { existsSync: () => false });
+		expect(dest).toBe("/proj/tests/hooks/pre-bash-secret-detection.test.mjs");
+	});
+	it("préfère le test nommé d'après le fichier renommé s'il existe", () => {
+		const renamedHook = {
+			slug: "post-write-biome",
+			script_path: ".claude/hooks/post-write-biome.mjs",
+			file: "/proj/.claude/hooks/biome-check.mjs",
+		};
+		const dest = resolveTestDest(renamedHook, "/proj", {
+			existsSync: (p) => p.endsWith("biome-check.test.mjs"),
+		});
+		expect(dest).toBe("/proj/tests/hooks/biome-check.test.mjs");
 	});
 });

@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, realpathSync, mkdtempSync, rmSync, copyFileSync } from 'fs'
 import { join as pathJoin } from 'path'
 import { homedir, tmpdir } from 'os'
-import { join, dirname } from 'path'
+import { join, dirname, relative } from 'path'
 import { fileURLToPath } from 'url'
 import { execFileSync } from 'node:child_process'
 import pc from 'picocolors'
@@ -25,6 +25,8 @@ import {
   buildContributionBranch,
   buildContributionPr,
   resolveContributionTarget,
+  detectTestChanges,
+  resolveTestDest,
 } from './core.mjs'
 
 const API_BASE = process.env.HOOKSTACK_API_BASE || 'https://hookstack.vercel.app'
@@ -466,7 +468,12 @@ async function loadChangedHooks(candidates, scope, root) {
   const fileBySlug = Object.fromEntries(candidates.map(c => [c.slug, c.file]))
   const { changed } = detectScriptChanges(hooks, scope, root, { readFileSync, fileBySlug })
   const changedSet = new Set(changed)
-  return candidates.filter(c => changedSet.has(c.slug))
+  // Fusion : les hooks du registre (test_snippet, script_path — utilisés par la
+  // copie des tests) + le fichier réellement installé (peut être renommé).
+  const bySlug = new Map(hooks.map(h => [h.slug, h]))
+  return candidates
+    .filter(c => changedSet.has(c.slug))
+    .map(c => ({ ...(bySlug.get(c.slug) ?? {}), file: c.file }))
 }
 
 // Resolves the authenticated gh user's login, failing fast with a friendly
@@ -482,14 +489,14 @@ function requireGhUsername() {
 }
 
 // Forks the catalogue (or clones it directly when the user owns it), copies
-// the modified .mjs files into a scratch dir, and opens a PR. Returns the PR
-// url, or null if the remote already has byte-identical content (nothing to
-// push). `sources` is the [{ slug, file }] list from findContributionCandidates
-// — the copy reads each hook's actual file but writes it under its canonical
-// `<slug>.mjs` name in the PR. `target` may be pre-resolved by the interactive
-// flow (so the confirm prompt can already know whether the user owns the repo);
-// when omitted, the owner/no-fork decision is made here from the authenticated
-// gh user.
+// the modified .mjs files (and their locally modified unit tests) into a
+// scratch dir, and opens a PR. Returns the PR url, or null if the remote
+// already has byte-identical content (nothing to push). `sources` is the
+// [{ slug, file }] list from findContributionCandidates — the copy reads each
+// hook's actual file but writes it under its canonical `<slug>.mjs` name in
+// the PR. `target` may be pre-resolved by the interactive flow (so the confirm
+// prompt can already know whether the user owns the repo); when omitted, the
+// owner/no-fork decision is made here from the authenticated gh user.
 function pushContribution(sources, dirs, log, target) {
   const username = requireGhUsername()
   const { isOwner, cloneRepo } =
@@ -518,7 +525,24 @@ function pushContribution(sources, dirs, log, target) {
       copyFileSync(file, dest)
     }
 
-    run('git', ['add', '.claude/hooks'], { cwd: workDir })
+    // Locally modified unit tests ride along with their hook — the PR keeps
+    // the test in sync with the contributed script (CI coverage gate ≥ 80 %).
+    // The fork may store the test under its script basename (upstream names ~half
+    // of them that way), so we overwrite the existing file rather than add a
+    // duplicate slug-named copy.
+    const testsChanged = detectTestChanges(sources, process.cwd(), { readFileSync })
+    if (testsChanged.length > 0) log.step(`Including ${plural(testsChanged.length, 'modified test')}…`)
+    const testPaths = []
+    for (const slug of testsChanged) {
+      const hook = sources.find(s => s.slug === slug)
+      const src = resolveTestDest(hook, process.cwd(), { existsSync })
+      const dest = resolveTestDest(hook, workDir, { existsSync })
+      mkdirSync(dirname(dest), { recursive: true })
+      copyFileSync(src, dest)
+      testPaths.push(relative(workDir, dest))
+    }
+
+    run('git', ['add', '.claude/hooks', 'tests/hooks'], { cwd: workDir })
     let hasChanges = true
     try {
       run('git', ['diff', '--cached', '--quiet'], { cwd: workDir })
@@ -528,7 +552,7 @@ function pushContribution(sources, dirs, log, target) {
     }
     if (!hasChanges) return null
 
-    const { title, body } = buildContributionPr(slugs)
+    const { title, body } = buildContributionPr(slugs, { withTests: testPaths })
     run('git', ['commit', '-m', title], { cwd: workDir })
 
     log.step('Pushing branch…')
@@ -679,7 +703,8 @@ const HELP = `
 
   "contribute" finds installed hooks whose local .mjs diverges from the live
   registry, forks ${UPSTREAM_REPO} for you (or branches directly if you own
-  it), and opens a PR with those changes. Requires the GitHub CLI (gh),
+  it), and opens a PR with those changes. Locally modified unit tests under
+  tests/hooks/ ride along with their hook. Requires the GitHub CLI (gh),
   authenticated (\`gh auth login\`).
 
   Browse hooks at https://hookstack.vercel.app
