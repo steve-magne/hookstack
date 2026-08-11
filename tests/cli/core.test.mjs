@@ -10,9 +10,11 @@ import {
 	buildSummaryRows,
 	collectIncomingHooks,
 	detectScriptChanges,
+	detectStacks,
 	detectTestChanges,
 	doUpdateTests,
 	extractFingerprint,
+	filterHooksByStack,
 	findInstalledSlugs,
 	isBlockingEvent,
 	isCodexScope,
@@ -87,6 +89,65 @@ describe("parseArgs", () => {
 	});
 	it("premier token libre = commande", () => {
 		expect(parseArgs(argv("install")).command).toBe("install");
+	});
+	it("--stacks= en liste", () => {
+		expect(
+			parseArgs(argv("install", "--stacks=typescript,python")).stacks,
+		).toEqual(["typescript", "python"]);
+	});
+	it("défaut stacks vide", () => {
+		expect(parseArgs(argv("install")).stacks).toEqual([]);
+	});
+	it("--no-detect", () => {
+		expect(parseArgs(argv("install", "--no-detect")).noDetect).toBe(true);
+	});
+	it("défaut noDetect false", () => {
+		expect(parseArgs(argv("install")).noDetect).toBe(false);
+	});
+});
+
+describe("detectStacks", () => {
+	const fsWith = (present) => ({
+		existsSync: (p) => present.some((name) => p.endsWith(name)),
+	});
+
+	it("package.json → typescript", () => {
+		expect(detectStacks("/proj", fsWith(["package.json"]))).toEqual([
+			"typescript",
+		]);
+	});
+	it("pyproject.toml → python", () => {
+		expect(detectStacks("/proj", fsWith(["pyproject.toml"]))).toEqual([
+			"python",
+		]);
+	});
+	it("les deux manifestes → les deux stacks", () => {
+		expect(
+			detectStacks("/proj", fsWith(["package.json", "requirements.txt"])),
+		).toEqual(["typescript", "python"]);
+	});
+	it("aucun manifeste connu → []", () => {
+		expect(detectStacks("/proj", fsWith([]))).toEqual([]);
+	});
+});
+
+describe("filterHooksByStack", () => {
+	const universal = { slug: "u" };
+	const tsOnly = { slug: "ts", stack: ["typescript"] };
+	const pyOnly = { slug: "py", stack: ["python"] };
+	const hooks = [universal, tsOnly, pyOnly];
+
+	it("stacks vide → aucun filtrage", () => {
+		expect(filterHooksByStack(hooks, [])).toEqual(hooks);
+	});
+	it("stacks absent (undefined) → aucun filtrage", () => {
+		expect(filterHooksByStack(hooks, undefined)).toEqual(hooks);
+	});
+	it("garde l'universel + le stack détecté, écarte le reste", () => {
+		expect(filterHooksByStack(hooks, ["python"])).toEqual([universal, pyOnly]);
+	});
+	it("plusieurs stacks détectés → union", () => {
+		expect(filterHooksByStack(hooks, ["typescript", "python"])).toEqual(hooks);
 	});
 });
 

@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
 		category: h.category,
 		hook_type: h.hook_type,
 		trigger: h.trigger,
+		stack: h.stack ?? [],
 		config: (h.implementation.config as { hooks?: unknown }).hooks
 			? { hooks: (h.implementation.config as { hooks: unknown }).hooks }
 			: null,

@@ -9,3 +9,4 @@
 * [Lien "Catalogue" dans la navbar — Implémentation](navbar-catalogue-link.md) - Ajout d'un lien de navigation qui scrolle vers la section catalogue de la home.
 * [OKF Knowledge Bundle — Implémentation](okf-knowledge-bundle.md) - Mise en place de la base de connaissance agentique OKF v0.1 sur Hookstack (bundle, scripts/okf.mjs, sous-agent librarian, skill /okf, hooks catalogue).
 * [Gate CI — couverture lignes ≥ 80 % par hook individuel](per-hook-coverage-gate.md) - En complément du seuil agrégé de vitest, scripts/check-hook-coverage.mjs bloque tout hook dont la couverture lignes < 80 %, avec une liste d'exceptions pour les hooks hérités.
+* [CLI install — détection de stack pour filtrer les hooks par défaut](cli-stack-detection.md) - Le CLI installait tout le set default_on sans distinction de langage (ex. Biome dans un projet Python) — résolu par détection de stack par manifeste (detectStacks/filterHooksByStack) + exposition du champ registre stack via l'API.
