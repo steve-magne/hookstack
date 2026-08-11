@@ -27,6 +27,8 @@ import {
   resolveContributionTarget,
   detectTestChanges,
   resolveTestDest,
+  detectStacks,
+  filterHooksByStack,
 } from './core.mjs'
 
 const API_BASE = process.env.HOOKSTACK_API_BASE || 'https://hookstack.vercel.app'
@@ -124,6 +126,29 @@ export function securityPanel(rows) {
 
 // ── install ───────────────────────────────────────────────────────────────────
 
+// Explicit --stacks= wins; --no-detect opts out entirely; otherwise detect
+// from the project's manifests. Returns [] when nothing should be filtered.
+function resolveStacks(args) {
+  if (args.noDetect) return { stacks: [], detected: false }
+  if (args.stacks.length) return { stacks: args.stacks, detected: false }
+  return { stacks: detectStacks(process.cwd(), { existsSync }), detected: true }
+}
+
+// Filters the default hook set down to the project's detected/declared stack.
+// Only applies to the default install (no explicit --hooks=) — an explicit
+// slug list is always installed as asked, never silently filtered.
+function applyStackFilter(hooks, isDefault, args, log) {
+  if (!isDefault) return hooks
+  const { stacks, detected } = resolveStacks(args)
+  const filtered = filterHooksByStack(hooks, stacks)
+  const skipped = hooks.length - filtered.length
+  if (skipped > 0) {
+    const label = detected ? `Detected stack: ${stacks.join(', ')}` : `Stack: ${stacks.join(', ')}`
+    log(`${label} — skipped ${plural(skipped, 'hook')} not needed for this stack (--stacks= or --no-detect to override)`)
+  }
+  return filtered
+}
+
 function doInstall(hooks, dirs, scope, log) {
   mkdirSync(dirs.claudeDir, { recursive: true })
   mkdirSync(dirs.hooksDir, { recursive: true })
@@ -193,8 +218,8 @@ async function interactiveInstall(slugs, args) {
     spin.stop(pc.red(`Fetch failed: ${e.message}`), 1)
     process.exit(1)
   }
-  const { hooks } = data
-  const notFound = slugs.filter(slug => !hooks.find(h => h.slug === slug))
+  const notFound = slugs.filter(slug => !data.hooks.find(h => h.slug === slug))
+  const hooks = applyStackFilter(data.hooks, slugs.length === 0, args, m => p.log.info(m))
   spin.stop(`Selected ${pc.bold(String(hooks.length))} hook${hooks.length === 1 ? '' : 's'}`)
   if (notFound.length) p.log.warn(`Unknown slugs skipped: ${notFound.join(', ')}`)
   if (hooks.length === 0) { p.cancel('No hooks to install.'); process.exit(1) }
@@ -308,8 +333,8 @@ async function directInstall(slugs, args) {
     console.error(`\n✗ Failed: ${e.message}`)
     process.exit(1)
   }
-  const { hooks } = data
-  const notFound = slugs.filter(slug => !hooks.find(h => h.slug === slug))
+  const notFound = slugs.filter(slug => !data.hooks.find(h => h.slug === slug))
+  const hooks = applyStackFilter(data.hooks, isDefault, args, m => console.log(`  ${m}`))
   if (notFound.length) console.warn(`  ! Unknown slugs (skipped): ${notFound.join(', ')}`)
   if (hooks.length === 0) {
     console.error('\n✗ No hooks to install.')
@@ -677,10 +702,14 @@ const HELP = `
   hookstack — Claude Code hook installer
 
   Usage:
-    npx hookstack-cli@latest install              # install the default HookStack
-    npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...  # custom selection
+    npx hookstack-cli@latest install              # detects your stack, installs matching defaults
+    npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...  # custom selection (never filtered)
     npx hookstack-cli@latest update                # refresh already-installed hooks
     npx hookstack-cli@latest contribute             # PR your local hook edits upstream
+
+  The default install scans the project for package.json/pyproject.toml/etc.
+  and skips stack-specific hooks (e.g. Biome) that don't apply. Override with
+  --stacks or --no-detect.
 
   Options:
     --hooks <slugs>   Comma-separated list of hook slugs (omit for default set,
@@ -692,6 +721,8 @@ const HELP = `
     --scope <s>       "project" (default), "global", "copilot",
                       "codex-project", or "codex-profile"
     --with-tests      Also install vitest unit tests into tests/hooks/ (install, project scope only)
+    --stacks <list>   Override stack detection (e.g. --stacks=typescript,python)
+    --no-detect       Skip stack detection, install the full default set
     --yes, -y         Skip prompts (non-interactive)
     --version, -v     Show version
     --help, -h        Show this help

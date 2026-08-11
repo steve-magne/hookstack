@@ -14,6 +14,8 @@ npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-bloc
 
 That's it. The CLI fetches the hooks, shows you what will be installed, and patches your `.claude/settings.json`.
 
+Running `install` with no `--hooks` installs the default HookStack — and detects your project's stack (looks for `package.json`/`pyproject.toml`/etc.) to skip default hooks that don't apply, e.g. no Biome hook in a pure Python project. An explicit `--hooks=` list is always installed as-is, never filtered. Override with `--stacks=typescript,python` or `--no-detect`.
+
 ---
 
 ## Usage
@@ -33,6 +35,8 @@ Options:
   --scope <s>        "project" (default), "global", "copilot",
                      "codex-project", or "codex-profile"
   --with-tests       Also install vitest unit tests into tests/hooks/ (install, project scope only)
+  --stacks <list>    Override stack detection (e.g. --stacks=typescript,python)
+  --no-detect        Skip stack detection, install the full default set
   --yes, -y          Skip prompts (non-interactive / CI)
   --version, -v      Print version
   --help, -h         Show help

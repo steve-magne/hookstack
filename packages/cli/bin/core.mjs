@@ -50,6 +50,8 @@ export function parseArgs(argv) {
 		scope: "project",
 		yes: false,
 		withTests: false,
+		stacks: [],
+		noDetect: false,
 	};
 
 	for (let i = 0; i < args.length; i++) {
@@ -68,6 +70,14 @@ export function parseArgs(argv) {
 		}
 		if (arg === "--with-tests") {
 			result.withTests = true;
+			continue;
+		}
+		if (arg === "--no-detect") {
+			result.noDetect = true;
+			continue;
+		}
+		if (arg.startsWith("--stacks=")) {
+			result.stacks = splitList(arg.slice("--stacks=".length));
 			continue;
 		}
 		if (arg === "--global" || arg === "-g") {
@@ -147,6 +157,37 @@ export function assertSafeTarget(destDir, target) {
 	if (rel.startsWith("..") || isAbsolute(rel)) {
 		throw new Error(`Unsafe path "${target}": resolves outside ${destDir}.`);
 	}
+}
+
+// ── stack detection ─────────────────────────────────────────────────────────
+// Manifest-based signals only (not file extensions — a stray .py script in a
+// TypeScript repo shouldn't flip the detection). One matching manifest is
+// enough; keep in sync with the registry's `stack` enum (registry.schema.json).
+const STACK_MANIFESTS = {
+	typescript: ["package.json", "tsconfig.json", "pnpm-workspace.yaml"],
+	python: [
+		"pyproject.toml",
+		"requirements.txt",
+		"setup.py",
+		"Pipfile",
+		"uv.lock",
+	],
+};
+
+export function detectStacks(cwd, { existsSync }) {
+	return Object.entries(STACK_MANIFESTS)
+		.filter(([, manifests]) => manifests.some((m) => existsSync(join(cwd, m))))
+		.map(([stack]) => stack);
+}
+
+// Universal hooks (no `stack`) always pass; stack-specific hooks only survive
+// when their stack overlaps with `stacks`. Empty/missing `stacks` is a no-op —
+// same rule as the site's catalogue filter (src/lib/hooks.ts).
+export function filterHooksByStack(hooks, stacks) {
+	if (!stacks || stacks.length === 0) return hooks;
+	return hooks.filter(
+		(h) => !h.stack?.length || h.stack.some((s) => stacks.includes(s)),
+	);
 }
 
 // Merges incoming settings.json hook fragments into existing ones, grouping by

@@ -33,6 +33,9 @@ describe("agents-md-loader", () => {
 	});
 
 	it("retourne null si projectDir absent", () => {
-		expect(run({}, { projectDir: undefined })).toBeNull();
+		// projectDir: null (pas undefined) — undefined déclencherait le défaut
+		// process.env.CLAUDE_PROJECT_DIR, réellement défini dans un hook Claude Code
+		// (voir run-tests.mjs qui propage process.env au subprocess de test).
+		expect(run({}, { projectDir: null })).toBeNull();
 	});
 });
