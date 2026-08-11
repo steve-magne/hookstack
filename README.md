@@ -115,7 +115,7 @@ copilot plugin install hookstack
 
 ## The HookStack evolution
 
-**102 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+**105 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">
