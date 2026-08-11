@@ -161,6 +161,38 @@ export const T = {
 		TeammateIdle: "Fires when a teammate goes idle.",
 		Setup: "Fires during initial setup.",
 	} as Record<string, string | undefined>,
+	// Category-mode sections (same two-column layout as event mode) — left column copy.
+	eventTypesLabel: "event types",
+	categoryGenericBlurb:
+		"Hooks grouped around one class of problem in the agent's workflow.",
+	categoryBlurb: {
+		security:
+			"Guardrails that block dangerous actions before they run — pushes to main, leaked secrets, destructive commands.",
+		context:
+			"Inject project conventions, git state, and environment into every session, so the agent codes like a teammate from the first turn.",
+		validation:
+			"Quality gates that typecheck, lint, and test on every change — nothing ships broken, nothing ships untested.",
+		notification:
+			"Alerts, chimes, and messages that keep you in the loop the moment work happens — without watching the terminal.",
+		workflow:
+			"Automation that reroutes, bootstraps, and tidies the workspace — isolated worktrees, deps installed, env reloaded.",
+		documentation:
+			"Docs that stay current — changelogs, READMEs, and knowledge refreshed automatically as the code evolves.",
+	} as Record<string, string | undefined>,
+	// Date-mode sections ("Recently added") — left column copy.
+	dateGenericSub: "Recent addition to the catalogue.",
+	dateWindowSub: {
+		week: "Added in the last 7 days",
+		month: "Added in the last 31 days",
+		earlier: "Added over a month ago",
+	} as Record<string, string | undefined>,
+	dateGenericBlurb: "Hooks added to the catalogue in this time window.",
+	dateBlurb: {
+		week: "The newest hooks in the catalogue — fresh additions, ready to try.",
+		month:
+			"Hooks added within the last month — recent, with early issues already ironed out.",
+		earlier: "The catalogue's veterans — established hooks, proven over time.",
+	} as Record<string, string | undefined>,
 	searchPlaceholder: "Search hooks by name or benefit…",
 	searchClear: "Clear search",
 	viewFullPage: "View full page",

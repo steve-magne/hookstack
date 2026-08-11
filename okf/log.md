@@ -3,6 +3,9 @@
 Historique des changements du bundle OKF. Date la plus récente en haut.
 Toute session qui enrichit le bundle ajoute une entrée ici (voir [self-improvement](meta/self-improvement.md)).
 
+## 2026-08-11
+* **Update**: [product/features-catalog](product/features-catalog.md) — les trois modes de groupage du catalogue (**Event**, **Category**, **Recently added**) partagent désormais le même visuel en sections façon Vercel (`EventSections`) : colonne gauche sticky (sous-ligne, blurb, valeurs dominantes, filet de progression) + tuiles à droite. Le mode `Date` décrit sa fenêtre de récence dans la colonne gauche. La liste classique (`CatalogueExplorer-grouped-list`) a été supprimée (dead code).
+
 ## 2026-08-05
 * **Creation**: [Badge de coverage du README](implementation/coverage-badge.md) — `scripts/coverage-badge.mjs` génère un badge SVG 4 métriques depuis `coverage-summary.json` et l'insère dans le README (bloc `COVERAGE_BADGE`), vérifié par la CI via `--check`.
 * **Creation**: [Gate CI — couverture lignes ≥ 80 % par hook individuel](implementation/per-hook-coverage-gate.md) — `scripts/check-hook-coverage.mjs` bloque tout hook sous 80 % de couverture lignes (en plus du seuil agrégé vitest), avec liste d'exceptions auto-périmable pour 16 hooks hérités.
