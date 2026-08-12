@@ -190,6 +190,211 @@ export function filterHooksByStack(hooks, stacks) {
 	);
 }
 
+// ── contextual signal detection ───────────────────────────────────────────────
+// Complementary to stack detection: stacks (typescript/python) decide which
+// default hooks apply; signals (i18n, OKF, Next.js…) decide which non-default
+// hooks to ADD for the systems the project actually uses. Signals are cheap
+// filesystem probes run against the current project; each maps to catalogue
+// hooks that only make sense when that system is present. `--no-detect` opts
+// out of both layers.
+
+// package.json dependency names that indicate an i18n/translation system.
+const I18N_PACKAGE_NAMES = new Set([
+	"i18next",
+	"react-i18next",
+	"next-intl",
+	"vue-i18n",
+	"react-intl",
+	"@formatjs/intl",
+	"@lingui/core",
+	"@lingui/react",
+	"@lingui/macro",
+	"typesafe-i18n",
+	"i18n-js",
+	"rosetta",
+	"ttag",
+	"fbt",
+]);
+
+// package.json dependency names that indicate a front-end codebase.
+const FRONTEND_PACKAGE_NAMES = new Set([
+	"react",
+	"react-dom",
+	"vue",
+	"svelte",
+	"astro",
+	"preact",
+	"solid-js",
+	"@angular/core",
+	"@angular/platform-browser",
+]);
+
+// Directories never walked during signal detection (heavy or vendored).
+const DETECT_SKIP_DIRS = new Set([
+	"node_modules",
+	".git",
+	".next",
+	".nuxt",
+	".sveltekit",
+	".turbo",
+	"dist",
+	"build",
+	"out",
+	".cache",
+	"coverage",
+	".venv",
+	"venv",
+	".claude",
+	".codex",
+	".idea",
+	".vscode",
+	"vendor",
+	"Pods",
+	"target",
+]);
+
+const I18N_DIR_RE = /^(?:locales?|messages?|i18n)$/i;
+const OKF_DIR_RE = /^\.?okf$/i;
+const NEXT_CONFIG_RE = /^next\.config\.(?:[cm]?js|ts)$/;
+
+// Human-readable label shown to the user when a signal is detected.
+export const SIGNAL_LABELS = {
+	i18n: "an i18n/translation system",
+	okf: "an OKF knowledge bundle",
+	nextjs: "a Next.js app",
+	frontend: "a front-end codebase",
+	github: "a GitHub-hosted repo",
+};
+
+// Signal → catalogue slugs. A hook can unlock several signals; keep the table
+// flat and one-directional so adding a new signal is a two-line change.
+export const AUTO_DETECT = {
+	i18n: ["stop-i18n-validation"],
+	okf: [
+		"okf-validate-on-change",
+		"session-start-okf-staleness",
+		"stop-okf-staleness-check",
+	],
+	nextjs: ["post-write-nextjs-quality"],
+	frontend: ["post-edit-visual-check"],
+	github: ["session-start-github-context"],
+};
+
+// Reads the union of all dependency flavors from package.json (or empty).
+function readPackageDeps(root, { readFileSync }) {
+	try {
+		const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+		return new Set([
+			...Object.keys(pkg.dependencies ?? {}),
+			...Object.keys(pkg.devDependencies ?? {}),
+			...Object.keys(pkg.peerDependencies ?? {}),
+			...Object.keys(pkg.optionalDependencies ?? {}),
+		]);
+	} catch {
+		return new Set();
+	}
+}
+
+const hasAnyDep = (deps, names) => [...deps].some((name) => names.has(name));
+
+// Depth-limited walk looking for an i18n directory (locales/locale/messages/
+// message/i18n), short-circuiting on the first match. Skips heavy/vendored dirs.
+function hasI18nDir(dir, depth, readdirSync) {
+	if (depth > 5) return false;
+	let entries;
+	try {
+		entries = readdirSync(dir, { withFileTypes: true });
+	} catch {
+		return false;
+	}
+	for (const ent of entries) {
+		if (!ent.isDirectory() || DETECT_SKIP_DIRS.has(ent.name)) continue;
+		if (I18N_DIR_RE.test(ent.name)) return true;
+		if (hasI18nDir(join(dir, ent.name), depth + 1, readdirSync)) return true;
+	}
+	return false;
+}
+
+// True when the project root holds an OKF bundle dir (okf, OKF, .okf, .OKF…).
+function hasOkfDir(root, readdirSync) {
+	try {
+		return readdirSync(root, { withFileTypes: true }).some(
+			(ent) => ent.isDirectory() && OKF_DIR_RE.test(ent.name),
+		);
+	} catch {
+		return false;
+	}
+}
+
+// True when the root holds a next.config.{js,mjs,cjs,ts} file.
+function hasNextConfig(root, readdirSync) {
+	try {
+		return readdirSync(root, { withFileTypes: true }).some(
+			(ent) => ent.isFile() && NEXT_CONFIG_RE.test(ent.name),
+		);
+	} catch {
+		return false;
+	}
+}
+
+// True when the project is hosted on GitHub: a .github/ dir, or a git remote
+// pointing at github.com (plain .git/config or worktree gitdir file).
+function hasGithubSignal(root, { readdirSync, readFileSync }) {
+	try {
+		const entries = readdirSync(root, { withFileTypes: true });
+		if (entries.some((e) => e.isDirectory() && e.name === ".github"))
+			return true;
+		const git = entries.find((e) => e.name === ".git");
+		if (!git) return false;
+		const gitPath = join(root, ".git");
+		let config;
+		if (git.isDirectory()) {
+			config = readFileSync(join(gitPath, "config"), "utf8");
+		} else {
+			// Worktree: .git is a file containing "gitdir: <path>"
+			const gitdir = readFileSync(gitPath, "utf8")
+				.trim()
+				.replace(/^gitdir:\s*/, "");
+			config = readFileSync(join(root, gitdir, "config"), "utf8");
+		}
+		return /github\.com/.test(config);
+	} catch {
+		return false;
+	}
+}
+
+// Detects which contextual systems the current project has, so `install` can
+// suggest the hooks that only make sense there. Pure: all filesystem access
+// goes through the injected deps (mirrors findInstalledSlugs' DI contract).
+export function detectProjectSignals(root, { readdirSync, readFileSync }) {
+	const signals = new Set();
+	const deps = readPackageDeps(root, { readFileSync });
+	if (hasI18nDir(root, 0, readdirSync) || hasAnyDep(deps, I18N_PACKAGE_NAMES)) {
+		signals.add("i18n");
+	}
+	if (hasOkfDir(root, readdirSync)) signals.add("okf");
+	if (deps.has("next") || hasNextConfig(root, readdirSync))
+		signals.add("nextjs");
+	if (hasAnyDep(deps, FRONTEND_PACKAGE_NAMES)) signals.add("frontend");
+	if (hasGithubSignal(root, { readdirSync, readFileSync }))
+		signals.add("github");
+	return [...signals].sort();
+}
+
+// Maps detected signals to catalogue slugs, minus the ones the user already
+// selected or has installed. Slugs that don't exist in the catalogue are simply
+// dropped by the API fetch — no need to hard-fail here.
+export function suggestHooksForSignals(signals, selectedSlugs = []) {
+	const slugs = [];
+	for (const signal of signals) {
+		for (const slug of AUTO_DETECT[signal] ?? []) {
+			if (selectedSlugs.includes(slug) || slugs.includes(slug)) continue;
+			slugs.push(slug);
+		}
+	}
+	return slugs;
+}
+
 // Merges incoming settings.json hook fragments into existing ones, grouping by
 // event then by matcher (no overwrite, no duplicate commands). Same contract as
 // src/lib/mergeConfig. Running install twice yields the same result as once.

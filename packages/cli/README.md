@@ -14,7 +14,12 @@ npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-bloc
 
 That's it. The CLI fetches the hooks, shows you what will be installed, and patches your `.claude/settings.json`.
 
-Running `install` with no `--hooks` installs the default HookStack — and detects your project's stack (looks for `package.json`/`pyproject.toml`/etc.) to skip default hooks that don't apply, e.g. no Biome hook in a pure Python project. An explicit `--hooks=` list is always installed as-is, never filtered. Override with `--stacks=typescript,python` or `--no-detect`.
+Running `install` with no `--hooks` installs the default HookStack — and **detects your project's setup** to pick the right hooks:
+
+- **Stack detection** (language): looks for `package.json`/`pyproject.toml`/etc. and skips default hooks that don't apply — e.g. no Biome hook in a pure Python project. Override with `--stacks=typescript,python`.
+- **Contextual detection** (systems): spots an i18n setup, an `okf/` knowledge bundle, a Next.js app, a front-end codebase, or a GitHub-hosted repo, and suggests (interactive) or auto-adds (`--yes`) the matching non-default hooks — see [Smart toolstack detection](#smart-toolstack-detection).
+
+An explicit `--hooks=` list is always installed as-is, never filtered. `--no-detect` opts out of both detection layers.
 
 ---
 
@@ -36,7 +41,7 @@ Options:
                      "codex-project", or "codex-profile"
   --with-tests       Also install vitest unit tests into tests/hooks/ (install, project scope only)
   --stacks <list>    Override stack detection (e.g. --stacks=typescript,python)
-  --no-detect        Skip stack detection, install the full default set
+  --no-detect        Skip all detection (stack + contextual systems), install the full default set
   --yes, -y          Skip prompts (non-interactive / CI)
   --version, -v      Print version
   --help, -h         Show help
@@ -80,6 +85,25 @@ npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guar
 # CI bootstrap for OpenAI Codex (committed ./.codex/hooks.json)
 npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guard-git-push-main --yes --scope=codex-project
 ```
+
+### Smart toolstack detection
+
+On the **default install** (`no --hooks`), besides the language-stack filter above, the CLI probes your project for the non-language systems you actually use and suggests hooks that only make sense when that system is present:
+
+| Signal | Detected when | Hooks added |
+|---|---|---|
+| `i18n` | a `locales/` / `locale/` / `messages/` / `i18n/` directory exists anywhere in the tree, or an i18n package (`next-intl`, `react-i18next`, `i18next`, `react-intl`…) is in `package.json` | `stop-i18n-validation` — keeps translation files consistent on every session stop |
+| `okf` | a top-level `okf/` (or `.okf/`, any case) knowledge bundle exists | `okf-validate-on-change` · `session-start-okf-staleness` · `stop-okf-staleness-check` — validate and keep the OKF bundle fresh |
+| `nextjs` | `next` in `package.json`, or a `next.config.{js,mjs,cjs,ts}` at the root | `post-write-nextjs-quality` — catches missing `'use client'`, Pages Router patterns, and missing `next/image`/`next/link` |
+| `frontend` | a front-end framework in `package.json` (`react`, `vue`, `svelte`, `astro`, `preact`, `solid-js`, `@angular/core`…) | `post-edit-visual-check` — reminds the agent to verify UI changes actually render |
+| `github` | a `.github/` directory, or a git remote pointing at `github.com` | `session-start-github-context` — loads open PRs and branch check status at session start |
+
+- **Interactive** installs ask before adding them (a multi-select, pre-checked — uncheck to skip)
+- **`--yes`** installs auto-add them and report what was detected (e.g. `⚡ Detected an i18n/translation system + an OKF knowledge bundle — auto-added: …`)
+- Detection is **best-effort**: a probe or fetch failure never aborts the install
+- Already-installed hooks are never re-suggested (fingerprint-based)
+- Global/profile scopes (`global`, `codex-profile`) skip detection by design — they target any project, so there's nothing to detect against
+- Skip it entirely with `--no-detect` (same flag as the stack filter)
 
 ---
 

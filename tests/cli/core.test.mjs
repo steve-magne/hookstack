@@ -9,6 +9,7 @@ import {
 	buildSecurityRows,
 	buildSummaryRows,
 	collectIncomingHooks,
+	detectProjectSignals,
 	detectScriptChanges,
 	detectStacks,
 	detectTestChanges,
@@ -29,6 +30,7 @@ import {
 	scanInstalledHooks,
 	shortRepo,
 	snykVerdict,
+	suggestHooksForSignals,
 } from "../../packages/cli/bin/core.mjs";
 
 const argv = (...a) => ["node", "cli.mjs", ...a];
@@ -148,6 +150,251 @@ describe("filterHooksByStack", () => {
 	});
 	it("plusieurs stacks détectés → union", () => {
 		expect(filterHooksByStack(hooks, ["typescript", "python"])).toEqual(hooks);
+	});
+});
+
+describe("detectProjectSignals", () => {
+	const ROOT = "/proj";
+	const noPkg = () => {
+		throw new Error("ENOENT");
+	};
+	// Fake readdirSync: path → [{ name, dir }] entries, matching the
+	// `{ withFileTypes: true }` contract used by detectProjectSignals.
+	const fakeReaddir = (entriesByPath) => (p) => entriesByPath[p] ?? [];
+	const dir = (name) => ({
+		name,
+		isDirectory: () => true,
+		isFile: () => false,
+	});
+	const file = (name) => ({
+		name,
+		isDirectory: () => false,
+		isFile: () => true,
+	});
+
+	it("aucun signal sur un projet sans i18n ni okf", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("README.md")] });
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual([]);
+	});
+
+	it("détecte i18n via un dossier locales à la racine", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [dir("locales")] });
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual(["i18n"]);
+	});
+
+	it("détecte i18n via src/locales imbriqué (profondeur limitée)", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [dir("src")],
+			"/proj/src": [dir("locales")],
+		});
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual(["i18n"]);
+	});
+
+	it("détecte i18n via un package i18n dans package.json", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("package.json")] });
+		const readFileSync = () =>
+			JSON.stringify({ dependencies: { "next-intl": "^3.0.0" } });
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"i18n",
+		]);
+	});
+
+	it("ne confond pas un projet avec des packages non-i18n", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("package.json")] });
+		const readFileSync = () =>
+			JSON.stringify({
+				devDependencies: { lodash: "^4.0.0", typescript: "^5.0.0" },
+			});
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual(
+			[],
+		);
+	});
+
+	it("détecte okf, OKF et .okf (insensible à la casse)", () => {
+		for (const name of ["okf", "OKF", ".okf"]) {
+			const readdirSync = fakeReaddir({ [ROOT]: [dir(name)] });
+			expect(
+				detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+			).toEqual(["okf"]);
+		}
+	});
+
+	it("détecte i18n + okf ensemble", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [dir("okf"), dir("src")],
+			"/proj/src": [dir("messages")],
+		});
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual(["i18n", "okf"]);
+	});
+
+	it("ne descend pas dans node_modules pour chercher i18n", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [dir("node_modules")],
+			"/proj/node_modules": [dir("locales")],
+		});
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual([]);
+	});
+
+	it("résiste à un dossier illisible", () => {
+		const readdirSync = (p) => {
+			if (p === ROOT) return [dir("src")];
+			throw new Error("EACCES");
+		};
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual([]);
+	});
+
+	it("détecte nextjs via la dépendance next", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("package.json")] });
+		const readFileSync = () =>
+			JSON.stringify({ dependencies: { next: "^15.0.0" } });
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"nextjs",
+		]);
+	});
+
+	it("détecte nextjs via next.config.mjs (sans dépendance)", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("next.config.mjs")] });
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual(["nextjs"]);
+	});
+
+	it("détecte frontend via une dépendance react", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("package.json")] });
+		const readFileSync = () =>
+			JSON.stringify({
+				dependencies: { react: "^18.3.1", "react-dom": "^18.3.1" },
+			});
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"frontend",
+		]);
+	});
+
+	it("détecte github via un dossier .github", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [dir(".github")] });
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual(["github"]);
+	});
+
+	it("détecte github via une remote git github.com", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [dir(".git")] });
+		const readFileSync = (p) => {
+			if (p === "/proj/.git/config")
+				return '[remote "origin"]\n\turl = git@github.com:acme/repo.git';
+			throw new Error("ENOENT");
+		};
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"github",
+		]);
+	});
+
+	it("détecte github via un worktree (fichier gitdir)", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file(".git")] });
+		const readFileSync = (p) => {
+			if (p === "/proj/.git") return "gitdir: ../real-gitdir";
+			// path.join normalizes the relative gitdir against the repo root.
+			if (p === "/real-gitdir/config")
+				return '[remote "origin"]\n\turl = https://github.com/acme/repo.git';
+			throw new Error("ENOENT");
+		};
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"github",
+		]);
+	});
+
+	it("ne détecte pas github sur une remote non-GitHub", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [dir(".git")] });
+		const readFileSync = (p) => {
+			if (p === "/proj/.git/config")
+				return '[remote "origin"]\n\turl = git@gitlab.com:acme/repo.git';
+			throw new Error("ENOENT");
+		};
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual(
+			[],
+		);
+	});
+
+	it("cumule i18n + nextjs + frontend + github + okf sur un projet complet", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [dir("okf"), dir("src"), dir(".github"), file("package.json")],
+			"/proj/src": [dir("locales")],
+		});
+		const readFileSync = () =>
+			JSON.stringify({
+				dependencies: { next: "^15.0.0", react: "^18.3.1" },
+			});
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"frontend",
+			"github",
+			"i18n",
+			"nextjs",
+			"okf",
+		]);
+	});
+});
+
+describe("suggestHooksForSignals", () => {
+	it("mappe i18n → stop-i18n-validation", () => {
+		expect(suggestHooksForSignals(["i18n"])).toEqual(["stop-i18n-validation"]);
+	});
+
+	it("mappe okf → les trois hooks OKF", () => {
+		expect(suggestHooksForSignals(["okf"])).toEqual([
+			"okf-validate-on-change",
+			"session-start-okf-staleness",
+			"stop-okf-staleness-check",
+		]);
+	});
+
+	it("exclut les slugs déjà sélectionnés", () => {
+		expect(suggestHooksForSignals(["okf"], ["okf-validate-on-change"])).toEqual(
+			["session-start-okf-staleness", "stop-okf-staleness-check"],
+		);
+	});
+
+	it("ignore les signaux inconnus", () => {
+		expect(suggestHooksForSignals(["cobol"], ["x"])).toEqual([]);
+	});
+
+	it("ne duplique pas un slug déjà suggéré", () => {
+		expect(suggestHooksForSignals(["i18n", "i18n"])).toEqual([
+			"stop-i18n-validation",
+		]);
+	});
+
+	it("mappe nextjs → post-write-nextjs-quality", () => {
+		expect(suggestHooksForSignals(["nextjs"])).toEqual([
+			"post-write-nextjs-quality",
+		]);
+	});
+
+	it("mappe frontend → post-edit-visual-check", () => {
+		expect(suggestHooksForSignals(["frontend"])).toEqual([
+			"post-edit-visual-check",
+		]);
+	});
+
+	it("mappe github → session-start-github-context", () => {
+		expect(suggestHooksForSignals(["github"])).toEqual([
+			"session-start-github-context",
+		]);
+	});
+
+	it("sans signaux → aucun slug", () => {
+		expect(suggestHooksForSignals([])).toEqual([]);
 	});
 });
 
