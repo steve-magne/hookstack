@@ -1,5 +1,6 @@
 overrides:
-  postcss: '>=8.5.10'
+  postcss: '>=8.5.23'
+  vite: '>=8.0.16'
 
 allowBuilds:
   sharp: true
