@@ -234,7 +234,6 @@ export const T = {
 	mustBannerSubtitle: "essential hooks · already selected",
 	mustInstallBtn: "View configuration",
 	mustPreselected: "Essential",
-	pluginInstallHint: "Run once in your project root:",
 	previewClickToAdd: "Click the row to add it",
 	previewMustHint: "Recommended — already selected",
 	navGuides: "Guides",
