@@ -29,6 +29,9 @@ import {
   resolveTestDest,
   detectStacks,
   filterHooksByStack,
+  detectProjectSignals,
+  suggestHooksForSignals,
+  SIGNAL_LABELS,
 } from './core.mjs'
 
 const API_BASE = process.env.HOOKSTACK_API_BASE || 'https://hookstack.vercel.app'
@@ -149,6 +152,29 @@ function applyStackFilter(hooks, isDefault, args, log) {
   return filtered
 }
 
+// Contextual detection — the counterpart of the stack filter: instead of
+// filtering the default set down by language, it ADDS non-default hooks for the
+// non-language systems the project uses (i18n, OKF, Next.js, front-end,
+// GitHub). Same scope as the stack filter: only the default install gets smart
+// additions — an explicit --hooks= list is installed exactly as asked, and
+// --no-detect opts out of both layers. Best-effort: a probe or fetch failure
+// never aborts the install.
+async function detectContextualHooks({ isDefault, args, scope, dirs, hooks }) {
+  if (!isDefault || args.noDetect || isGlobalScope(scope)) return { signals: [], extra: [] }
+  const signals = detectProjectSignals(process.cwd(), { readdirSync, readFileSync })
+  if (signals.length === 0) return { signals, extra: [] }
+  const installed = findInstalledSlugs(dirs.hooksDir, { readdirSync, readFileSync })
+  const suggested = suggestHooksForSignals(signals, [...hooks.map(h => h.slug), ...installed])
+  if (suggested.length === 0) return { signals, extra: [] }
+  let extra = []
+  try {
+    extra = (await fetchHooks(suggested)).hooks
+  } catch {
+    // Best-effort — skip the suggestions silently.
+  }
+  return { signals, extra }
+}
+
 function doInstall(hooks, dirs, scope, log) {
   mkdirSync(dirs.claudeDir, { recursive: true })
   mkdirSync(dirs.hooksDir, { recursive: true })
@@ -219,7 +245,7 @@ async function interactiveInstall(slugs, args) {
     process.exit(1)
   }
   const notFound = slugs.filter(slug => !data.hooks.find(h => h.slug === slug))
-  const hooks = applyStackFilter(data.hooks, slugs.length === 0, args, m => p.log.info(m))
+  let hooks = applyStackFilter(data.hooks, slugs.length === 0, args, m => p.log.info(m))
   spin.stop(`Selected ${pc.bold(String(hooks.length))} hook${hooks.length === 1 ? '' : 's'}`)
   if (notFound.length) p.log.warn(`Unknown slugs skipped: ${notFound.join(', ')}`)
   if (hooks.length === 0) { p.cancel('No hooks to install.'); process.exit(1) }
@@ -261,6 +287,22 @@ async function interactiveInstall(slugs, args) {
   scope = scopeResult
 
   const dirs = resolveScopeRoot(scope, { cwd: process.cwd(), home: homedir() })
+
+  // Contextual detection (default install only, like the stack filter):
+  // suggest hooks matching the project's non-language systems.
+  const { signals, extra } = await detectContextualHooks({ isDefault: slugs.length === 0, args, scope, dirs, hooks })
+  if (extra.length > 0) {
+    const picked = await p.multiselect({
+      message: `Detected ${pc.cyan(signals.map(s => SIGNAL_LABELS[s] ?? s).join(' + '))} — add the matching hook${extra.length === 1 ? '' : 's'}?`,
+      options: extra.map(h => ({ value: h.slug, label: h.name ?? h.slug, hint: h.benefit })),
+      initialValues: extra.map(h => h.slug),
+      required: false,
+    })
+    if (!p.isCancel(picked) && picked.length > 0) {
+      hooks.push(...extra.filter(h => picked.includes(h.slug)))
+    }
+  }
+
   const secRows = buildSecurityRows(hooks)
 
   // Panel
@@ -334,13 +376,22 @@ async function directInstall(slugs, args) {
     process.exit(1)
   }
   const notFound = slugs.filter(slug => !data.hooks.find(h => h.slug === slug))
-  const hooks = applyStackFilter(data.hooks, isDefault, args, m => console.log(`  ${m}`))
+  let hooks = applyStackFilter(data.hooks, isDefault, args, m => console.log(`  ${m}`))
   if (notFound.length) console.warn(`  ! Unknown slugs (skipped): ${notFound.join(', ')}`)
   if (hooks.length === 0) {
     console.error('\n✗ No hooks to install.')
     process.exit(1)
   }
   const dirs = resolveScopeRoot(args.scope, { cwd: process.cwd(), home: homedir() })
+
+  // Contextual detection (default install only, like the stack filter):
+  // auto-add hooks matching the project's non-language systems.
+  const { signals, extra } = await detectContextualHooks({ isDefault, args, scope: args.scope, dirs, hooks })
+  if (extra.length > 0) {
+    hooks.push(...extra)
+    console.log(`  ⚡ Detected ${signals.map(s => SIGNAL_LABELS[s] ?? s).join(' + ')} — auto-added: ${extra.map(h => h.slug).join(', ')}`)
+  }
+
   const log = { warn: m => console.warn(`  ! ${m}`) }
   const result = doInstall(hooks, dirs, args.scope, log)
   console.log(`  ✓ ${dirs.settingsPath}`)
@@ -702,14 +753,15 @@ const HELP = `
   hookstack — Claude Code hook installer
 
   Usage:
-    npx hookstack-cli@latest install              # detects your stack, installs matching defaults
+    npx hookstack-cli@latest install              # detects stack + contextual systems, installs matching defaults
     npx hookstack-cli@latest install --hooks=<slug1>,<slug2>,...  # custom selection (never filtered)
     npx hookstack-cli@latest update                # refresh already-installed hooks
     npx hookstack-cli@latest contribute             # PR your local hook edits upstream
 
-  The default install scans the project for package.json/pyproject.toml/etc.
-  and skips stack-specific hooks (e.g. Biome) that don't apply. Override with
-  --stacks or --no-detect.
+  The default install scans the project: it skips stack-specific hooks that
+  don't apply (no Biome in a pure Python project — package.json/pyproject.toml
+  based) and adds non-default hooks for the systems it detects (i18n, OKF,
+  Next.js, front-end, GitHub). Override with --stacks or --no-detect.
 
   Options:
     --hooks <slugs>   Comma-separated list of hook slugs (omit for default set,
@@ -722,7 +774,7 @@ const HELP = `
                       "codex-project", or "codex-profile"
     --with-tests      Also install vitest unit tests into tests/hooks/ (install, project scope only)
     --stacks <list>   Override stack detection (e.g. --stacks=typescript,python)
-    --no-detect       Skip stack detection, install the full default set
+    --no-detect       Skip all detection (stack + contextual systems), install the full default set
     --yes, -y         Skip prompts (non-interactive)
     --version, -v     Show version
     --help, -h        Show this help

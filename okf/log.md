@@ -3,6 +3,10 @@
 Historique des changements du bundle OKF. Date la plus récente en haut.
 Toute session qui enrichit le bundle ajoute une entrée ici (voir [self-improvement](meta/self-improvement.md)).
 
+## 2026-08-12
+* **Creation**: [implementation/cli-smart-toolstack-detection](implementation/cli-smart-toolstack-detection.md) — le CLI `install` (par défaut) analyse la toolstack du projet (dossiers i18n/okf, package.json, remote git) et suggère/auto-installe les hooks non-`default_on` correspondants (`AUTO_DETECT` + `detectProjectSignals` dans `core.mjs`). Complète le stack filter upstream (#231) ; `--no-detect` commun désactive les deux.
+* **Update**: test interactif PTY du parcours → libellés humains des signaux (`SIGNAL_LABELS`), noms des hooks dans le multiselect, 3 nouveaux signaux (`nextjs`, `frontend`, `github`) couvrant `post-write-nextjs-quality`, `post-edit-visual-check`, `session-start-github-context`.
+
 ## 2026-08-11
 * **Update**: [product/features-catalog](product/features-catalog.md) — les trois modes de groupage du catalogue (**Event**, **Category**, **Recently added**) partagent désormais le même visuel en sections façon Vercel (`EventSections`) : colonne gauche sticky (sous-ligne, blurb, valeurs dominantes, filet de progression) + tuiles à droite. Le mode `Date` décrit sa fenêtre de récence dans la colonne gauche. La liste classique (`CatalogueExplorer-grouped-list`) a été supprimée (dead code).
 
