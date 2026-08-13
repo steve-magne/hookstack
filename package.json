@@ -13,8 +13,9 @@
 		"start": "next start",
 		"lint": "biome lint .",
 		"typecheck": "tsc --noEmit",
-		"test": "vitest run",
-		"validate:registry": "node registry/validate-registry.mjs",
+	"test": "vitest run",
+	"test:python": "python3 -m pytest -q",
+	"validate:registry": "node registry/validate-registry.mjs",
 		"timeline": "node .claude/hooks-timeline.mjs",
 		"prepare": "node scripts/install-git-hooks.mjs"
 	},

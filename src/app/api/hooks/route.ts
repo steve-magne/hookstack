@@ -23,6 +23,9 @@ export async function GET(req: NextRequest) {
 		script_path: h.implementation.script_path ?? null,
 		code_snippet: h.implementation.code_snippet ?? null,
 		test_snippet: h.implementation.test_snippet ?? null,
+		python_script_path: h.implementation.python_script_path ?? null,
+		python_code_snippet: h.implementation.python_code_snippet ?? null,
+		python_test_snippet: h.implementation.python_test_snippet ?? null,
 		security: h.implementation.security ?? null,
 	}));
 

@@ -33,6 +33,8 @@ Options:
   --scope <s>        "project" (default), "global", "copilot",
                      "codex-project", or "codex-profile"
   --with-tests       Also install vitest unit tests into tests/hooks/ (install, project scope only)
+  --stack <s>        "auto" (default) — filter hooks to the detected project toolchain;
+                     "typescript" / "python" force one stack; "all" disables filtering
   --yes, -y          Skip prompts (non-interactive / CI)
   --version, -v      Print version
   --help, -h         Show help
@@ -62,6 +64,36 @@ When run in a terminal the CLI opens an interactive prompt:
 4. Shows a **security panel** (shell access · network · filesystem writes · Snyk score)
 5. Asks for confirmation before writing anything
 
+### Language-aware installs
+
+The CLI detects the project's toolchain before installing and keeps only hooks that match it — so a Python repo never receives hooks that shell out to `npm`/`tsc`/`biome`, and a TypeScript repo never receives hooks that shell out to `uv`/`ruff`/`pytest`:
+
+| Detection | Markers | Default install gets |
+|---|---|---|
+| TypeScript/Node | `package.json`, `tsconfig.json` | universal hooks + TypeScript hooks (`biome`, `tsc`, `pnpm`, Next.js SEO…) |
+| Python | `pyproject.toml`, `requirements.txt`, `setup.py`, `setup.cfg`, `Pipfile`, `uv.lock`, `poetry.lock` | universal hooks + Python hooks (`ruff format`, `ruff check`, `pyright`, `pytest`, `uv` guard) |
+| Both (monorepo) | markers of both | universal + TypeScript + Python |
+| Neither (Rust, Go…) | — | universal hooks only |
+
+Universal hooks (no declared stack) are language-neutral by contract and always install. `stop-quality-check` and `task-completed-test-gate` are themselves language-aware: they run `tsc`/`biome` on TypeScript projects and `ruff`/`pyright`/`pytest` via `uv` on Python projects. Use `--stack` to override the detection:
+
+```bash
+npx hookstack-cli@latest install --stack=typescript   # force the TypeScript set
+npx hookstack-cli@latest install --stack=python       # force the Python set
+npx hookstack-cli@latest install --stack=all          # no filtering (previous behavior)
+```
+
+### Python hooks & Python tests (`.py` + pytest)
+
+On a pure-Python install (detected toolchain, or `--stack=python`), hooks that have a **Python variant** are installed as real `.py` scripts (`python3 $CLAUDE_PROJECT_DIR/.claude/hooks/<slug>.py` in `settings.json`), and `--with-tests` writes **pytest** tests (`tests/hooks/test_<slug>.py`) instead of vitest tests. Vitest tests are **never** installed on Python projects — so the project's CI stays Python-only, with no `npm`/`node` added just to test the hooks.
+
+```bash
+# Python project (pyproject.toml present) — hooks land as .py, tests as pytest
+npx hookstack-cli@latest install --with-tests
+```
+
+Hooks without a Python variant yet fall back to the `.mjs` script (reported in the install summary — python variants are landing progressively). To add a variant for a hook, transcribe the logic to `.claude/hooks/<slug>.py` (stdlib only) + `tests/hooks/test_<slug>.py`, set `implementation.python_script_path`, and run the sync.
+
 ### Non-interactive mode (`--yes` or piped)
 
 Skips all prompts — useful in CI or dotfile bootstrap scripts.
@@ -86,6 +118,7 @@ For each hook the CLI:
 - Writes the `.mjs` script to the scripts directory for the chosen agent (`.claude/hooks/`, `~/.claude/hooks/`, `.codex/hooks/`, or `~/.codex/hooks/`)
 - Patches the agent's config file (`.claude/settings.json` or `.codex/hooks.json`) to register the hook on the right lifecycle event
 - Optionally writes vitest unit tests to `tests/hooks/` when `--with-tests` is passed (or confirmed interactively)
+- Filters the set to the project's detected toolchain (see [Language-aware installs](#language-aware-installs)) unless `--stack=all` is passed — an explicit `--hooks=` list is filtered too, and skipped slugs are reported
 
 The same hook `.mjs` is used regardless of agent — Claude Code and Codex share lifecycle event names, so only the config file format changes. No new dependencies are added to your project. Hooks are plain Node.js scripts — no SDK, no agent modification.
 

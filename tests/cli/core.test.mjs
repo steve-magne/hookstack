@@ -9,9 +9,13 @@ import {
 	buildSecurityRows,
 	buildSummaryRows,
 	collectIncomingHooks,
+	describeToolchain,
 	detectScriptChanges,
+	detectToolstack,
+	doInstallTests,
 	doUpdateTests,
 	extractFingerprint,
+	filterHooksByStack,
 	findInstalledSlugs,
 	isBlockingEvent,
 	isCodexScope,
@@ -22,6 +26,7 @@ import {
 	resolveContributionTarget,
 	resolveScopeRoot,
 	resolveScriptPath,
+	resolveStacks,
 	shortRepo,
 	snykVerdict,
 } from "../../packages/cli/bin/core.mjs";
@@ -84,6 +89,147 @@ describe("parseArgs", () => {
 	});
 	it("premier token libre = commande", () => {
 		expect(parseArgs(argv("install")).command).toBe("install");
+	});
+	it("--stack défaut auto", () => {
+		expect(parseArgs(argv("install")).stack).toBe("auto");
+	});
+	it("parse --stack=python", () => {
+		expect(parseArgs(argv("install", "--stack=python")).stack).toBe("python");
+	});
+	it("parse --stack séparé", () => {
+		expect(parseArgs(argv("install", "--stack", "typescript")).stack).toBe(
+			"typescript",
+		);
+	});
+	it("parse --language=all comme alias de --stack=all", () => {
+		expect(parseArgs(argv("install", "--language=all")).stack).toBe("all");
+	});
+	it("--stack invalide ignoré (reste auto)", () => {
+		expect(parseArgs(argv("install", "--stack=rust")).stack).toBe("auto");
+	});
+});
+
+describe("detectToolstack", () => {
+	const existsFor = (files) => (p) => files.has(p.split("/").pop());
+	it("détecte TypeScript via package.json", () => {
+		expect(
+			detectToolstack("/proj", { exists: existsFor(new Set(["package.json"])) }),
+		).toEqual({ typescript: true, python: false });
+	});
+	it("détecte TypeScript via tsconfig.json", () => {
+		expect(
+			detectToolstack("/proj", { exists: existsFor(new Set(["tsconfig.json"])) }),
+		).toEqual({ typescript: true, python: false });
+	});
+	it("détecte Python via pyproject.toml", () => {
+		expect(
+			detectToolstack("/proj", {
+				exists: existsFor(new Set(["pyproject.toml"])),
+			}),
+		).toEqual({ typescript: false, python: true });
+	});
+	it("détecte Python via requirements.txt / uv.lock / Pipfile", () => {
+		for (const f of ["requirements.txt", "uv.lock", "Pipfile", "setup.py"]) {
+			expect(
+				detectToolstack("/proj", { exists: existsFor(new Set([f])) }).python,
+			).toBe(true);
+		}
+	});
+	it("projet mixte → les deux", () => {
+		expect(
+			detectToolstack("/proj", {
+				exists: existsFor(new Set(["package.json", "pyproject.toml"])),
+			}),
+		).toEqual({ typescript: true, python: true });
+	});
+	it("aucune toolchain reconnue → les deux faux", () => {
+		expect(
+			detectToolstack("/proj", {
+				exists: existsFor(new Set(["go.mod", "Cargo.toml"])),
+			}),
+		).toEqual({ typescript: false, python: false });
+	});
+});
+
+describe("describeToolchain", () => {
+	it("libellé TS", () => {
+		expect(describeToolchain({ typescript: true, python: false })).toBe(
+			"TypeScript/Node",
+		);
+	});
+	it("libellé Python", () => {
+		expect(describeToolchain({ typescript: false, python: true })).toBe(
+			"Python",
+		);
+	});
+	it("libellé mixte", () => {
+		expect(describeToolchain({ typescript: true, python: true })).toBe(
+			"TypeScript/Node + Python",
+		);
+	});
+	it("aucune toolchain", () => {
+		expect(describeToolchain({ typescript: false, python: false })).toBe(
+			"no recognized toolchain",
+		);
+	});
+});
+
+describe("resolveStacks", () => {
+	const detected = { typescript: false, python: true };
+	it("auto → stacks de la détection", () => {
+		expect(resolveStacks("auto", detected)).toEqual(["python"]);
+		expect(resolveStacks("auto", { typescript: true, python: false })).toEqual([
+			"typescript",
+		]);
+		expect(resolveStacks("auto", { typescript: true, python: true })).toEqual([
+			"typescript",
+			"python",
+		]);
+	});
+	it("auto sans toolchain → [] (universel seulement)", () => {
+		expect(resolveStacks("auto", { typescript: false, python: false })).toEqual(
+			[],
+		);
+	});
+	it("all → null (pas de filtre)", () => {
+		expect(resolveStacks("all", detected)).toBeNull();
+	});
+	it("typescript/python forcés", () => {
+		expect(resolveStacks("typescript", detected)).toEqual(["typescript"]);
+		expect(resolveStacks("python", detected)).toEqual(["python"]);
+	});
+});
+
+describe("filterHooksByStack", () => {
+	const hooks = [
+		{ slug: "universal-a" },
+		{ slug: "universal-b", stack: [] },
+		{ slug: "ts-hook", stack: ["typescript"] },
+		{ slug: "py-hook", stack: ["python"] },
+		{ slug: "both-hook", stack: ["typescript", "python"] },
+	];
+	it("projet python → universels + python", () => {
+		const { kept, skipped } = filterHooksByStack(hooks, ["python"]);
+		expect(kept.map((h) => h.slug)).toEqual([
+			"universal-a",
+			"universal-b",
+			"py-hook",
+			"both-hook",
+		]);
+		expect(skipped.map((h) => h.slug)).toEqual(["ts-hook"]);
+	});
+	it("aucune toolchain → uniquement universels", () => {
+		const { kept } = filterHooksByStack(hooks, []);
+		expect(kept.map((h) => h.slug)).toEqual(["universal-a", "universal-b"]);
+	});
+	it("stacks null → aucun filtre", () => {
+		const { kept, skipped } = filterHooksByStack(hooks, null);
+		expect(kept).toHaveLength(5);
+		expect(skipped).toHaveLength(0);
+	});
+	it("projet mixte → tout sauf stack exclusive non matchée", () => {
+		const { kept } = filterHooksByStack(hooks, ["typescript", "python"]);
+		expect(kept).toHaveLength(5);
 	});
 });
 
@@ -324,6 +470,79 @@ describe("collectIncomingHooks", () => {
 	it("ignore les hooks sans fragment config", () => {
 		expect(collectIncomingHooks([{ slug: "x" }], {})).toEqual({});
 	});
+
+	it("python : réécrit node … .mjs en python3 … .py (variante dispo)", () => {
+		const h = [
+			{
+				slug: "s",
+				python_script_path: ".claude/hooks/s.py",
+				python_code_snippet: "#!/usr/bin/env python3\n",
+				config: {
+					hooks: {
+						PreToolUse: [
+							{
+								matcher: "Bash",
+								hooks: [
+									{ command: "node $CLAUDE_PROJECT_DIR/.claude/hooks/s.mjs" },
+								],
+							},
+						],
+					},
+				},
+			},
+		];
+		const out = collectIncomingHooks(h, { scope: "project", python: true });
+		expect(out.PreToolUse[0].hooks[0].command).toBe(
+			"python3 $CLAUDE_PROJECT_DIR/.claude/hooks/s.py",
+		);
+	});
+
+	it("python : garde node … .mjs quand le hook n'a pas de variante python", () => {
+		const h = [
+			{
+				slug: "s",
+				config: {
+					hooks: {
+						Stop: [
+							{
+								hooks: [
+									{ command: "node $CLAUDE_PROJECT_DIR/.claude/hooks/s.mjs" },
+								],
+							},
+						],
+					},
+				},
+			},
+		];
+		const out = collectIncomingHooks(h, { scope: "project", python: true });
+		expect(out.Stop[0].hooks[0].command).toContain("node $CLAUDE_PROJECT_DIR");
+	});
+
+	it("python : la réécriture survit à la relocalisation codex", () => {
+		const h = [
+			{
+				slug: "s",
+				python_script_path: ".claude/hooks/s.py",
+				python_code_snippet: "#!/usr/bin/env python3\n",
+				config: {
+					hooks: {
+						PreToolUse: [
+							{
+								matcher: "Bash",
+								hooks: [
+									{ command: "node $CLAUDE_PROJECT_DIR/.claude/hooks/s.mjs" },
+								],
+							},
+						],
+					},
+				},
+			},
+		];
+		const out = collectIncomingHooks(h, { scope: "codex-project", python: true });
+		expect(out.PreToolUse[0].hooks[0].command).toBe(
+			"python3 .codex/hooks/s.py",
+		);
+	});
 });
 
 describe("analyzeSecurity", () => {
@@ -532,6 +751,17 @@ describe("findInstalledSlugs", () => {
 		});
 		expect(slugs).toEqual([]);
 	});
+	it("reconnaît le fingerprint des variantes python (# @hookstack)", () => {
+		const files = {
+			"a.py": "#!/usr/bin/env python3\n# @hookstack hook-a\n",
+			"b.mjs": "#!/usr/bin/env node\n// @hookstack hook-b\n",
+		};
+		const slugs = findInstalledSlugs("/proj/.claude/hooks", {
+			readdirSync: () => Object.keys(files),
+			readFileSync: (p) => files[p.split("/").pop()],
+		});
+		expect(slugs).toEqual(["hook-a", "hook-b"]);
+	});
 });
 
 describe("detectScriptChanges", () => {
@@ -590,6 +820,69 @@ describe("detectScriptChanges", () => {
 		);
 		expect(changed).toEqual([]);
 		expect(unchanged).toEqual([]);
+	});
+});
+
+describe("detectScriptChanges (python)", () => {
+	it("compare la variante .py quand python est actif", () => {
+		const hooks = [
+			{
+				slug: "a",
+				script_path: ".claude/hooks/a.mjs",
+				code_snippet: "mjs code",
+				python_script_path: ".claude/hooks/a.py",
+				python_code_snippet: "py code",
+			},
+		];
+		const { changed } = detectScriptChanges(hooks, "project", "/proj", {
+			readFileSync: () => "py code",
+			python: true,
+		});
+		expect(changed).toEqual([]);
+	});
+	it("sans python, compare le .mjs", () => {
+		const hooks = [
+			{
+				slug: "a",
+				script_path: ".claude/hooks/a.mjs",
+				code_snippet: "mjs code",
+				python_script_path: ".claude/hooks/a.py",
+				python_code_snippet: "py code",
+			},
+		];
+		const { changed } = detectScriptChanges(hooks, "project", "/proj", {
+			readFileSync: () => "py code",
+		});
+		expect(changed).toEqual(["a"]);
+	});
+});
+
+describe("doInstallTests (python)", () => {
+	it("écrit des tests pytest (test_<slug>.py) pour les variantes python, jamais de vitest", () => {
+		const written = {};
+		const hooks = [
+			{ slug: "py-hook", python_test_snippet: "def test_x(): pass" },
+			{ slug: "no-py-variant", test_snippet: "vitest code" },
+		];
+		const result = doInstallTests(
+			hooks,
+			"/proj",
+			{
+				mkdirSync: () => {},
+				writeFileSync: (p, content) => {
+					written[p] = content;
+				},
+				join: (...parts) => parts.join("/"),
+			},
+			{ python: true },
+		);
+		expect(result.testCount).toBe(1);
+		expect(written["/proj/tests/hooks/test_py-hook.py"]).toBe(
+			"def test_x(): pass",
+		);
+		expect(Object.keys(written).some((p) => p.endsWith(".test.mjs"))).toBe(
+			false,
+		);
 	});
 });
 

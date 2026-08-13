@@ -209,9 +209,11 @@ These are non-negotiable. A PR that violates them will not be merged.
 - **Timeout every `execSync`.** Pass `{ timeout: 10_000 }` (10 s) or less. A hook that hangs blocks the agent.
 - **Filter before running heavy tools.** Check file extensions (`/.tsx?$/.test(filePath)`) before invoking `tsc` or `eslint`.
 
-**Node.js only**
+**Node.js by default — Python variants for Python projects**
 
-Hooks are `.mjs` — even for Python or Java projects. Node.js is the only runtime guaranteed to be present (Claude Code depends on it). A "Python hook" is a `.mjs` that calls Python tools via `execSync`. Always prefer `uv run <tool>` over calling `ruff`/`pytest`/`pyright` directly: it resolves the project venv automatically.
+Hooks are `.mjs` — Node.js is the only runtime guaranteed to be present (Claude Code depends on it). A "Python hook" is a `.mjs` that calls Python tools via `execSync` (`uv run <tool>`, never `ruff`/`pytest`/`pyright` directly: it resolves the project venv automatically).
+
+On top of that, a hook can carry a **Python variant**: `.claude/hooks/<slug>.py` (stdlib only, `#!/usr/bin/env python3`, `# @hookstack <slug>` fingerprint on line 2) + `tests/hooks/test_<slug>.py` (pytest). Register it via `implementation.python_script_path` in the registry; the sync mirrors the `.py` into `python_code_snippet` and the test into `python_test_snippet`. The CLI installs the variant (command `python3 … .py`, pytest tests) on pure-Python installs and never writes vitest tests there — keeping the project's CI Python-only. A Python hook follows the same `run()` + DI + guard pattern as the `.mjs`, with the guard under `if __name__ == "__main__":` reading stdin JSON.
 
 ---
 
@@ -222,7 +224,8 @@ Every PR runs:
 | Check | Command | Fails when |
 |---|---|---|
 | TypeScript | `pnpm typecheck` | Type errors in `/src` or `/packages` |
-| Tests | `pnpm test` | Any test fails or coverage < 80 % |
+| Tests (vitest) | `pnpm test` | Any `.mjs` hook test fails |
+| Tests (pytest) | `pnpm test:python` (python3 -m pytest) | Any `.py` hook variant test fails |
 | Registry schema | `pnpm validate:registry` | Unknown field, missing required field, invalid enum |
 | Hook drift | `node .claude/sync-hooks.mjs --check` | `code_snippet` in registry diverged from the `.mjs` on disk |
 | Timeline drift | `node .claude/hooks-timeline.mjs --check` | Generated artefacts diverged from git history |

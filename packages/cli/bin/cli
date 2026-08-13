@@ -20,6 +20,10 @@ import {
   doUpdateTests,
   findInstalledSlugs,
   detectScriptChanges,
+  detectToolstack,
+  describeToolchain,
+  resolveStacks,
+  filterHooksByStack,
   isGlobalScope,
   buildContributionBranch,
   buildContributionPr,
@@ -121,7 +125,41 @@ export function securityPanel(rows) {
 
 // ── install ───────────────────────────────────────────────────────────────────
 
-function doInstall(hooks, dirs, scope, log) {
+// Filters fetched hooks by the project's detected toolchain (unless --stack=all)
+// and reports what was skipped, so a Python repo never receives hooks that shell
+// out to npm/tsc/biome and vice-versa. Returns the filtered hook list.
+// True when the install targets a pure-Python toolchain (detected or forced via
+// --stack=python). Such installs use Python hook variants (.py + pytest) where
+// available; mixed TS+Python repos keep the .mjs (node is present there).
+function stacksIncludeOnlyPython(args, hooks) {
+  if (args.stack === 'all') return false
+  const detected = detectToolstack(process.cwd(), { exists: existsSync })
+  const stacks = resolveStacks(args.stack, detected)
+  if (stacks === null) return false
+  return stacks.includes('python') && !stacks.includes('typescript')
+}
+
+function applyStackFilter(hooks, args, { warn, info }) {
+  const detected = detectToolstack(process.cwd(), { exists: existsSync })
+  const stacks = resolveStacks(args.stack, detected)
+  const { kept, skipped } = filterHooksByStack(hooks, stacks)
+  const forced = args.stack !== 'auto'
+  if (skipped.length === 0) {
+    if (!forced) info(`Detected ${describeToolchain(detected)} project — all ${kept.length} hooks compatible.`)
+    return kept
+  }
+  const names = skipped.map(h => h.slug).join(', ')
+  const list = names.length <= 120 ? ` (${names})` : ''
+  if (forced) {
+    warn(`Skipped ${plural(skipped.length, 'language-specific hook')} by --stack=${args.stack}: ${names}`)
+  } else {
+    warn(`Detected ${describeToolchain(detected)} project — ${plural(skipped.length, 'language-specific hook')} skipped${list}. Use --stack=all to force.`)
+  }
+  return kept
+}
+
+
+function doInstall(hooks, dirs, scope, log, { python = false } = {}) {
   mkdirSync(dirs.claudeDir, { recursive: true })
   mkdirSync(dirs.hooksDir, { recursive: true })
 
@@ -135,7 +173,7 @@ function doInstall(hooks, dirs, scope, log) {
     }
   }
 
-  const incoming = collectIncomingHooks(hooks, { scope, globalRoot: dirs.root })
+  const incoming = collectIncomingHooks(hooks, { scope, globalRoot: dirs.root, python })
   if (dirs.format === 'codex') {
     // Codex hooks.json holds events at the top level (no "hooks" wrapper).
     settings = mergeHooks(settings, incoming)
@@ -145,17 +183,22 @@ function doInstall(hooks, dirs, scope, log) {
   writeFileSync(dirs.settingsPath, JSON.stringify(settings, null, 2) + '\n')
 
   let scriptCount = 0
+  let pythonScriptCount = 0
   for (const hook of hooks) {
-    if (!hook.script_path || !hook.code_snippet) continue
-    const target = resolveScriptPath(hook.script_path, scope)
+    const usePy = python && hook.python_script_path && hook.python_code_snippet
+    const scriptPath = usePy ? hook.python_script_path : hook.script_path
+    const snippet = usePy ? hook.python_code_snippet : hook.code_snippet
+    if (!scriptPath || !snippet) continue
+    const target = resolveScriptPath(scriptPath, scope)
     assertSafeTarget(dirs.root, target)
     const dest = join(dirs.root, target)
     mkdirSync(join(dest, '..'), { recursive: true })
-    writeFileSync(dest, hook.code_snippet, 'utf8')
+    writeFileSync(dest, snippet, 'utf8')
     scriptCount++
+    if (usePy) pythonScriptCount++
   }
 
-  return { hookCount: hooks.length, scriptCount }
+  return { hookCount: hooks.length, scriptCount, pythonScriptCount }
 }
 
 // ── flows ─────────────────────────────────────────────────────────────────────
@@ -196,6 +239,16 @@ async function interactiveInstall(slugs, args) {
   if (notFound.length) p.log.warn(`Unknown slugs skipped: ${notFound.join(', ')}`)
   if (hooks.length === 0) { p.cancel('No hooks to install.'); process.exit(1) }
 
+  // Toolchain filter: keep only hooks compatible with the project's language.
+  const filtered = applyStackFilter(hooks, args, {
+    warn: m => p.log.warn(m),
+    info: m => p.log.step(m),
+  })
+  if (filtered.length === 0) {
+    p.cancel('No hooks compatible with this project\'s toolchain — use --stack=all to force.')
+    process.exit(1)
+  }
+
   // Scope
   let scope = args.scope
   const scopeResult = await p.select({
@@ -232,8 +285,9 @@ async function interactiveInstall(slugs, args) {
   if (p.isCancel(scopeResult)) return onCancel()
   scope = scopeResult
 
+  const pythonMode = stacksIncludeOnlyPython(args, filtered)
   const dirs = resolveScopeRoot(scope, { cwd: process.cwd(), home: homedir() })
-  const secRows = buildSecurityRows(hooks)
+  const secRows = buildSecurityRows(filtered)
 
   // Panel
   p.note(securityPanel(secRows), 'Installation Summary')
@@ -241,7 +295,7 @@ async function interactiveInstall(slugs, args) {
   // Confirm
   const scopeLabel = SCOPE_LABELS[scope] ?? './.claude'
   const confirmed = await p.confirm({
-    message: `Install ${plural(hooks.length, 'hook')} into ${pc.cyan(scopeLabel)}?`,
+    message: `Install ${plural(filtered.length, 'hook')} into ${pc.cyan(scopeLabel)}?`,
   })
   if (p.isCancel(confirmed) || !confirmed) return onCancel()
 
@@ -250,7 +304,7 @@ async function interactiveInstall(slugs, args) {
   spin2.start('Installing…')
   let result
   try {
-    result = doInstall(hooks, dirs, scope, { warn: m => p.log.warn(m) })
+    result = doInstall(filtered, dirs, scope, { warn: m => p.log.warn(m) }, { python: pythonMode })
   } catch (e) {
     spin2.stop(pc.red(`Install failed: ${e.message}`), 1)
     process.exit(1)
@@ -259,15 +313,18 @@ async function interactiveInstall(slugs, args) {
 
   // Unit tests prompt (project/copilot scope only)
   let testResult = null
-  const hooksWithTests = hooks.filter(h => h.test_snippet)
+  const hooksWithTests = pythonMode
+    ? filtered.filter(h => h.python_test_snippet)
+    : filtered.filter(h => h.test_snippet)
   if (!isGlobalScope(scope) && hooksWithTests.length > 0) {
+    const testLabel = pythonMode ? 'pytest' : 'vitest'
     const wantTests = await p.confirm({
-      message: `Install unit tests for ${plural(hooksWithTests.length, 'hook')} into ${pc.cyan('tests/hooks/')}? ${pc.dim('(vitest — helps SonarQube gating)')}`,
+      message: `Install ${testLabel} unit tests for ${plural(hooksWithTests.length, 'hook')} into ${pc.cyan('tests/hooks/')}? ${pc.dim(`(${testLabel} — keeps CI ${pythonMode ? 'Python-only' : 'Node-only'})`)}`,
       initialValue: true,
     })
     if (!p.isCancel(wantTests) && wantTests) {
       try {
-        testResult = doInstallTests(hooks, process.cwd(), { mkdirSync, writeFileSync, join: pathJoin })
+        testResult = doInstallTests(filtered, process.cwd(), { mkdirSync, writeFileSync, join: pathJoin }, { python: pythonMode })
       } catch (e) {
         p.log.warn(`Could not write tests: ${e.message}`)
       }
@@ -275,11 +332,14 @@ async function interactiveInstall(slugs, args) {
   }
 
   // Result panel
-  const hints = buildPostInstallHints(hooks)
+  const hints = buildPostInstallHints(filtered)
   const resultLines = [
     pc.green(`✓ ${dirs.settingsPath}`),
     result.scriptCount > 0
       ? pc.green(`✓ ${result.scriptCount} script${result.scriptCount === 1 ? '' : 's'} written to ${dirs.hooksDir}`)
+      : null,
+    pythonMode && result.pythonScriptCount !== result.scriptCount
+      ? pc.dim(`  ${result.pythonScriptCount} Python · ${result.scriptCount - result.pythonScriptCount} .mjs fallback (python variants landing progressively)`)
       : null,
     testResult?.testCount > 0
       ? pc.green(`✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} written to tests/hooks/`)
@@ -312,20 +372,33 @@ async function directInstall(slugs, args) {
     console.error('\n✗ No hooks to install.')
     process.exit(1)
   }
+
+  // Toolchain filter: keep only hooks compatible with the project's language.
+  const filtered = applyStackFilter(hooks, args, {
+    warn: m => console.warn(`  ! ${m}`),
+    info: m => console.log(`  · ${m}`),
+  })
+  if (filtered.length === 0) {
+    console.error('\n✗ No hooks compatible with this project\'s toolchain — use --stack=all to force.')
+    process.exit(1)
+  }
+  const pythonMode = stacksIncludeOnlyPython(args, filtered)
   const dirs = resolveScopeRoot(args.scope, { cwd: process.cwd(), home: homedir() })
   const log = { warn: m => console.warn(`  ! ${m}`) }
-  const result = doInstall(hooks, dirs, args.scope, log)
+  const result = doInstall(filtered, dirs, args.scope, log, { python: pythonMode })
   console.log(`  ✓ ${dirs.settingsPath}`)
+  if (pythonMode && result.pythonScriptCount !== result.scriptCount)
+    console.log(`  · ${result.pythonScriptCount} Python scripts · ${result.scriptCount - result.pythonScriptCount} .mjs fallback (python variants landing progressively)`)
   if (args.withTests && !isGlobalScope(args.scope)) {
     try {
-      const testResult = doInstallTests(hooks, process.cwd(), { mkdirSync, writeFileSync, join: pathJoin })
+      const testResult = doInstallTests(filtered, process.cwd(), { mkdirSync, writeFileSync, join: pathJoin }, { python: pythonMode })
       if (testResult.testCount > 0)
-        console.log(`  ✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} written to tests/hooks/`)
+        console.log(`  ✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} (${pythonMode ? 'pytest' : 'vitest'}) written to tests/hooks/`)
     } catch (e) {
       console.warn(`  ! Could not write tests: ${e.message}`)
     }
   }
-  const hints = buildPostInstallHints(hooks)
+  const hints = buildPostInstallHints(filtered)
   if (hints.length > 0) {
     for (const h of hints) console.warn(`  ${formatHint(h)}`)
   }
@@ -367,7 +440,7 @@ async function interactiveUpdate(args) {
     process.exit(1)
   }
   const { hooks } = data
-  const { changed, unchanged } = detectScriptChanges(hooks, args.scope, dirs.root, { readFileSync })
+  const { changed, unchanged } = detectScriptChanges(hooks, args.scope, dirs.root, { readFileSync, python: stacksIncludeOnlyPython(args, hooks) })
   spin.stop(changed.length > 0 ? `${plural(changed.length, 'hook')} can be updated` : 'Everything is already up to date')
 
   if (changed.length === 0) {
@@ -385,14 +458,15 @@ async function interactiveUpdate(args) {
 
   const spin2 = p.spinner()
   spin2.start('Updating…')
+  const pythonMode = stacksIncludeOnlyPython(args, hooks)
   let result
   try {
-    result = doInstall(hooks, dirs, args.scope, { warn: m => p.log.warn(m) })
+    result = doInstall(hooks, dirs, args.scope, { warn: m => p.log.warn(m) }, { python: pythonMode })
   } catch (e) {
     spin2.stop(pc.red(`Update failed: ${e.message}`), 1)
     process.exit(1)
   }
-  const testResult = doUpdateTests(hooks, process.cwd(), { existsSync, writeFileSync, join: pathJoin })
+  const testResult = doUpdateTests(hooks, process.cwd(), { existsSync, writeFileSync, join: pathJoin }, { python: pythonMode })
   spin2.stop(`Updated ${pc.bold(String(changed.length))} hook${changed.length === 1 ? '' : 's'}`)
 
   const resultLines = [
@@ -422,14 +496,15 @@ async function directUpdate(args) {
     process.exit(1)
   }
   const { hooks } = data
-  const { changed, unchanged } = detectScriptChanges(hooks, args.scope, dirs.root, { readFileSync })
+  const { changed, unchanged } = detectScriptChanges(hooks, args.scope, dirs.root, { readFileSync, python: stacksIncludeOnlyPython(args, hooks) })
   if (changed.length === 0) {
     console.log('✓ Already up to date.\n')
     return
   }
 
-  const result = doInstall(hooks, dirs, args.scope, { warn: m => console.warn(`  ! ${m}`) })
-  const testResult = doUpdateTests(hooks, process.cwd(), { existsSync, writeFileSync, join: pathJoin })
+  const pythonMode = stacksIncludeOnlyPython(args, hooks)
+  const result = doInstall(hooks, dirs, args.scope, { warn: m => console.warn(`  ! ${m}`) }, { python: pythonMode })
+  const testResult = doUpdateTests(hooks, process.cwd(), { existsSync, writeFileSync, join: pathJoin }, { python: pythonMode })
   console.log(`  ✓ ${result.scriptCount} script${result.scriptCount === 1 ? '' : 's'} refreshed in ${dirs.hooksDir}`)
   if (unchanged.length > 0) console.log(`  · ${plural(unchanged.length, 'hook')} already up to date`)
   if (testResult.testCount > 0) console.log(`  ✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} refreshed`)
@@ -632,6 +707,9 @@ const HELP = `
     --scope <s>       "project" (default), "global", "copilot",
                       "codex-project", or "codex-profile"
     --with-tests      Also install vitest unit tests into tests/hooks/ (install, project scope only)
+    --stack <s>       "auto" (default) filters the default set to the detected
+                      project toolchain (TypeScript and/or Python); "typescript"
+                      or "python" force a single stack; "all" disables filtering
     --yes, -y         Skip prompts (non-interactive)
     --version, -v     Show version
     --help, -h        Show this help
@@ -640,6 +718,11 @@ const HELP = `
   @hookstack fingerprint) from the live registry and refreshes the local
   .mjs. settings.json is only touched if a hook's config actually changed.
   Use the same scope flag you installed with (--global, --codex-project…).
+
+  "install" is language-aware: unless --stack=all is passed, hooks whose
+  stack doesn't match the detected toolchain (package.json/tsconfig.json →
+  TypeScript; pyproject.toml/requirements.txt/… → Python) are skipped, so a
+  Python repo never receives hooks that shell out to npm/tsc/biome.
 
   "contribute" finds installed hooks whose local .mjs diverges from the live
   registry, forks ${UPSTREAM_REPO} for you (or branches directly if you own
@@ -678,6 +761,7 @@ async function main() {
 
   if (interactive) await interactiveInstall(args.hooks, args)
   else await directInstall(args.hooks, args)
+  return
 }
 
 /* v8 ignore next 4 */

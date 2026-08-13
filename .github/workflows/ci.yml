@@ -42,8 +42,11 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Unit tests
+      - name: Unit tests (vitest — .mjs hooks)
         run: pnpm test
+
+      - name: Unit tests (pytest — .py hook variants)
+        run: python3 -m pytest -q
 
       - name: Registry schema validation
         run: pnpm validate:registry

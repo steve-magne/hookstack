@@ -39,3 +39,7 @@ pnpm-debug.log*
 
 # Private local context
 .claude/CLAUDE.local.md
+
+# Python hook variant tests
+__pycache__/
+*.pyc

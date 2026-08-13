@@ -9,9 +9,14 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // Fichiers concernés par un typecheck/lint JS-TS. Une session qui ne touche que
-// du Markdown, du Python ou des assets n'a rien à vérifier ici.
+// du Markdown ou des assets n'a rien à vérifier ici.
 const JS_TS = /\.(ts|tsx|js|jsx|mjs|cjs|vue|svelte)$/;
 const QC_CFG = /(^|\/)(tsconfig.*\.json|package\.json|biome\.jsonc?)$/;
+
+// Fichiers concernés par le gate qualité Python (ruff lint + pyright types).
+const PY = /\.py$/;
+const PY_CFG =
+	/(^|\/)(pyproject\.toml|setup\.py|setup\.cfg|pytest\.ini|ruff\.toml|\.ruff\.toml|pyrightconfig\.json)$/;
 
 /** Fichiers modifiés en attente (staged + unstaged + untracked), ou null hors git. */
 function defaultChanged(cwd) {
@@ -52,8 +57,13 @@ export function run({
 	projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
 	changed = defaultChanged(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
 } = {}) {
-	// Aucun fichier JS/TS (ni config tsc/biome) modifié → typecheck/lint inutiles.
-	if (changed && !changed.some((f) => JS_TS.test(f) || QC_CFG.test(f)))
+	// Aucun fichier JS/TS ni Python (ni config associée) modifié → checks inutiles.
+	if (
+		changed &&
+		!changed.some(
+			(f) => JS_TS.test(f) || QC_CFG.test(f) || PY.test(f) || PY_CFG.test(f),
+		)
+	)
 		return { checks: 0, failed: 0, message: "" };
 
 	const doExec =
@@ -78,6 +88,7 @@ export function run({
 
 	const checks = [];
 	const hasPkg = exists(join(projectDir, "package.json"));
+	const hasPyproject = exists(join(projectDir, "pyproject.toml"));
 	if (hasPkg && exists(join(projectDir, "tsconfig.json")))
 		// --incremental + cache buildinfo : la 1re run reste froide, les suivantes ne
 		// retypent que ce qui a bougé → fin de session quasi instantanée côté types.
@@ -107,6 +118,28 @@ export function run({
 					: ["Biome", "npx --no-install biome lint --error-on-warnings ."],
 			);
 		}
+	}
+
+	// ── Python (via uv) : ruff (lint) + pyright (types) sur les .py modifiés,
+	// repo entier si la session n'a touché que des configs ou hors git.
+	if (hasPyproject) {
+		const touchedPy = changed ? changed.filter((f) => PY.test(f)) : [];
+		checks.push(
+			touchedPy.length > 0
+				? [
+						"Ruff",
+						`uv run ruff check ${touchedPy.map((f) => `"${f}"`).join(" ")}`,
+					]
+				: ["Ruff", "uv run ruff check ."],
+		);
+		checks.push(
+			touchedPy.length > 0
+				? [
+						"Pyright",
+						`uv run pyright ${touchedPy.map((f) => `"${f}"`).join(" ")}`,
+					]
+				: ["Pyright", "uv run pyright"],
+		);
 	}
 
 	const results = checks.map(([label, cmd]) => check(label, cmd));

@@ -2,7 +2,8 @@
 // Everything here is side-effect free and unit-tested in isolation; the
 // interactive I/O (clack/picocolors, fs, fetch) lives in cli.mjs. This mirrors
 // the project's "pure run() + thin I/O guard" hook convention.
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { basename, isAbsolute, join, relative, resolve } from "node:path";
 
 const BLOCKING_EVENTS = new Set([
 	"PreToolUse",
@@ -33,6 +34,77 @@ const CODEX_SCOPES = new Set(["codex-project", "codex-profile"]);
 export const isGlobalScope = (scope) => GLOBAL_SCOPES.has(scope);
 export const isCodexScope = (scope) => CODEX_SCOPES.has(scope);
 
+// ── toolstack detection ───────────────────────────────────────────────────────
+// The default HookStack is filtered by the project's language so a Python repo
+// never gets hooks that shell out to npm/tsc/biome, and a TS repo never gets
+// hooks that shell out to uv/ruff/pytest. Detection is manifest-only: it looks
+// for well-known toolchain marker files and never reads file contents, so it
+// stays cheap and side-effect free at install time.
+
+// Marker files that reveal a Node/TypeScript toolchain.
+export const TYPESCRIPT_MARKERS = ["package.json", "tsconfig.json"];
+
+// Marker files that reveal a Python toolchain.
+export const PYTHON_MARKERS = [
+	"pyproject.toml",
+	"requirements.txt",
+	"setup.py",
+	"setup.cfg",
+	"Pipfile",
+	"uv.lock",
+	"poetry.lock",
+];
+
+// Detects which toolchains the project at `cwd` belongs to. Pure + DI: `exists`
+// defaults to node:fs existsSync, but tests inject a fake map.
+export function detectToolstack(cwd, { exists = existsSync } = {}) {
+	const has = (file) => exists(join(cwd, file));
+	return {
+		typescript: TYPESCRIPT_MARKERS.some(has),
+		python: PYTHON_MARKERS.some(has),
+	};
+}
+
+// Human-readable label for the detection result, used in install messaging.
+export function describeToolchain(detected) {
+	const parts = [];
+	if (detected.typescript) parts.push("TypeScript/Node");
+	if (detected.python) parts.push("Python");
+	return parts.length > 0 ? parts.join(" + ") : "no recognized toolchain";
+}
+
+// Maps the parsed --stack flag + detected toolchain to the stack list used by
+// filterHooksByStack. `null` means "no filtering" (--stack=all).
+export function resolveStacks(flag, detected) {
+	if (flag === "all") return null;
+	if (flag === "typescript") return ["typescript"];
+	if (flag === "python") return ["python"];
+	// auto — trust the detection: a mixed project gets both toolchains.
+	return [
+		...(detected.typescript ? ["typescript"] : []),
+		...(detected.python ? ["python"] : []),
+	];
+}
+
+// Filters hooks by their declared `stack`. Universal hooks (no stack) always
+// pass — they are language-neutral by contract. Stack-specific hooks are kept
+// only when their stack intersects the enabled ones. `stacks === null` disables
+// the filter entirely (--stack=all); `stacks === []` (no toolchain detected)
+// keeps only the universal set.
+export function filterHooksByStack(hooks, stacks) {
+	if (stacks === null) return { kept: hooks, skipped: [] };
+	const kept = [];
+	const skipped = [];
+	for (const hook of hooks) {
+		if (!hook.stack?.length || hook.stack.some((s) => stacks.includes(s))) {
+			kept.push(hook);
+		} else {
+			skipped.push(hook);
+		}
+	}
+	return { kept, skipped };
+}
+
 function splitList(raw) {
 	return raw
 		.split(",")
@@ -48,6 +120,7 @@ export function parseArgs(argv) {
 		help: false,
 		version: false,
 		scope: "project",
+		stack: "auto",
 		yes: false,
 		withTests: false,
 	};
@@ -101,6 +174,16 @@ export function parseArgs(argv) {
 		}
 		if (arg === "--hooks" && args[i + 1]) {
 			result.hooks = splitList(args[++i]);
+			continue;
+		}
+		if (arg.startsWith("--stack=") || arg.startsWith("--language=")) {
+			const v = (arg.includes("--stack=") ? arg.slice("--stack=".length) : arg.slice("--language=".length)).toLowerCase();
+			if (["auto", "typescript", "python", "all"].includes(v)) result.stack = v;
+			continue;
+		}
+		if ((arg === "--stack" || arg === "--language") && args[i + 1]) {
+			const v = args[++i].toLowerCase();
+			if (["auto", "typescript", "python", "all"].includes(v)) result.stack = v;
 			continue;
 		}
 		if (!result.command) result.command = arg;
@@ -174,6 +257,26 @@ export function mergeHooks(existing, incoming) {
 	return merged;
 }
 
+// Whether a hook should install its Python variant (python_script_path) instead
+// of the .mjs. Only when the hook carries one AND the active stacks are pure
+// Python (mixed TS+Python repos keep the .mjs, node being present there).
+function usePythonVariant(hook, python) {
+	return Boolean(
+		python && hook.python_script_path && hook.python_code_snippet,
+	);
+}
+
+// Rewrites a hook command for its Python variant:
+//   node $CLAUDE_PROJECT_DIR/.claude/hooks/foo.mjs
+//   → python3 $CLAUDE_PROJECT_DIR/.claude/hooks/foo.py
+// The python_script_path basename wins so the on-disk file always matches.
+function toPythonCommand(command, pythonScriptPath) {
+	const base = basename(pythonScriptPath);
+	return command
+		.replace(/^node\s+/, "python3 ")
+		.replace(/\.claude\/hooks\/[^\s"]+\.mjs/, `.claude/hooks/${base}`);
+}
+
 // Rewrites a hook command's path for the target scope:
 // - global             → $CLAUDE_PROJECT_DIR ↦ absolute global root (.claude stays)
 // - copilot            → strips $CLAUDE_PROJECT_DIR/ (relative, Copilot compatible)
@@ -195,14 +298,17 @@ function rewriteCommand(command, scope, globalRoot) {
 // map, rewriting command paths per scope (see rewriteCommand). The resulting map
 // is identical in shape for both Claude (settings.hooks) and Codex (top-level
 // hooks.json) — only doInstall decides how to nest it on disk.
+// When `python` is set, hooks carrying a Python variant register `python3 … .py`
+// commands instead of `node … .mjs`.
 export function collectIncomingHooks(
 	hooks,
-	{ scope = "project", globalRoot } = {},
+	{ scope = "project", globalRoot, python = false } = {},
 ) {
 	const incoming = {};
 	for (const hook of hooks) {
 		const fragment = hook.config?.hooks;
 		if (!fragment) continue;
+		const pyVariant = usePythonVariant(hook, python);
 		for (const [event, entries] of Object.entries(fragment)) {
 			incoming[event] ??= [];
 			for (const entry of entries) {
@@ -210,9 +316,12 @@ export function collectIncomingHooks(
 					...entry,
 					hooks: entry.hooks.map((h) => {
 						if (!h.command || typeof h.command !== "string") return h;
+						const command = pyVariant
+							? toPythonCommand(h.command, hook.python_script_path)
+							: h.command;
 						return {
 							...h,
-							command: rewriteCommand(h.command, scope, globalRoot),
+							command: rewriteCommand(command, scope, globalRoot),
 						};
 					}),
 				});
@@ -234,6 +343,7 @@ export function isBlockingEvent(event) {
 }
 
 // Honest static read of what a hook's code does — no external service.
+// Recognizes both the Node (.mjs) and Python (.py) variants.
 export function analyzeSecurity(codeSnippet) {
 	const code = codeSnippet ?? "";
 	const has = (...patterns) => patterns.some((re) => re.test(code));
@@ -241,15 +351,21 @@ export function analyzeSecurity(codeSnippet) {
 		shell: has(
 			/\b(execSync|execFileSync|execFile|exec|spawnSync|spawn|fork)\s*\(/,
 			/child_process/,
+			/\bsubprocess\b/,
+			/\bos\.(system|popen)\b/,
 		),
 		network: has(
 			/\bfetch\s*\(/,
 			/['"]node:(https?|net|dgram|dns)['"]/,
 			/\brequire\(\s*['"](https?|net|dgram|dns)['"]\s*\)/,
 			/\bfrom\s+['"](node:)?https?['"]/,
+			/\b(urllib|requests|http\.client|socket|httpx)\b/,
 		),
 		fsWrite: has(
 			/\b(writeFileSync|writeFile|appendFileSync|appendFile|rmSync|unlinkSync|unlink|mkdirSync|renameSync|rename|rmdirSync|cpSync)\s*\(/,
+			/\bopen\([^)]*['"]w/, // open(…, "w") — Python
+			/\bPath\([^)]*\).*(write_text|write_bytes|unlink|rmdir)/,
+			/\b(os\.(remove|unlink|mkdir|rename)|shutil\.(copy|move|rmtree))\b/,
 		),
 	};
 }
@@ -286,16 +402,27 @@ export function shortRepo(url) {
 }
 
 // Writes test files for installed hooks into <projectRoot>/tests/hooks/.
-// Only hooks that have a test_snippet are written; others are silently skipped.
+// Only hooks that have a matching snippet are written; others are silently
+// skipped. Python projects (python=true) receive pytest tests
+// (tests/hooks/test_<slug>.py) for hooks with a Python variant — vitest tests
+// are never installed there, so the project's CI stays Python-only.
 export function doInstallTests(
 	hooks,
 	projectRoot,
 	{ mkdirSync, writeFileSync, join },
+	{ python = false } = {},
 ) {
 	const testsDir = join(projectRoot, "tests", "hooks");
 	mkdirSync(testsDir, { recursive: true });
 	let testCount = 0;
 	for (const hook of hooks) {
+		if (python) {
+			if (!hook.python_test_snippet) continue;
+			const dest = join(testsDir, `test_${hook.slug}.py`);
+			writeFileSync(dest, hook.python_test_snippet, "utf8");
+			testCount++;
+			continue;
+		}
 		if (!hook.test_snippet) continue;
 		const dest = join(testsDir, `${hook.slug}.test.mjs`);
 		writeFileSync(dest, hook.test_snippet, "utf8");
@@ -309,9 +436,10 @@ export function doInstallTests(
 // refreshes its .mjs in place — same overwrite as install, just without the
 // user having to remember which slugs they picked originally.
 
-// Matches the "// @hookstack <slug>" fingerprint sync-hooks.mjs writes on line 2
-// of every .mjs (see CLAUDE.md "Conventions hooks Claude Code").
-const FINGERPRINT_RE = /^\/\/\s*@hookstack\s+(\S+)/;
+// Matches the "// @hookstack <slug>" (or "# @hookstack <slug>" on Python
+// variants) fingerprint sync-hooks.mjs writes on line 2 of every script (see
+// CLAUDE.md "Conventions hooks Claude Code").
+const FINGERPRINT_RE = /^(?:\/\/|#)\s*@hookstack\s+(\S+)/;
 
 export function extractFingerprint(content) {
 	const line2 = (content ?? "").split("\n")[1] ?? "";
@@ -319,8 +447,9 @@ export function extractFingerprint(content) {
 }
 
 // Scans a hooks directory for previously installed HookStack scripts, reading
-// each .mjs's fingerprint to recover its slug. Used by `update` so the user
-// doesn't have to retype --hooks=<slugs> for a re-install.
+// each script's fingerprint (line 2) to recover its slug. Both .mjs and .py
+// variants are recognized. Used by `update` so the user doesn't have to retype
+// --hooks=<slugs> for a re-install.
 export function findInstalledSlugs(hooksDir, { readdirSync, readFileSync }) {
 	let files;
 	try {
@@ -330,7 +459,7 @@ export function findInstalledSlugs(hooksDir, { readdirSync, readFileSync }) {
 	}
 	const slugs = [];
 	for (const file of files) {
-		if (!file.endsWith(".mjs")) continue;
+		if (!file.endsWith(".mjs") && !file.endsWith(".py")) continue;
 		let content;
 		try {
 			content = readFileSync(join(hooksDir, file), "utf8");
@@ -345,12 +474,22 @@ export function findInstalledSlugs(hooksDir, { readdirSync, readFileSync }) {
 
 // Splits freshly fetched hooks into those whose on-disk script differs from
 // the registry (will be overwritten) and those already up to date.
-export function detectScriptChanges(hooks, scope, root, { readFileSync }) {
+// With `python`, hooks that carry a Python variant are compared against their
+// .py file; the rest fall back to the .mjs comparison.
+export function detectScriptChanges(
+	hooks,
+	scope,
+	root,
+	{ readFileSync, python = false },
+) {
 	const changed = [];
 	const unchanged = [];
 	for (const hook of hooks) {
-		if (!hook.script_path || !hook.code_snippet) continue;
-		const target = resolveScriptPath(hook.script_path, scope);
+		const usePy = usePythonVariant(hook, python);
+		const scriptPath = usePy ? hook.python_script_path : hook.script_path;
+		const snippet = usePy ? hook.python_code_snippet : hook.code_snippet;
+		if (!scriptPath || !snippet) continue;
+		const target = resolveScriptPath(scriptPath, scope);
 		const dest = join(root, target);
 		let existing = null;
 		try {
@@ -358,7 +497,7 @@ export function detectScriptChanges(hooks, scope, root, { readFileSync }) {
 		} catch {
 			// No file on disk yet — treat as changed so update can (re)write it.
 		}
-		(existing === hook.code_snippet ? unchanged : changed).push(hook.slug);
+		(existing === snippet ? unchanged : changed).push(hook.slug);
 	}
 	return { changed, unchanged };
 }
@@ -370,10 +509,19 @@ export function doUpdateTests(
 	hooks,
 	projectRoot,
 	{ existsSync, writeFileSync, join },
+	{ python = false } = {},
 ) {
 	const testsDir = join(projectRoot, "tests", "hooks");
 	let testCount = 0;
 	for (const hook of hooks) {
+		if (python) {
+			if (!hook.python_test_snippet) continue;
+			const dest = join(testsDir, `test_${hook.slug}.py`);
+			if (!existsSync(dest)) continue;
+			writeFileSync(dest, hook.python_test_snippet, "utf8");
+			testCount++;
+			continue;
+		}
 		if (!hook.test_snippet) continue;
 		const dest = join(testsDir, `${hook.slug}.test.mjs`);
 		if (!existsSync(dest)) continue;
@@ -421,13 +569,14 @@ export function buildContributionPr(slugs) {
 }
 
 // Display rows for the "Installation Summary" panel.
-export function buildSummaryRows(hooks, { root }) {
+export function buildSummaryRows(hooks, { root, python = false }) {
 	return hooks.map((h) => {
 		const events = h.config?.hooks ? Object.keys(h.config.hooks) : [];
+		const scriptPath = python && h.python_script_path ? h.python_script_path : h.script_path;
 		return {
 			slug: h.slug,
 			name: h.name ?? h.slug,
-			path: h.script_path ? join(root, h.script_path) : null,
+			path: scriptPath ? join(root, scriptPath) : null,
 			category: h.category ?? null,
 			events,
 			blocking: events.some(isBlockingEvent),

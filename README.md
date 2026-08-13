@@ -34,6 +34,19 @@ That's it. The CLI walks you through picking hooks, writes the `.mjs` scripts, a
 
 >Want to fine-tune your Hookstack? Go to **[hookstack.app](https://www.hookstack.app)** — browse the full catalogue, select exactly what you need, copy the generated command and paste it in your terminal
 
+**Language-aware by default.** The CLI detects your project's toolchain (TypeScript/Node: `package.json`/`tsconfig.json` · Python: `pyproject.toml`/`requirements.txt`/… ) and only installs hooks that match it — a Python repo gets the ruff/pyright/pytest stack, never hooks that shell out to `npm`/`tsc`/`biome`. Mixed repos get both. Override with `--stack=typescript|python|all`.
+
+**Python hooks, Python tests.** On a Python project the hooks that carry a Python variant are installed as real `.py` scripts (`python3 …` commands) and `--with-tests` writes **pytest** tests instead of vitest tests — vitest is never installed on Python projects, so your GitHub Actions CI stays Python-only with no `npm` added to test the hooks. Hooks without a variant yet fall back to `.mjs` while the catalogue transcribes them (see the install summary).
+
+```bash
+# In a Python project — ruff format, ruff check, pyright, pytest, uv guard
+npx hookstack-cli@latest install
+
+# Force one toolchain, or install everything regardless of the detected stack
+npx hookstack-cli@latest install --stack=typescript
+npx hookstack-cli@latest install --stack=all
+```
+
 ---
 
 ## Updating
