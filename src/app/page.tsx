@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CatalogueExplorer } from "@/components/CatalogueExplorer";
 import { HeroRotatingTitle } from "@/components/HeroRotatingTitle";
-import { HooksFlow } from "@/components/HooksFlow";
 import { StickyInstallBanner } from "@/components/StickyInstallBanner";
 import { guides } from "@/lib/guides";
 import { allHooks } from "@/lib/hooks";
@@ -250,11 +249,6 @@ export default async function HomePage() {
 
 				{/* StickyInstallBanner — dynamic, reflects live selection */}
 				<StickyInstallBanner />
-
-				{/* HooksFlowSection — animated explainer: what hooks bring to a project */}
-				<section data-component="HooksFlowSection" className="pt-4 pb-16">
-					<HooksFlow />
-				</section>
 
 				{/* FineTuneSection */}
 				<section data-component="FineTuneSection" className="pt-6">

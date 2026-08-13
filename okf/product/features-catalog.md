@@ -3,7 +3,7 @@ type: Reference
 title: Inventaire du surface produit
 description: Ce qui existe, ce qui est à améliorer, ce qui est à créer — du catalogue filtrable au wizard guidé. Cartographie honnête du surface produit Hookstack à date.
 tags: [features, catalogue, roadmap, surface-produit, configurateur]
-timestamp: 2026-06-30T00:00:00Z
+timestamp: 2026-08-04T00:00:00Z
 ---
 
 # Inventaire du surface produit
@@ -17,7 +17,7 @@ Cartographie honnête du surface produit Hookstack, séparée en trois bacs : **
 Le moteur de découverte. Composant client (`src/components/CatalogueExplorer.tsx`) qui expose :
 
 - **Filtres multi-critères** — par event type, par catégorie (les 6 de la taxonomie), par mot-clé, par stack.
-- **Regroupements** — bascule entre regroupement par event et par catégorie.
+- **Regroupements** — bascule entre regroupement par event, par catégorie et par récence. Les trois modes partagent les sections façon Vercel `/eve` (`EventSections`) : colonne gauche sticky (numéro, nom, sous-ligne, blurb, valeurs dominantes, filet de progression scroll-linked) + tuiles en pin-and-scroll à droite — même visuel et même gestion de scroll. Seul le contenu de la colonne gauche diffère : cycle de vie + matchers pour **Event** ; nombre d'event types + event types dominants pour **Category** ; fenêtre de récence + blurb dédié pour **Date** (« Recently added », fenêtres alimentées par les dates git de premier ajout, `src/lib/timeline.ts`).
 - **Sélecteur de stack** — chips TypeScript / Python / Node.js qui filtrent les hooks tech-spécifiques (un hook annoté `stack: ["typescript"]` ne s'affiche que si la stack correspond).
 - **Liste groupée + modale** — survol d'une ligne = détail (`benefit` en héros), clic = modale complète (`HookModal`).
 

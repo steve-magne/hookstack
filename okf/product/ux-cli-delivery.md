@@ -84,7 +84,7 @@ Le scan Snyk tourne **côté CI**, pas côté client :
 
 Le site tient la promesse *« configure en temps réel »* via `src/components/HookConfigurator.tsx` :
 
-- Construit `pluginCmd` (la commande `npx`) à partir des slugs sélectionnés en temps réel.
+- Construit la commande `npx` (`installCmd`) à partir des slugs sélectionnés en temps réel.
 - Une **bannière sticky** pulse à chaque sélection / désélection pour attirer l'attention sur la commande mise à jour.
 - Trois boutons de copie coexistent :
   - **Copier la commande** (principal) — `npx hookstack-cli@latest install --hooks=...`

@@ -106,6 +106,93 @@ export const T = {
 	recentThisWeek: "This week",
 	recentThisMonth: "This month",
 	recentEarlier: "Earlier",
+	// Event-mode catalogue (Vercel /eve-style sections) — left column copy.
+	eventHooks: "hooks",
+	eventGenericBlurb: "Fires at this point in the agent's lifecycle.",
+	eventBlurb: {
+		PreToolUse:
+			"Runs before a tool — Bash, Write, Edit, WebFetch — executes. The only event that can stop the action.",
+		PostToolUse:
+			"Runs after a tool completes, with its result. Format, lint, check, and react to what just happened.",
+		PostToolUseFailure:
+			"Runs after a tool call fails. Log the error, notify, or queue a retry.",
+		PostToolBatch:
+			"Runs after a batch of tool calls finishes. The place for batch-level quality gates.",
+		UserPromptSubmit:
+			"Fires on each prompt you submit. Whatever it prints becomes extra context for that turn.",
+		UserPromptExpansion:
+			"Fires when a prompt is expanded. Guard or enrich the expanded version.",
+		Notification:
+			"Fires when Claude wants to notify you. The wiring for alerts, chimes, and popups.",
+		MessageDisplay:
+			"Fires when a message is shown to the user. Useful for audit trails.",
+		Stop: "Fires when Claude finishes a task. Run tests, changelogs, and closing quality gates.",
+		StopFailure:
+			"Fires when a task ends in failure. Report, log, or trigger recovery.",
+		SubagentStart:
+			"Fires when a subagent starts. Inject the context and instructions the child should carry.",
+		SubagentStop:
+			"Fires when a subagent finishes. Collect results and check the child's work.",
+		PreCompact:
+			"Runs right before context compaction. Persist the context worth keeping.",
+		PostCompact:
+			"Runs after context compaction. Re-inject what the session still needs.",
+		SessionStart:
+			"Fires at session start. Load project context, git state, and conventions.",
+		SessionEnd: "Fires at session end. Audit logs, summaries, final checks.",
+		WorktreeCreate:
+			"Fires when a worktree is created. Seed it with env, deps, and setup.",
+		WorktreeRemove: "Fires when a worktree is removed. Clean up after it.",
+		PermissionRequest:
+			"Fires on a permission request. Can auto-approve or deny before the prompt.",
+		PermissionDenied:
+			"Fires when a permission request is denied. Log it, notify, or adapt.",
+		CwdChanged:
+			"Fires when the working directory changes. Reload env and per-directory context.",
+		ConfigChange:
+			"Fires when the configuration changes. Validate and keep settings consistent.",
+		FileChanged:
+			"Fires when a file on disk changes. Trigger syncs, reloads, and watches.",
+		InstructionsLoaded:
+			"Fires when instructions are loaded into the session. Verify or enrich them.",
+		TaskCreated: "Fires when a task is created. Set it up or notify.",
+		TaskCompleted:
+			"Fires when a task completes. Close it out and log the outcome.",
+		TeammateIdle: "Fires when a teammate goes idle.",
+		Setup: "Fires during initial setup.",
+	} as Record<string, string | undefined>,
+	// Category-mode sections (same two-column layout as event mode) — left column copy.
+	eventTypesLabel: "event types",
+	categoryGenericBlurb:
+		"Hooks grouped around one class of problem in the agent's workflow.",
+	categoryBlurb: {
+		security:
+			"Guardrails that block dangerous actions before they run — pushes to main, leaked secrets, destructive commands.",
+		context:
+			"Inject project conventions, git state, and environment into every session, so the agent codes like a teammate from the first turn.",
+		validation:
+			"Quality gates that typecheck, lint, and test on every change — nothing ships broken, nothing ships untested.",
+		notification:
+			"Alerts, chimes, and messages that keep you in the loop the moment work happens — without watching the terminal.",
+		workflow:
+			"Automation that reroutes, bootstraps, and tidies the workspace — isolated worktrees, deps installed, env reloaded.",
+		documentation:
+			"Docs that stay current — changelogs, READMEs, and knowledge refreshed automatically as the code evolves.",
+	} as Record<string, string | undefined>,
+	// Date-mode sections ("Recently added") — left column copy.
+	dateGenericSub: "Recent addition to the catalogue.",
+	dateWindowSub: {
+		week: "Added in the last 7 days",
+		month: "Added in the last 31 days",
+		earlier: "Added over a month ago",
+	} as Record<string, string | undefined>,
+	dateGenericBlurb: "Hooks added to the catalogue in this time window.",
+	dateBlurb: {
+		week: "The newest hooks in the catalogue — fresh additions, ready to try.",
+		month:
+			"Hooks added within the last month — recent, with early issues already ironed out.",
+		earlier: "The catalogue's veterans — established hooks, proven over time.",
+	} as Record<string, string | undefined>,
 	searchPlaceholder: "Search hooks by name or benefit…",
 	searchClear: "Clear search",
 	viewFullPage: "View full page",
@@ -147,7 +234,6 @@ export const T = {
 	mustBannerSubtitle: "essential hooks · already selected",
 	mustInstallBtn: "View configuration",
 	mustPreselected: "Essential",
-	pluginInstallHint: "Run once in your project root:",
 	previewClickToAdd: "Click the row to add it",
 	previewMustHint: "Recommended — already selected",
 	navGuides: "Guides",

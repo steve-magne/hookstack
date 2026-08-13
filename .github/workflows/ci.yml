@@ -1,9 +1,12 @@
 name: CI
 
 # Garde-fou qualité sur chaque PR / push :
-#   - typecheck + tests unitaires (dont les 62 hooks)
+#   - typecheck + tests unitaires avec gate de coverage (lignes/statements/branches
+#     ≥ 80 %, fonctions ≥ 75 %) sur la surface unit-testée (.claude/hooks,
+#     src/lib, src/store, packages/cli/bin/core.mjs)
 #   - validate:registry : échoue si registry.json viole registry.schema.json
-#     (champ requis manquant, énumération invalide, champ inconnu)
+#     (champ requis manquant, énumération invalide, champ inconnu) ou si un hook
+#     dogfoodé n'a pas de test unitaire (échapperait au gate de coverage)
 #   - sync-hooks --check : échoue si registry.json a dérivé des .mjs sur disque
 #     (les .mjs sont la source de vérité du code ; code_snippet en dérive)
 #   - ci-check-content : liens relatifs cassés + images manquantes dans tous les .md/.mdx
@@ -42,8 +45,19 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Unit tests (vitest — .mjs hooks)
-        run: pnpm test
+      - name: Unit tests + coverage gate (≥ 80 %)
+        run: pnpm test:coverage
+
+      # Gate par hook individuel : chaque .claude/hooks/*.mjs doit avoir ≥ 80 % de
+      # couverture lignes, hors liste d'exceptions héritée (scripts/check-hook-coverage.mjs).
+      # Consomme coverage/coverage-summary.json généré à l'étape précédente.
+      - name: Per-hook coverage gate (lines ≥ 80 %)
+        run: node scripts/check-hook-coverage.mjs
+
+      # Badge de coverage du README : le SVG commité et le bloc COVERAGE_BADGE doivent
+      # refléter le summary généré ci-dessus (générateur déterministe, cf. hooks-timeline).
+      - name: Coverage badge drift guard
+        run: node scripts/coverage-badge.mjs --check
 
       - name: Unit tests (pytest — .py hook variants)
         run: python3 -m pytest -q

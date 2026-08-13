@@ -18,6 +18,16 @@ Install them in one command — your agent gets guardrails in under a minute.
 [![Known Vulnerabilities](https://snyk.io/test/github/steve-magne/hookstack/badge.svg?style=flat-square)](https://snyk.io/test/github/steve-magne/hookstack)
 
 
+<!-- COVERAGE_BADGE:START -->
+
+<p align="center">
+  <img src="public/coverage-badge.svg" alt="HookStack coverage — lines 91% · statements 91% · branches 87% · functions 82%"/>
+</p>
+
+<sub>Unit-test coverage (agrégat) · gate CI : lines/statements/branches ≥ 80 %, functions ≥ 75 %</sub>
+
+<!-- COVERAGE_BADGE:END -->
+
 <img src="public/demo-hookstack.gif" alt="HookStack Mode Demo" width="600"/>
 
 </div>
@@ -30,7 +40,7 @@ Installation takes under a minute.
 npx hookstack-cli@latest install
 ```
 
-That's it. The CLI walks you through picking hooks, writes the `.mjs` scripts, and patches the right config file — no manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent.
+That's it. The CLI **detects your project's setup** — its language stack (no Biome in a pure Python project) *and* the systems it uses (i18n, an `okf/` knowledge bundle, Next.js, a front-end codebase, a GitHub-hosted repo) — then walks you through picking hooks, writes the `.mjs` scripts, and patches the right config file. No manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent; `--no-detect` skips detection.
 
 >Want to fine-tune your Hookstack? Go to **[hookstack.app](https://www.hookstack.app)** — browse the full catalogue, select exactly what you need, copy the generated command and paste it in your terminal
 
@@ -67,50 +77,7 @@ Edited a hook in your own project and think the catalogue should have it too?
 npx hookstack-cli@latest contribute
 ```
 
-It finds the hooks you've locally modified, forks this repo, and opens a PR with your changes — no manual git/GitHub dance required. Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated. See [`packages/cli/README.md`](packages/cli/README.md#contributing-changes-back) for details.
-
----
-
-## Install via /plugin
-
-Prefer your agent's native plugin command? Hookstack ships a plugin manifest for Claude Code, Codex, and GitHub Copilot.
-
-### Claude Code
-
-```bash
-/plugin install hookstack@steve-magne
-```
-
-Or via the CLI:
-
-```bash
-claude plugin install hookstack@steve-magne
-```
-
-### OpenAI Codex
-
-```bash
-/plugin install hookstack@steve-magne
-```
-
-Or via the CLI:
-
-```bash
-codex plugin install hookstack@steve-magne
-```
-
-### GitHub Copilot
-
-Add the Hookstack marketplace, then install:
-
-```bash
-copilot plugin marketplace add steve-magne/hookstack
-copilot plugin install hookstack
-```
-
----
-
-**What you get either way:** the same 83 production-ready hooks, wired into your agent lifecycle automatically. The `/plugin` path keeps the scripts inside your agent's plugin directory rather than your project — ideal for global installs or when you don't want hook files checked into your repo.
+It finds the hooks you've locally modified and opens a PR with your changes — forking this repo for you, or pushing a branch straight to it when your `gh` account owns it (no fork needed). Hooks are detected by their `@hookstack` fingerprint, so even renamed local files get contributed under their canonical name, and locally edited unit tests (`tests/hooks/`) ride along with their hook so the contribution keeps the CI coverage gate green. No manual git/GitHub dance required. Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated. See [`packages/cli/README.md`](packages/cli/README.md#contributing-changes-back) for details.
 
 ---
 
@@ -118,7 +85,7 @@ copilot plugin install hookstack
 
 ## The HookStack evolution
 
-**105 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+**102 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">

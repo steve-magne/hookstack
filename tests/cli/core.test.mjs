@@ -9,9 +9,10 @@ import {
 	buildSecurityRows,
 	buildSummaryRows,
 	collectIncomingHooks,
-	describeToolchain,
+	detectProjectSignals,
 	detectScriptChanges,
-	detectToolstack,
+	detectStacks,
+	detectTestChanges,
 	doInstallTests,
 	doUpdateTests,
 	extractFingerprint,
@@ -26,9 +27,11 @@ import {
 	resolveContributionTarget,
 	resolveScopeRoot,
 	resolveScriptPath,
-	resolveStacks,
+	resolveTestDest,
+	scanInstalledHooks,
 	shortRepo,
 	snykVerdict,
+	suggestHooksForSignals,
 } from "../../packages/cli/bin/core.mjs";
 
 const argv = (...a) => ["node", "cli.mjs", ...a];
@@ -90,6 +93,20 @@ describe("parseArgs", () => {
 	it("premier token libre = commande", () => {
 		expect(parseArgs(argv("install")).command).toBe("install");
 	});
+	it("--stacks= en liste", () => {
+		expect(
+			parseArgs(argv("install", "--stacks=typescript,python")).stacks,
+		).toEqual(["typescript", "python"]);
+	});
+	it("défaut stacks vide", () => {
+		expect(parseArgs(argv("install")).stacks).toEqual([]);
+	});
+	it("--no-detect", () => {
+		expect(parseArgs(argv("install", "--no-detect")).noDetect).toBe(true);
+	});
+	it("défaut noDetect false", () => {
+		expect(parseArgs(argv("install")).noDetect).toBe(false);
+	});
 	it("--stack défaut auto", () => {
 		expect(parseArgs(argv("install")).stack).toBe("auto");
 	});
@@ -109,127 +126,293 @@ describe("parseArgs", () => {
 	});
 });
 
-describe("detectToolstack", () => {
-	const existsFor = (files) => (p) => files.has(p.split("/").pop());
-	it("détecte TypeScript via package.json", () => {
-		expect(
-			detectToolstack("/proj", { exists: existsFor(new Set(["package.json"])) }),
-		).toEqual({ typescript: true, python: false });
+describe("detectStacks", () => {
+	const fsWith = (present) => ({
+		existsSync: (p) => present.some((name) => p.endsWith(name)),
 	});
-	it("détecte TypeScript via tsconfig.json", () => {
-		expect(
-			detectToolstack("/proj", { exists: existsFor(new Set(["tsconfig.json"])) }),
-		).toEqual({ typescript: true, python: false });
-	});
-	it("détecte Python via pyproject.toml", () => {
-		expect(
-			detectToolstack("/proj", {
-				exists: existsFor(new Set(["pyproject.toml"])),
-			}),
-		).toEqual({ typescript: false, python: true });
-	});
-	it("détecte Python via requirements.txt / uv.lock / Pipfile", () => {
-		for (const f of ["requirements.txt", "uv.lock", "Pipfile", "setup.py"]) {
-			expect(
-				detectToolstack("/proj", { exists: existsFor(new Set([f])) }).python,
-			).toBe(true);
-		}
-	});
-	it("projet mixte → les deux", () => {
-		expect(
-			detectToolstack("/proj", {
-				exists: existsFor(new Set(["package.json", "pyproject.toml"])),
-			}),
-		).toEqual({ typescript: true, python: true });
-	});
-	it("aucune toolchain reconnue → les deux faux", () => {
-		expect(
-			detectToolstack("/proj", {
-				exists: existsFor(new Set(["go.mod", "Cargo.toml"])),
-			}),
-		).toEqual({ typescript: false, python: false });
-	});
-});
 
-describe("describeToolchain", () => {
-	it("libellé TS", () => {
-		expect(describeToolchain({ typescript: true, python: false })).toBe(
-			"TypeScript/Node",
-		);
-	});
-	it("libellé Python", () => {
-		expect(describeToolchain({ typescript: false, python: true })).toBe(
-			"Python",
-		);
-	});
-	it("libellé mixte", () => {
-		expect(describeToolchain({ typescript: true, python: true })).toBe(
-			"TypeScript/Node + Python",
-		);
-	});
-	it("aucune toolchain", () => {
-		expect(describeToolchain({ typescript: false, python: false })).toBe(
-			"no recognized toolchain",
-		);
-	});
-});
-
-describe("resolveStacks", () => {
-	const detected = { typescript: false, python: true };
-	it("auto → stacks de la détection", () => {
-		expect(resolveStacks("auto", detected)).toEqual(["python"]);
-		expect(resolveStacks("auto", { typescript: true, python: false })).toEqual([
+	it("package.json → typescript", () => {
+		expect(detectStacks("/proj", fsWith(["package.json"]))).toEqual([
 			"typescript",
 		]);
-		expect(resolveStacks("auto", { typescript: true, python: true })).toEqual([
-			"typescript",
+	});
+	it("pyproject.toml → python", () => {
+		expect(detectStacks("/proj", fsWith(["pyproject.toml"]))).toEqual([
 			"python",
 		]);
 	});
-	it("auto sans toolchain → [] (universel seulement)", () => {
-		expect(resolveStacks("auto", { typescript: false, python: false })).toEqual(
-			[],
-		);
+	it("les deux manifestes → les deux stacks", () => {
+		expect(
+			detectStacks("/proj", fsWith(["package.json", "requirements.txt"])),
+		).toEqual(["typescript", "python"]);
 	});
-	it("all → null (pas de filtre)", () => {
-		expect(resolveStacks("all", detected)).toBeNull();
-	});
-	it("typescript/python forcés", () => {
-		expect(resolveStacks("typescript", detected)).toEqual(["typescript"]);
-		expect(resolveStacks("python", detected)).toEqual(["python"]);
+	it("aucun manifeste connu → []", () => {
+		expect(detectStacks("/proj", fsWith([]))).toEqual([]);
 	});
 });
 
 describe("filterHooksByStack", () => {
-	const hooks = [
-		{ slug: "universal-a" },
-		{ slug: "universal-b", stack: [] },
-		{ slug: "ts-hook", stack: ["typescript"] },
-		{ slug: "py-hook", stack: ["python"] },
-		{ slug: "both-hook", stack: ["typescript", "python"] },
-	];
-	it("projet python → universels + python", () => {
-		const { kept, skipped } = filterHooksByStack(hooks, ["python"]);
-		expect(kept.map((h) => h.slug)).toEqual([
-			"universal-a",
-			"universal-b",
-			"py-hook",
-			"both-hook",
+	const universal = { slug: "u" };
+	const tsOnly = { slug: "ts", stack: ["typescript"] };
+	const pyOnly = { slug: "py", stack: ["python"] };
+	const hooks = [universal, tsOnly, pyOnly];
+
+	it("stacks vide → aucun filtrage", () => {
+		expect(filterHooksByStack(hooks, [])).toEqual(hooks);
+	});
+	it("stacks absent (undefined) → aucun filtrage", () => {
+		expect(filterHooksByStack(hooks, undefined)).toEqual(hooks);
+	});
+	it("garde l'universel + le stack détecté, écarte le reste", () => {
+		expect(filterHooksByStack(hooks, ["python"])).toEqual([universal, pyOnly]);
+	});
+	it("plusieurs stacks détectés → union", () => {
+		expect(filterHooksByStack(hooks, ["typescript", "python"])).toEqual(hooks);
+	});
+});
+
+describe("detectProjectSignals", () => {
+	const ROOT = "/proj";
+	const noPkg = () => {
+		throw new Error("ENOENT");
+	};
+	// Fake readdirSync: path → [{ name, dir }] entries, matching the
+	// `{ withFileTypes: true }` contract used by detectProjectSignals.
+	const fakeReaddir = (entriesByPath) => (p) => entriesByPath[p] ?? [];
+	const dir = (name) => ({
+		name,
+		isDirectory: () => true,
+		isFile: () => false,
+	});
+	const file = (name) => ({
+		name,
+		isDirectory: () => false,
+		isFile: () => true,
+	});
+
+	it("aucun signal sur un projet sans i18n ni okf", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("README.md")] });
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual([]);
+	});
+
+	it("détecte i18n via un dossier locales à la racine", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [dir("locales")] });
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual(["i18n"]);
+	});
+
+	it("détecte i18n via src/locales imbriqué (profondeur limitée)", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [dir("src")],
+			"/proj/src": [dir("locales")],
+		});
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual(["i18n"]);
+	});
+
+	it("détecte i18n via un package i18n dans package.json", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("package.json")] });
+		const readFileSync = () =>
+			JSON.stringify({ dependencies: { "next-intl": "^3.0.0" } });
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"i18n",
 		]);
-		expect(skipped.map((h) => h.slug)).toEqual(["ts-hook"]);
 	});
-	it("aucune toolchain → uniquement universels", () => {
-		const { kept } = filterHooksByStack(hooks, []);
-		expect(kept.map((h) => h.slug)).toEqual(["universal-a", "universal-b"]);
+
+	it("ne confond pas un projet avec des packages non-i18n", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("package.json")] });
+		const readFileSync = () =>
+			JSON.stringify({
+				devDependencies: { lodash: "^4.0.0", typescript: "^5.0.0" },
+			});
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual(
+			[],
+		);
 	});
-	it("stacks null → aucun filtre", () => {
-		const { kept, skipped } = filterHooksByStack(hooks, null);
-		expect(kept).toHaveLength(5);
-		expect(skipped).toHaveLength(0);
+
+	it("détecte okf, OKF et .okf (insensible à la casse)", () => {
+		for (const name of ["okf", "OKF", ".okf"]) {
+			const readdirSync = fakeReaddir({ [ROOT]: [dir(name)] });
+			expect(
+				detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+			).toEqual(["okf"]);
+		}
 	});
-	it("projet mixte → tout sauf stack exclusive non matchée", () => {
-		const { kept } = filterHooksByStack(hooks, ["typescript", "python"]);
-		expect(kept).toHaveLength(5);
+
+	it("détecte i18n + okf ensemble", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [dir("okf"), dir("src")],
+			"/proj/src": [dir("messages")],
+		});
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual(["i18n", "okf"]);
+	});
+
+	it("ne descend pas dans node_modules pour chercher i18n", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [dir("node_modules")],
+			"/proj/node_modules": [dir("locales")],
+		});
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual([]);
+	});
+
+	it("résiste à un dossier illisible", () => {
+		const readdirSync = (p) => {
+			if (p === ROOT) return [dir("src")];
+			throw new Error("EACCES");
+		};
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual([]);
+	});
+
+	it("détecte nextjs via la dépendance next", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("package.json")] });
+		const readFileSync = () =>
+			JSON.stringify({ dependencies: { next: "^15.0.0" } });
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"nextjs",
+		]);
+	});
+
+	it("détecte nextjs via next.config.mjs (sans dépendance)", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("next.config.mjs")] });
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual(["nextjs"]);
+	});
+
+	it("détecte frontend via une dépendance react", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("package.json")] });
+		const readFileSync = () =>
+			JSON.stringify({
+				dependencies: { react: "^18.3.1", "react-dom": "^18.3.1" },
+			});
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"frontend",
+		]);
+	});
+
+	it("détecte github via un dossier .github", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [dir(".github")] });
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual(["github"]);
+	});
+
+	it("détecte github via une remote git github.com", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [dir(".git")] });
+		const readFileSync = (p) => {
+			if (p === "/proj/.git/config")
+				return '[remote "origin"]\n\turl = git@github.com:acme/repo.git';
+			throw new Error("ENOENT");
+		};
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"github",
+		]);
+	});
+
+	it("détecte github via un worktree (fichier gitdir)", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file(".git")] });
+		const readFileSync = (p) => {
+			if (p === "/proj/.git") return "gitdir: ../real-gitdir";
+			// path.join normalizes the relative gitdir against the repo root.
+			if (p === "/real-gitdir/config")
+				return '[remote "origin"]\n\turl = https://github.com/acme/repo.git';
+			throw new Error("ENOENT");
+		};
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"github",
+		]);
+	});
+
+	it("ne détecte pas github sur une remote non-GitHub", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [dir(".git")] });
+		const readFileSync = (p) => {
+			if (p === "/proj/.git/config")
+				return '[remote "origin"]\n\turl = git@gitlab.com:acme/repo.git';
+			throw new Error("ENOENT");
+		};
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual(
+			[],
+		);
+	});
+
+	it("cumule i18n + nextjs + frontend + github + okf sur un projet complet", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [dir("okf"), dir("src"), dir(".github"), file("package.json")],
+			"/proj/src": [dir("locales")],
+		});
+		const readFileSync = () =>
+			JSON.stringify({
+				dependencies: { next: "^15.0.0", react: "^18.3.1" },
+			});
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"frontend",
+			"github",
+			"i18n",
+			"nextjs",
+			"okf",
+		]);
+	});
+});
+
+describe("suggestHooksForSignals", () => {
+	it("mappe i18n → stop-i18n-validation", () => {
+		expect(suggestHooksForSignals(["i18n"])).toEqual(["stop-i18n-validation"]);
+	});
+
+	it("mappe okf → les trois hooks OKF", () => {
+		expect(suggestHooksForSignals(["okf"])).toEqual([
+			"okf-validate-on-change",
+			"session-start-okf-staleness",
+			"stop-okf-staleness-check",
+		]);
+	});
+
+	it("exclut les slugs déjà sélectionnés", () => {
+		expect(suggestHooksForSignals(["okf"], ["okf-validate-on-change"])).toEqual(
+			["session-start-okf-staleness", "stop-okf-staleness-check"],
+		);
+	});
+
+	it("ignore les signaux inconnus", () => {
+		expect(suggestHooksForSignals(["cobol"], ["x"])).toEqual([]);
+	});
+
+	it("ne duplique pas un slug déjà suggéré", () => {
+		expect(suggestHooksForSignals(["i18n", "i18n"])).toEqual([
+			"stop-i18n-validation",
+		]);
+	});
+
+	it("mappe nextjs → post-write-nextjs-quality", () => {
+		expect(suggestHooksForSignals(["nextjs"])).toEqual([
+			"post-write-nextjs-quality",
+		]);
+	});
+
+	it("mappe frontend → post-edit-visual-check", () => {
+		expect(suggestHooksForSignals(["frontend"])).toEqual([
+			"post-edit-visual-check",
+		]);
+	});
+
+	it("mappe github → session-start-github-context", () => {
+		expect(suggestHooksForSignals(["github"])).toEqual([
+			"session-start-github-context",
+		]);
+	});
+
+	it("sans signaux → aucun slug", () => {
+		expect(suggestHooksForSignals([])).toEqual([]);
 	});
 });
 
@@ -763,6 +946,70 @@ describe("findInstalledSlugs", () => {
 		expect(slugs).toEqual(["hook-a", "hook-b"]);
 	});
 });
+describe("scanInstalledHooks", () => {
+	it("retourne slug + nom de fichier réel, même renommé", () => {
+		const files = {
+			"biome-check.mjs":
+				"#!/usr/bin/env node\n// @hookstack post-write-biome\n",
+			"quality-check.mjs":
+				"#!/usr/bin/env node\n// @hookstack stop-quality-check\n",
+		};
+		const hooks = scanInstalledHooks("/proj/.claude/hooks", {
+			readdirSync: () => Object.keys(files),
+			readFileSync: (p) => files[p.split("/").pop()],
+		});
+		expect(hooks).toEqual([
+			{ slug: "post-write-biome", file: "biome-check.mjs" },
+			{ slug: "stop-quality-check", file: "quality-check.mjs" },
+		]);
+	});
+	it("déduplique par slug (premier fichier gagne)", () => {
+		const files = {
+			"a.mjs": "#!/usr/bin/env node\n// @hookstack dup\n",
+			"b.mjs": "#!/usr/bin/env node\n// @hookstack dup\n",
+		};
+		const hooks = scanInstalledHooks("/proj/.claude/hooks", {
+			readdirSync: () => Object.keys(files),
+			readFileSync: (p) => files[p.split("/").pop()],
+		});
+		expect(hooks).toEqual([{ slug: "dup", file: "a.mjs" }]);
+	});
+	it("le fichier canonique <slug>.mjs gagne sur un fichier renommé", () => {
+		const files = {
+			"biome-check.mjs":
+				"#!/usr/bin/env node\n// @hookstack post-write-biome\n",
+			"post-write-biome.mjs":
+				"#!/usr/bin/env node\n// @hookstack post-write-biome\n",
+		};
+		const hooks = scanInstalledHooks("/proj/.claude/hooks", {
+			readdirSync: () => Object.keys(files),
+			readFileSync: (p) => files[p.split("/").pop()],
+		});
+		expect(hooks).toEqual([
+			{ slug: "post-write-biome", file: "post-write-biome.mjs" },
+		]);
+	});
+	it("ignore les fichiers non-.mjs et sans fingerprint", () => {
+		const files = {
+			"plain.mjs": "#!/usr/bin/env node\nno fingerprint here\n",
+			"readme.txt": "x",
+		};
+		const hooks = scanInstalledHooks("/proj/.claude/hooks", {
+			readdirSync: () => Object.keys(files),
+			readFileSync: (p) => files[p.split("/").pop()],
+		});
+		expect(hooks).toEqual([]);
+	});
+	it("retourne [] si le dossier n'existe pas", () => {
+		const hooks = scanInstalledHooks("/missing", {
+			readdirSync: () => {
+				throw new Error("ENOENT");
+			},
+			readFileSync: () => "",
+		});
+		expect(hooks).toEqual([]);
+	});
+});
 
 describe("detectScriptChanges", () => {
 	it("classe en changed si le contenu disque diffère", () => {
@@ -820,6 +1067,46 @@ describe("detectScriptChanges", () => {
 		);
 		expect(changed).toEqual([]);
 		expect(unchanged).toEqual([]);
+	});
+	it("fileBySlug : lit le fichier réel quand le hook a été renommé", () => {
+		const hooks = [
+			{
+				slug: "post-write-biome",
+				script_path: ".claude/hooks/post-write-biome.mjs",
+				code_snippet: "renamed content",
+			},
+		];
+		const { changed, unchanged } = detectScriptChanges(
+			hooks,
+			"project",
+			"/proj",
+			{
+				readFileSync: (p) => {
+					if (p.endsWith("biome-check.mjs")) return "renamed content";
+					throw new Error("ENOENT");
+				},
+				fileBySlug: {
+					"post-write-biome": "/proj/.claude/hooks/biome-check.mjs",
+				},
+			},
+		);
+		expect(changed).toEqual([]);
+		expect(unchanged).toEqual(["post-write-biome"]);
+	});
+	it("fileBySlug : classé changed si le fichier renommé diverge", () => {
+		const hooks = [
+			{
+				slug: "post-write-biome",
+				script_path: ".claude/hooks/post-write-biome.mjs",
+				code_snippet: "registry version",
+			},
+		];
+		const { changed } = detectScriptChanges(hooks, "project", "/proj", {
+			readFileSync: (p) =>
+				p.endsWith("biome-check.mjs") ? "my local edits" : "registry version",
+			fileBySlug: { "post-write-biome": "/proj/.claude/hooks/biome-check.mjs" },
+		});
+		expect(changed).toEqual(["post-write-biome"]);
 	});
 });
 
@@ -961,5 +1248,121 @@ describe("buildContributionPr", () => {
 		expect(body).toContain("- `a`");
 		expect(body).toContain("- `b`");
 		expect(body).toContain("npx hookstack-cli@latest contribute");
+	});
+	it("liste les tests inclus quand withTests est fourni", () => {
+		const { body } = buildContributionPr(["a", "b"], {
+			withTests: ["tests/hooks/a.test.mjs"],
+		});
+		expect(body).toContain("Unit tests updated:");
+		expect(body).toContain("- `tests/hooks/a.test.mjs`");
+		expect(body).not.toContain("- `tests/hooks/b.test.mjs`");
+	});
+	it("n'ajoute pas de section tests par défaut", () => {
+		const { body } = buildContributionPr(["a"]);
+		expect(body).not.toContain("Unit tests updated:");
+	});
+});
+
+describe("detectTestChanges", () => {
+	it("signale un test local qui diffère du registre", () => {
+		const hooks = [{ slug: "a", test_snippet: "published test" }];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: () => "edited test",
+		});
+		expect(changed).toEqual(["a"]);
+	});
+	it("ignore un test identique au registre", () => {
+		const hooks = [{ slug: "a", test_snippet: "same" }];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: () => "same",
+		});
+		expect(changed).toEqual([]);
+	});
+	it("ignore un hook sans test local", () => {
+		const hooks = [{ slug: "a", test_snippet: "published" }];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: () => {
+				throw new Error("ENOENT");
+			},
+		});
+		expect(changed).toEqual([]);
+	});
+	it("signale un test local quand le registre n'en a pas", () => {
+		const hooks = [{ slug: "a" }];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: () => "brand new test",
+		});
+		expect(changed).toEqual(["a"]);
+	});
+	it("trouve un test nommé d'après le basename du script", () => {
+		const hooks = [
+			{
+				slug: "pre-bash-secret-detection",
+				script_path: ".claude/hooks/detect-secrets.mjs",
+				test_snippet: "published",
+			},
+		];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: (p) => {
+				if (p.endsWith("detect-secrets.test.mjs")) return "edited";
+				throw new Error("ENOENT");
+			},
+		});
+		expect(changed).toEqual(["pre-bash-secret-detection"]);
+	});
+
+	it("trouve un test nommé d'après le fichier réellement installé (renommé)", () => {
+		// Miroir test du fix #227 : quand l'utilisateur renomme le hook .mjs installé
+		// (post-write-biome.mjs → biome-check.mjs) et son test avec, le fingerprint
+		// reste la source de vérité et le test renommé doit être détecté via hook.file.
+		const hooks = [
+			{
+				slug: "post-write-biome",
+				script_path: ".claude/hooks/post-write-biome.mjs",
+				file: "/proj/.claude/hooks/biome-check.mjs",
+				test_snippet: "published",
+			},
+		];
+		const changed = detectTestChanges(hooks, "/proj", {
+			readFileSync: (p) => {
+				if (p.endsWith("biome-check.test.mjs")) return "edited";
+				throw new Error("ENOENT");
+			},
+		});
+		expect(changed).toEqual(["post-write-biome"]);
+	});
+});
+
+describe("resolveTestDest", () => {
+	const hook = {
+		slug: "pre-bash-secret-detection",
+		script_path: ".claude/hooks/detect-secrets.mjs",
+	};
+	it("préfère le test nommé par slug", () => {
+		const dest = resolveTestDest(hook, "/proj", {
+			existsSync: (p) => p.endsWith("pre-bash-secret-detection.test.mjs"),
+		});
+		expect(dest).toBe("/proj/tests/hooks/pre-bash-secret-detection.test.mjs");
+	});
+	it("retombe sur le test nommé par basename", () => {
+		const dest = resolveTestDest(hook, "/proj", {
+			existsSync: (p) => p.endsWith("detect-secrets.test.mjs"),
+		});
+		expect(dest).toBe("/proj/tests/hooks/detect-secrets.test.mjs");
+	});
+	it("retourne le chemin slug si aucun test n'existe (création)", () => {
+		const dest = resolveTestDest(hook, "/proj", { existsSync: () => false });
+		expect(dest).toBe("/proj/tests/hooks/pre-bash-secret-detection.test.mjs");
+	});
+	it("préfère le test nommé d'après le fichier renommé s'il existe", () => {
+		const renamedHook = {
+			slug: "post-write-biome",
+			script_path: ".claude/hooks/post-write-biome.mjs",
+			file: "/proj/.claude/hooks/biome-check.mjs",
+		};
+		const dest = resolveTestDest(renamedHook, "/proj", {
+			existsSync: (p) => p.endsWith("biome-check.test.mjs"),
+		});
+		expect(dest).toBe("/proj/tests/hooks/biome-check.test.mjs");
 	});
 });

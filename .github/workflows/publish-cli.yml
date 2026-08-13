@@ -33,6 +33,13 @@ jobs:
       - name: Upgrade npm
         run: npm install -g npm@latest
 
+      - name: Ensure sigstore (provenance)
+        # npm publish --provenance requires the sigstore module; the global
+        # npm upgrade on the runner can leave it missing ("Cannot find module
+        # 'sigstore'"), which silently fails the publish. Install it globally
+        # so Node's parent-dir resolution finds it from npm's libnpmpublish.
+        run: npm install -g sigstore
+
       - name: Bump patch version
         id: bump
         working-directory: packages/cli

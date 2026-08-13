@@ -14,6 +14,13 @@ npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-bloc
 
 That's it. The CLI fetches the hooks, shows you what will be installed, and patches your `.claude/settings.json`.
 
+Running `install` with no `--hooks` installs the default HookStack — and **detects your project's setup** to pick the right hooks:
+
+- **Stack detection** (language): looks for `package.json`/`pyproject.toml`/etc. and skips default hooks that don't apply — e.g. no Biome hook in a pure Python project. Override with `--stacks=typescript,python`.
+- **Contextual detection** (systems): spots an i18n setup, an `okf/` knowledge bundle, a Next.js app, a front-end codebase, or a GitHub-hosted repo, and suggests (interactive) or auto-adds (`--yes`) the matching non-default hooks — see [Smart toolstack detection](#smart-toolstack-detection).
+
+An explicit `--hooks=` list is always installed as-is, never filtered. `--no-detect` opts out of both detection layers.
+
 ---
 
 ## Usage
@@ -32,9 +39,12 @@ Options:
   --copilot          GitHub Copilot — ./.claude with paths adapted for Copilot
   --scope <s>        "project" (default), "global", "copilot",
                      "codex-project", or "codex-profile"
-  --with-tests       Also install vitest unit tests into tests/hooks/ (install, project scope only)
+  --with-tests       Also install unit tests into tests/hooks/ — vitest (.mjs) or pytest
+                     (Python projects, .py variants) — install, project scope only
   --stack <s>        "auto" (default) — filter hooks to the detected project toolchain;
                      "typescript" / "python" force one stack; "all" disables filtering
+  --stacks <list>    Override stack detection (e.g. --stacks=typescript,python)
+  --no-detect        Skip all detection (stack + contextual systems), install the full default set
   --yes, -y          Skip prompts (non-interactive / CI)
   --version, -v      Print version
   --help, -h         Show help
@@ -64,36 +74,6 @@ When run in a terminal the CLI opens an interactive prompt:
 4. Shows a **security panel** (shell access · network · filesystem writes · Snyk score)
 5. Asks for confirmation before writing anything
 
-### Language-aware installs
-
-The CLI detects the project's toolchain before installing and keeps only hooks that match it — so a Python repo never receives hooks that shell out to `npm`/`tsc`/`biome`, and a TypeScript repo never receives hooks that shell out to `uv`/`ruff`/`pytest`:
-
-| Detection | Markers | Default install gets |
-|---|---|---|
-| TypeScript/Node | `package.json`, `tsconfig.json` | universal hooks + TypeScript hooks (`biome`, `tsc`, `pnpm`, Next.js SEO…) |
-| Python | `pyproject.toml`, `requirements.txt`, `setup.py`, `setup.cfg`, `Pipfile`, `uv.lock`, `poetry.lock` | universal hooks + Python hooks (`ruff format`, `ruff check`, `pyright`, `pytest`, `uv` guard) |
-| Both (monorepo) | markers of both | universal + TypeScript + Python |
-| Neither (Rust, Go…) | — | universal hooks only |
-
-Universal hooks (no declared stack) are language-neutral by contract and always install. `stop-quality-check` and `task-completed-test-gate` are themselves language-aware: they run `tsc`/`biome` on TypeScript projects and `ruff`/`pyright`/`pytest` via `uv` on Python projects. Use `--stack` to override the detection:
-
-```bash
-npx hookstack-cli@latest install --stack=typescript   # force the TypeScript set
-npx hookstack-cli@latest install --stack=python       # force the Python set
-npx hookstack-cli@latest install --stack=all          # no filtering (previous behavior)
-```
-
-### Python hooks & Python tests (`.py` + pytest)
-
-On a pure-Python install (detected toolchain, or `--stack=python`), hooks that have a **Python variant** are installed as real `.py` scripts (`python3 $CLAUDE_PROJECT_DIR/.claude/hooks/<slug>.py` in `settings.json`), and `--with-tests` writes **pytest** tests (`tests/hooks/test_<slug>.py`) instead of vitest tests. Vitest tests are **never** installed on Python projects — so the project's CI stays Python-only, with no `npm`/`node` added just to test the hooks.
-
-```bash
-# Python project (pyproject.toml present) — hooks land as .py, tests as pytest
-npx hookstack-cli@latest install --with-tests
-```
-
-Hooks without a Python variant yet fall back to the `.mjs` script (reported in the install summary — python variants are landing progressively). To add a variant for a hook, transcribe the logic to `.claude/hooks/<slug>.py` (stdlib only) + `tests/hooks/test_<slug>.py`, set `implementation.python_script_path`, and run the sync.
-
 ### Non-interactive mode (`--yes` or piped)
 
 Skips all prompts — useful in CI or dotfile bootstrap scripts.
@@ -109,18 +89,49 @@ npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guar
 npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guard-git-push-main --yes --scope=codex-project
 ```
 
+### Smart toolstack detection
+
+On the **default install** (`no --hooks`), besides the language-stack filter above, the CLI probes your project for the non-language systems you actually use and suggests hooks that only make sense when that system is present:
+
+| Signal | Detected when | Hooks added |
+|---|---|---|
+| `i18n` | a `locales/` / `locale/` / `messages/` / `i18n/` directory exists anywhere in the tree, or an i18n package (`next-intl`, `react-i18next`, `i18next`, `react-intl`…) is in `package.json` | `stop-i18n-validation` — keeps translation files consistent on every session stop |
+| `okf` | a top-level `okf/` (or `.okf/`, any case) knowledge bundle exists | `okf-validate-on-change` · `session-start-okf-staleness` · `stop-okf-staleness-check` — validate and keep the OKF bundle fresh |
+| `nextjs` | `next` in `package.json`, or a `next.config.{js,mjs,cjs,ts}` at the root | `post-write-nextjs-quality` — catches missing `'use client'`, Pages Router patterns, and missing `next/image`/`next/link` |
+| `frontend` | a front-end framework in `package.json` (`react`, `vue`, `svelte`, `astro`, `preact`, `solid-js`, `@angular/core`…) | `post-edit-visual-check` — reminds the agent to verify UI changes actually render |
+| `github` | a `.github/` directory, or a git remote pointing at `github.com` | `session-start-github-context` — loads open PRs and branch check status at session start |
+
+- **Interactive** installs ask before adding them (a multi-select, pre-checked — uncheck to skip)
+- **`--yes`** installs auto-add them and report what was detected (e.g. `⚡ Detected an i18n/translation system + an OKF knowledge bundle — auto-added: …`)
+- Detection is **best-effort**: a probe or fetch failure never aborts the install
+- Already-installed hooks are never re-suggested (fingerprint-based)
+- Global/profile scopes (`global`, `codex-profile`) skip detection by design — they target any project, so there's nothing to detect against
+- Skip it entirely with `--no-detect` (same flag as the stack filter)
+
+---
+
+### Python hooks & Python tests (`.py` + pytest)
+
+On a pure-Python install (detected toolchain, or `--stack=python`), hooks that have a **Python variant** are installed as real `.py` scripts (`python3 $CLAUDE_PROJECT_DIR/.claude/hooks/<slug>.py` in `settings.json`), and `--with-tests` writes **pytest** tests (`tests/hooks/test_<slug>.py`) instead of vitest tests. Vitest tests are **never** installed on Python projects — so the project's CI stays Python-only, with no `npm`/`node` added just to test the hooks.
+
+```bash
+# Python project (pyproject.toml present) — hooks land as .py, tests as pytest
+npx hookstack-cli@latest install --with-tests
+```
+
+Hooks without a Python variant fall back to the `.mjs` (the install summary shows `18 Python · 49 .mjs fallback`-style counts). `update` compares and refreshes the installed variant (`.py` on Python projects, `.mjs` otherwise).
+
 ---
 
 ## What gets installed
 
 For each hook the CLI:
 
-- Writes the `.mjs` script to the scripts directory for the chosen agent (`.claude/hooks/`, `~/.claude/hooks/`, `.codex/hooks/`, or `~/.codex/hooks/`)
+- Writes the hook script (`.mjs`, or the `.py` variant on pure-Python installs) to the scripts directory for the chosen agent (`.claude/hooks/`, `~/.claude/hooks/`, `.codex/hooks/`, or `~/.codex/hooks/`)
 - Patches the agent's config file (`.claude/settings.json` or `.codex/hooks.json`) to register the hook on the right lifecycle event
-- Optionally writes vitest unit tests to `tests/hooks/` when `--with-tests` is passed (or confirmed interactively)
-- Filters the set to the project's detected toolchain (see [Language-aware installs](#language-aware-installs)) unless `--stack=all` is passed — an explicit `--hooks=` list is filtered too, and skipped slugs are reported
+- Optionally writes unit tests to `tests/hooks/` when `--with-tests` is passed (or confirmed interactively) — vitest on Node projects, pytest on Python projects
 
-The same hook `.mjs` is used regardless of agent — Claude Code and Codex share lifecycle event names, so only the config file format changes. No new dependencies are added to your project. Hooks are plain Node.js scripts — no SDK, no agent modification.
+The same hook code is used regardless of agent — Claude Code and Codex share lifecycle event names, so only the config file format changes. No new dependencies are added to your project. Hooks are plain Node.js/Python scripts — no SDK, no agent modification.
 
 ---
 
@@ -132,7 +143,7 @@ Hooks evolve — bug fixes, new options, the occasional rewrite. To pull the lat
 npx hookstack-cli@latest update
 ```
 
-No `--hooks` needed: the CLI scans the scripts directory for the target scope (`.claude/hooks/` by default), reads the `// @hookstack <slug>` fingerprint each script carries, and re-fetches exactly those hooks from the live registry. Each hook's metadata (code, config, tests) is served live from [hookstack.app](https://www.hookstack.app) — never bundled in the npm package — so `update` always gets what's currently on the catalogue, no CLI version bump required.
+No `--hooks` needed: the CLI scans the scripts directory for the target scope (`.claude/hooks/` by default), reads the `// @hookstack <slug>` (or `# @hookstack <slug>` on Python variants) fingerprint each script carries, and re-fetches exactly those hooks from the live registry. Each hook's metadata (code, config, tests) is served live from [hookstack.app](https://www.hookstack.app) — never bundled in the npm package — so `update` always gets what's currently on the catalogue, no CLI version bump required.
 
 - Scripts whose content changed are overwritten; unchanged ones are left alone and reported separately
 - `settings.json` (or `hooks.json` for Codex) is re-merged — it's only actually touched if a hook's config fragment changed, since the merge is idempotent
@@ -155,7 +166,9 @@ Tweaked a hook locally and want the catalogue to have it? `contribute` turns tha
 npx hookstack-cli@latest contribute
 ```
 
-It scans your installed hooks (same `@hookstack` fingerprint lookup as `update`), finds the ones whose local `.mjs` no longer matches the live registry, lets you pick which to send, then forks [steve-magne/hookstack](https://github.com/steve-magne/hookstack), pushes a branch with your version of those files, and opens the PR for you.
+It scans your installed hooks (same `@hookstack` fingerprint lookup as `update`), finds the ones whose local `.mjs` no longer matches the live registry, lets you pick which to send, then opens a PR with your version of those files — forking [steve-magne/hookstack](https://github.com/steve-magne/hookstack) for you, or pushing a branch straight to it when your `gh` account owns the repo (no fork needed). Renamed hook files work too — detection follows the fingerprint, not the filename.
+
+**Unit tests ride along.** If you installed with `--with-tests` and edited the matching `tests/hooks/<slug>.test.mjs` (or wrote one where the catalogue ships none), the modified test file is pushed with its hook — the PR body lists every test included. The upstream repo's CI gate requires ≥ 80 % coverage, so shipping the test with the script is what makes a contribution mergeable.
 
 Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated (`gh auth login`).
 

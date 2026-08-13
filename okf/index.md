@@ -30,11 +30,17 @@ des fichiers markdown + frontmatter YAML, lisibles sans outillage, versionnés d
 
 ## Implementation
 
+* [CLI contribute — noms de fichiers canoniques des hooks](implementation/canonical-hook-filenames.md) - PR contribute auto-générée ajoutant des doublons <slug>.mjs byte-identiques aux hooks renommés sur main — résolue par un renommage canonique (git mv + script_path + config + tests + settings + timeline).
 * [Catalogue — filtre par thématiques](implementation/catalogue-theme-filter.md) - Barre de chips thématiques sur la home pour filtrer le catalogue par cas d'usage, projetées depuis le registre vers une allowlist curée orientée besoin.
-* [CLI contribute — renvoyer un hook modifié en PR](implementation/cli-contribute-command.md) - Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR.
+* [CLI contribute — renvoyer un hook modifié en PR](implementation/cli-contribute-command.md) - Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR, tests unitaires associés inclus.
+* [CLI contribute — hooks renommés localement (fichier ≠ slug)](implementation/cli-contribute-renamed-files.md) - Le contribute du CLI échouait en ENOENT quand l'utilisateur renommait un hook .mjs installé — la copie partait de <slug>.mjs au lieu du fichier réel portant le fingerprint.
+* [CLI — détection intelligente de la toolstack à l'install](implementation/cli-smart-toolstack-detection.md) - Le CLI analyse le projet (dossiers i18n/okf, package.json, remote git) et suggère ou auto-installe les hooks du catalogue qui correspondent aux systèmes réellement présents.
+* [CLI install — détection de stack pour filtrer les hooks par défaut](implementation/cli-stack-detection.md) - Le CLI installait tout le set default_on sans distinction de langage (ex. le hook Biome, TypeScript-only, dans un projet purement Python) — résolu par détection de stack par manifeste + filtrage côté CLI et exposition du champ registre stack via l'API.
+* [Badge de coverage du README — générateur déterministe + drift guard CI](implementation/coverage-badge.md) - scripts/coverage-badge.mjs rend le badge 4 métriques (lines/statements/branches/functions) depuis coverage-summary.json, l'insère dans le README et le CI vérifie sa fraîcheur via --check.
 * [i18n-validation — find qui timeout sur les worktrees](implementation/fix-i18n-hook-timeout.md) - Le hook Stop i18n-validation explosait en ETIMEDOUT à chaque session car son find parcourait les node_modules des .claude/worktrees. Correction du prune + silence défensif.
 * [Lien "Catalogue" dans la navbar — Implémentation](implementation/navbar-catalogue-link.md) - Ajout d'un lien de navigation qui scrolle vers la section catalogue de la home.
 * [OKF Knowledge Bundle — Implémentation](implementation/okf-knowledge-bundle.md) - Mise en place de la base de connaissance agentique OKF v0.1 sur Hookstack (bundle, scripts/okf.mjs, sous-agent librarian, skill /okf, hooks catalogue).
+* [Gate CI — couverture lignes ≥ 80 % par hook individuel](implementation/per-hook-coverage-gate.md) - En complément du seuil agrégé de vitest, scripts/check-hook-coverage.mjs bloque tout hook dont la couverture lignes < 80 %, avec une liste d'exceptions pour les hooks hérités.
 * [Variantes Python des hooks — install language-aware](implementation/python-hook-variants.md) - Chaque hook peut porter une variante .py (stdlib only + tests pytest) ; le CLI détecte la toolstack du projet et installe les bons scripts du bon langage — plus aucun vitest/npm sur un projet Python.
 
 ## Marketing

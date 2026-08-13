@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { run } from "../../.claude/hooks/quality-check.mjs";
+import { run } from "../../.claude/hooks/stop-quality-check.mjs";
 
 const PROJECT_DIR = "/fake/project";
 
@@ -31,7 +31,7 @@ function makeOpts({
 	};
 }
 
-describe("quality-check", () => {
+describe("stop-quality-check", () => {
 	it("retourne 0 checks si pas de package.json", () => {
 		const result = run(makeOpts({ hasPkg: false }));
 		expect(result.checks).toBe(0);

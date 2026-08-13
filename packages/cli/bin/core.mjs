@@ -2,7 +2,6 @@
 // Everything here is side-effect free and unit-tested in isolation; the
 // interactive I/O (clack/picocolors, fs, fetch) lives in cli.mjs. This mirrors
 // the project's "pure run() + thin I/O guard" hook convention.
-import { existsSync } from "node:fs";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 
 const BLOCKING_EVENTS = new Set([
@@ -34,77 +33,6 @@ const CODEX_SCOPES = new Set(["codex-project", "codex-profile"]);
 export const isGlobalScope = (scope) => GLOBAL_SCOPES.has(scope);
 export const isCodexScope = (scope) => CODEX_SCOPES.has(scope);
 
-// ── toolstack detection ───────────────────────────────────────────────────────
-// The default HookStack is filtered by the project's language so a Python repo
-// never gets hooks that shell out to npm/tsc/biome, and a TS repo never gets
-// hooks that shell out to uv/ruff/pytest. Detection is manifest-only: it looks
-// for well-known toolchain marker files and never reads file contents, so it
-// stays cheap and side-effect free at install time.
-
-// Marker files that reveal a Node/TypeScript toolchain.
-export const TYPESCRIPT_MARKERS = ["package.json", "tsconfig.json"];
-
-// Marker files that reveal a Python toolchain.
-export const PYTHON_MARKERS = [
-	"pyproject.toml",
-	"requirements.txt",
-	"setup.py",
-	"setup.cfg",
-	"Pipfile",
-	"uv.lock",
-	"poetry.lock",
-];
-
-// Detects which toolchains the project at `cwd` belongs to. Pure + DI: `exists`
-// defaults to node:fs existsSync, but tests inject a fake map.
-export function detectToolstack(cwd, { exists = existsSync } = {}) {
-	const has = (file) => exists(join(cwd, file));
-	return {
-		typescript: TYPESCRIPT_MARKERS.some(has),
-		python: PYTHON_MARKERS.some(has),
-	};
-}
-
-// Human-readable label for the detection result, used in install messaging.
-export function describeToolchain(detected) {
-	const parts = [];
-	if (detected.typescript) parts.push("TypeScript/Node");
-	if (detected.python) parts.push("Python");
-	return parts.length > 0 ? parts.join(" + ") : "no recognized toolchain";
-}
-
-// Maps the parsed --stack flag + detected toolchain to the stack list used by
-// filterHooksByStack. `null` means "no filtering" (--stack=all).
-export function resolveStacks(flag, detected) {
-	if (flag === "all") return null;
-	if (flag === "typescript") return ["typescript"];
-	if (flag === "python") return ["python"];
-	// auto — trust the detection: a mixed project gets both toolchains.
-	return [
-		...(detected.typescript ? ["typescript"] : []),
-		...(detected.python ? ["python"] : []),
-	];
-}
-
-// Filters hooks by their declared `stack`. Universal hooks (no stack) always
-// pass — they are language-neutral by contract. Stack-specific hooks are kept
-// only when their stack intersects the enabled ones. `stacks === null` disables
-// the filter entirely (--stack=all); `stacks === []` (no toolchain detected)
-// keeps only the universal set.
-export function filterHooksByStack(hooks, stacks) {
-	if (stacks === null) return { kept: hooks, skipped: [] };
-	const kept = [];
-	const skipped = [];
-	for (const hook of hooks) {
-		if (!hook.stack?.length || hook.stack.some((s) => stacks.includes(s))) {
-			kept.push(hook);
-		} else {
-			skipped.push(hook);
-		}
-	}
-	return { kept, skipped };
-}
-
 function splitList(raw) {
 	return raw
 		.split(",")
@@ -123,6 +51,8 @@ export function parseArgs(argv) {
 		stack: "auto",
 		yes: false,
 		withTests: false,
+		stacks: [],
+		noDetect: false,
 	};
 
 	for (let i = 0; i < args.length; i++) {
@@ -141,6 +71,31 @@ export function parseArgs(argv) {
 		}
 		if (arg === "--with-tests") {
 			result.withTests = true;
+			continue;
+		}
+		if (arg === "--no-detect") {
+			result.noDetect = true;
+			continue;
+		}
+		if (arg.startsWith("--stacks=")) {
+			result.stacks = splitList(arg.slice("--stacks=".length));
+			continue;
+		}
+		if (arg.startsWith("--stack=") || arg.startsWith("--language=")) {
+			const v = (arg.includes("--stack=")
+				? arg.slice("--stack=".length)
+				: arg.slice("--language=".length)
+			).toLowerCase();
+			if (["auto", "typescript", "python", "all"].includes(v)) {
+				result.stack = v;
+			}
+			continue;
+		}
+		if ((arg === "--stack" || arg === "--language") && args[i + 1]) {
+			const v = args[++i].toLowerCase();
+			if (["auto", "typescript", "python", "all"].includes(v)) {
+				result.stack = v;
+			}
 			continue;
 		}
 		if (arg === "--global" || arg === "-g") {
@@ -174,16 +129,6 @@ export function parseArgs(argv) {
 		}
 		if (arg === "--hooks" && args[i + 1]) {
 			result.hooks = splitList(args[++i]);
-			continue;
-		}
-		if (arg.startsWith("--stack=") || arg.startsWith("--language=")) {
-			const v = (arg.includes("--stack=") ? arg.slice("--stack=".length) : arg.slice("--language=".length)).toLowerCase();
-			if (["auto", "typescript", "python", "all"].includes(v)) result.stack = v;
-			continue;
-		}
-		if ((arg === "--stack" || arg === "--language") && args[i + 1]) {
-			const v = args[++i].toLowerCase();
-			if (["auto", "typescript", "python", "all"].includes(v)) result.stack = v;
 			continue;
 		}
 		if (!result.command) result.command = arg;
@@ -232,6 +177,242 @@ export function assertSafeTarget(destDir, target) {
 	}
 }
 
+// ── stack detection ─────────────────────────────────────────────────────────
+// Manifest-based signals only (not file extensions — a stray .py script in a
+// TypeScript repo shouldn't flip the detection). One matching manifest is
+// enough; keep in sync with the registry's `stack` enum (registry.schema.json).
+const STACK_MANIFESTS = {
+	typescript: ["package.json", "tsconfig.json", "pnpm-workspace.yaml"],
+	python: [
+		"pyproject.toml",
+		"requirements.txt",
+		"setup.py",
+		"Pipfile",
+		"uv.lock",
+	],
+};
+
+export function detectStacks(cwd, { existsSync }) {
+	return Object.entries(STACK_MANIFESTS)
+		.filter(([, manifests]) => manifests.some((m) => existsSync(join(cwd, m))))
+		.map(([stack]) => stack);
+}
+
+// Universal hooks (no `stack`) always pass; stack-specific hooks only survive
+// when their stack overlaps with `stacks`. Empty/missing `stacks` is a no-op —
+// same rule as the site's catalogue filter (src/lib/hooks.ts).
+export function filterHooksByStack(hooks, stacks) {
+	if (!stacks || stacks.length === 0) return hooks;
+	return hooks.filter(
+		(h) => !h.stack?.length || h.stack.some((s) => stacks.includes(s)),
+	);
+}
+
+// ── contextual signal detection ───────────────────────────────────────────────
+// Complementary to stack detection: stacks (typescript/python) decide which
+// default hooks apply; signals (i18n, OKF, Next.js…) decide which non-default
+// hooks to ADD for the systems the project actually uses. Signals are cheap
+// filesystem probes run against the current project; each maps to catalogue
+// hooks that only make sense when that system is present. `--no-detect` opts
+// out of both layers.
+
+// package.json dependency names that indicate an i18n/translation system.
+const I18N_PACKAGE_NAMES = new Set([
+	"i18next",
+	"react-i18next",
+	"next-intl",
+	"vue-i18n",
+	"react-intl",
+	"@formatjs/intl",
+	"@lingui/core",
+	"@lingui/react",
+	"@lingui/macro",
+	"typesafe-i18n",
+	"i18n-js",
+	"rosetta",
+	"ttag",
+	"fbt",
+]);
+
+// package.json dependency names that indicate a front-end codebase.
+const FRONTEND_PACKAGE_NAMES = new Set([
+	"react",
+	"react-dom",
+	"vue",
+	"svelte",
+	"astro",
+	"preact",
+	"solid-js",
+	"@angular/core",
+	"@angular/platform-browser",
+]);
+
+// Directories never walked during signal detection (heavy or vendored).
+const DETECT_SKIP_DIRS = new Set([
+	"node_modules",
+	".git",
+	".next",
+	".nuxt",
+	".sveltekit",
+	".turbo",
+	"dist",
+	"build",
+	"out",
+	".cache",
+	"coverage",
+	".venv",
+	"venv",
+	".claude",
+	".codex",
+	".idea",
+	".vscode",
+	"vendor",
+	"Pods",
+	"target",
+]);
+
+const I18N_DIR_RE = /^(?:locales?|messages?|i18n)$/i;
+const OKF_DIR_RE = /^\.?okf$/i;
+const NEXT_CONFIG_RE = /^next\.config\.(?:[cm]?js|ts)$/;
+
+// Human-readable label shown to the user when a signal is detected.
+export const SIGNAL_LABELS = {
+	i18n: "an i18n/translation system",
+	okf: "an OKF knowledge bundle",
+	nextjs: "a Next.js app",
+	frontend: "a front-end codebase",
+	github: "a GitHub-hosted repo",
+};
+
+// Signal → catalogue slugs. A hook can unlock several signals; keep the table
+// flat and one-directional so adding a new signal is a two-line change.
+export const AUTO_DETECT = {
+	i18n: ["stop-i18n-validation"],
+	okf: [
+		"okf-validate-on-change",
+		"session-start-okf-staleness",
+		"stop-okf-staleness-check",
+	],
+	nextjs: ["post-write-nextjs-quality"],
+	frontend: ["post-edit-visual-check"],
+	github: ["session-start-github-context"],
+};
+
+// Reads the union of all dependency flavors from package.json (or empty).
+function readPackageDeps(root, { readFileSync }) {
+	try {
+		const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+		return new Set([
+			...Object.keys(pkg.dependencies ?? {}),
+			...Object.keys(pkg.devDependencies ?? {}),
+			...Object.keys(pkg.peerDependencies ?? {}),
+			...Object.keys(pkg.optionalDependencies ?? {}),
+		]);
+	} catch {
+		return new Set();
+	}
+}
+
+const hasAnyDep = (deps, names) => [...deps].some((name) => names.has(name));
+
+// Depth-limited walk looking for an i18n directory (locales/locale/messages/
+// message/i18n), short-circuiting on the first match. Skips heavy/vendored dirs.
+function hasI18nDir(dir, depth, readdirSync) {
+	if (depth > 5) return false;
+	let entries;
+	try {
+		entries = readdirSync(dir, { withFileTypes: true });
+	} catch {
+		return false;
+	}
+	for (const ent of entries) {
+		if (!ent.isDirectory() || DETECT_SKIP_DIRS.has(ent.name)) continue;
+		if (I18N_DIR_RE.test(ent.name)) return true;
+		if (hasI18nDir(join(dir, ent.name), depth + 1, readdirSync)) return true;
+	}
+	return false;
+}
+
+// True when the project root holds an OKF bundle dir (okf, OKF, .okf, .OKF…).
+function hasOkfDir(root, readdirSync) {
+	try {
+		return readdirSync(root, { withFileTypes: true }).some(
+			(ent) => ent.isDirectory() && OKF_DIR_RE.test(ent.name),
+		);
+	} catch {
+		return false;
+	}
+}
+
+// True when the root holds a next.config.{js,mjs,cjs,ts} file.
+function hasNextConfig(root, readdirSync) {
+	try {
+		return readdirSync(root, { withFileTypes: true }).some(
+			(ent) => ent.isFile() && NEXT_CONFIG_RE.test(ent.name),
+		);
+	} catch {
+		return false;
+	}
+}
+
+// True when the project is hosted on GitHub: a .github/ dir, or a git remote
+// pointing at github.com (plain .git/config or worktree gitdir file).
+function hasGithubSignal(root, { readdirSync, readFileSync }) {
+	try {
+		const entries = readdirSync(root, { withFileTypes: true });
+		if (entries.some((e) => e.isDirectory() && e.name === ".github"))
+			return true;
+		const git = entries.find((e) => e.name === ".git");
+		if (!git) return false;
+		const gitPath = join(root, ".git");
+		let config;
+		if (git.isDirectory()) {
+			config = readFileSync(join(gitPath, "config"), "utf8");
+		} else {
+			// Worktree: .git is a file containing "gitdir: <path>"
+			const gitdir = readFileSync(gitPath, "utf8")
+				.trim()
+				.replace(/^gitdir:\s*/, "");
+			config = readFileSync(join(root, gitdir, "config"), "utf8");
+		}
+		return /github\.com/.test(config);
+	} catch {
+		return false;
+	}
+}
+
+// Detects which contextual systems the current project has, so `install` can
+// suggest the hooks that only make sense there. Pure: all filesystem access
+// goes through the injected deps (mirrors findInstalledSlugs' DI contract).
+export function detectProjectSignals(root, { readdirSync, readFileSync }) {
+	const signals = new Set();
+	const deps = readPackageDeps(root, { readFileSync });
+	if (hasI18nDir(root, 0, readdirSync) || hasAnyDep(deps, I18N_PACKAGE_NAMES)) {
+		signals.add("i18n");
+	}
+	if (hasOkfDir(root, readdirSync)) signals.add("okf");
+	if (deps.has("next") || hasNextConfig(root, readdirSync))
+		signals.add("nextjs");
+	if (hasAnyDep(deps, FRONTEND_PACKAGE_NAMES)) signals.add("frontend");
+	if (hasGithubSignal(root, { readdirSync, readFileSync }))
+		signals.add("github");
+	return [...signals].sort();
+}
+
+// Maps detected signals to catalogue slugs, minus the ones the user already
+// selected or has installed. Slugs that don't exist in the catalogue are simply
+// dropped by the API fetch — no need to hard-fail here.
+export function suggestHooksForSignals(signals, selectedSlugs = []) {
+	const slugs = [];
+	for (const signal of signals) {
+		for (const slug of AUTO_DETECT[signal] ?? []) {
+			if (selectedSlugs.includes(slug) || slugs.includes(slug)) continue;
+			slugs.push(slug);
+		}
+	}
+	return slugs;
+}
+
 // Merges incoming settings.json hook fragments into existing ones, grouping by
 // event then by matcher (no overwrite, no duplicate commands). Same contract as
 // src/lib/mergeConfig. Running install twice yields the same result as once.
@@ -258,8 +439,9 @@ export function mergeHooks(existing, incoming) {
 }
 
 // Whether a hook should install its Python variant (python_script_path) instead
-// of the .mjs. Only when the hook carries one AND the active stacks are pure
-// Python (mixed TS+Python repos keep the .mjs, node being present there).
+// of the .mjs. Only when the hook carries one AND the install targets a pure
+// Python toolchain (mixed TS+Python repos keep the .mjs, node being present
+// there).
 function usePythonVariant(hook, python) {
 	return Boolean(
 		python && hook.python_script_path && hook.python_code_snippet,
@@ -298,8 +480,6 @@ function rewriteCommand(command, scope, globalRoot) {
 // map, rewriting command paths per scope (see rewriteCommand). The resulting map
 // is identical in shape for both Claude (settings.hooks) and Codex (top-level
 // hooks.json) — only doInstall decides how to nest it on disk.
-// When `python` is set, hooks carrying a Python variant register `python3 … .py`
-// commands instead of `node … .mjs`.
 export function collectIncomingHooks(
 	hooks,
 	{ scope = "project", globalRoot, python = false } = {},
@@ -447,17 +627,20 @@ export function extractFingerprint(content) {
 }
 
 // Scans a hooks directory for previously installed HookStack scripts, reading
-// each script's fingerprint (line 2) to recover its slug. Both .mjs and .py
-// variants are recognized. Used by `update` so the user doesn't have to retype
-// --hooks=<slugs> for a re-install.
-export function findInstalledSlugs(hooksDir, { readdirSync, readFileSync }) {
+// each script's fingerprint (line 2) to recover its slug alongside the ACTUAL
+// filename that carries it. Both .mjs and .py variants are recognized. The
+// on-disk file may have been renamed by the user (e.g. `post-write-biome.mjs`
+// → `biome-check.mjs`) — the fingerprint is the source of truth, not the
+// filename. Used by `update` (slugs) and `contribute` (slug + file, so the
+// copy reads the file wherever it actually lives).
+export function scanInstalledHooks(hooksDir, { readdirSync, readFileSync }) {
 	let files;
 	try {
 		files = readdirSync(hooksDir);
 	} catch {
 		return [];
 	}
-	const slugs = [];
+	const found = new Map();
 	for (const file of files) {
 		if (!file.endsWith(".mjs") && !file.endsWith(".py")) continue;
 		let content;
@@ -467,30 +650,49 @@ export function findInstalledSlugs(hooksDir, { readdirSync, readFileSync }) {
 			continue;
 		}
 		const slug = extractFingerprint(content);
-		if (slug) slugs.push(slug);
+		if (!slug) continue;
+		// Dédup par slug. Si le fichier canonique <slug>.mjs existe en plus d'un
+		// fichier renommé, le canonique gagne — c'est celui qui porte l'identité
+		// attendue par le registre.
+		const existing = found.get(slug);
+		const canonical = `${slug}.mjs`;
+		if (!existing || (file === canonical && existing.file !== canonical)) {
+			found.set(slug, { slug, file });
+		}
 	}
-	return slugs;
+	return [...found.values()];
+}
+
+// Slugs only — enough for `update`, which re-fetches by slug. `contribute`
+// prefers scanInstalledHooks to keep the actual file path.
+export function findInstalledSlugs(hooksDir, deps) {
+	return scanInstalledHooks(hooksDir, deps).map(({ slug }) => slug);
 }
 
 // Splits freshly fetched hooks into those whose on-disk script differs from
 // the registry (will be overwritten) and those already up to date.
-// With `python`, hooks that carry a Python variant are compared against their
-// .py file; the rest fall back to the .mjs comparison.
+// `fileBySlug` lets callers (contribute) point at the ACTUAL file a slug lives
+// in when the user renamed it — read that path instead of script_path.
 export function detectScriptChanges(
 	hooks,
 	scope,
 	root,
-	{ readFileSync, python = false },
+	{ readFileSync, fileBySlug = {}, python = false } = {},
 ) {
 	const changed = [];
 	const unchanged = [];
 	for (const hook of hooks) {
+		// Python installs compare the installed .py against python_code_snippet;
+		// otherwise the .mjs against code_snippet (fileBySlug lets contribute
+		// point at the ACTUAL file when the user renamed it).
 		const usePy = usePythonVariant(hook, python);
 		const scriptPath = usePy ? hook.python_script_path : hook.script_path;
 		const snippet = usePy ? hook.python_code_snippet : hook.code_snippet;
 		if (!scriptPath || !snippet) continue;
-		const target = resolveScriptPath(scriptPath, scope);
-		const dest = join(root, target);
+		const dest = usePy
+			? join(root, resolveScriptPath(scriptPath, scope))
+			: (fileBySlug[hook.slug] ??
+				join(root, resolveScriptPath(scriptPath, scope)));
 		let existing = null;
 		try {
 			existing = readFileSync(dest, "utf8");
@@ -505,6 +707,8 @@ export function detectScriptChanges(
 // Refreshes existing test files for updated hooks. Unlike doInstallTests this
 // never creates a new test file — only hooks the user already opted into
 // testing (file present from a prior --with-tests install) get refreshed.
+// Python installs refresh pytest files for hooks with a Python variant; the
+// .mjs tests are never touched there (CI stays Python-only).
 export function doUpdateTests(
 	hooks,
 	projectRoot,
@@ -555,7 +759,9 @@ export function buildContributionBranch(slugs) {
 	return `hookstack-contrib/${slugs.join("-")}`;
 }
 
-export function buildContributionPr(slugs) {
+// `withTests` lists the test file paths (repo-relative, e.g.
+// "tests/hooks/detect-secrets.test.mjs") included in the PR.
+export function buildContributionPr(slugs, { withTests = [] } = {}) {
 	const title =
 		slugs.length === 1
 			? `Update hook: ${slugs[0]}`
@@ -564,15 +770,78 @@ export function buildContributionPr(slugs) {
 		"Local changes to the following hook(s), submitted via `npx hookstack-cli@latest contribute`:",
 		"",
 		...slugs.map((s) => `- \`${s}\``),
-	].join("\n");
-	return { title, body };
+	];
+	if (withTests.length > 0) {
+		body.push(
+			"",
+			"Unit tests updated:",
+			"",
+			...withTests.map((p) => `- \`${p}\``),
+		);
+	}
+	return { title, body: body.join("\n") };
+}
+
+// Candidate test paths for a hook under `<dir>/tests/hooks/`, slug-based first
+// then script-basename-based — the upstream repo names ~half its tests after
+// the script file (e.g. detect-secrets.test.mjs for slug
+// pre-bash-secret-detection). Mirrors the lookup in .claude/sync-hooks.mjs.
+// `hook.file` (the ACTUAL installed file, which the user may have renamed — see
+// scanInstalledHooks) is also considered, so a renamed test file is detected
+// just like the renamed script it belongs to.
+function testPathCandidates(hook, dir) {
+	const alts = new Set(
+		[
+			hook.script_path ? basename(hook.script_path, ".mjs") : null,
+			hook.file ? basename(hook.file, ".mjs") : null,
+		]
+			.filter(Boolean)
+			.filter((b) => b !== hook.slug),
+	);
+	const candidates = [join(dir, "tests", "hooks", `${hook.slug}.test.mjs`)];
+	for (const base of alts) {
+		candidates.push(join(dir, "tests", "hooks", `${base}.test.mjs`));
+	}
+	return candidates;
+}
+
+// Resolves where a hook's unit test lives in `dir`: the first candidate that
+// already exists (slug- or basename-named), else the slug-based path (the
+// naming the CLI uses when installing tests with --with-tests).
+export function resolveTestDest(hook, dir, { existsSync }) {
+	const candidates = testPathCandidates(hook, dir);
+	return candidates.find((p) => existsSync(p)) ?? candidates[0];
+}
+
+// Compares local unit test files under tests/hooks/ against the registry's
+// test_snippet for each hook, returning the slugs whose local test differs
+// from the published one (edited locally, or written for a hook that ships no
+// test at all). Mirrors detectScriptChanges for the .mjs scripts: a difference
+// means the user's version is a candidate to contribute upstream.
+export function detectTestChanges(hooks, projectRoot, { readFileSync }) {
+	const changed = [];
+	for (const hook of hooks) {
+		let existing = null;
+		for (const dest of testPathCandidates(hook, projectRoot)) {
+			try {
+				existing = readFileSync(dest, "utf8");
+				break;
+			} catch {
+				// Try the next candidate (basename-named test).
+			}
+		}
+		if (existing === null) continue;
+		if (existing !== (hook.test_snippet ?? "")) changed.push(hook.slug);
+	}
+	return changed;
 }
 
 // Display rows for the "Installation Summary" panel.
 export function buildSummaryRows(hooks, { root, python = false }) {
 	return hooks.map((h) => {
 		const events = h.config?.hooks ? Object.keys(h.config.hooks) : [];
-		const scriptPath = python && h.python_script_path ? h.python_script_path : h.script_path;
+		const scriptPath =
+			python && h.python_script_path ? h.python_script_path : h.script_path;
 		return {
 			slug: h.slug,
 			name: h.name ?? h.slug,

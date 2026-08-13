@@ -43,3 +43,6 @@ pnpm-debug.log*
 # Python hook variant tests
 __pycache__/
 *.pyc
+
+# Freebuff desktop app (local database)
+.freebuff/

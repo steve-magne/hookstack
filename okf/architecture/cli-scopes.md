@@ -31,8 +31,8 @@ Pour Codex, `doInstall` écrit les événements **à la racine** du `hooks.json`
 
 # Install language-aware
 
-Depuis 2026-08, `install` filtre aussi les hooks par la **toolstack du projet** (`detectToolstack` :
-`package.json`/`tsconfig.json` → typescript ; `pyproject.toml`/`requirements.txt`/`setup.py`/`setup.cfg`/`Pipfile`/`uv.lock`/`poetry.lock` → python ; flag `--stack` pour surcharger). Sur un projet Python, un hook avec une **variante Python** (`implementation.python_script_path` + `python_code_snippet` + `python_test_snippet`) est installé en `.py` (commande `python3`) avec des tests **pytest** — jamais de vitest. Les hooks sans variante retombent en `.mjs` (fallback listé dans le résumé). Détails : [/implementation/python-hook-variants](/implementation/python-hook-variants.md).
+Depuis 2026-08, `install` filtre aussi les hooks par la **toolstack du projet** (`detectStacks` :
+`package.json`/`tsconfig.json`/`pnpm-workspace.yaml` → typescript ; `pyproject.toml`/`requirements.txt`/`setup.py`/`Pipfile`/`uv.lock` → python ; flags `--stack`/`--stacks` pour surcharger, `--no-detect` pour désactiver). Sur un projet Python, un hook avec une **variante Python** (`implementation.python_script_path` + `python_code_snippet` + `python_test_snippet`) est installé en `.py` (commande `python3`) avec des tests **pytest** — jamais de vitest. Les hooks sans variante retombent en `.mjs` (fallback listé dans le résumé). Détails : [/implementation/python-hook-variants](/implementation/python-hook-variants.md).
 
 # Ordre du menu interactif
 
