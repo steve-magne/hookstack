@@ -1,6 +1,8 @@
 # Implementation
 
+* [Catalogue — filtre par thématiques](catalogue-theme-filter.md) - Barre de chips thématiques sur la home pour filtrer le catalogue par cas d'usage, projetées depuis le registre vers une allowlist curée orientée besoin.
 * [CLI contribute — renvoyer un hook modifié en PR](cli-contribute-command.md) - Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR.
+* [i18n-validation — find qui timeout sur les worktrees](fix-i18n-hook-timeout.md) - Le hook Stop i18n-validation explosait en ETIMEDOUT à chaque session car son find parcourait les node_modules des .claude/worktrees. Correction du prune + silence défensif.
+* [Lien "Catalogue" dans la navbar — Implémentation](navbar-catalogue-link.md) - Ajout d'un lien de navigation qui scrolle vers la section catalogue de la home.
 * [OKF Knowledge Bundle — Implémentation](okf-knowledge-bundle.md) - Mise en place de la base de connaissance agentique OKF v0.1 sur Hookstack (bundle, scripts/okf.mjs, sous-agent librarian, skill /okf, hooks catalogue).
-* [i18n-validation — find qui timeout sur les worktrees](fix-i18n-hook-timeout.md) - Le hook Stop explosait en ETIMEDOUT à chaque session (find parcourant les node_modules des worktrees). Prune complet + silence défensif.
-* [Catalogue — filtre par thématiques](catalogue-theme-filter.md) - Barre de chips thématiques sur la home pour filtrer le catalogue par cas d'usage (tags transverses), dérivée dynamiquement du registre.
+* [Variantes Python des hooks — install language-aware](python-hook-variants.md) - Chaque hook peut porter une variante .py (stdlib only + tests pytest) ; le CLI détecte la toolstack du projet et installe les bons scripts du bon langage — plus aucun vitest/npm sur un projet Python.

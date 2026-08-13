@@ -3,6 +3,10 @@
 Historique des changements du bundle OKF. Date la plus récente en haut.
 Toute session qui enrichit le bundle ajoute une entrée ici (voir [self-improvement](meta/self-improvement.md)).
 
+## 2026-08-13
+* **Creation**: `implementation/python-hook-variants.md` — variantes Python des hooks (install language-aware) : chaque hook peut porter un `.py` stdlib-only + tests pytest, le CLI détecte la toolstack et n'installe plus jamais de vitest sur un projet Python. 58 hooks transcrits en 5 vagues (stack python, language-aware, cœur universel).
+* **Update**: `architecture/cli-scopes.md` — section install language-aware (detectToolstack, `--stack`, fallback `.mjs`).
+
 ## 2026-06-30
 * **Initialization**: Création du bundle OKF conforme à la spec v0.1 — structure `vision/`, `architecture/`, `product/`, `business/`, `marketing/`, `roadmap/`, `strategy/`, `implementation/`, `meta/`. Contenu seedé depuis `doc/product/` (personas, vision, valeur, hook-101, UX), `CLAUDE.md` (architecture, scopes CLI, sync registre, outillage Claude Code) et `README.md`.
 * **Creation**: `meta/agent-protocol.md`, `meta/self-improvement.md`, `meta/porting.md` — protocole de consommation agent, mécanisme d'auto-bonification (test de relecture + staleness 14j), guide de portage.
