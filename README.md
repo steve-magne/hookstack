@@ -21,7 +21,7 @@ Install them in one command — your agent gets guardrails in under a minute.
 <!-- COVERAGE_BADGE:START -->
 
 <p align="center">
-  <img src="public/coverage-badge.svg" alt="HookStack coverage — lines 91% · statements 91% · branches 87% · functions 82%"/>
+  <img src="public/coverage-badge.svg" alt="HookStack coverage — lines 91% · statements 90% · branches 87% · functions 82%"/>
 </p>
 
 <sub>Unit-test coverage (agrégat) · gate CI : lines/statements/branches ≥ 80 %, functions ≥ 75 %</sub>
@@ -85,7 +85,7 @@ It finds the hooks you've locally modified and opens a PR with your changes — 
 
 ## The HookStack evolution
 
-**102 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+**105 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">

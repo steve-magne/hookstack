@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+	coverageDrift,
 	extractMetrics,
+	extractMetricsFromLabel,
+	extractMetricsFromReadme,
+	extractMetricsFromSvg,
 	GATE_THRESHOLDS,
 	injectReadme,
 	renderBadgeSvg,
@@ -43,6 +47,78 @@ describe("extractMetrics", () => {
 
 	it("retourne null pour une métrique absente", () => {
 		expect(extractMetrics({ total: { lines: {} } }).lines).toBeNull();
+	});
+});
+
+describe("extractMetricsFromLabel", () => {
+	it("parse les deux séparateurs (« , » et « · »)", () => {
+		expect(
+			extractMetricsFromLabel(
+				"lines 90%, statements 87%, branches 90%, functions 80%",
+			),
+		).toEqual({ lines: 90, statements: 87, branches: 90, functions: 80 });
+		expect(
+			extractMetricsFromLabel(
+				"lines 90% · statements 87% · branches 90% · functions 80%",
+			),
+		).toEqual({ lines: 90, statements: 87, branches: 90, functions: 80 });
+	});
+
+	it("retourne null si une métrique manque ou est illisible", () => {
+		expect(extractMetricsFromLabel("lines 90%")).toBeNull();
+		expect(extractMetricsFromLabel("")).toBeNull();
+		expect(extractMetricsFromLabel(undefined)).toBeNull();
+	});
+});
+
+describe("extractMetricsFromSvg / extractMetricsFromReadme", () => {
+	const svg = renderBadgeSvg(extractMetrics(SUMMARY));
+	const block = renderReadmeBlock(extractMetrics(SUMMARY));
+
+	it("relit les métriques depuis l'aria-label du SVG", () => {
+		expect(extractMetricsFromSvg(svg)).toEqual(extractMetrics(SUMMARY));
+	});
+
+	it("relit les métriques depuis l'alt du bloc README", () => {
+		expect(extractMetricsFromReadme(block)).toEqual(extractMetrics(SUMMARY));
+	});
+
+	it("retourne null sur un artefact illisible", () => {
+		expect(extractMetricsFromSvg("<svg/>")).toBeNull();
+		expect(extractMetricsFromReadme("no badge here")).toBeNull();
+	});
+});
+
+describe("coverageDrift", () => {
+	const committed = { lines: 90, statements: 87, branches: 90, functions: 80 };
+
+	it("aucun drift quand les métriques sont identiques", () => {
+		expect(coverageDrift(committed, committed)).toEqual([]);
+	});
+
+	it("tolère ±1 point (variance v8 au seuil d'arrondi)", () => {
+		expect(coverageDrift(committed, { ...committed, statements: 88 })).toEqual(
+			[],
+		);
+		expect(coverageDrift(committed, { ...committed, lines: 89 })).toEqual([]);
+	});
+
+	it("signale un écart ≥ 2 points (vrai recul de coverage)", () => {
+		expect(coverageDrift(committed, { ...committed, statements: 85 })).toEqual([
+			"statements",
+		]);
+	});
+
+	it("signale un changement de nullité", () => {
+		expect(coverageDrift(committed, { ...committed, branches: null })).toEqual([
+			"branches",
+		]);
+		expect(coverageDrift(null, committed)).toEqual([
+			"lines",
+			"statements",
+			"branches",
+			"functions",
+		]);
 	});
 });
 

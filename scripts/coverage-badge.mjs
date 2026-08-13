@@ -45,6 +45,16 @@ export const GATE_THRESHOLDS = {
 	functions: 75,
 };
 
+// Tolérance du garde-fou `--check` (en points entiers).
+// L'arrondi à l'entier absorbe la variance v8 entre plateformes/invocations,
+// mais pas un run qui retombe juste de l'autre côté du seuil d'arrondi
+// (90,42 → 90 vs 90,51 → 91) : la comparaison byte-à-byte casserait alors la CI
+// sur des PR innocentes. On compare donc les métriques du badge committé à
+// celles du résumé courant avec une tolérance de ±1 point. Un vrai recul de
+// coverage (≥ 2 points) reste détecté, et le gate vitest (seuils 80/80/80/75)
+// reste la référence dure.
+export const CHECK_TOLERANCE = 1;
+
 const METRIC_LABELS = {
 	lines: "lines",
 	statements: "statements",
@@ -155,6 +165,47 @@ export function renderBadgeSvg(metrics, thresholds = GATE_THRESHOLDS) {
 	return `${lines.join("\n")}\n`;
 }
 
+/**
+ * Extrait les métriques encodées dans un artefact committé (aria-label du SVG
+ * ou alt du bloc README — mêmes valeurs, séparateurs " , " ou " · ").
+ * Retourne null si une des 4 métriques est illisible.
+ */
+export function extractMetricsFromLabel(label) {
+	const out = {};
+	for (const part of (label ?? "").split(/,|·/)) {
+		const m = part.match(/(\w+)\s+(\d+)%/);
+		if (m) out[m[1]] = Number(m[2]);
+	}
+	return Object.keys(GATE_THRESHOLDS).every((k) => k in out) ? out : null;
+}
+
+/** Métriques du badge SVG committé (aria-label). */
+export function extractMetricsFromSvg(svg) {
+	const m = svg?.match(/aria-label="HookStack coverage — ([^"]+)"/);
+	return m ? extractMetricsFromLabel(m[1]) : null;
+}
+
+/** Métriques du bloc README committé (alt de l'image). */
+export function extractMetricsFromReadme(readme) {
+	const m = readme?.match(/alt="HookStack coverage — ([^"]+)"/);
+	return m ? extractMetricsFromLabel(m[1]) : null;
+}
+
+/**
+ * Métriques dont l'écart entre le committé et le résumé courant dépasse la
+ * tolérance (ou qui ont changé de nullité). Vide = synchrones.
+ */
+export function coverageDrift(committed, current, tolerance = CHECK_TOLERANCE) {
+	const drift = [];
+	for (const key of Object.keys(GATE_THRESHOLDS)) {
+		const a = committed?.[key];
+		const b = current[key];
+		if (a == null && b == null) continue;
+		if (a == null || b == null || Math.abs(a - b) > tolerance) drift.push(key);
+	}
+	return drift;
+}
+
 /** Construit le bloc README complet (marqueurs inclus). */
 export function renderReadmeBlock(metrics) {
 	const parts = Object.keys(GATE_THRESHOLDS)
@@ -242,9 +293,24 @@ function main() {
 
 	if (CHECK) {
 		const drift = [];
-		if (!existsSync(SVG_PATH) || readFileSync(SVG_PATH, "utf8") !== svg)
-			drift.push("public/coverage-badge.svg");
-		if (readme !== nextReadme) drift.push("README.md (bloc COVERAGE_BADGE)");
+		const svgMetrics = existsSync(SVG_PATH)
+			? extractMetricsFromSvg(readFileSync(SVG_PATH, "utf8"))
+			: null;
+		if (!svgMetrics) {
+			drift.push("public/coverage-badge.svg (absent ou métriques illisibles)");
+		} else {
+			const keys = coverageDrift(svgMetrics, metrics);
+			if (keys.length)
+				drift.push(`public/coverage-badge.svg (${keys.join(", ")})`);
+		}
+		const readmeMetrics = extractMetricsFromReadme(readme);
+		if (!readmeMetrics || !readme.includes(START_MARK)) {
+			drift.push("README.md (bloc COVERAGE_BADGE)");
+		} else {
+			const keys = coverageDrift(readmeMetrics, metrics);
+			if (keys.length)
+				drift.push(`README.md (bloc COVERAGE_BADGE — ${keys.join(", ")})`);
+		}
 		if (drift.length) {
 			console.error(`\n✗ ${drift.length} artefact(s) badge désynchronisé(s) :`);
 			drift.forEach((d) => {
