@@ -36,6 +36,13 @@ jobs:
         with:
           node-version: 22
 
+      # Python pour les variantes .py des hooks (pytest). setup-python fournit un
+      # Python non « externally-managed » (PEP 668) : pip install y fonctionne
+      # directement, contrairement au python3 système du runner (ubuntu-latest).
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
       - name: Enable pnpm
         run: corepack enable
 
@@ -60,7 +67,9 @@ jobs:
         run: node scripts/coverage-badge.mjs --check
 
       - name: Unit tests (pytest — .py hook variants)
-        run: python3 -m pytest -q
+        run: |
+          pip install pytest
+          python3 -m pytest -q
 
       - name: Registry schema validation
         run: pnpm validate:registry

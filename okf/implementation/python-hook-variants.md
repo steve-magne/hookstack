@@ -83,6 +83,11 @@ selon le contrat). Toujours préférer `uv run <tool>` à l'appel direct (`ruff`
 `.github/workflows/ci.yml`. Les tests de hook importent le script via
 `importlib.util.spec_from_file_location` (aucun package à installer).
 
+**Installer pytest dans le CI** : le runner `ubuntu-latest` n'a pas pytest, et son `python3`
+système est « externally-managed » (PEP 668) — `pip install` direct échoue avec
+`error: externally-managed-environment`. Le CI passe par `actions/setup-python` (Python non
+géré, `pip install pytest` fonctionne) avant le run pytest.
+
 ## Pièges de transcription (capturés par les tests)
 
 - **`os.path.join` Python réinitialise sur un composant absolu** — contrairement à `path.join`
