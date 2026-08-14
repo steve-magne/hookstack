@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // validate-hooks.js <hooks.json>
-// Filtre les hooks selon les bonnes pratiques agentiques avant insertion dans le registre.
+// Filtre les hooks selon le schéma actuel du registre (registry.schema.json) et les
+// bonnes pratiques agentiques avant insertion. Les champs retirés du schéma en #236
+// (id, provider, i18n, community_examples, votes) ne sont plus exigés ni produits.
 //
 // Sorties :
 //   /tmp/hookstack-hooks-validated.json   — hooks passant la validation (prêts pour le merge)
@@ -17,33 +19,40 @@ const VALID_CATEGORIES = [
 	"workflow",
 	"documentation",
 ];
+
+// Aligné sur l'enum hook_type de registry.schema.json (superset des types affichés).
 const VALID_HOOK_TYPES = [
 	"PreToolUse",
 	"PostToolUse",
+	"PostToolUseFailure",
+	"PostToolBatch",
 	"UserPromptSubmit",
+	"UserPromptExpansion",
 	"Notification",
+	"MessageDisplay",
 	"Stop",
-	"SubagentStop",
+	"StopFailure",
 	"SubagentStart",
+	"SubagentStop",
 	"PreCompact",
+	"PostCompact",
 	"SessionStart",
 	"SessionEnd",
 	"WorktreeCreate",
+	"WorktreeRemove",
 	"PermissionRequest",
-	"PostToolUseFailure",
-	"ConfigChange",
+	"PermissionDenied",
 	"CwdChanged",
+	"ConfigChange",
 	"FileChanged",
-	"TeammateIdle",
+	"InstructionsLoaded",
 	"TaskCreated",
 	"TaskCompleted",
-	"StopFailure",
-	"MessageDisplay",
-	"PostToolBatch",
-	"UserPromptExpansion",
+	"TeammateIdle",
 	"Setup",
-	"PermissionDenied",
 ];
+
+const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 // Commandes pouvant bloquer l'agent si utilisées en pre-hook sur trigger large
 const SLOW_PATTERNS = [
@@ -70,27 +79,36 @@ const hooks = JSON.parse(readFileSync(hooksFile, "utf8"));
 const validated = [];
 const rejected = [];
 const recommended = [];
-const i18nNotices = []; // overlay EN manquant/incomplet — non bloquant (fallback FR)
 
 for (const hook of hooks) {
 	const errors = [];
 	const warnings = [];
 
-	// — Vérifications structurelles —
+	// — Vérifications structurelles (alignées sur registry.schema.json) —
 	if (!hook.slug) errors.push("slug manquant");
+	else if (!SLUG_RE.test(hook.slug))
+		errors.push(`slug invalide (kebab-case attendu): "${hook.slug}"`);
 	if (!hook.name || hook.name.length < 3)
 		errors.push("name absent ou trop court");
 	if (!hook.benefit || hook.benefit.length < 8)
 		errors.push("benefit absent ou trop court");
+	else if (hook.benefit.length > 90)
+		errors.push(`benefit trop long (${hook.benefit.length} > 90 caractères)`);
 	if (!VALID_CATEGORIES.includes(hook.category))
 		errors.push(`category invalide: "${hook.category}"`);
-	if (!hook.provider?.length) errors.push("provider absent");
 	if (!VALID_HOOK_TYPES.includes(hook.hook_type))
 		errors.push(`hook_type invalide: "${hook.hook_type}"`);
+	if (!hook.trigger || hook.trigger.length < 1) errors.push("trigger absent");
 	if (!hook.description || hook.description.length < 10)
 		errors.push("description absente ou trop courte");
 	if (!Array.isArray(hook.use_cases) || hook.use_cases.length === 0)
 		errors.push("use_cases absent ou vide");
+	if (!Array.isArray(hook.tags) || hook.tags.length === 0)
+		errors.push("tags absent ou vide (min 1)");
+	if (hook.implementation?.type !== "settings_json")
+		errors.push('implementation.type doit être "settings_json"');
+	if (!hook.implementation?.script_path?.endsWith(".mjs"))
+		errors.push("implementation.script_path doit pointer vers un .mjs");
 	if (!hook.implementation?.config?.hooks)
 		errors.push("implementation.config.hooks absent");
 
@@ -133,22 +151,7 @@ for (const hook of hooks) {
 
 	validated.push(hook);
 
-	// — Overlay de traduction (catalogue multilingue, fallback FR si absent) —
-	const en = hook.i18n?.en;
-	if (
-		!en?.name ||
-		!en.description ||
-		!Array.isArray(en.use_cases) ||
-		en.use_cases.length === 0
-	) {
-		i18nNotices.push(`${hook.slug}: overlay i18n.en absent ou incomplet`);
-	} else if (en.use_cases.length !== hook.use_cases.length) {
-		i18nNotices.push(
-			`${hook.slug}: i18n.en.use_cases (${en.use_cases.length}) ≠ use_cases (${hook.use_cases.length})`,
-		);
-	}
-
-	// — Critères d'application automatique au projet courant —
+	// — Critères d'application au projet courant —
 	// Bénéfiques universellement : sécurité et validation, implémentation concrète, sans effets réseau en pre-hook
 	const isSafeForProject =
 		["security", "validation"].includes(hook.category) &&
@@ -181,28 +184,4 @@ if (rejected.length > 0) {
 	console.log("Rejetés :");
 	for (const r of rejected)
 		console.log(`  ✗ ${r.slug}: ${r.errors.join("; ")}`);
-}
-if (i18nNotices.length > 0) {
-	console.log("Traductions EN à compléter (non bloquant) :");
-	for (const n of i18nNotices) console.log(`  · ${n}`);
-}
-if (
-	validated.some((h) => {
-		const cmds = Object.values(h.implementation?.config?.hooks ?? {})
-			.flat()
-			.flatMap((e) => e.hooks ?? []);
-		return SLOW_PATTERNS.some((p) => cmds.some((c) => p.test(c.command ?? "")));
-	})
-) {
-	console.log("Avertissements de performance :");
-	for (const h of validated) {
-		const cmds = Object.values(h.implementation?.config?.hooks ?? {})
-			.flat()
-			.flatMap((e) => e.hooks ?? []);
-		const w = SLOW_PATTERNS.filter((p) =>
-			cmds.some((c) => p.test(c.command ?? "")),
-		);
-		if (w.length > 0)
-			console.log(`  ⚠ ${h.slug}: commande potentiellement lente en pre-hook`);
-	}
 }

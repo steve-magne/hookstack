@@ -1,5 +1,7 @@
 # Implementation
 
+* [Skill /analyze-repo — alignement sur le schéma actuel](analyze-repo-schema-alignment.md) - Pipeline d'analyse mis à jour : suppression des champs morts (provider/i18n/community_examples), support des layouts non-.claude (hooks/hooks.json, hooks.json, .claude/hooks.json), Phase 6 remplacée par sync-hooks (apply-best-practices.js supprimé).
+* [Hook seo-schema-validation — validation JSON-LD post-édition](seo-schema-validation.md) - Nouveau hook du catalogue (PostToolUse Write|Edit) validant les blocs JSON-LD schema.org des fichiers HTML-like — adapté de AgriciDaniel/claude-seo, réimplémenté en Node pur au pattern run()+DI+test ; pipeline /analyze-repo partiellement obsolète (provider/i18n/community_examples retirés du schéma en #236).
 * [CLI contribute — noms de fichiers canoniques des hooks](canonical-hook-filenames.md) - PR contribute auto-générée ajoutant des doublons <slug>.mjs byte-identiques aux hooks renommés sur main — résolue par un renommage canonique (git mv + script_path + config + tests + settings + timeline).
 * [Catalogue — filtre par thématiques](catalogue-theme-filter.md) - Barre de chips thématiques sur la home pour filtrer le catalogue par cas d'usage, projetées depuis le registre vers une allowlist curée orientée besoin.
 * [CLI contribute — renvoyer un hook modifié en PR](cli-contribute-command.md) - Commande npx ... contribute qui pousse une modification locale d'un hook vers le registre upstream via fork + PR, tests unitaires associés inclus.
