@@ -5,30 +5,11 @@ import { execSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { changedFiles } from "./lib/changed-files.mjs";
 
 // Fichiers purement documentaires/binaires : ne peuvent pas casser la suite de tests.
 const DOC_ONLY =
 	/\.(md|mdx|markdown|txt|rst|adoc|svg|png|jpe?g|gif|webp|ico|pdf|lock)$|(^|\/)LICENSE/i;
-
-/** Fichiers modifiés en attente (staged + unstaged + untracked), ou null hors git. */
-function defaultChanged(cwd) {
-	try {
-		const out = execSync("git status --porcelain", {
-			encoding: "utf8",
-			cwd,
-			timeout: 5_000,
-		});
-		return out
-			.split("\n")
-			.filter(Boolean)
-			.map((l) => {
-				const p = l.slice(3);
-				return p.includes(" -> ") ? p.split(" -> ").pop() : p;
-			});
-	} catch {
-		return null; // hors dépôt git → ne pas court-circuiter (comportement historique)
-	}
-}
 
 /** Résout la racine principale du repo (pas le worktree courant). */
 function resolveMainRoot(cwd) {
@@ -100,7 +81,9 @@ export function run({
 	spawn = spawnSync,
 	projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
 	mainRoot = resolveMainRoot(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
-	changed = defaultChanged(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
+	changed = changedFiles({
+		cwd: process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+	}),
 } = {}) {
 	// Rien en attente, ou uniquement des fichiers docs/binaires → relancer toute
 	// la suite à chaque fin de session ne sert à rien. (changed === null → hors git,

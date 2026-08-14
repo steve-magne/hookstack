@@ -74,6 +74,13 @@ jobs:
       - name: Registry schema validation
         run: pnpm validate:registry
 
+      - name: Python/JS test coverage parity
+        # La variante Python de chaque hook (.py) doit être au moins aussi
+        # testée que sa variante .mjs — cf. scripts/check-python-coverage-parity.mjs.
+        # Garantit que les utilisateurs Python ont le même filet de sécurité
+        # que les utilisateurs TypeScript/JS.
+        run: pnpm check:python-parity
+
       - name: Registry sync drift guard
         run: node .claude/sync-hooks.mjs --check
 

@@ -5,6 +5,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { changedFiles } from "./lib/changed-files.mjs";
 
 const MIN_TOKENS = 50; // blocs < 50 tokens ignorés (évite les faux positifs sur boilerplate)
 const THRESHOLD = 5; // % de duplication max avant avertissement
@@ -22,26 +23,6 @@ function defaultExec(cmd) {
 	});
 }
 
-/** Fichiers modifiés en attente (staged + unstaged + untracked), ou null hors git. */
-function defaultChanged() {
-	try {
-		const out = execSync("git status --porcelain", {
-			encoding: "utf8",
-			timeout: 5_000,
-			stdio: "pipe",
-		});
-		return out
-			.split("\n")
-			.filter(Boolean)
-			.map((l) => {
-				const p = l.slice(3);
-				return p.includes(" -> ") ? p.split(" -> ").pop() : p;
-			});
-	} catch {
-		return null; // hors dépôt git → ne pas court-circuiter
-	}
-}
-
 function jscpdBin({ exists = existsSync } = {}) {
 	// Préfère la version locale (devDependency), replie sur le PATH
 	const local = "node_modules/.bin/jscpd";
@@ -54,7 +35,7 @@ function findSrcDirs({ exists = existsSync } = {}) {
 
 export function run(
 	_input,
-	{ exec = defaultExec, exists = existsSync, changed = defaultChanged() } = {},
+	{ exec = defaultExec, exists = existsSync, changed = changedFiles({ exec }) } = {},
 ) {
 	// Rien en attente, ou uniquement des fichiers docs/binaires → rien à dédupliquer.
 	if (

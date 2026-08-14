@@ -28,6 +28,9 @@ export async function GET(req: NextRequest) {
 		python_code_snippet: h.implementation.python_code_snippet ?? null,
 		python_test_snippet: h.implementation.python_test_snippet ?? null,
 		security: h.implementation.security ?? null,
+		// Shared files the hook imports (lib/) — the CLI installs them alongside
+		// the script so relative imports resolve in the user's project.
+		companion_files: h.implementation.companion_files ?? [],
 	}));
 
 	return NextResponse.json(

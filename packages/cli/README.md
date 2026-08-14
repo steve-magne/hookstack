@@ -16,7 +16,7 @@ That's it. The CLI fetches the hooks, shows you what will be installed, and patc
 
 Running `install` with no `--hooks` installs the default HookStack — and **detects your project's setup** to pick the right hooks:
 
-- **Stack detection** (language): looks for `package.json`/`pyproject.toml`/etc. and skips default hooks that don't apply — e.g. no Biome hook in a pure Python project. Override with `--stacks=typescript,python`.
+- **Stack detection** (language): looks for `package.json`/`tsconfig.json`/`pyproject.toml`/etc. and skips default hooks that don't apply — e.g. no Biome hook in a pure Python project. When no TypeScript/Python toolchain is found, only the universal hooks are installed (the skipped slugs are listed), never tsc/ruff/pytest hooks the project can't run. Override with `--stacks=typescript,python` or `--no-detect`.
 - **Contextual detection** (systems): spots an i18n setup, an `okf/` knowledge bundle, a Next.js app, a front-end codebase, or a GitHub-hosted repo, and suggests (interactive) or auto-adds (`--yes`) the matching non-default hooks — see [Smart toolstack detection](#smart-toolstack-detection).
 
 An explicit `--hooks=` list is always installed as-is, never filtered. `--no-detect` opts out of both detection layers.
@@ -62,16 +62,16 @@ The hook code is identical across agents — only the config file it's wired int
 | `--codex-profile` | OpenAI Codex | all projects | `~/.codex/hooks.json` | `~/.codex/hooks/` |
 | `--copilot` | GitHub Copilot | this project | `.claude/` paths adapted | `.claude/hooks/` |
 
-Codex and Claude Code expose the same lifecycle event names (`PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`…), so a HookStack hook is portable between them without any change to the `.mjs` — the CLI just writes the appropriate config format.
+Codex and Claude Code expose the same lifecycle event names (`PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`…), so a HookStack hook is portable between them without any change to the script (`.mjs`, or the `.py` variant on a Python install) — the CLI just writes the appropriate config format.
 
 ### Interactive mode (default in a terminal)
 
 When run in a terminal the CLI opens an interactive prompt:
 
 1. Asks which **target agent** to install for — the menu order is: This project → All my projects → Codex profile → Codex project → GitHub Copilot
-2. Fetches the requested hooks from the registry
-3. Shows an **installation summary** (path, category, events, blocking flag)
-4. Shows a **security panel** (shell access · network · filesystem writes · Snyk score)
+2. Fetches the requested hooks from the registry, detects the project's stack, and reports what was filtered out (the skipped slugs) or that no toolchain was found
+3. Probes the project for non-language systems (i18n, OKF, Next.js, front-end, GitHub) and offers the matching hooks as a pre-checked multi-select
+4. Shows an **installation summary** + **security panel** (shell access · network · filesystem writes · Snyk score)
 5. Asks for confirmation before writing anything
 
 ### Non-interactive mode (`--yes` or piped)
@@ -97,7 +97,7 @@ On the **default install** (`no --hooks`), besides the language-stack filter abo
 |---|---|---|
 | `i18n` | a `locales/` / `locale/` / `messages/` / `i18n/` directory exists anywhere in the tree, or an i18n package (`next-intl`, `react-i18next`, `i18next`, `react-intl`…) is in `package.json` | `stop-i18n-validation` — keeps translation files consistent on every session stop |
 | `okf` | a top-level `okf/` (or `.okf/`, any case) knowledge bundle exists | `okf-validate-on-change` · `session-start-okf-staleness` · `stop-okf-staleness-check` — validate and keep the OKF bundle fresh |
-| `nextjs` | `next` in `package.json`, or a `next.config.{js,mjs,cjs,ts}` at the root | `post-write-nextjs-quality` — catches missing `'use client'`, Pages Router patterns, and missing `next/image`/`next/link` |
+| `nextjs` | `next` in `package.json`, or a `next.config.{js,mjs,cjs,ts}` at the root | `post-write-nextjs-quality` — catches missing `'use client'`, Pages Router patterns, and missing `next/image`/`next/link` · `seo-page-metadata-guard` · `seo-next-image-guard` · `stop-seo-structure-check` — the Next.js-only SEO guards (App Router metadata, `next/image`, robots/sitemap) |
 | `frontend` | a front-end framework in `package.json` (`react`, `vue`, `svelte`, `astro`, `preact`, `solid-js`, `@angular/core`…) | `post-edit-visual-check` — reminds the agent to verify UI changes actually render |
 | `github` | a `.github/` directory, or a git remote pointing at `github.com` | `session-start-github-context` — loads open PRs and branch check status at session start |
 
@@ -119,7 +119,7 @@ On a pure-Python install (detected toolchain, or `--stack=python`), hooks that h
 npx hookstack-cli@latest install --with-tests
 ```
 
-Hooks without a Python variant fall back to the `.mjs` (the install summary shows `18 Python · 49 .mjs fallback`-style counts). `update` compares and refreshes the installed variant (`.py` on Python projects, `.mjs` otherwise).
+Every hook in the default stack carries a Python variant, so a default Python install is **100 % `.py` — zero `.mjs` fallback** (66 Python hooks today — the install summary only prints a `N Python · M .mjs fallback` line when a fallback actually occurs). Hooks outside the default stack (picked explicitly) without a Python variant still fall back to the `.mjs`. `update` compares and refreshes the installed variant (`.py` on Python projects, `.mjs` otherwise).
 
 ---
 
@@ -166,9 +166,9 @@ Tweaked a hook locally and want the catalogue to have it? `contribute` turns tha
 npx hookstack-cli@latest contribute
 ```
 
-It scans your installed hooks (same `@hookstack` fingerprint lookup as `update`), finds the ones whose local `.mjs` no longer matches the live registry, lets you pick which to send, then opens a PR with your version of those files — forking [steve-magne/hookstack](https://github.com/steve-magne/hookstack) for you, or pushing a branch straight to it when your `gh` account owns the repo (no fork needed). Renamed hook files work too — detection follows the fingerprint, not the filename.
+It scans your installed hooks (same `@hookstack` fingerprint lookup as `update`), finds the ones whose local script (`.mjs`, or the `.py` variant on a Python install) no longer matches the live registry, lets you pick which to send, then opens a PR with your version of those files — forking [steve-magne/hookstack](https://github.com/steve-magne/hookstack) for you, or pushing a branch straight to it when your `gh` account owns the repo (no fork needed). Renamed hook files work too — detection follows the fingerprint, not the filename.
 
-**Unit tests ride along.** If you installed with `--with-tests` and edited the matching `tests/hooks/<slug>.test.mjs` (or wrote one where the catalogue ships none), the modified test file is pushed with its hook — the PR body lists every test included. The upstream repo's CI gate requires ≥ 80 % coverage, so shipping the test with the script is what makes a contribution mergeable.
+**Unit tests ride along.** If you installed with `--with-tests` and edited the matching test file (`tests/hooks/<slug>.test.mjs` on Node, `tests/hooks/test_<slug>.py` on Python — or wrote one where the catalogue ships none), the modified test file is pushed with its hook — the PR body lists every test included. The upstream repo's CI gate requires ≥ 80 % coverage (vitest on Node, pytest on Python), so shipping the test with the script is what makes a contribution mergeable.
 
 Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated (`gh auth login`).
 
