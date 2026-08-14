@@ -15,6 +15,7 @@
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage",
+		"test:python": "python3 -m pytest -q",
 		"check:hook-coverage": "node scripts/check-hook-coverage.mjs",
 		"coverage:badge": "node scripts/coverage-badge.mjs",
 		"validate:registry": "node registry/validate-registry.mjs",

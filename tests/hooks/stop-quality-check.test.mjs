@@ -8,6 +8,7 @@ function makeOpts({
 	hasPkg = true,
 	hasTsConfig = true,
 	hasBiomeConfig = false,
+	hasPyproject = false,
 	execResults = {},
 } = {}) {
 	return {
@@ -17,6 +18,7 @@ function makeOpts({
 			if (p.endsWith("package.json")) return hasPkg;
 			if (p.endsWith("tsconfig.json")) return hasTsConfig;
 			if (p.endsWith("biome.json")) return hasBiomeConfig;
+			if (p.endsWith("pyproject.toml")) return hasPyproject;
 			return false;
 		},
 		exec: vi.fn((cmd) => {
@@ -115,12 +117,25 @@ describe("stop-quality-check", () => {
 		expect(result.message).toContain("vérification(s) échouée(s)");
 	});
 
-	it("court-circuite (0 check, aucun exec) si aucun fichier JS/TS modifié", () => {
+	it("court-circuite (0 check, aucun exec) si seuls des fichiers neutres changent", () => {
 		const opts = makeOpts({ hasBiomeConfig: true });
-		opts.changed = ["README.md", "app/main.py"];
+		opts.changed = ["README.md", "docs/logo.svg", "assets/icon.png"];
 		const result = run(opts);
 		expect(result.checks).toBe(0);
 		expect(opts.exec).not.toHaveBeenCalled();
+	});
+
+	it("ne lance pas de checks Python sans pyproject (projet JS pur)", () => {
+		const opts = makeOpts({ hasPkg: false, hasTsConfig: false });
+		opts.changed = ["app/main.py"];
+		const result = run(opts);
+		expect(result.checks).toBe(0);
+		expect(opts.exec).not.toHaveBeenCalledWith(
+			expect.stringContaining("ruff"),
+		);
+		expect(opts.exec).not.toHaveBeenCalledWith(
+			expect.stringContaining("pyright"),
+		);
 	});
 
 	it("lance les checks si un tsconfig/package.json a changé sans fichier .ts", () => {
@@ -167,5 +182,65 @@ describe("stop-quality-check", () => {
 		expect(opts.exec).not.toHaveBeenCalledWith(
 			expect.stringContaining("biome lint --error-on-warnings ."),
 		);
+	});
+
+	it("projet Python : lance ruff + pyright via uv sur les .py modifiés", () => {
+		const opts = makeOpts({ hasPyproject: true });
+		opts.changed = ["app/main.py", "README.md"];
+		run(opts);
+		expect(opts.exec).toHaveBeenCalledWith(
+			expect.stringContaining('uv run ruff check "app/main.py"'),
+		);
+		expect(opts.exec).toHaveBeenCalledWith(
+			expect.stringContaining('uv run pyright "app/main.py"'),
+		);
+		expect(opts.exec).not.toHaveBeenCalledWith(
+			expect.stringMatching(/ruff check \.$/),
+		);
+	});
+
+	it("projet Python : config seule modifiée → ruff/pyright sur tout le repo", () => {
+		const opts = makeOpts({ hasPyproject: true });
+		opts.changed = ["pyproject.toml"];
+		run(opts);
+		expect(opts.exec).toHaveBeenCalledWith(
+			expect.stringMatching(/uv run ruff check \.$/),
+		);
+		expect(opts.exec).toHaveBeenCalledWith(
+			expect.stringMatching(/uv run pyright$/),
+		);
+	});
+
+	it("projet Python : ne lance ni tsc ni biome (pas de package.json)", () => {
+		const opts = makeOpts({ hasPkg: false, hasPyproject: true });
+		opts.changed = ["app/main.py"];
+		run(opts);
+		expect(opts.exec).not.toHaveBeenCalledWith(
+			expect.stringContaining("tsc"),
+		);
+		expect(opts.exec).not.toHaveBeenCalledWith(
+			expect.stringContaining("biome"),
+		);
+	});
+
+	it("projet mixte : exécute à la fois les checks TS et Python", () => {
+		const opts = makeOpts({ hasPyproject: true });
+		opts.changed = ["src/foo.ts", "app/main.py"];
+		run(opts);
+		expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining("tsc"));
+		expect(opts.exec).toHaveBeenCalledWith(
+			expect.stringContaining("ruff check"),
+		);
+	});
+
+	it("projet Python : un échec ruff fait échouer le gate", () => {
+		const err = Object.assign(new Error("ruff error"), {
+			stdout: Buffer.from("2 lint errors"),
+		});
+		const result = run(
+			makeOpts({ hasPyproject: true, execResults: { ruff: err } }),
+		);
+		expect(result.failed).toBeGreaterThanOrEqual(1);
+		expect(result.message).toContain("✗ Ruff");
 	});
 });

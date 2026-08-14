@@ -3,7 +3,7 @@ type: Architecture
 title: Scopes d'installation CLI — 5 scopes, 3 agents
 description: Les 5 cibles d'installation du CLI hookstack-cli, le format de config et la réécriture des chemins par scope.
 tags: [architecture, cli, scopes, multi-agent]
-timestamp: 2026-06-30T00:00:00Z
+timestamp: 2026-08-13T00:00:00Z
 ---
 
 # Les 5 scopes
@@ -28,6 +28,11 @@ couvrant 3 agents :
 - `isGlobalScope` / `isCodexScope` — prédicats.
 
 Pour Codex, `doInstall` écrit les événements **à la racine** du `hooks.json` (pas de wrapper `hooks`).
+
+# Install language-aware
+
+Depuis 2026-08, `install` filtre aussi les hooks par la **toolstack du projet** (`detectStacks` :
+`package.json`/`tsconfig.json`/`pnpm-workspace.yaml` → typescript ; `pyproject.toml`/`requirements.txt`/`setup.py`/`Pipfile`/`uv.lock` → python ; flags `--stack`/`--stacks` pour surcharger, `--no-detect` pour désactiver). Sur un projet Python, un hook avec une **variante Python** (`implementation.python_script_path` + `python_code_snippet` + `python_test_snippet`) est installé en `.py` (commande `python3`) avec des tests **pytest** — jamais de vitest. Les hooks sans variante retombent en `.mjs` (fallback listé dans le résumé). Détails : [/implementation/python-hook-variants](/implementation/python-hook-variants.md).
 
 # Ordre du menu interactif
 

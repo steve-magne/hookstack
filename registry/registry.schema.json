@@ -152,6 +152,19 @@
 				"test_snippet": {
 					"type": "string"
 				},
+				"python_script_path": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Path to the Python variant of the hook (.py). When present, the CLI installs this variant (and the python_test_snippet) on Python projects instead of the .mjs + vitest test."
+				},
+				"python_code_snippet": {
+					"type": "string",
+					"description": "Mirror of the .py on disk, populated by .claude/sync-hooks.mjs. Never hand-edited."
+				},
+				"python_test_snippet": {
+					"type": "string",
+					"description": "pytest source mirror of tests/hooks/test_<slug>.py, populated by .claude/sync-hooks.mjs."
+				},
 				"security": {
 					"$ref": "#/$defs/security"
 				}

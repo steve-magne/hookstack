@@ -150,6 +150,69 @@ console.log(
 		(noSnippet ? `, ${noSnippet} sans source` : ""),
 );
 
+// ── Étape 1a : DISQUE -> python_code_snippet (variantes Python .py) ──────────
+// Un hook peut avoir une variante Python (python_script_path) : le fichier .py est
+// la source de vérité de python_code_snippet, exactement comme le .mjs l'est pour
+// code_snippet. Le CLI installe la variante Python sur les projets Python.
+
+let pyUpdated = 0;
+let pyDrift = 0;
+let pyUnchanged = 0;
+let pySeeded = 0;
+
+for (const hook of registry) {
+	const pyRel = hook.implementation?.python_script_path;
+	if (!pyRel) continue;
+
+	const pyPath = resolve(ROOT, pyRel);
+
+	if (existsSync(pyPath)) {
+		let disk = readFileSync(pyPath, "utf8");
+
+		const patched = ensurePythonFingerprint(disk, hook.slug);
+		if (patched !== disk) {
+			if (!CHECK && !DRY_RUN) writeFileSync(pyPath, patched, "utf8");
+			console.log(
+				`  ${DRY_RUN || CHECK ? "[dry] " : ""}✎ fingerprint injecté (python) : ${hook.slug}`,
+			);
+			disk = patched;
+		}
+
+		const current = hook.implementation.python_code_snippet ?? "";
+		if (disk === current) {
+			pyUnchanged++;
+			continue;
+		}
+		pyDrift++;
+		if (CHECK) {
+			console.log(`  ✗ dérive (python) : ${hook.slug} (${pyRel})`);
+		} else {
+			hook.implementation.python_code_snippet = disk;
+			console.log(
+				`  ${DRY_RUN ? "[dry] " : ""}↻ python_code_snippet mis à jour depuis disque : ${hook.slug}`,
+			);
+			pyUpdated++;
+		}
+	} else if (hook.implementation?.python_code_snippet) {
+		// Pas de fichier .py sur disque mais un snippet présent → bootstrap.
+		if (isExcluded(hook.stack)) continue;
+		if (!DRY_RUN && !CHECK) {
+			writeFileSync(pyPath, hook.implementation.python_code_snippet, "utf8");
+			pySeeded++;
+		}
+		console.log(
+			`  ${DRY_RUN || CHECK ? "[dry] " : ""}✓ seedé depuis snippet (python) : ${pyRel}`,
+		);
+	}
+}
+
+if (pyUpdated > 0 || pyDrift > 0 || pySeeded > 0 || pyUnchanged > 0) {
+	console.log(
+		`  python : ${pyUnchanged} synchrone(s), ${pyUpdated} mis à jour, ${pySeeded} seedé(s)` +
+			(pyDrift ? `, ${pyDrift} dérive(s)` : ""),
+	);
+}
+
 // ── Étape 1b : DISQUE -> test_snippet (tests/hooks/<slug>.test.mjs) ─────────
 // Les slugs du registre (ex: pre-bash-secret-detection) peuvent diverger du basename
 // du script_path (ex: detect-secrets.mjs). On cherche d'abord par slug, puis par basename.
@@ -157,6 +220,9 @@ console.log(
 const TESTS_DIR = resolve(ROOT, "tests/hooks");
 let testsUpdated = 0;
 let testsUnchanged = 0;
+
+let pyTestsUpdated = 0;
+let pyTestsUnchanged = 0;
 
 for (const hook of registry) {
 	const scriptBasename = hook.implementation?.script_path
@@ -185,6 +251,44 @@ for (const hook of registry) {
 	}
 }
 
+// Variantes Python : tests/hooks/test_<slug>.py -> python_test_snippet
+for (const hook of registry) {
+	const pyRel = hook.implementation?.python_script_path;
+	if (!pyRel) continue;
+	const pyTestPath = resolve(TESTS_DIR, `test_${hook.slug}.py`);
+	if (!existsSync(pyTestPath)) continue;
+
+	const disk = readFileSync(pyTestPath, "utf8");
+	const current = hook.implementation?.python_test_snippet ?? "";
+	if (disk === current) {
+		pyTestsUnchanged++;
+		continue;
+	}
+
+	if (CHECK) {
+		// informational only — not a hard failure
+	} else if (!DRY_RUN) {
+		if (!hook.implementation) hook.implementation = {};
+		hook.implementation.python_test_snippet = disk;
+		pyTestsUpdated++;
+	}
+}
+
+if (
+	testsUpdated > 0 ||
+	testsUnchanged > 0 ||
+	pyTestsUpdated > 0 ||
+	pyTestsUnchanged > 0
+) {
+	console.log(`\n── Tests (disque -> registre) ──`);
+	console.log(
+		`  ${testsUnchanged} synchrone(s), ${testsUpdated} mis à jour` +
+			(pyTestsUpdated > 0 || pyTestsUnchanged > 0
+				? ` · python : ${pyTestsUnchanged} synchrone(s), ${pyTestsUpdated} mis à jour`
+				: ""),
+	);
+}
+
 if (testsUpdated > 0 || testsUnchanged > 0) {
 	console.log(`\n── Tests (disque -> registre) ──`);
 	console.log(`  ${testsUnchanged} synchrone(s), ${testsUpdated} mis à jour`);
@@ -193,14 +297,18 @@ if (testsUpdated > 0 || testsUnchanged > 0) {
 // ── Étape 1c : normaliser implementation.config.hooks[].command ─────────────
 // Le CLI (hookstack-cli) lit ces champs directement depuis le registre.
 // On s'assure que chaque commande est de la forme "node $CLAUDE_PROJECT_DIR/..."
-// pour éviter les commandes malformées (ex. "node bash ..." héritées de l'ère .sh).
+// pour éviter les commandes malformées (ex. "node bash ..." héritées de l'ère .sh).	// ── Étape 1b.5 : injection du fingerprint @hookstack ────────────────────────
+	// Chaque .mjs doit avoir "// @hookstack <slug>" en ligne 2 (après le shebang),
+	// chaque variante .py "# @hookstack <slug>". Permet la détection automatique
+	// dans des repos open source (grep "@hookstack").
 
-// ── Étape 1b.5 : injection du fingerprint @hookstack ────────────────────────
-// Chaque .mjs doit avoir "// @hookstack <slug>" en ligne 2 (après le shebang).
-// Permet la détection automatique dans des repos open source (grep "@hookstack").
 
 function buildFingerprint(slug) {
 	return `// @hookstack ${slug}`;
+}
+
+function buildPythonFingerprint(slug) {
+	return `# @hookstack ${slug}`;
 }
 
 function ensureFingerprint(content, slug) {
@@ -209,6 +317,19 @@ function ensureFingerprint(content, slug) {
 	if (!lines[0]?.startsWith("#!")) return content; // pas de shebang → on ne touche pas
 	if (lines[1] === expected) return content; // déjà correct
 	if (lines[1]?.startsWith("// @hookstack")) {
+		lines[1] = expected; // mise à jour du slug
+	} else {
+		lines.splice(1, 0, expected); // insertion
+	}
+	return lines.join("\n");
+}
+
+function ensurePythonFingerprint(content, slug) {
+	const expected = buildPythonFingerprint(slug);
+	const lines = content.split("\n");
+	if (!lines[0]?.startsWith("#!")) return content; // pas de shebang → on ne touche pas
+	if (lines[1] === expected) return content; // déjà correct
+	if (lines[1]?.startsWith("# @hookstack")) {
 		lines[1] = expected; // mise à jour du slug
 	} else {
 		lines.splice(1, 0, expected); // insertion
@@ -314,11 +435,16 @@ events.forEach((evt) => {
 
 // ── Mode --check : pas d'écriture, exit selon dérive ─────────────────────────
 if (CHECK) {
-	const totalDrift = drift + cmdDrift;
+	const totalDrift = drift + pyDrift + cmdDrift;
 	if (totalDrift > 0) {
 		if (drift > 0) {
 			console.error(
 				`\n✗ ${drift} dérive(s) entre registry.json et les .mjs sur disque.`,
+			);
+		}
+		if (pyDrift > 0) {
+			console.error(
+				`\n✗ ${pyDrift} dérive(s) entre registry.json et les .py sur disque.`,
 			);
 		}
 		if (cmdDrift > 0) {
@@ -337,7 +463,7 @@ if (CHECK) {
 
 // ── Écritures ────────────────────────────────────────────────────────────────
 if (!DRY_RUN) {
-	if (updated > 0 || cmdFixed > 0 || testsUpdated > 0) {
+	if (updated > 0 || pyUpdated > 0 || cmdFixed > 0 || testsUpdated > 0 || pyTestsUpdated > 0) {
 		writeFileSync(
 			REGISTRY_PATH,
 			`${JSON.stringify(registry, null, 2)}\n`,
@@ -345,7 +471,9 @@ if (!DRY_RUN) {
 		);
 		const parts = [];
 		if (updated > 0) parts.push(`${updated} code_snippet`);
+		if (pyUpdated > 0) parts.push(`${pyUpdated} python_code_snippet`);
 		if (testsUpdated > 0) parts.push(`${testsUpdated} test_snippet`);
+		if (pyTestsUpdated > 0) parts.push(`${pyTestsUpdated} python_test_snippet`);
 		if (cmdFixed > 0) parts.push(`${cmdFixed} commande(s) normalisée(s)`);
 		console.log(`\n✓ registry.json mis à jour (${parts.join(", ")})`);
 	}

@@ -39,7 +39,10 @@ Options:
   --copilot          GitHub Copilot — ./.claude with paths adapted for Copilot
   --scope <s>        "project" (default), "global", "copilot",
                      "codex-project", or "codex-profile"
-  --with-tests       Also install vitest unit tests into tests/hooks/ (install, project scope only)
+  --with-tests       Also install unit tests into tests/hooks/ — vitest (.mjs) or pytest
+                     (Python projects, .py variants) — install, project scope only
+  --stack <s>        "auto" (default) — filter hooks to the detected project toolchain;
+                     "typescript" / "python" force one stack; "all" disables filtering
   --stacks <list>    Override stack detection (e.g. --stacks=typescript,python)
   --no-detect        Skip all detection (stack + contextual systems), install the full default set
   --yes, -y          Skip prompts (non-interactive / CI)
@@ -107,15 +110,28 @@ On the **default install** (`no --hooks`), besides the language-stack filter abo
 
 ---
 
+### Python hooks & Python tests (`.py` + pytest)
+
+On a pure-Python install (detected toolchain, or `--stack=python`), hooks that have a **Python variant** are installed as real `.py` scripts (`python3 $CLAUDE_PROJECT_DIR/.claude/hooks/<slug>.py` in `settings.json`), and `--with-tests` writes **pytest** tests (`tests/hooks/test_<slug>.py`) instead of vitest tests. Vitest tests are **never** installed on Python projects — so the project's CI stays Python-only, with no `npm`/`node` added just to test the hooks.
+
+```bash
+# Python project (pyproject.toml present) — hooks land as .py, tests as pytest
+npx hookstack-cli@latest install --with-tests
+```
+
+Hooks without a Python variant fall back to the `.mjs` (the install summary shows `18 Python · 49 .mjs fallback`-style counts). `update` compares and refreshes the installed variant (`.py` on Python projects, `.mjs` otherwise).
+
+---
+
 ## What gets installed
 
 For each hook the CLI:
 
-- Writes the `.mjs` script to the scripts directory for the chosen agent (`.claude/hooks/`, `~/.claude/hooks/`, `.codex/hooks/`, or `~/.codex/hooks/`)
+- Writes the hook script (`.mjs`, or the `.py` variant on pure-Python installs) to the scripts directory for the chosen agent (`.claude/hooks/`, `~/.claude/hooks/`, `.codex/hooks/`, or `~/.codex/hooks/`)
 - Patches the agent's config file (`.claude/settings.json` or `.codex/hooks.json`) to register the hook on the right lifecycle event
-- Optionally writes vitest unit tests to `tests/hooks/` when `--with-tests` is passed (or confirmed interactively)
+- Optionally writes unit tests to `tests/hooks/` when `--with-tests` is passed (or confirmed interactively) — vitest on Node projects, pytest on Python projects
 
-The same hook `.mjs` is used regardless of agent — Claude Code and Codex share lifecycle event names, so only the config file format changes. No new dependencies are added to your project. Hooks are plain Node.js scripts — no SDK, no agent modification.
+The same hook code is used regardless of agent — Claude Code and Codex share lifecycle event names, so only the config file format changes. No new dependencies are added to your project. Hooks are plain Node.js/Python scripts — no SDK, no agent modification.
 
 ---
 
@@ -127,7 +143,7 @@ Hooks evolve — bug fixes, new options, the occasional rewrite. To pull the lat
 npx hookstack-cli@latest update
 ```
 
-No `--hooks` needed: the CLI scans the scripts directory for the target scope (`.claude/hooks/` by default), reads the `// @hookstack <slug>` fingerprint each script carries, and re-fetches exactly those hooks from the live registry. Each hook's metadata (code, config, tests) is served live from [hookstack.app](https://www.hookstack.app) — never bundled in the npm package — so `update` always gets what's currently on the catalogue, no CLI version bump required.
+No `--hooks` needed: the CLI scans the scripts directory for the target scope (`.claude/hooks/` by default), reads the `// @hookstack <slug>` (or `# @hookstack <slug>` on Python variants) fingerprint each script carries, and re-fetches exactly those hooks from the live registry. Each hook's metadata (code, config, tests) is served live from [hookstack.app](https://www.hookstack.app) — never bundled in the npm package — so `update` always gets what's currently on the catalogue, no CLI version bump required.
 
 - Scripts whose content changed are overwritten; unchanged ones are left alone and reported separately
 - `settings.json` (or `hooks.json` for Codex) is re-merged — it's only actually touched if a hook's config fragment changed, since the merge is idempotent

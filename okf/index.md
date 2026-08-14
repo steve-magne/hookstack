@@ -41,6 +41,7 @@ des fichiers markdown + frontmatter YAML, lisibles sans outillage, versionnés d
 * [Lien "Catalogue" dans la navbar — Implémentation](implementation/navbar-catalogue-link.md) - Ajout d'un lien de navigation qui scrolle vers la section catalogue de la home.
 * [OKF Knowledge Bundle — Implémentation](implementation/okf-knowledge-bundle.md) - Mise en place de la base de connaissance agentique OKF v0.1 sur Hookstack (bundle, scripts/okf.mjs, sous-agent librarian, skill /okf, hooks catalogue).
 * [Gate CI — couverture lignes ≥ 80 % par hook individuel](implementation/per-hook-coverage-gate.md) - En complément du seuil agrégé de vitest, scripts/check-hook-coverage.mjs bloque tout hook dont la couverture lignes < 80 %, avec une liste d'exceptions pour les hooks hérités.
+* [Variantes Python des hooks — install language-aware](implementation/python-hook-variants.md) - Chaque hook peut porter une variante .py (stdlib only + tests pytest) ; le CLI détecte la toolstack du projet et installe les bons scripts du bon langage — plus aucun vitest/npm sur un projet Python.
 
 ## Marketing
 

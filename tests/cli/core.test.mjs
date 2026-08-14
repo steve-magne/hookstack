@@ -13,6 +13,7 @@ import {
 	detectScriptChanges,
 	detectStacks,
 	detectTestChanges,
+	doInstallTests,
 	doUpdateTests,
 	extractFingerprint,
 	filterHooksByStack,
@@ -105,6 +106,23 @@ describe("parseArgs", () => {
 	});
 	it("défaut noDetect false", () => {
 		expect(parseArgs(argv("install")).noDetect).toBe(false);
+	});
+	it("--stack défaut auto", () => {
+		expect(parseArgs(argv("install")).stack).toBe("auto");
+	});
+	it("parse --stack=python", () => {
+		expect(parseArgs(argv("install", "--stack=python")).stack).toBe("python");
+	});
+	it("parse --stack séparé", () => {
+		expect(parseArgs(argv("install", "--stack", "typescript")).stack).toBe(
+			"typescript",
+		);
+	});
+	it("parse --language=all comme alias de --stack=all", () => {
+		expect(parseArgs(argv("install", "--language=all")).stack).toBe("all");
+	});
+	it("--stack invalide ignoré (reste auto)", () => {
+		expect(parseArgs(argv("install", "--stack=rust")).stack).toBe("auto");
 	});
 });
 
@@ -635,6 +653,79 @@ describe("collectIncomingHooks", () => {
 	it("ignore les hooks sans fragment config", () => {
 		expect(collectIncomingHooks([{ slug: "x" }], {})).toEqual({});
 	});
+
+	it("python : réécrit node … .mjs en python3 … .py (variante dispo)", () => {
+		const h = [
+			{
+				slug: "s",
+				python_script_path: ".claude/hooks/s.py",
+				python_code_snippet: "#!/usr/bin/env python3\n",
+				config: {
+					hooks: {
+						PreToolUse: [
+							{
+								matcher: "Bash",
+								hooks: [
+									{ command: "node $CLAUDE_PROJECT_DIR/.claude/hooks/s.mjs" },
+								],
+							},
+						],
+					},
+				},
+			},
+		];
+		const out = collectIncomingHooks(h, { scope: "project", python: true });
+		expect(out.PreToolUse[0].hooks[0].command).toBe(
+			"python3 $CLAUDE_PROJECT_DIR/.claude/hooks/s.py",
+		);
+	});
+
+	it("python : garde node … .mjs quand le hook n'a pas de variante python", () => {
+		const h = [
+			{
+				slug: "s",
+				config: {
+					hooks: {
+						Stop: [
+							{
+								hooks: [
+									{ command: "node $CLAUDE_PROJECT_DIR/.claude/hooks/s.mjs" },
+								],
+							},
+						],
+					},
+				},
+			},
+		];
+		const out = collectIncomingHooks(h, { scope: "project", python: true });
+		expect(out.Stop[0].hooks[0].command).toContain("node $CLAUDE_PROJECT_DIR");
+	});
+
+	it("python : la réécriture survit à la relocalisation codex", () => {
+		const h = [
+			{
+				slug: "s",
+				python_script_path: ".claude/hooks/s.py",
+				python_code_snippet: "#!/usr/bin/env python3\n",
+				config: {
+					hooks: {
+						PreToolUse: [
+							{
+								matcher: "Bash",
+								hooks: [
+									{ command: "node $CLAUDE_PROJECT_DIR/.claude/hooks/s.mjs" },
+								],
+							},
+						],
+					},
+				},
+			},
+		];
+		const out = collectIncomingHooks(h, { scope: "codex-project", python: true });
+		expect(out.PreToolUse[0].hooks[0].command).toBe(
+			"python3 .codex/hooks/s.py",
+		);
+	});
 });
 
 describe("analyzeSecurity", () => {
@@ -843,6 +934,17 @@ describe("findInstalledSlugs", () => {
 		});
 		expect(slugs).toEqual([]);
 	});
+	it("reconnaît le fingerprint des variantes python (# @hookstack)", () => {
+		const files = {
+			"a.py": "#!/usr/bin/env python3\n# @hookstack hook-a\n",
+			"b.mjs": "#!/usr/bin/env node\n// @hookstack hook-b\n",
+		};
+		const slugs = findInstalledSlugs("/proj/.claude/hooks", {
+			readdirSync: () => Object.keys(files),
+			readFileSync: (p) => files[p.split("/").pop()],
+		});
+		expect(slugs).toEqual(["hook-a", "hook-b"]);
+	});
 });
 describe("scanInstalledHooks", () => {
 	it("retourne slug + nom de fichier réel, même renommé", () => {
@@ -1005,6 +1107,69 @@ describe("detectScriptChanges", () => {
 			fileBySlug: { "post-write-biome": "/proj/.claude/hooks/biome-check.mjs" },
 		});
 		expect(changed).toEqual(["post-write-biome"]);
+	});
+});
+
+describe("detectScriptChanges (python)", () => {
+	it("compare la variante .py quand python est actif", () => {
+		const hooks = [
+			{
+				slug: "a",
+				script_path: ".claude/hooks/a.mjs",
+				code_snippet: "mjs code",
+				python_script_path: ".claude/hooks/a.py",
+				python_code_snippet: "py code",
+			},
+		];
+		const { changed } = detectScriptChanges(hooks, "project", "/proj", {
+			readFileSync: () => "py code",
+			python: true,
+		});
+		expect(changed).toEqual([]);
+	});
+	it("sans python, compare le .mjs", () => {
+		const hooks = [
+			{
+				slug: "a",
+				script_path: ".claude/hooks/a.mjs",
+				code_snippet: "mjs code",
+				python_script_path: ".claude/hooks/a.py",
+				python_code_snippet: "py code",
+			},
+		];
+		const { changed } = detectScriptChanges(hooks, "project", "/proj", {
+			readFileSync: () => "py code",
+		});
+		expect(changed).toEqual(["a"]);
+	});
+});
+
+describe("doInstallTests (python)", () => {
+	it("écrit des tests pytest (test_<slug>.py) pour les variantes python, jamais de vitest", () => {
+		const written = {};
+		const hooks = [
+			{ slug: "py-hook", python_test_snippet: "def test_x(): pass" },
+			{ slug: "no-py-variant", test_snippet: "vitest code" },
+		];
+		const result = doInstallTests(
+			hooks,
+			"/proj",
+			{
+				mkdirSync: () => {},
+				writeFileSync: (p, content) => {
+					written[p] = content;
+				},
+				join: (...parts) => parts.join("/"),
+			},
+			{ python: true },
+		);
+		expect(result.testCount).toBe(1);
+		expect(written["/proj/tests/hooks/test_py-hook.py"]).toBe(
+			"def test_x(): pass",
+		);
+		expect(Object.keys(written).some((p) => p.endsWith(".test.mjs"))).toBe(
+			false,
+		);
 	});
 });
 

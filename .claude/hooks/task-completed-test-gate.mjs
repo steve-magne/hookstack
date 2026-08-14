@@ -26,6 +26,18 @@ function detectManager({
 	return "npm";
 }
 
+const PY_MARKERS = ["pyproject.toml", "setup.py", "setup.cfg", "pytest.ini"];
+
+// Le gate Python ne s'arme que si le projet déclare réellement des tests
+// (pytest.ini explicite ou dossier tests/) — sinon `uv run pytest` exit 5
+// (no tests ran) bloquerait la complétion de chaque tâche sur un projet sans
+// test. pyproject.toml seul ne suffit pas : tout projet uv en possède un.
+function hasPythonTests({ exists, projectDir }) {
+	if (!PY_MARKERS.some((f) => exists(join(projectDir, f)))) return false;
+	if (exists(join(projectDir, "pytest.ini"))) return true;
+	return exists(join(projectDir, "tests")) || exists(join(projectDir, "test"));
+}
+
 export function run(
 	input,
 	{
@@ -34,8 +46,14 @@ export function run(
 		projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
 	} = {},
 ) {
+	const commands = [];
+	// Python : gate pytest via uv (même outil que stop-pytest).
+	if (hasPythonTests({ exists, projectDir })) commands.push("uv run pytest -q");
+	// Node : gate sur le gestionnaire détecté, `--if-present` pour sauter sans script test.
+	if (exists(join(projectDir, "package.json")))
+		commands.push(`${detectManager({ exists, projectDir })} test --if-present 2>&1`);
 	try {
-		exec(`${detectManager({ exists, projectDir })} test --if-present 2>&1`);
+		for (const cmd of commands) exec(cmd);
 		return null;
 	} catch (e) {
 		const out = (e.stdout ?? e.stderr ?? e.message).toString().slice(0, 800);

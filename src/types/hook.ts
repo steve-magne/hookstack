@@ -73,6 +73,10 @@ export interface HookImplementation {
 	code_snippet?: string;
 	test_snippet?: string;
 	script_path?: string;
+	/** Python variant: installed on Python projects instead of the .mjs + vitest test. */
+	python_script_path?: string;
+	python_code_snippet?: string;
+	python_test_snippet?: string;
 	/** Third-party security verdicts, populated by CI (see .claude/scan-snyk.mjs). */
 	security?: HookSecurity;
 }

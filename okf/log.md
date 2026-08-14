@@ -3,6 +3,10 @@
 Historique des changements du bundle OKF. Date la plus récente en haut.
 Toute session qui enrichit le bundle ajoute une entrée ici (voir [self-improvement](meta/self-improvement.md)).
 
+## 2026-08-13
+* **Creation**: [implementation/python-hook-variants](implementation/python-hook-variants.md) — variantes Python des hooks (install language-aware) : chaque hook peut porter un `.py` stdlib-only + tests pytest, le CLI détecte la toolstack et n'installe plus jamais de vitest sur un projet Python. 58 hooks transcrits en 5 vagues (stack python, language-aware, cœur universel).
+* **Update**: [architecture/cli-scopes](architecture/cli-scopes.md) — section install language-aware (`detectStacks`, `--stack`/`--stacks`, fallback `.mjs`).
+
 ## 2026-08-12
 * **Creation**: [implementation/cli-smart-toolstack-detection](implementation/cli-smart-toolstack-detection.md) — le CLI `install` (par défaut) analyse la toolstack du projet (dossiers i18n/okf, package.json, remote git) et suggère/auto-installe les hooks non-`default_on` correspondants (`AUTO_DETECT` + `detectProjectSignals` dans `core.mjs`). Complète le stack filter upstream (#231) ; `--no-detect` commun désactive les deux.
 * **Update**: test interactif PTY du parcours → libellés humains des signaux (`SIGNAL_LABELS`), noms des hooks dans le multiselect, 3 nouveaux signaux (`nextjs`, `frontend`, `github`) couvrant `post-write-nextjs-quality`, `post-edit-visual-check`, `session-start-github-context`.

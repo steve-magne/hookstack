@@ -67,12 +67,13 @@ pnpm typecheck
 pnpm test:coverage
 pnpm check:hook-coverage
 pnpm coverage:badge
+pnpm test:python          # python3 -m pytest -q — .py hook variants
 pnpm validate:registry
 node .claude/sync-hooks.mjs --check
 node .claude/hooks-timeline.mjs --check
 ```
 
-All seven commands must exit 0. If one fails on a clean checkout, open an issue.
+All eight commands must exit 0. If one fails on a clean checkout, open an issue.
 
 ---
 
@@ -211,9 +212,11 @@ These are non-negotiable. A PR that violates them will not be merged.
 - **Timeout every `execSync`.** Pass `{ timeout: 10_000 }` (10 s) or less. A hook that hangs blocks the agent.
 - **Filter before running heavy tools.** Check file extensions (`/.tsx?$/.test(filePath)`) before invoking `tsc` or `eslint`.
 
-**Node.js only**
+**Node.js by default — Python variants for Python projects**
 
-Hooks are `.mjs` — even for Python or Java projects. Node.js is the only runtime guaranteed to be present (Claude Code depends on it). A "Python hook" is a `.mjs` that calls Python tools via `execSync`. Always prefer `uv run <tool>` over calling `ruff`/`pytest`/`pyright` directly: it resolves the project venv automatically.
+Hooks are `.mjs` — Node.js is the only runtime guaranteed to be present (Claude Code depends on it). A "Python hook" is a `.mjs` that calls Python tools via `execSync` (`uv run <tool>`, never `ruff`/`pytest`/`pyright` directly: it resolves the project venv automatically).
+
+On top of that, a hook can carry a **Python variant**: `.claude/hooks/<slug>.py` (stdlib only, `#!/usr/bin/env python3`, `# @hookstack <slug>` fingerprint on line 2) + `tests/hooks/test_<slug>.py` (pytest). Register it via `implementation.python_script_path` in the registry; the sync mirrors the `.py` into `python_code_snippet` and the test into `python_test_snippet`. The CLI installs the variant (command `python3 … .py`, pytest tests) on pure-Python installs and never writes vitest tests there — keeping the project's CI Python-only. A Python variant follows the same `run()` + DI + guard pattern as the `.mjs`, with the guard under `if __name__ == "__main__":` reading stdin JSON. Python variants are tested with `pnpm test:python`; the per-hook vitest coverage gate (`check:hook-coverage`) only applies to `.mjs` hooks.
 
 ---
 
@@ -227,11 +230,12 @@ Every PR runs:
 | Tests + coverage | `pnpm test:coverage` | Any test fails, or aggregate coverage drops below the gate — lines/statements/branches ≥ 80 %, functions ≥ 75 % — on the unit-tested surface |
 | Per-hook coverage | `pnpm check:hook-coverage` | Any individual hook (`tests/hooks/` imports it) falls below **80 % line coverage**, unless listed in the legacy exceptions of `scripts/check-hook-coverage.mjs` (stale exceptions — hook recovered or deleted — also fail, forcing the list to shrink) |
 | Coverage badge | `pnpm coverage:badge` (CI: `--check`) | `public/coverage-badge.svg` or the `COVERAGE_BADGE` README block drifted from `coverage/coverage-summary.json` — regenerate with `pnpm coverage:badge` and commit |
+| Tests (pytest) | `pnpm test:python` (python3 -m pytest) | Any `.py` hook variant test fails |
 | Registry schema | `pnpm validate:registry` | Unknown field, missing required field, invalid enum, or a dogfooded hook (script on disk) without a unit test |
-| Hook drift | `node .claude/sync-hooks.mjs --check` | `code_snippet` in registry diverged from the `.mjs` on disk |
+| Hook drift | `node .claude/sync-hooks.mjs --check` | `code_snippet` / `python_code_snippet` / `python_test_snippet` in registry diverged from the scripts on disk |
 | Timeline drift | `node .claude/hooks-timeline.mjs --check` | Generated artefacts diverged from git history |
 
-All seven must be green. Run them locally before pushing to avoid back-and-forth.
+All eight must be green. Run them locally before pushing to avoid back-and-forth.
 
 ---
 
