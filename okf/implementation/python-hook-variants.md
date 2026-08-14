@@ -110,7 +110,7 @@ géré, `pip install pytest` fonctionne) avant le run pytest.
   le sync sans erreur mais sans miroir (décompte faux). Vérifier avec
   `node .claude/sync-hooks.mjs --check` + comptage des variantes complètes.
 
-## Transcription — 81 hooks en 6 vagues
+## Transcription — 80 hooks en 6 vagues
 
 1. **Stack Python (6)** : `post-write-ruff-format`, `post-write-ruff-check`, `post-edit-pyright`,
    `stop-pytest`, `pre-bash-enforce-uv`, `setup-check-install-deps`.
@@ -121,7 +121,7 @@ géré, `pip install pytest` fonctionne) avant le run pytest.
    config, api errors, permission denied, audit session, compact), qualité (i18n, dead links,
    dead images, duplication, debug statements, conflict markers, missing tests), utilitaires
    (cleanup temp, reinject après compaction, redaction de secrets, file→markdown…).
-4. **Vague mécanismes Claude Code (23)** : TTS/sons (`notification-tts-voice`,
+4. **Vague mécanismes Claude Code (22)** : TTS/sons (`notification-tts-voice`,
    `stop-tts-completion`, `subagent-start-tts-announce`, `subagent-stop-tts-summary`,
    `notification-sound`, `stop-sound`), worktrees (`session-start-worktree-if-main`,
    `pre-edit-worktree-guard`, `worktree-create-setup-env`, `worktree-remove-cleanup`,
@@ -130,6 +130,7 @@ géré, `pip install pytest` fonctionne) avant le run pytest.
    `user-prompt-llm-agent-name`, `task-created-naming-convention`, `instructions-loaded-audit-log`,
    `stop-generate-changelog`, `post-bash-cost-tracker`, `message-display-redact-pii`,
    `notification-slack`, `user-prompt-expansion-skill-context`, `stop-session-dedup-autodisable`).
+   (`stop-run-tests` y figurait mais a été re-transféré en `typescript` à la vague 5.)
 5. **Vague tri des fallbacks restants (décisions par hook, 10 hooks)** : plutôt que de transcrire
    mécaniquement, analyse de l'utilité réelle sur un projet Python —
    - **Taggés `stack: ["typescript"]`** (outils Node-only, équivalent Python déjà au registre) :
@@ -150,10 +151,10 @@ géré, `pip install pytest` fonctionne) avant le run pytest.
 ## Reste à faire / hors scope
 
 - **Zéro fallback `.mjs` sur un install Python par défaut** (66/66 en `.py`). Sur le catalogue
-  complet, les 25 hooks sans variante `.py` sont tous hors cible : 16 `stack: ["typescript"]`
-  (outils Node-only, jamais installés sur un projet Python) + 7 internes au repo Hookstack
-  (`default_on: false`) + 2 universels Node-only (`post-write-autoformat`,
-  `session-start-node-version-check`, taggés typescript).
+  complet, les 25 hooks sans variante `.py` sont tous hors cible : 18 `stack: ["typescript"]`
+  (outils Node-only — dont `post-write-autoformat` et `session-start-node-version-check` — jamais
+  installés sur un projet Python) + 7 internes au repo Hookstack (`default_on: false`, dont
+  2 aussi taggés typescript).
 - Les variantes `.py` n'ont pas de timeline dédiée (la timeline reste indexée sur les `.mjs`).
 - Pas d'i18n, pas de changement de l'API publique du catalogue au-delà des 3 champs.
 

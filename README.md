@@ -40,13 +40,13 @@ Installation takes under a minute.
 npx hookstack-cli@latest install
 ```
 
-That's it. The CLI **detects your project's setup** — its language stack (no Biome in a pure Python project) *and* the systems it uses (i18n, an `okf/` knowledge bundle, Next.js, a front-end codebase, a GitHub-hosted repo) — then walks you through picking hooks, writes the `.mjs` scripts, and patches the right config file. No manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent; `--no-detect` skips detection.
+That's it. The CLI **detects your project's setup** — its language stack (no Biome in a pure Python project) *and* the systems it uses (i18n, an `okf/` knowledge bundle, Next.js, a front-end codebase, a GitHub-hosted repo) — then walks you through picking hooks, writes the hook scripts (`.mjs`, or `.py` variants on Python projects), and patches the right config file. No manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent; `--no-detect` skips detection.
 
 >Want to fine-tune your Hookstack? Go to **[hookstack.app](https://www.hookstack.app)** — browse the full catalogue, select exactly what you need, copy the generated command and paste it in your terminal
 
 **Language-aware by default.** The CLI detects your project's toolchain (TypeScript/Node: `package.json`/`tsconfig.json` · Python: `pyproject.toml`/`requirements.txt`/… ) and only installs hooks that match it — a Python repo gets the ruff/pyright/pytest stack, never hooks that shell out to `npm`/`tsc`/`biome`. Mixed repos get both. Override with `--stack=typescript|python|all`.
 
-**Python hooks, Python tests.** On a Python project the hooks that carry a Python variant are installed as real `.py` scripts (`python3 …` commands) and `--with-tests` writes **pytest** tests instead of vitest tests — vitest is never installed on Python projects, so your GitHub Actions CI stays Python-only with no `npm` added to test the hooks. Hooks without a variant yet fall back to `.mjs` while the catalogue transcribes them (see the install summary).
+**Python hooks, Python tests.** On a Python project the hooks are installed as real `.py` scripts (`python3 …` commands) and `--with-tests` writes **pytest** tests instead of vitest tests — vitest is never installed on Python projects, so your GitHub Actions CI stays Python-only with no `npm` added to test the hooks. Every hook in the default stack carries a Python variant: a default Python install currently lands **66 hooks, 100 % as `.py`, zero `.mjs` fallback** (see the install summary).
 
 ```bash
 # In a Python project — ruff format, ruff check, pyright, pytest, uv guard
@@ -65,7 +65,7 @@ npx hookstack-cli@latest install --stack=all
 npx hookstack-cli@latest update
 ```
 
-No need to remember which hooks you picked — the CLI reads the `// @hookstack <slug>` fingerprint each installed `.mjs` already carries, re-fetches those exact hooks from the live registry, and overwrites only the scripts that changed. `settings.json` is re-merged but only actually touched if a hook's config fragment changed (the merge is idempotent). Installed somewhere other than the default project scope? Pass the same flag you installed with, e.g. `update --global` or `update --codex-project`. See [`packages/cli/README.md`](packages/cli/README.md#updating) for the full breakdown.
+No need to remember which hooks you picked — the CLI reads the `@hookstack <slug>` fingerprint each installed script carries (`// @hookstack` on `.mjs`, `# @hookstack` on `.py` variants), re-fetches those exact hooks from the live registry, and overwrites only the scripts that changed. `settings.json` is re-merged but only actually touched if a hook's config fragment changed (the merge is idempotent). Installed somewhere other than the default project scope? Pass the same flag you installed with, e.g. `update --global` or `update --codex-project`. See [`packages/cli/README.md`](packages/cli/README.md#updating) for the full breakdown.
 
 ---
 
@@ -240,7 +240,10 @@ touch tests/hooks/<slug>.test.mjs   # coverage ≥ 80 % required
 # 3. Add metadata to registry/registry.json, then sync
 node .claude/sync-hooks.mjs
 
-# 4. Open a PR — CI runs typecheck, tests, schema validation, and drift checks
+# 4. (Optional) ship a Python variant for pure-Python installs
+touch .claude/hooks/<slug>.py       # same run() contract, stdlib only
+
+# 5. Open a PR — CI runs typecheck, tests, schema validation, and drift checks
 ```
 
 ---
