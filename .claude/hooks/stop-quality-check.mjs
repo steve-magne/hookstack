@@ -7,6 +7,7 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { changedFiles } from "./lib/changed-files.mjs";
 
 // Fichiers concernés par un typecheck/lint JS-TS. Une session qui ne touche que
 // du Markdown ou des assets n'a rien à vérifier ici.
@@ -17,26 +18,6 @@ const QC_CFG = /(^|\/)(tsconfig.*\.json|package\.json|biome\.jsonc?)$/;
 const PY = /\.py$/;
 const PY_CFG =
 	/(^|\/)(pyproject\.toml|setup\.py|setup\.cfg|pytest\.ini|ruff\.toml|\.ruff\.toml|pyrightconfig\.json)$/;
-
-/** Fichiers modifiés en attente (staged + unstaged + untracked), ou null hors git. */
-function defaultChanged(cwd) {
-	try {
-		const out = execSync("git status --porcelain", {
-			encoding: "utf8",
-			cwd,
-			timeout: 5_000,
-		});
-		return out
-			.split("\n")
-			.filter(Boolean)
-			.map((l) => {
-				const p = l.slice(3);
-				return p.includes(" -> ") ? p.split(" -> ").pop() : p;
-			});
-	} catch {
-		return null; // hors dépôt git → ne pas court-circuiter (comportement historique)
-	}
-}
 
 /** Scripts npm du package.json projet, ou {} si absent/illisible. */
 function defaultReadScripts(projectDir) {
@@ -55,7 +36,9 @@ export function run({
 	exists = existsSync,
 	readScripts = defaultReadScripts,
 	projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
-	changed = defaultChanged(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
+	changed = changedFiles({
+		cwd: process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+	}),
 } = {}) {
 	// Aucun fichier JS/TS ni Python (ni config associée) modifié → checks inutiles.
 	if (

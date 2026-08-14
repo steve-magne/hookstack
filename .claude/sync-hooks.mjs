@@ -21,7 +21,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, dirname, resolve } from "node:path";
+import { basename, dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -210,6 +210,91 @@ if (pyUpdated > 0 || pyDrift > 0 || pySeeded > 0 || pyUnchanged > 0) {
 	console.log(
 		`  python : ${pyUnchanged} synchrone(s), ${pyUpdated} mis à jour, ${pySeeded} seedé(s)` +
 			(pyDrift ? `, ${pyDrift} dérive(s)` : ""),
+	);
+}
+
+// ── Étape 1a-bis : DISQUE -> companion_files (fichiers partagés importés) ───
+// Un hook peut importer un module partagé (ex. `./lib/changed-files.mjs` côté
+// .mjs, `from lib.changed_files import ...` côté .py). Ces fichiers vivent dans
+// .claude/hooks/lib/ et doivent être livrés AUX CÔTÉS du hook par le CLI — le
+// snippet installé référence l'import relatif, le fichier doit donc exister dans
+// le même dossier hooks/ chez l'utilisateur. On scanne le .mjs/.py sur disque,
+// on résout les imports `lib/`, et on miroite leur contenu dans
+// implementation.companion_files (champ absent si aucun import).
+
+const LIB_ROOT = resolve(ROOT, ".claude/hooks/lib");
+const JS_LIB_IMPORT = /from\s+["']\.\/lib\/([^"']+)["']/g;
+const PY_LIB_IMPORT = /(?:from|import)\s+lib\.([\w.]+)/g;
+
+/** Résout un import relatif à .claude/hooks/ vers un chemin repo, en verrouillant
+ *  la résolution dans .claude/hooks/lib/ (un import `./lib/../x` ne sort pas). */
+function resolveLibPath(rel) {
+	const resolved = resolve(LIB_ROOT, rel);
+	const prefix = `${LIB_ROOT}${sep}`;
+	if (!resolved.startsWith(prefix)) return null;
+	return relative(ROOT, resolved).replaceAll("\\", "/");
+}
+
+function collectLibRefs(content) {
+	const refs = new Set();
+	if (!content) return refs;
+	for (const m of content.matchAll(JS_LIB_IMPORT)) refs.add(m[1]);
+	for (const m of content.matchAll(PY_LIB_IMPORT)) {
+		refs.add(`${m[1].replaceAll(".", "/")}.py`);
+	}
+	return refs;
+}
+
+let companionsDrift = 0;
+let companionsUpdated = 0;
+let companionsUnchanged = 0;
+
+for (const hook of registry) {
+	const refs = new Set();
+	for (const rel of [
+		hook.implementation?.script_path,
+		hook.implementation?.python_script_path,
+	]) {
+		if (!rel) continue;
+		const abs = resolve(ROOT, rel);
+		if (!existsSync(abs)) continue;
+		const content = readFileSync(abs, "utf8");
+		for (const ref of collectLibRefs(content)) {
+			const repoPath = resolveLibPath(ref);
+			if (!repoPath || !existsSync(resolve(ROOT, repoPath))) continue;
+			refs.add(repoPath);
+		}
+	}
+	if (refs.size === 0) continue; // pas d'import lib → champ absent (diff minimal)
+
+	const expected = [...refs]
+		.sort()
+		.map((path) => ({ path, snippet: readFileSync(resolve(ROOT, path), "utf8") }));
+	const current = hook.implementation?.companion_files;
+	if (JSON.stringify(current) === JSON.stringify(expected)) {
+		companionsUnchanged++;
+		continue;
+	}
+	companionsDrift++;
+	if (CHECK) {
+		console.log(`  ✗ dérive companion_files : ${hook.slug}`);
+	} else {
+		if (!hook.implementation) hook.implementation = {};
+		hook.implementation.companion_files = expected;
+		console.log(
+			`  ${DRY_RUN ? "[dry] " : ""}↻ companion_files mis à jour depuis disque : ${hook.slug}`,
+		);
+		companionsUpdated++;
+	}
+}
+
+if (companionsUpdated > 0 || companionsDrift > 0 || companionsUnchanged > 0) {
+	console.log(
+		`\n── Companion files (disque -> registre) ──`,
+	);
+	console.log(
+		`  ${companionsUnchanged} synchrone(s), ${companionsUpdated} mis à jour` +
+			(companionsDrift > 0 ? `, ${companionsDrift} dérive(s)` : ""),
 	);
 }
 
@@ -435,7 +520,7 @@ events.forEach((evt) => {
 
 // ── Mode --check : pas d'écriture, exit selon dérive ─────────────────────────
 if (CHECK) {
-	const totalDrift = drift + pyDrift + cmdDrift;
+	const totalDrift = drift + pyDrift + cmdDrift + companionsDrift;
 	if (totalDrift > 0) {
 		if (drift > 0) {
 			console.error(
@@ -452,6 +537,11 @@ if (CHECK) {
 				`\n✗ ${cmdDrift} commande(s) malformée(s) dans implementation.config (ex. "node bash …").`,
 			);
 		}
+		if (companionsDrift > 0) {
+			console.error(
+				`\n✗ ${companionsDrift} hook(s) dont companion_files a dérivé des fichiers lib/ sur disque.`,
+			);
+		}
 		console.error(
 			"  Lancer 'node .claude/sync-hooks.mjs' pour resynchroniser.",
 		);
@@ -463,7 +553,14 @@ if (CHECK) {
 
 // ── Écritures ────────────────────────────────────────────────────────────────
 if (!DRY_RUN) {
-	if (updated > 0 || pyUpdated > 0 || cmdFixed > 0 || testsUpdated > 0 || pyTestsUpdated > 0) {
+	if (
+		updated > 0 ||
+		pyUpdated > 0 ||
+		cmdFixed > 0 ||
+		testsUpdated > 0 ||
+		pyTestsUpdated > 0 ||
+		companionsUpdated > 0
+	) {
 		writeFileSync(
 			REGISTRY_PATH,
 			`${JSON.stringify(registry, null, 2)}\n`,
@@ -475,6 +572,7 @@ if (!DRY_RUN) {
 		if (testsUpdated > 0) parts.push(`${testsUpdated} test_snippet`);
 		if (pyTestsUpdated > 0) parts.push(`${pyTestsUpdated} python_test_snippet`);
 		if (cmdFixed > 0) parts.push(`${cmdFixed} commande(s) normalisée(s)`);
+		if (companionsUpdated > 0) parts.push(`${companionsUpdated} companion_files`);
 		console.log(`\n✓ registry.json mis à jour (${parts.join(", ")})`);
 	}
 	writeFileSync(

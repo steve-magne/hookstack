@@ -281,6 +281,8 @@ Met en valeur la croissance du catalogue « en public » (marketing/communauté)
 
 **Fingerprint** : chaque script commence par `#!/usr/bin/env node` suivi immédiatement de `// @hookstack <slug>` en ligne 2. Ce marqueur est injecté et maintenu automatiquement par `node .claude/sync-hooks.mjs` — ne pas l'éditer à la main. Il permet la détection dans des dépôts open source : `grep -r "@hookstack" --include="*.mjs"`. Format : `// @hookstack <slug-canonique-du-registre>`.
 
+**Modules partagés (`lib/`)** : si plusieurs hooks partagent une logique, la mettre dans `.claude/hooks/lib/<name>.mjs` (et son miroir `.py`) plutôt que de la dupliquer — les hooks l'importent (`./lib/...` en JS, `from lib.xxx import ...` en Python via `sys.path.insert`). Le sync détecte ces imports et miroite les fichiers dans `implementation.companion_files` du registre ; le CLI les installe alors aux côtés du hook (y compris scopes Codex via `resolveScriptPath`). Ne jamais référencer un fichier hors de `.claude/hooks/lib/` (le sync verrouille la résolution). Voir `okf/implementation/hooks-changed-files-helper.md`.
+
 **Pattern obligatoire — `run()` + garde + injection de dépendances** : tout hook expose une fonction pure `export function run(input, deps = {…})` qui contient la logique et **retourne** son résultat (`{ decision, reason }` | `{ exitCode, message }` | une chaîne de contexte | `null`), sans toucher à stdin/stdout/`process.exit`. Les effets de bord (`execSync`, `fs`, `fetch`, `process.platform`, horloge) passent par des dépendances injectées avec des valeurs par défaut réelles — c'est ce qui rend le hook testable. Une garde d'entrée fait le marshalling réel :
 
 ```js
