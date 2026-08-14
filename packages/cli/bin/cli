@@ -146,22 +146,38 @@ function resolveStacks(args) {
 // variants + pytest where available (never vitest), so the project's CI stays
 // Python-only. Mixed TS+Python repos keep the .mjs (node is present there), as
 // do --stack=all / --no-detect (no filtering → no variant decision).
-function purePythonStack(args) {
-  const { stacks } = resolveStacks(args)
+function purePythonStack(stackFilter) {
+  const { stacks } = stackFilter
   return stacks.length > 0 && stacks.every(s => s === 'python')
 }
 
 // Filters the default hook set down to the project's detected/declared stack.
 // Only applies to the default install (no explicit --hooks=) — an explicit
-// slug list is always installed as asked, never silently filtered.
-function applyStackFilter(hooks, isDefault, args, log) {
+// slug list is always installed as asked, never silently filtered. `stackFilter`
+// is the precomputed resolveStacks(args) result — computed once per flow, not
+// re-detected on every call.
+function applyStackFilter(hooks, isDefault, stackFilter, log) {
   if (!isDefault) return hooks
-  const { stacks, detected } = resolveStacks(args)
-  const filtered = filterHooksByStack(hooks, stacks)
+  const { stacks, detected } = stackFilter
+  // Unknown toolchain (detection ran, no TypeScript/Python manifest found — a
+  // Go, Rust or manifest-less project): only universal hooks make sense, never
+  // tsc/biome/ruff/pytest hooks the project can't run. --no-detect / --stack=all
+  // bypass detection and keep the full set.
+  const filtered = detected && stacks.length === 0
+    ? hooks.filter(h => !h.stack?.length)
+    : filterHooksByStack(hooks, stacks)
   const skipped = hooks.length - filtered.length
-  if (skipped > 0) {
+  if (detected && stacks.length === 0) {
+    // Say it — silence reads like detection never ran.
+    log(`No TypeScript/Python toolchain detected — installing ${plural(filtered.length, 'universal hook')} only (no tsc/biome/ruff/pytest hooks).\nUse --stacks=typescript,python or --no-detect to install the full default set.`)
+  } else if (skipped > 0) {
     const label = detected ? `Detected stack: ${stacks.join(', ')}` : `Stack: ${stacks.join(', ')}`
-    log(`${label} — skipped ${plural(skipped, 'hook')} not needed for this stack (--stacks= or --no-detect to override)`)
+    // Auto-detection lists exactly what was dropped (transparency); an explicit
+    // --stack= override only reports the count (the user chose the filter).
+    const detail = detected
+      ? `: ${hooks.filter(h => !filtered.includes(h)).map(h => h.slug).join(', ')}`
+      : ' not needed for this stack'
+    log(`${label} — skipped ${plural(skipped, 'hook')}${detail} (--stacks= or --no-detect to override)`)
   }
   return filtered
 }
@@ -280,8 +296,14 @@ async function interactiveInstall(slugs, args) {
     process.exit(1)
   }
   const notFound = slugs.filter(slug => !data.hooks.find(h => h.slug === slug))
-  let hooks = applyStackFilter(data.hooks, slugs.length === 0, args, m => p.log.info(m))
+  const isDefault = slugs.length === 0
+  const stackFilter = resolveStacks(args)
+  // Notes are collected and logged AFTER spin.stop — p.log.* while the spinner
+  // is animating interleaves stdout with the spinner's stderr frames.
+  const filterNotes = []
+  let hooks = applyStackFilter(data.hooks, isDefault, stackFilter, m => filterNotes.push(m))
   spin.stop(`Selected ${pc.bold(String(hooks.length))} hook${hooks.length === 1 ? '' : 's'}`)
+  for (const note of filterNotes) p.log.info(note)
   if (notFound.length) p.log.warn(`Unknown slugs skipped: ${notFound.join(', ')}`)
   if (hooks.length === 0) { p.cancel('No hooks to install.'); process.exit(1) }
 
@@ -321,12 +343,21 @@ async function interactiveInstall(slugs, args) {
   if (p.isCancel(scopeResult)) return onCancel()
   scope = scopeResult
 
-  const pythonMode = purePythonStack(args)
+  const pythonMode = purePythonStack(stackFilter)
   const dirs = resolveScopeRoot(scope, { cwd: process.cwd(), home: homedir() })
 
   // Contextual detection (default install only, like the stack filter):
-  // suggest hooks matching the project's non-language systems.
-  const { signals, extra } = await detectContextualHooks({ isDefault: slugs.length === 0, args, scope, dirs, hooks })
+  // suggest hooks matching the project's non-language systems. The probe + API
+  // fetch is a silent round-trip — a spinner keeps the wait visible.
+  const willDetect = isDefault && !args.noDetect && !isGlobalScope(scope)
+  const detectSpin = willDetect ? p.spinner() : null
+  detectSpin?.start('Checking for project systems…')
+  const { signals, extra } = await detectContextualHooks({ isDefault, args, scope, dirs, hooks })
+  if (detectSpin) {
+    detectSpin.stop(extra.length > 0
+      ? `Detected ${pc.cyan(signals.map(s => SIGNAL_LABELS[s] ?? s).join(' + '))}`
+      : undefined)
+  }
   if (extra.length > 0) {
     const picked = await p.multiselect({
       message: `Detected ${pc.cyan(signals.map(s => SIGNAL_LABELS[s] ?? s).join(' + '))} — add the matching hook${extra.length === 1 ? '' : 's'}?`,
@@ -421,13 +452,14 @@ async function directInstall(slugs, args) {
     process.exit(1)
   }
   const notFound = slugs.filter(slug => !data.hooks.find(h => h.slug === slug))
-  let hooks = applyStackFilter(data.hooks, isDefault, args, m => console.log(`  ${m}`))
+  const stackFilter = resolveStacks(args)
+  let hooks = applyStackFilter(data.hooks, isDefault, stackFilter, m => console.log(`  ${m}`))
   if (notFound.length) console.warn(`  ! Unknown slugs (skipped): ${notFound.join(', ')}`)
   if (hooks.length === 0) {
     console.error('\n✗ No hooks to install.')
     process.exit(1)
   }
-  const pythonMode = purePythonStack(args)
+  const pythonMode = purePythonStack(stackFilter)
   const dirs = resolveScopeRoot(args.scope, { cwd: process.cwd(), home: homedir() })
 
   // Contextual detection (default install only, like the stack filter):

@@ -4837,7 +4837,7 @@
   {
     "benefit": "Every page ships indexable — title + description set",
     "category": "validation",
-    "default_on": true,
+    "default_on": false,
     "description": "After editing a Next.js App Router page (src/app/**/page.tsx), verifies it exports `metadata` or `generateMetadata` with both a title and a description — the two tags Google shows in results and weighs when ranking. Non-blocking: names exactly what is missing so no page ever goes live invisible to search.",
     "hook_type": "PostToolUse",
     "implementation": {
@@ -4882,7 +4882,7 @@
   {
     "benefit": "Stop a raw <img> from wrecking your LCP score",
     "category": "validation",
-    "default_on": true,
+    "default_on": false,
     "description": "Flags raw <img> tags in components (src/**/*.tsx) and routes you to next/image (<Image>) — automatic LCP optimization, zero layout shift (CLS), lazy-loading and modern formats (AVIF/WebP) for free. Non-blocking: a raw <img> is a silent Core Web Vitals regression that quietly costs you ranking.",
     "hook_type": "PostToolUse",
     "implementation": {
@@ -5019,7 +5019,7 @@
   {
     "benefit": "Your SEO can't regress — gated like your test suite",
     "category": "validation",
-    "default_on": true,
+    "default_on": false,
     "description": "Session-end SEO gate (Stop) for Next.js projects — a test suite for search. Verifies every page.tsx carries a title + description, the structural files exist (robots, sitemap, OpenGraph image, manifest), and every literal internal <Link href=\"/...\"> resolves to a real route, so no broken link bleeds crawl budget. Blocks the stop (exit 2) on any regression. Runtime JSON-LD and Core Web Vitals stay with a full audit.",
     "hook_type": "Stop",
     "implementation": {

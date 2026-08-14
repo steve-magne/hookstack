@@ -44,7 +44,7 @@ That's it. The CLI **detects your project's setup** — its language stack (no B
 
 >Want to fine-tune your Hookstack? Go to **[hookstack.app](https://www.hookstack.app)** — browse the full catalogue, select exactly what you need, copy the generated command and paste it in your terminal
 
-**Language-aware by default.** The CLI detects your project's toolchain (TypeScript/Node: `package.json`/`tsconfig.json` · Python: `pyproject.toml`/`requirements.txt`/… ) and only installs hooks that match it — a Python repo gets the ruff/pyright/pytest stack, never hooks that shell out to `npm`/`tsc`/`biome`. Mixed repos get both. Override with `--stack=typescript|python|all`.
+**Language-aware by default.** The CLI detects your project's toolchain (TypeScript/Node: `package.json`/`tsconfig.json` · Python: `pyproject.toml`/`requirements.txt`/… ) and only installs hooks that match it — a Python repo gets the ruff/pyright/pytest stack, never hooks that shell out to `npm`/`tsc`/`biome`. Mixed repos get both. When no TypeScript/Python toolchain is detected (Go, Rust, bare JS…), only the universal hooks are installed — never tsc/biome/ruff/pytest hooks the project can't run — and the CLI says so. Override with `--stack=typescript|python|all` or `--no-detect`.
 
 **Python hooks, Python tests.** On a Python project the hooks are installed as real `.py` scripts (`python3 …` commands) and `--with-tests` writes **pytest** tests instead of vitest tests — vitest is never installed on Python projects, so your GitHub Actions CI stays Python-only with no `npm` added to test the hooks. Every hook in the default stack carries a Python variant: a default Python install currently lands **66 hooks, 100 % as `.py`, zero `.mjs` fallback** (see the install summary).
 

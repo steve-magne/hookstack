@@ -181,6 +181,9 @@ export function assertSafeTarget(destDir, target) {
 // Manifest-based signals only (not file extensions — a stray .py script in a
 // TypeScript repo shouldn't flip the detection). One matching manifest is
 // enough; keep in sync with the registry's `stack` enum (registry.schema.json).
+// Note: `typescript` here means the node/JS/TS ecosystem — a bare package.json
+// (JS-only project) still belongs to it: the node hooks (biome, npm install…)
+// run fine there and the tsc-based ones self-guard on tsconfig presence.
 const STACK_MANIFESTS = {
 	typescript: ["package.json", "tsconfig.json", "pnpm-workspace.yaml"],
 	python: [
@@ -286,6 +289,9 @@ export const SIGNAL_LABELS = {
 
 // Signal → catalogue slugs. A hook can unlock several signals; keep the table
 // flat and one-directional so adding a new signal is a two-line change.
+// nextjs also carries the SEO guards that only make sense on Next.js App Router
+// (src/app/** metadata, next/image, robots/sitemap) — they are NOT default_on
+// so a Vite/Express TypeScript project never gets Next.js-only hooks.
 export const AUTO_DETECT = {
 	i18n: ["stop-i18n-validation"],
 	okf: [
@@ -293,7 +299,12 @@ export const AUTO_DETECT = {
 		"session-start-okf-staleness",
 		"stop-okf-staleness-check",
 	],
-	nextjs: ["post-write-nextjs-quality"],
+	nextjs: [
+		"post-write-nextjs-quality",
+		"seo-page-metadata-guard",
+		"seo-next-image-guard",
+		"stop-seo-structure-check",
+	],
 	frontend: ["post-edit-visual-check"],
 	github: ["session-start-github-context"],
 };
