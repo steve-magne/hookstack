@@ -47,13 +47,18 @@ def _default_changed():
     except Exception:
         return None  # hors dépôt git → ne pas court-circuiter
 
+# Sentinel : distingue « changed non fourni » (fallback git) de « changed=None
+# explicite » (hors dépôt git → analyser quand même). En JS seul `undefined`
+# déclenche le défaut ; en Python `None` fait les deux, d'où ce sentinel.
+_UNSET = object()
 
-def run(_input=None, *, exec_cmd=None, exists=None, changed=None):
+
+def run(_input=None, *, exec_cmd=None, exists=None, changed=_UNSET):
     if exec_cmd is None:
         exec_cmd = _exec
     if exists is None:
         exists = _exists
-    if changed is None:
+    if changed is _UNSET:
         changed = _default_changed()
 
     # Rien en attente, ou uniquement des fichiers docs/binaires → rien à dédupliquer.

@@ -97,6 +97,13 @@ géré, `pip install pytest` fonctionne) avant le run pytest.
   globale) ; il faut `.search` (`stop-duplication-check.py`).
 - **Deps par kwargs** : les tests passent les fakes en kwargs nommés, jamais dans l'input JSON ;
   un compteur interne passé par `**deps` non prévu lève une erreur (`pre-webfetch-html-to-markdown`).
+- **`None` ≠ « non fourni »** : en JS seul `undefined` déclenche le défaut — un `changed: null`
+  explicite reste null et court-circuite le fallback git (« hors dépôt → analyser quand même »).
+  En Python `None` fait les deux : le portage doit utiliser un **sentinel** (`_UNSET = object()`)
+  comme valeur par défaut pour distinguer « non fourni » (fallback `git status`) de
+  « explicitement null » (`stop-duplication-check.py`). Un test passant `changed=None` était
+  dépendant de l'état du working tree : vert localement (arbre sale), rouge en CI (checkout
+  propre).
 - **Enregistrement des `python_script_path`** : oublier le préfixe `.claude/hooks/` fait passer
   le sync sans erreur mais sans miroir (décompte faux). Vérifier avec
   `node .claude/sync-hooks.mjs --check` + comptage des variantes complètes.
