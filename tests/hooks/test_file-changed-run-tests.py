@@ -51,3 +51,41 @@ def test_reports_success():
 def test_reports_failure():
     r = hook.run({"file_path": "a.py"}, **_deps(lambda cmd, **kwargs: (_ for _ in ()).throw(_Fail("test failed"))))
     assert "FAILED" in r["hookSpecificOutput"]["additionalContext"]
+
+
+def test_uses_uv_pytest_with_empty_file_path():
+    # Pas de file_path : on lance quand même pytest (utile au premier test
+    # d'une session, ou si l'événement ne porte pas le path).
+    calls = []
+    hook.run({}, **_deps(lambda cmd, **kwargs: calls.append(cmd) or "ok"))
+    assert any("uv run pytest" in c for c in calls)
+
+
+def test_passes_when_command_returns_no_output():
+    # exec_cmd peut retourner une string vide — сообщение `passed` doit
+    # quand même être rendu (sans crash sur le slicing).
+    r = hook.run(
+        {"file_path": "a.py"},
+        **_deps(lambda cmd, **kwargs: ""),
+    )
+    assert "passed" in r["hookSpecificOutput"]["additionalContext"]
+
+
+def test_failure_includes_stdout_in_message():
+    # Le message d'échec doit inclure stdout (cause réelle du fail).
+    r = hook.run(
+        {"file_path": "a.py"},
+        **_deps(lambda cmd, **kwargs: (_ for _ in ()).throw(_Fail("1 failed, 2 passed"))),
+    )
+    msg = r["hookSpecificOutput"]["additionalContext"]
+    assert "FAILED" in msg
+    assert "1 failed, 2 passed" in msg
+
+
+def test_failure_includes_file_path_in_message():
+    # Le file_path modifié doit figurer dans le diagnostic pour l'utilisateur.
+    r = hook.run(
+        {"file_path": "/repo/src/broken_module.py"},
+        **_deps(lambda cmd, **kwargs: (_ for _ in ()).throw(_Fail(""))),
+    )
+    assert "broken_module.py" in r["hookSpecificOutput"]["additionalContext"]

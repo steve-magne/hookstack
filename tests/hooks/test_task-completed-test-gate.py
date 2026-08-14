@@ -92,3 +92,96 @@ def test_disarmed_on_non_python_project():
         )
         is None
     )
+
+
+def test_arms_with_pytest_markers_other_than_pyproject():
+    # projet Python sans pyproject.toml mais avec pytest.ini → pytest armé.
+    calls = []
+
+    def ok(cmd, **kwargs):
+        calls.append(cmd)
+        return None
+
+    assert (
+        hook.run(
+            {"task_subject": "x"},
+            exec_cmd=ok,
+            exists=_exists("pytest.ini"),
+            project_dir="/repo",
+        )
+        is None
+    )
+    assert calls == ["uv run pytest -q"]
+
+
+def test_arms_with_alternative_test_directory_name():
+    # `test/` (singulier) — un projet legacy peut utiliser ce nom.
+    calls = []
+
+    def ok(cmd, **kwargs):
+        calls.append(cmd)
+        return None
+
+    assert (
+        hook.run(
+            {"task_subject": "x"},
+            exec_cmd=ok,
+            exists=_exists("pyproject.toml", "test"),
+            project_dir="/repo",
+        )
+        is None
+    )
+    assert calls == ["uv run pytest -q"]
+
+
+def test_failure_message_truncates_long_output():
+    # pytest peut sortir énormément de texte (verbose, stack traces) — la
+    # sortie est tronquée pour éviter de saturer le transcript.
+    long_out = "x" * 5000
+
+    def fail(cmd, **kwargs):
+        raise subprocess.CalledProcessError(1, cmd, output=long_out)
+
+    result = hook.run(
+        {"task_subject": "x"},
+        exec_cmd=fail,
+        exists=_exists("pyproject.toml", "tests"),
+        project_dir="/repo",
+    )
+    assert result["exitCode"] == 2
+    assert len(result["message"]) <= 2000  # le hook coupe à ~800
+
+
+def test_uses_pytest_ini_over_tests_dir():
+    # Si pytest.ini existe, le hook s'arme même sans dossier tests/.
+    calls = []
+
+    def ok(cmd, **kwargs):
+        calls.append(cmd)
+        return None
+
+    assert (
+        hook.run(
+            {"task_subject": "x"},
+            exec_cmd=ok,
+            exists=_exists("pyproject.toml", "pytest.ini"),  # pas de "tests"
+            project_dir="/repo",
+        )
+        is None
+    )
+    assert calls == ["uv run pytest -q"]
+
+
+def test_missing_subject_uses_empty_string():
+    # task_subject absent — ne doit pas crash (le hook affiche une chaîne vide).
+    def fail(cmd, **kwargs):
+        raise subprocess.CalledProcessError(1, cmd, output="1 failed\n")
+
+    result = hook.run(
+        {},
+        exec_cmd=fail,
+        exists=_exists("pyproject.toml", "tests"),
+        project_dir="/repo",
+    )
+    assert result["exitCode"] == 2
+    assert '""' in result["message"]
