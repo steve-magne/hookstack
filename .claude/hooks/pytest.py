@@ -5,29 +5,14 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib.changed_files import changed_files  # noqa: E402
 
 PYTHON_MARKERS = ["pyproject.toml", "setup.py", "pytest.ini", "setup.cfg"]
 PY = re.compile(r"\.py$")
 PY_CFG = re.compile(r"(^|/)(pyproject\.toml|pytest\.ini|setup\.cfg|setup\.py)$")
-
-
-def _changed_files(cwd):
-    """Fichiers modifiés en attente (staged + unstaged + untracked), ou None hors git."""
-    try:
-        out = subprocess.run(
-            ["git", "status", "--porcelain"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-            cwd=cwd,
-        ).stdout
-        files = []
-        for line in out.splitlines():
-            p = line[3:]
-            files.append(p.split(" -> ")[-1] if " -> " in p else p)
-        return files
-    except Exception:
-        return None  # hors dépôt git → ne pas court-circuiter (comportement historique)
 
 
 def _spawn(args, *, timeout=300, cwd=None):
@@ -47,7 +32,7 @@ def run(*, exists=None, spawn=None, cwd=None, changed=None):
     if exists is None:
         exists = lambda f: os.path.exists(os.path.join(cwd, f))
     if changed is None:
-        changed = _changed_files(cwd)
+        changed = changed_files(cwd=cwd)
     if spawn is None:
         spawn = _spawn
 
