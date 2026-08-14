@@ -55,3 +55,17 @@ def test_ignores_main_branch():
 def test_ignores_gh_failure():
     exec_cmd = _exec_map({"git rev-parse": "feature/x\n", "gh pr view": RuntimeError("not a repo")})
     assert hook.run(_bash("git push origin feature/x"), exec_cmd=exec_cmd) is None
+
+
+def test_ignores_when_git_rev_parse_fails():
+    # `git rev-parse` peut échouer hors dépôt ou en sandbox — on laissera passer
+    # pour éviter un faux positif plutôt que bloquer un contexte valide.
+    exec_cmd = _exec_map({"git rev-parse": RuntimeError("not a git repo")})
+    assert hook.run(_bash("git push origin feature/x"), exec_cmd=exec_cmd) is None
+
+
+def test_blocks_push_reason_mentions_branch_name():
+    # La reason doit nommer la branche pour aider l'utilisateur à comprendre laquelle est concernée.
+    exec_cmd = _exec_map({"git rev-parse": "fix/closed-feature\n", "gh pr view": "CLOSED\n"})
+    result = hook.run(_bash("git push origin fix/closed-feature"), exec_cmd=exec_cmd)
+    assert "fix/closed-feature" in result["reason"]
