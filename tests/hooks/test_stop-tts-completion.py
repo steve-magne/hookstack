@@ -1,0 +1,18 @@
+import importlib.util
+from pathlib import Path
+
+_HOOK = Path(__file__).resolve().parents[2] / ".claude" / "hooks" / "stop-tts.py"
+_spec = importlib.util.spec_from_file_location("stop_tts", _HOOK)
+hook = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(hook)
+
+
+def test_announces_project():
+    calls = []
+    text = hook.run(
+        exec_cmd=lambda c: calls.append(c),
+        platform="darwin",
+        project_dir="/x/myproj",
+    )
+    assert "myproj" in text
+    assert calls
