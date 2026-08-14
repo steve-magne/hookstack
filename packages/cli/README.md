@@ -16,7 +16,7 @@ That's it. The CLI fetches the hooks, shows you what will be installed, and patc
 
 Running `install` with no `--hooks` installs the default HookStack — and **detects your project's setup** to pick the right hooks:
 
-- **Stack detection** (language): looks for `package.json`/`pyproject.toml`/etc. and skips default hooks that don't apply — e.g. no Biome hook in a pure Python project. Override with `--stacks=typescript,python`.
+- **Stack detection** (language): looks for `package.json`/`tsconfig.json`/`pyproject.toml`/etc. and skips default hooks that don't apply — e.g. no Biome hook in a pure Python project. When no TypeScript/Python toolchain is found, only the universal hooks are installed (the skipped slugs are listed), never tsc/ruff/pytest hooks the project can't run. Override with `--stacks=typescript,python` or `--no-detect`.
 - **Contextual detection** (systems): spots an i18n setup, an `okf/` knowledge bundle, a Next.js app, a front-end codebase, or a GitHub-hosted repo, and suggests (interactive) or auto-adds (`--yes`) the matching non-default hooks — see [Smart toolstack detection](#smart-toolstack-detection).
 
 An explicit `--hooks=` list is always installed as-is, never filtered. `--no-detect` opts out of both detection layers.
@@ -69,9 +69,9 @@ Codex and Claude Code expose the same lifecycle event names (`PreToolUse`, `Post
 When run in a terminal the CLI opens an interactive prompt:
 
 1. Asks which **target agent** to install for — the menu order is: This project → All my projects → Codex profile → Codex project → GitHub Copilot
-2. Fetches the requested hooks from the registry
-3. Shows an **installation summary** (path, category, events, blocking flag)
-4. Shows a **security panel** (shell access · network · filesystem writes · Snyk score)
+2. Fetches the requested hooks from the registry, detects the project's stack, and reports what was filtered out (the skipped slugs) or that no toolchain was found
+3. Probes the project for non-language systems (i18n, OKF, Next.js, front-end, GitHub) and offers the matching hooks as a pre-checked multi-select
+4. Shows an **installation summary** + **security panel** (shell access · network · filesystem writes · Snyk score)
 5. Asks for confirmation before writing anything
 
 ### Non-interactive mode (`--yes` or piped)
@@ -97,7 +97,7 @@ On the **default install** (`no --hooks`), besides the language-stack filter abo
 |---|---|---|
 | `i18n` | a `locales/` / `locale/` / `messages/` / `i18n/` directory exists anywhere in the tree, or an i18n package (`next-intl`, `react-i18next`, `i18next`, `react-intl`…) is in `package.json` | `stop-i18n-validation` — keeps translation files consistent on every session stop |
 | `okf` | a top-level `okf/` (or `.okf/`, any case) knowledge bundle exists | `okf-validate-on-change` · `session-start-okf-staleness` · `stop-okf-staleness-check` — validate and keep the OKF bundle fresh |
-| `nextjs` | `next` in `package.json`, or a `next.config.{js,mjs,cjs,ts}` at the root | `post-write-nextjs-quality` — catches missing `'use client'`, Pages Router patterns, and missing `next/image`/`next/link` |
+| `nextjs` | `next` in `package.json`, or a `next.config.{js,mjs,cjs,ts}` at the root | `post-write-nextjs-quality` — catches missing `'use client'`, Pages Router patterns, and missing `next/image`/`next/link` · `seo-page-metadata-guard` · `seo-next-image-guard` · `stop-seo-structure-check` — the Next.js-only SEO guards (App Router metadata, `next/image`, robots/sitemap) |
 | `frontend` | a front-end framework in `package.json` (`react`, `vue`, `svelte`, `astro`, `preact`, `solid-js`, `@angular/core`…) | `post-edit-visual-check` — reminds the agent to verify UI changes actually render |
 | `github` | a `.github/` directory, or a git remote pointing at `github.com` | `session-start-github-context` — loads open PRs and branch check status at session start |
 

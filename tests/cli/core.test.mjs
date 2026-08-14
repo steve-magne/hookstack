@@ -131,7 +131,7 @@ describe("detectStacks", () => {
 		existsSync: (p) => present.some((name) => p.endsWith(name)),
 	});
 
-	it("package.json → typescript", () => {
+	it("package.json → typescript (écosystème node/JS/TS)", () => {
 		expect(detectStacks("/proj", fsWith(["package.json"]))).toEqual([
 			"typescript",
 		]);
@@ -393,9 +393,12 @@ describe("suggestHooksForSignals", () => {
 		]);
 	});
 
-	it("mappe nextjs → post-write-nextjs-quality", () => {
+	it("mappe nextjs → quality + hooks SEO Next.js-only", () => {
 		expect(suggestHooksForSignals(["nextjs"])).toEqual([
 			"post-write-nextjs-quality",
+			"seo-page-metadata-guard",
+			"seo-next-image-guard",
+			"stop-seo-structure-check",
 		]);
 	});
 
