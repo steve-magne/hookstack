@@ -121,3 +121,65 @@ def test_reports_multiple_broken_images():
     )
     r = hook.run(**deps)
     assert "3 broken" in r["message"]
+
+
+def test_scans_all_md_and_mdx_files():
+    # Le hook doit scanner tous les .md et .mdx du repo (et pas seulement
+    # un sous-ensemble). On trace les fichiers lus pour vérifier.
+    read_paths = []
+
+    def read_file(p):
+        read_paths.append(p)
+        return ""
+
+    deps = {
+        "project_dir": "/proj",
+        "exists": lambda p: p in {"/proj", "/proj/a.md", "/proj/b.mdx", "/proj/c.ts"},
+        "readdir": lambda d: (
+            [
+                _Entry("a.md", False),
+                _Entry("b.mdx", False),
+                _Entry("c.ts", False),
+            ]
+            if d == "/proj"
+            else []
+        ),
+        "read_file": read_file,
+    }
+    hook.run(None, **deps)
+    assert "/proj/a.md" in read_paths
+    assert "/proj/b.mdx" in read_paths
+    assert "/proj/c.ts" not in read_paths
+
+
+def test_skips_node_modules_git_claude_next_dirs():
+    # walk_md doit ignorer node_modules, .git, .claude, .next (risque/perf).
+    readdir = []
+
+    def tracked_readdir(d):
+        readdir.append(d)
+        return []
+
+    deps = {
+        "project_dir": "/proj",
+        "exists": lambda p: True,
+        "readdir": lambda d: (
+            [
+                _Entry("node_modules", True),
+                _Entry(".git", True),
+                _Entry(".claude", True),
+                _Entry(".next", True),
+                _Entry("README.md", False),
+            ]
+            if d == "/proj"
+            else []
+        ),
+        "read_file": lambda p: "",
+    }
+    # On trace les dossiers visités via l'instrumentation précédente.
+    deps["readdir"] = tracked_readdir
+    hook.run(None, **deps)
+    assert "/proj/node_modules" not in readdir
+    assert "/proj/.git" not in readdir
+    assert "/proj/.claude" not in readdir
+    assert "/proj/.next" not in readdir

@@ -394,7 +394,7 @@ async function interactiveInstall(slugs, args) {
       ? pc.dim(`✓ ${result.companionCount} shared file${result.companionCount === 1 ? '' : 's'} (lib/) written to ${dirs.hooksDir}`)
       : null,
     pythonMode && result.pythonScriptCount !== result.scriptCount
-      ? pc.dim(`  ${result.pythonScriptCount} Python · ${result.scriptCount - result.pythonScriptCount} .mjs fallback (python variants landing progressively)`)
+      ? pc.dim(`  ${result.pythonScriptCount} Python · ${result.scriptCount - result.pythonScriptCount} .mjs fallback (hooks without a Python variant)`)
       : null,
     testResult?.testCount > 0
       ? pc.green(`✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} written to tests/hooks/`)
@@ -442,7 +442,7 @@ async function directInstall(slugs, args) {
   const result = doInstall(hooks, dirs, args.scope, log, { python: pythonMode })
   console.log(`  ✓ ${dirs.settingsPath}`)
   if (pythonMode && result.pythonScriptCount !== result.scriptCount)
-    console.log(`  · ${result.pythonScriptCount} Python scripts · ${result.scriptCount - result.pythonScriptCount} .mjs fallback (python variants landing progressively)`)
+    console.log(`  · ${result.pythonScriptCount} Python scripts · ${result.scriptCount - result.pythonScriptCount} .mjs fallback (hooks without a Python variant)`)
   if (result.companionCount > 0)
     console.log(`  · ${result.companionCount} shared file${result.companionCount === 1 ? '' : 's'} (lib/) written to ${dirs.hooksDir}`)
   if (args.withTests && !isGlobalScope(args.scope)) {
@@ -465,7 +465,8 @@ async function directInstall(slugs, args) {
 
 // ── update ───────────────────────────────────────────────────────────────────
 // Re-fetches every already-installed hook (recovered via its @hookstack
-// fingerprint) from the live registry and refreshes the local .mjs in place.
+// fingerprint) from the live registry and refreshes the local script (.mjs or
+// .py) in place.
 // settings.json merge is idempotent, so it's only ever touched if a hook's
 // config fragment actually changed since install.
 
@@ -824,7 +825,7 @@ const HELP = `
     --codex-profile   Target ~/.codex/hooks.json (OpenAI Codex, all projects)
     --scope <s>       "project" (default), "global", "copilot",
                       "codex-project", or "codex-profile"
-    --with-tests      Also install vitest unit tests into tests/hooks/ (install, project scope only)
+    --with-tests      Also install unit tests into tests/hooks/ — vitest on TypeScript, pytest on Python (install, project scope only)
     --stacks <list>   Override stack detection (e.g. --stacks=typescript,python)
     --no-detect       Skip all detection (stack + contextual systems), install the full default set
     --yes, -y         Skip prompts (non-interactive)
@@ -833,14 +834,14 @@ const HELP = `
 
   "update" re-fetches every already-installed hook (detected via its
   @hookstack fingerprint) from the live registry and refreshes the local
-  .mjs. settings.json is only touched if a hook's config actually changed.
+  script (.mjs or .py). settings.json is only touched if a hook's config actually changed.
   Use the same scope flag you installed with (--global, --codex-project…).
 
-  "contribute" finds installed hooks whose local .mjs diverges from the live
-  registry, forks ${UPSTREAM_REPO} for you (or branches directly if you own
-  it), and opens a PR with those changes. Locally modified unit tests under
-  tests/hooks/ ride along with their hook. Requires the GitHub CLI (gh),
-  authenticated (\`gh auth login\`).
+  "contribute" finds installed hooks whose local script (.mjs or .py)
+  diverges from the live registry, forks ${UPSTREAM_REPO} for you (or branches
+  directly if you own it), and opens a PR with those changes. Locally modified
+  unit tests under tests/hooks/ ride along with their hook. Requires the
+  GitHub CLI (gh), authenticated (\`gh auth login\`).
 
   Browse hooks at https://hookstack.vercel.app
 `
