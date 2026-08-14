@@ -62,7 +62,7 @@ The hook code is identical across agents — only the config file it's wired int
 | `--codex-profile` | OpenAI Codex | all projects | `~/.codex/hooks.json` | `~/.codex/hooks/` |
 | `--copilot` | GitHub Copilot | this project | `.claude/` paths adapted | `.claude/hooks/` |
 
-Codex and Claude Code expose the same lifecycle event names (`PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`…), so a HookStack hook is portable between them without any change to the `.mjs` — the CLI just writes the appropriate config format.
+Codex and Claude Code expose the same lifecycle event names (`PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`…), so a HookStack hook is portable between them without any change to the script (`.mjs`, or the `.py` variant on a Python install) — the CLI just writes the appropriate config format.
 
 ### Interactive mode (default in a terminal)
 
@@ -119,7 +119,7 @@ On a pure-Python install (detected toolchain, or `--stack=python`), hooks that h
 npx hookstack-cli@latest install --with-tests
 ```
 
-Hooks without a Python variant fall back to the `.mjs` (the install summary shows `18 Python · 49 .mjs fallback`-style counts). `update` compares and refreshes the installed variant (`.py` on Python projects, `.mjs` otherwise).
+Every hook in the default stack carries a Python variant, so a default Python install is **100 % `.py` — zero `.mjs` fallback** (66 Python hooks today — the install summary only prints a `N Python · M .mjs fallback` line when a fallback actually occurs). Hooks outside the default stack (picked explicitly) without a Python variant still fall back to the `.mjs`. `update` compares and refreshes the installed variant (`.py` on Python projects, `.mjs` otherwise).
 
 ---
 
@@ -166,9 +166,9 @@ Tweaked a hook locally and want the catalogue to have it? `contribute` turns tha
 npx hookstack-cli@latest contribute
 ```
 
-It scans your installed hooks (same `@hookstack` fingerprint lookup as `update`), finds the ones whose local `.mjs` no longer matches the live registry, lets you pick which to send, then opens a PR with your version of those files — forking [steve-magne/hookstack](https://github.com/steve-magne/hookstack) for you, or pushing a branch straight to it when your `gh` account owns the repo (no fork needed). Renamed hook files work too — detection follows the fingerprint, not the filename.
+It scans your installed hooks (same `@hookstack` fingerprint lookup as `update`), finds the ones whose local script (`.mjs`, or the `.py` variant on a Python install) no longer matches the live registry, lets you pick which to send, then opens a PR with your version of those files — forking [steve-magne/hookstack](https://github.com/steve-magne/hookstack) for you, or pushing a branch straight to it when your `gh` account owns the repo (no fork needed). Renamed hook files work too — detection follows the fingerprint, not the filename.
 
-**Unit tests ride along.** If you installed with `--with-tests` and edited the matching `tests/hooks/<slug>.test.mjs` (or wrote one where the catalogue ships none), the modified test file is pushed with its hook — the PR body lists every test included. The upstream repo's CI gate requires ≥ 80 % coverage, so shipping the test with the script is what makes a contribution mergeable.
+**Unit tests ride along.** If you installed with `--with-tests` and edited the matching test file (`tests/hooks/<slug>.test.mjs` on Node, `tests/hooks/test_<slug>.py` on Python — or wrote one where the catalogue ships none), the modified test file is pushed with its hook — the PR body lists every test included. The upstream repo's CI gate requires ≥ 80 % coverage (vitest on Node, pytest on Python), so shipping the test with the script is what makes a contribution mergeable.
 
 Requires the [GitHub CLI](https://cli.github.com) (`gh`), already authenticated (`gh auth login`).
 
