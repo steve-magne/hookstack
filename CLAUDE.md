@@ -178,7 +178,7 @@ Hookstack est un catalogue de hooks agentiques pour Claude Code. Next.js 15 (App
 
 **Source de données** : `registry/registry.json` est la source de vérité des **métadonnées** du catalogue — lue directement par `src/lib/hooks.ts` (via `allHooks`). C'est ce que le front-end et le CLI consomment. Sans `.env`, tout fonctionne en mode registre local. Le champ `code_snippet` y est un miroir des `.mjs` (jamais édité à la main).
 
-**Registre** : `registry/registry.json` est la source canonique des **métadonnées** du catalogue versionné. Le code exécutable, lui, vit dans `.claude/hooks/*.mjs` et est propagé vers `code_snippet` par le sync. Les scripts sous `.claude/skills/analyze-repo/scripts/` alimentent le skill `/analyze-repo` (fetch, validation, merge, apply).
+**Registre** : `registry/registry.json` est la source canonique des **métadonnées** du catalogue versionné. Le code exécutable, lui, vit dans `.claude/hooks/*.mjs` et est propagé vers `code_snippet` par le sync. Les scripts sous `.claude/skills/analyze-repo/scripts/` alimentent le skill `/analyze-repo` (fetch, validation, merge, puis activation via `sync-hooks`).
 
 **État global** : Zustand persisté dans `src/store/selection.ts` (clé `hookstack-selection`) — stocke les slugs des hooks sélectionnés.
 
