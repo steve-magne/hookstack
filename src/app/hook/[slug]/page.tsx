@@ -36,11 +36,20 @@ export async function generateMetadata({
 			url: `${BASE}/hook/${slug}`,
 			siteName: "HookStack",
 			type: "article",
+			images: [
+				{
+					url: `${BASE}/hook/${slug}/opengraph-image`,
+					width: 1200,
+					height: 630,
+					alt: `${hook.name} — HookStack`,
+				},
+			],
 		},
 		twitter: {
-			card: "summary",
+			card: "summary_large_image",
 			title: `${hook.name} — HookStack`,
 			description: hook.description,
+			images: [`${BASE}/hook/${slug}/opengraph-image`],
 		},
 		alternates: { canonical: `${BASE}/hook/${slug}` },
 	};
@@ -136,6 +145,36 @@ export default async function HookDetailPage({
 		],
 	};
 
+	// FAQPage schema mirrors the visible question H2 below (AEO consistency: the
+	// structured answer must match what a crawler sees rendered on the page).
+	const faqJsonLd = {
+		"@context": "https://schema.org",
+		"@type": "FAQPage",
+		mainEntity: [
+			{
+				"@type": "Question",
+				name: `What does the ${hook.name} hook do?`,
+				acceptedAnswer: {
+					"@type": "Answer",
+					text: hook.benefit
+						? `${hook.benefit}. ${hook.description}`
+						: hook.description,
+				},
+			},
+			{
+				"@type": "Question",
+				name: `When does the ${hook.name} hook run?`,
+				acceptedAnswer: {
+					"@type": "Answer",
+					text: `It runs on the Claude Code ${hook.hook_type} event${
+						hook.trigger && hook.trigger !== "*"
+							? ` for the ${hook.trigger} matcher`
+							: ""
+					}, firing automatically at that lifecycle event.`,
+				},
+			},
+		],
+	};
 	return (
 		<>
 			<script
@@ -147,6 +186,11 @@ export default async function HookDetailPage({
 				type="application/ld+json"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: server-rendered JSON-LD from our own data, never user input
 				dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+			/>
+			<script
+				type="application/ld+json"
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: server-rendered JSON-LD from our own data, never user input
+				dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
 			/>
 			<HookDetailTracker
 				slug={hook.slug}
