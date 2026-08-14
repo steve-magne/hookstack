@@ -45,6 +45,16 @@ export const PERSON_SAME_AS: string[] = [
 	MAINTAINER.linkedin,
 ];
 
+// Social share image (Open Graph / Twitter). Next.js serves it at /opengraph-image
+// (file convention) but nested routes that export their own `openGraph` metadata do
+// NOT inherit it — pages reference it explicitly through this constant.
+export const OG_IMAGE = {
+	url: `${SITE.base}/opengraph-image`,
+	width: 1200,
+	height: 630,
+	alt: "HookStack — Agentic Hooks for Claude Code",
+} as const;
+
 // Build a GitHub source URL for a hook script path (e.g. ".claude/hooks/x.mjs").
 export function hookSourceUrl(scriptPath?: string): string | null {
 	if (!scriptPath) return null;

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { type GuideBlock, getGuideBySlug, guides } from "@/lib/guides";
 import { getHookBySlug } from "@/lib/hooks";
-import { MAINTAINER, PERSON_SAME_AS, SITE } from "@/lib/site";
+import { MAINTAINER, OG_IMAGE, PERSON_SAME_AS, SITE } from "@/lib/site";
 
 export async function generateStaticParams() {
 	return guides.map((g) => ({ slug: g.slug }));
@@ -31,11 +31,13 @@ export async function generateMetadata({
 			publishedTime: guide.datePublished,
 			modifiedTime: guide.dateModified,
 			authors: [MAINTAINER.name],
+			images: [OG_IMAGE],
 		},
 		twitter: {
 			card: "summary_large_image",
 			title: guide.title,
 			description: guide.description,
+			images: [OG_IMAGE.url],
 		},
 		alternates: { canonical: `${SITE.base}/guides/${slug}` },
 	};

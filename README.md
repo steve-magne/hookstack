@@ -28,7 +28,7 @@ Install them in one command — your agent gets guardrails in under a minute.
 
 <!-- COVERAGE_BADGE:END -->
 
-<img src="public/demo-hookstack.gif" alt="HookStack Mode Demo" width="600"/>
+<img src="doc/assets/demo-hookstack.gif" alt="HookStack Mode Demo" width="600"/>
 
 </div>
 
