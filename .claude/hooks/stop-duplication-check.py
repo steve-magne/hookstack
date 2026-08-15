@@ -6,6 +6,10 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib.changed_files import changed_files  # noqa: E402
 
 MIN_TOKENS = 50  # blocs < 50 tokens ignorés (évite les faux positifs sur boilerplate)
 THRESHOLD = 5  # % de duplication max avant avertissement
@@ -27,26 +31,6 @@ def _exists(path):
     return os.path.exists(path)
 
 
-def _default_changed():
-    try:
-        out = subprocess.run(
-            "git status --porcelain",
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=True,
-        ).stdout
-        paths = []
-        for line in out.split("\n"):
-            if not line:
-                continue
-            p = line[3:]
-            paths.append(p.split(" -> ")[-1] if " -> " in p else p)
-        return paths
-    except Exception:
-        return None  # hors dépôt git → ne pas court-circuiter
-
 # Sentinel : distingue « changed non fourni » (fallback git) de « changed=None
 # explicite » (hors dépôt git → analyser quand même). En JS seul `undefined`
 # déclenche le défaut ; en Python `None` fait les deux, d'où ce sentinel.
@@ -59,7 +43,7 @@ def run(_input=None, *, exec_cmd=None, exists=None, changed=_UNSET):
     if exists is None:
         exists = _exists
     if changed is _UNSET:
-        changed = _default_changed()
+        changed = changed_files()
 
     # Rien en attente, ou uniquement des fichiers docs/binaires → rien à dédupliquer.
     if changed is not None and (len(changed) == 0 or all(DOC_ONLY.search(f) for f in changed)):

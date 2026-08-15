@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node .claude/skills/analyze-repo/scripts/apply-best-practices.js*)"
+      "Bash(bash .claude/skills/analyze-repo/scripts/fetch-hook-sources.sh*)",
+      "Bash(node .claude/skills/analyze-repo/scripts/*)",
+      "Bash(node .claude/sync-hooks.mjs*)"
     ]
   },
   "hooks": {
@@ -15,10 +17,6 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/block-destructive.mjs"
-          },
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/guard-push-main.mjs"
           },
           {
             "type": "command",
@@ -237,10 +235,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/autoformat.mjs"
-          },
-          {
-            "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-biome.mjs"
           },
           {
@@ -278,6 +272,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/debug-statement-guard.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/seo-schema-validation.mjs"
           }
         ],
         "matcher": "Write|Edit"

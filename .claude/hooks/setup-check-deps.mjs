@@ -9,7 +9,8 @@ const SPECS = [
 	["pnpm-lock.yaml", "node_modules", "pnpm install"],
 	["package-lock.json", "node_modules", "npm ci"],
 	["yarn.lock", "node_modules", "yarn install --frozen-lockfile"],
-	["requirements.txt", ".venv", "pip install -r requirements.txt"],
+	// Projet uv : le lockfile uv.lock est la référence (requirements.txt n'est pas un lockfile).
+	["uv.lock", ".venv", "uv sync"],
 ];
 
 export function run({

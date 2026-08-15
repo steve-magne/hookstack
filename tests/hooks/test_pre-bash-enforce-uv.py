@@ -35,6 +35,11 @@ def test_allows_pip_in_documentation_mention():
     assert hook.run(_bash('echo "see pip-install docs"')) is None
 
 
+def test_allows_pip_install_in_quoted_commit_message():
+    # Le contenu entre guillemets est neutralisé : pas de faux positif sur -m/--body.
+    assert hook.run(_bash('git commit -m "fix: use pip install requests"')) is None
+
+
 def test_allows_uv_install():
     assert hook.run(_bash("uv add requests")) is None
 

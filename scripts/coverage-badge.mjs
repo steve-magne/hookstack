@@ -240,7 +240,7 @@ export function injectReadme(readme, block) {
 			readme.slice(0, startIdx) + block + readme.slice(endIdx + END_MARK.length)
 		);
 	}
-	const demoIdx = readme.indexOf('<img src="public/demo-hookstack.gif"');
+	const demoIdx = readme.indexOf('<img src="doc/assets/demo-hookstack.gif"');
 	if (demoIdx !== -1) {
 		return `${readme.slice(0, demoIdx) + block}\n\n${readme.slice(demoIdx)}`;
 	}

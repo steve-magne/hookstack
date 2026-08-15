@@ -16,8 +16,10 @@ hooks. La feature corrige le besoin à la racine : chaque hook peut désormais p
 **variante Python** dans le registre, et le CLI installe les bons scripts du bon langage selon
 la toolstack détectée du projet.
 
-Résultat sur un install Python par défaut : **58 hooks en `.py` (67 % du set), 0 test vitest**,
-tests pytest uniquement — le CI de l'utilisateur reste 100 % Python.
+Résultat sur un install Python par défaut : **66 hooks en `.py` (100 % du set), 0 fallback `.mjs`, 0 test
+vitest** — le CI de l'utilisateur reste 100 % Python. (Le set par défaut = les hooks `default_on` du
+registre, 82 hooks — pas les 105 du catalogue. Sur le catalogue complet, 80 hooks portent une
+variante `.py`.)
 
 ## Why this shape
 
@@ -108,9 +110,9 @@ géré, `pip install pytest` fonctionne) avant le run pytest.
   le sync sans erreur mais sans miroir (décompte faux). Vérifier avec
   `node .claude/sync-hooks.mjs --check` + comptage des variantes complètes.
 
-## Transcription — 58 hooks en 5 vagues
+## Transcription — 80 hooks en 6 vagues
 
-1. **Stack Python (6)** : `post-write-ruff-format`, `post-write-ruff-check`, `post-edit-pyright`,
+1. **Stack Python (5)** : `post-write-ruff-check` (format + lint fusionnés), `post-edit-pyright`,
    `stop-pytest`, `pre-bash-enforce-uv`, `setup-check-install-deps`.
 2. **Language-aware (2)** : `stop-quality-check` (ruff + pyright via uv), `task-completed-test-gate`
    (gate pytest).
@@ -119,13 +121,40 @@ géré, `pip install pytest` fonctionne) avant le run pytest.
    config, api errors, permission denied, audit session, compact), qualité (i18n, dead links,
    dead images, duplication, debug statements, conflict markers, missing tests), utilitaires
    (cleanup temp, reinject après compaction, redaction de secrets, file→markdown…).
+4. **Vague mécanismes Claude Code (22)** : TTS/sons (`notification-tts-voice`,
+   `stop-tts-completion`, `subagent-start-tts-announce`, `subagent-stop-tts-summary`,
+   `notification-sound`, `stop-sound`), worktrees (`session-start-worktree-if-main`,
+   `pre-edit-worktree-guard`, `worktree-create-setup-env`, `worktree-remove-cleanup`,
+   `cwd-changed-reload-direnv`), permissions (`permission-request-auto-allow-readonly`,
+   `permission-request-auto-allow-exit-plan`), vie de session (`stop-run-tests`,
+   `user-prompt-llm-agent-name`, `task-created-naming-convention`, `instructions-loaded-audit-log`,
+   `stop-generate-changelog`, `post-bash-cost-tracker`, `message-display-redact-pii`,
+   `notification-slack`, `user-prompt-expansion-skill-context`, `stop-session-dedup-autodisable`).
+   (`stop-run-tests` y figurait mais a été re-transféré en `typescript` à la vague 5.)
+5. **Vague tri des fallbacks restants (décisions par hook, 10 hooks)** : plutôt que de transcrire
+   mécaniquement, analyse de l'utilité réelle sur un projet Python —
+   - **Taggés `stack: ["typescript"]`** (outils Node-only, équivalent Python déjà au registre) :
+     `post-write-autoformat` (→ `post-write-ruff-format`), `session-start-node-version-check`,
+     `stop-run-tests` (→ `stop-pytest`) — ce dernier a vu sa variante `.py` **retirée** : elle était
+     un no-op comportemental (le hook ne détecte pas Python par design, `stop-pytest` le couvre) et
+     contredisait la convention CLAUDE.md « un hook universel qui ne marche que sur Node doit être
+     taggé `stack: ['typescript']` ».
+   - **`default_on: false`** (internes au repo Hookstack, hors set par défaut) :
+     `registry-changed-auto-sync`, `registry-validate-on-change`, `stop-registry-drift-check`,
+     `stop-force-implementation-doc`, `session-start-okf-staleness`, `stop-okf-staleness-check`,
+     `okf-validate-on-change` — 6 d'entre eux l'étaient déjà de fait (champ absent) ; le flag est
+     désormais explicite. Ils restent dans le catalogue et restent actifs sur ce repo via
+     `settings.json` (le sync ne filtre pas par `default_on`).
+   Leçon : le set d'install par défaut du CLI = les hooks `default_on` (83→82), pas le catalogue
+   complet — tout comptage de couverture Python doit se faire sur ce sous-ensemble.
 
 ## Reste à faire / hors scope
 
-- **29 hooks encore en fallback `.mjs`** sur un install Python : majoritairement des mécanismes
-  internes à Claude Code (TTS/sons, worktrees hookstack, permission auto-allow, OKF) — la
-  prochaine vague pertinente : `stop-session-dedup-autodisable`, `session-start-worktree-if-main`,
-  `worktree-remove-cleanup`, `cwd-changed-reload-direnv`, `user-prompt-llm-agent-name`.
+- **Zéro fallback `.mjs` sur un install Python par défaut** (66/66 en `.py`). Sur le catalogue
+  complet, les 25 hooks sans variante `.py` sont tous hors cible : 18 `stack: ["typescript"]`
+  (outils Node-only — dont `post-write-autoformat` et `session-start-node-version-check` — jamais
+  installés sur un projet Python) + 7 internes au repo Hookstack (`default_on: false`, dont
+  2 aussi taggés typescript).
 - Les variantes `.py` n'ont pas de timeline dédiée (la timeline reste indexée sur les `.mjs`).
 - Pas d'i18n, pas de changement de l'API publique du catalogue au-delà des 3 champs.
 

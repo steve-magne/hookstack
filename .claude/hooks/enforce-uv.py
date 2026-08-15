@@ -12,11 +12,19 @@ BLOCKED = [
     (re.compile(r"(^|[;&|\s`])poetry\s+install\b"), "uv sync"),
 ]
 
+# Retire le contenu des chaînes entre guillemets (arguments -m "...", --body "...")
+# pour éviter les faux positifs sur des mentions documentaires.
+QUOTED = re.compile(r'"(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'')
+
+
+def _strip_quoted_args(cmd):
+    return QUOTED.sub('""', cmd)
+
 
 def run(input_data):
     if input_data.get("tool_name") != "Bash":
         return None
-    cmd = (input_data.get("tool_input") or {}).get("command") or ""
+    cmd = _strip_quoted_args((input_data.get("tool_input") or {}).get("command") or "")
 
     for pattern, fix in BLOCKED:
         if pattern.search(cmd):

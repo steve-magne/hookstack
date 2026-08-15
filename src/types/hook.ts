@@ -67,6 +67,14 @@ export interface HookSecurity {
 	codeql?: CodeqlScan;
 }
 
+/** Shared file a hook imports at runtime (e.g. lib/changed-files.mjs). */
+export interface CompanionFile {
+	/** Repo-relative path under .claude/hooks/lib/ (relocated to .codex/ by Codex scopes). */
+	path: string;
+	/** Mirror of the file on disk, populated by .claude/sync-hooks.mjs. Never hand-edited. */
+	snippet: string;
+}
+
 export interface HookImplementation {
 	type: "settings_json";
 	config: Record<string, unknown>;
@@ -79,6 +87,8 @@ export interface HookImplementation {
 	python_test_snippet?: string;
 	/** Third-party security verdicts, populated by CI (see .claude/scan-snyk.mjs). */
 	security?: HookSecurity;
+	/** Shared files the hook imports — installed alongside it by the CLI. Derived by sync-hooks. */
+	companion_files?: CompanionFile[];
 }
 
 export interface Hook {

@@ -19,26 +19,31 @@ Deux hooks du catalogue étaient devenus obsolètes :
   (`afplay`/`paplay`/`beep`). **Claude Code joue désormais ce son nativement**,
   le hook faisait doublon.
 
-Ni l'un ni l'autre n'avait de variante Python (`python_script_path` absent) :
-aucun `.py` ni test pytest à supprimer. `notification-sound` (événement
-Notification, quand Claude attend l'utilisateur) reste — il couvre un besoin
-distinct (attention pendant une session, pas la fin).
+Les deux hooks avaient **aussi** une variante Python (`session-changelog.py`,
+`stop-sound.py` + tests pytest, ajoutés entre-temps par #237) : retirée en même
+temps. `notification-sound` (événement Notification, quand Claude attend
+l'utilisateur) reste — il couvre un besoin distinct (attention pendant une
+session, pas la fin).
 
 ## Résolution
 
-1. Suppression des scripts `.claude/hooks/session-changelog.mjs` et
-   `.claude/hooks/stop-sound.mjs` + leurs tests
-   `tests/hooks/{session-changelog,stop-sound}.test.mjs`.
-2. `registry/registry.json` : suppression des 2 entrées (105 → 103 hooks).
+1. Suppression des scripts `.claude/hooks/session-changelog.{mjs,py}` et
+   `.claude/hooks/stop-sound.{mjs,py}` + leurs tests
+   (`tests/hooks/{session-changelog,stop-sound}.test.mjs` et
+   `tests/hooks/test_stop-{generate-changelog,sound}.py`).
+2. `registry/registry.json` : suppression des 2 entrées et de leurs champs
+   `python_script_path`/`python_code_snippet`/`python_test_snippet` (103 → 101).
 3. `scripts/check-hook-coverage.mjs` : retrait de `session-changelog.mjs` des
    `EXCEPTIONS` (fichier disparu → aurait été signalé « orphan »).
 4. `.claude/sync-hooks.mjs` : commentaire de `EXCLUDED_SLUGS` actualisé —
    `stop-tts-completion` n'est plus « remplacé par stop-sound ».
-5. `README.md` : suppression des 2 bullets de la table des hooks phares.
-6. `node .claude/sync-hooks.mjs` : reconstruit `.claude/settings.json` (les 2
+5. `packages/cli/bin/core.mjs` : signal `changelog` retiré de `SIGNAL_LABELS`,
+   `AUTO_DETECT`, `hasChangelogSignal` et de la détection (#244 le référençait) ;
+   README CLI + tests mis à jour.
+6. `README.md` : suppression des 2 bullets de la table des hooks phares.
+7. `node .claude/sync-hooks.mjs` : reconstruit `.claude/settings.json` (les 2
    commandes `Stop` disparaissent).
-7. `pnpm timeline` : régénère les 3 artefacts dérivés (JSON/SVG/bloc README,
-   105 → 103 hooks).
+8. `pnpm timeline` : régénère les 3 artefacts dérivés (JSON/SVG/bloc README).
 
 ## Pourquoi ne pas retirer les TTS
 

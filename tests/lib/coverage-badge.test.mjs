@@ -202,10 +202,10 @@ describe("injectReadme", () => {
 
 	it("insère le bloc dans le hero avant la démo GIF lors de la première exécution", () => {
 		const readme =
-			'# T\n\n[![badge](x)](y)\n\n<img src="public/demo-hookstack.gif" alt="demo"/>\n\n## Promise\n';
+			'# T\n\n[![badge](x)](y)\n\n<img src="doc/assets/demo-hookstack.gif" alt="demo"/>\n\n## Promise\n';
 		const out = injectReadme(readme, block);
 		expect(out.indexOf("COVERAGE_BADGE:START")).toBeLessThan(
-			out.indexOf("public/demo-hookstack.gif"),
+			out.indexOf("doc/assets/demo-hookstack.gif"),
 		);
 		expect(out.indexOf("COVERAGE_BADGE:START")).toBeGreaterThan(
 			out.indexOf("[![badge](x)](y)"),

@@ -38,8 +38,9 @@ guillemets doubles. Solution : deux familles de motifs.
 
 `block-destructive.mjs` ne bloque le force-push que sur `main`/`master`. Ce hook
 couvre **toute branche** mais laisse passer `--force-with-lease` (le force-push sûr)
-et oriente l'agent vers lui dans la `reason`. Distinct aussi de `guard-git-push-main`
-et `block-push-closed-pr`.
+et oriente l'agent vers lui dans la `reason`. `guard-git-push-main` (force vers main) a
+ensuite été supprimé comme redondant avec ce hook + `block-destructive`. Reste
+distinct de `block-push-closed-pr`.
 
 ### 3. `env-gitignore-guard` — advisory pour coexister avec `protect-paths`
 

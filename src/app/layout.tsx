@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import Link from "next/link";
@@ -27,6 +27,12 @@ export const metadata: Metadata = {
 	verification: {
 		google: "3oIn95TB_l6m5LWjbWkXFOO_GakuUZ68XQ2m0djhkbg",
 	},
+};
+
+// Dark brand color for the mobile browser chrome — matches the site background
+// (--color-bg) so the address bar doesn't flash white on navigation.
+export const viewport: Viewport = {
+	themeColor: "#0b0b12",
 };
 
 export default function RootLayout({

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { guides } from "@/lib/guides";
-import { SITE } from "@/lib/site";
+import { OG_IMAGE, SITE } from "@/lib/site";
 
 const TITLE = "Claude Code Hooks Guides";
 const DESCRIPTION =
@@ -16,6 +16,13 @@ export const metadata: Metadata = {
 		url: `${SITE.base}/guides`,
 		siteName: "HookStack",
 		type: "website",
+		images: [OG_IMAGE],
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: `${TITLE} — HookStack`,
+		description: DESCRIPTION,
+		images: [OG_IMAGE.url],
 	},
 	alternates: { canonical: `${SITE.base}/guides` },
 };

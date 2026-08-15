@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+// @hookstack block-push-closed-pr
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";

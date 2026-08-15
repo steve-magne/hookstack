@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="427" height="20" viewBox="0 0 427 20" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" role="img" aria-label="HookStack coverage — lines 91%, statements 90%, branches 87%, functions 82%">
+<svg xmlns="http://www.w3.org/2000/svg" width="427" height="20" viewBox="0 0 427 20" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" role="img" aria-label="HookStack coverage — lines 92%, statements 91%, branches 87%, functions 84%">
   <rect width="427" height="20" rx="3" fill="#0a0a0a"/>
   <rect x="0" y="0" width="50" height="20" fill="#21262d" rx="3 0 0 3"/>
   <text x="8" y="13.5" font-size="11" fill="#8b949e">lines</text>
   <rect x="50" y="0" width="36.4" height="20" fill="#3fb950" rx="0"/>
-  <text x="58" y="13.5" font-size="11" fill="#ffffff">91%</text>
+  <text x="58" y="13.5" font-size="11" fill="#ffffff">92%</text>
   <rect x="86.4" y="0" width="84" height="20" fill="#21262d" rx="0"/>
   <text x="94.4" y="13.5" font-size="11" fill="#8b949e">statements</text>
   <rect x="170.4" y="0" width="36.4" height="20" fill="#3fb950" rx="0"/>
-  <text x="178.4" y="13.5" font-size="11" fill="#ffffff">90%</text>
+  <text x="178.4" y="13.5" font-size="11" fill="#ffffff">91%</text>
   <rect x="206.8" y="0" width="70.4" height="20" fill="#21262d" rx="0"/>
   <text x="214.8" y="13.5" font-size="11" fill="#8b949e">branches</text>
   <rect x="277.2" y="0" width="36.4" height="20" fill="#3fb950" rx="0"/>
@@ -15,5 +15,5 @@
   <rect x="313.6" y="0" width="77.19999999999999" height="20" fill="#21262d" rx="0"/>
   <text x="321.6" y="13.5" font-size="11" fill="#8b949e">functions</text>
   <rect x="390.8" y="0" width="36.4" height="20" fill="#3fb950" rx="0 3 3 0"/>
-  <text x="398.8" y="13.5" font-size="11" fill="#ffffff">82%</text>
+  <text x="398.8" y="13.5" font-size="11" fill="#ffffff">84%</text>
 </svg>

@@ -46,5 +46,13 @@
     "hooks_found": 5,
     "hooks_added": 5,
     "status": "success"
+  },
+  {
+    "url": "https://github.com/AgriciDaniel/claude-seo",
+    "name": "AgriciDaniel/claude-seo",
+    "scanned_at": "2026-08-14T19:08:06.145Z",
+    "hooks_found": 1,
+    "hooks_added": 1,
+    "status": "success"
   }
 ]

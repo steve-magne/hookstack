@@ -343,6 +343,14 @@ export function CatalogueExplorer({
 
 	const selectedSlugs = useSelection((s) => s.selected);
 
+	// Deep-link / AI-search support: the WebSite SearchAction advertises ?q= on the
+	// homepage. Apply it to the search box on mount — client-side only so the page
+	// stays statically rendered and the catalogue keeps its SSR'd HTML.
+	useEffect(() => {
+		const q = new URLSearchParams(window.location.search).get("q");
+		if (q) setQuery(q);
+	}, []);
+
 	// Date de premier ajout (git) par slug — alimente le groupage « Recently added ».
 	const dateBySlug = useMemo(() => {
 		const map = new Map<string, string>();

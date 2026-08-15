@@ -165,6 +165,25 @@
 					"type": "string",
 					"description": "pytest source mirror of tests/hooks/test_<slug>.py, populated by .claude/sync-hooks.mjs."
 				},
+				"companion_files": {
+					"type": "array",
+					"description": "Shared files the hook imports at runtime (e.g. lib/changed-files.mjs) — installed alongside it by the CLI. Derived by .claude/sync-hooks.mjs from the .mjs/.py on disk; never hand-edited.",
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["path", "snippet"],
+						"properties": {
+							"path": {
+								"type": "string",
+								"minLength": 1
+							},
+							"snippet": {
+								"type": "string",
+								"description": "Mirror of the shared file on disk, populated by .claude/sync-hooks.mjs."
+							}
+						}
+					}
+				},
 				"security": {
 					"$ref": "#/$defs/security"
 				}

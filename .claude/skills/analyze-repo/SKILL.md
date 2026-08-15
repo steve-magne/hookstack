@@ -32,6 +32,13 @@ echo "$DATA"
 - Si `DATA` contient la clé `"error"` → afficher l'erreur et s'arrêter.
 - Si `has_hooks` est `false` → écrire `[]` dans `/tmp/hookstack-hooks-new.json` et passer directement à la Phase 3.5.
 
+**Layouts de config supportés** (le script détecte automatiquement, `config_paths` liste les fichiers trouvés) :
+- `.claude/settings.json` / `.claude/settings.local.json` — Claude Code classique (clé `hooks`)
+- `.claude/hooks.json` / `hooks.json` — config hooks seule à la racine
+- `hooks/hooks.json` — layout plugin/marketplace, commandes type `${CLAUDE_PLUGIN_ROOT}/hooks/…` (ex. `AgriciDaniel/claude-seo`)
+
+Les scripts associés sont fournis dans `hook_scripts` (`.claude/hooks/*` toujours ; `hooks/*` quand le layout plugin est détecté).
+
 ---
 
 ## Phase 1b — [Documentation] Récupération de la page (script, 0 token LLM)
@@ -61,11 +68,11 @@ Produire une entrée JSON pour chaque **concept fonctionnel réutilisable** trou
 
 **Règle fondamentale** : ne créer une entrée que pour un comportement ancré dans un hook explicitement déclaré sous `hooks` (ou `hooks_local`). Ne jamais inventer un hook depuis un README, CLAUDE.md ou documentation.
 
-**Granularité sub-script** : si un script implémente plusieurs concepts distincts et indépendants, créer **une entrée par concept**, pas une seule entrée par événement. Un concept est distinct s'il peut être extrait et réutilisé seul dans un autre projet.
+**Granularité sub-script** : si un script implémente plusieurs concepts distincts et indépendants, créer **une entrée par concept**, pas une seule entrée par événement. Un concept est distinct s'il peut être extrait et réutilisé seul dans un autre projet. Un simple launcher/plomberie (ex. localisateur d'interpréteur, wrapper) n'est **pas** un concept de hook en soi.
 
 **Analyse des scripts** : lire chaque contenu de `hook_scripts` en entier. Identifier toutes les phases/blocs logiques. Pour chaque bloc indépendant, évaluer s'il constitue un pattern réutilisable.
 
-**Déduplication** : si un slug figure dans `existing_slugs` → réutiliser ce slug ; le merge ajoutera l'exemple communautaire sans créer de doublon.
+**Déduplication** : si un slug figure dans `existing_slugs` → ne pas créer d'entrée (le principe est déjà couvert par le registre).
 
 ---
 
@@ -84,11 +91,6 @@ Produire une entrée JSON pour chaque **principe d'automatisation concret** iden
 
 **Déduplication** : si un slug figure dans `existing_slugs` → ignorer (le principe est déjà couvert).
 
-**`community_examples`** : utiliser `article_url` à la place de `file_path` pour tracer l'origine documentaire :
-```json
-{ "repo": "$ARGUMENTS", "article_url": "$ARGUMENTS", "source_type": "documentation", "added_by": "documentation-analysis" }
-```
-
 ---
 
 ### Règles communes aux deux modes
@@ -96,11 +98,11 @@ Produire une entrée JSON pour chaque **principe d'automatisation concret** iden
 **Adaptation obligatoire** : produire **toujours** :
 - `script_path` avec extension `.mjs`
 - `code_snippet` en Node.js pur (builtins uniquement : `fs`, `child_process`, `path`, `os`) — jamais du bash copié verbatim
-- La commande dans `implementation.config` doit référencer le script `.mjs` (ex. `node $CLAUDE_PROJECT_DIR/.claude/hooks/nom.mjs`)
+- La commande dans `implementation.config` doit référencer le script `.mjs` (ex. `node $CLAUDE_PROJECT_DIR/.claude/hooks/nom.mjs`), même si la source utilise `${CLAUDE_PLUGIN_ROOT}` ou un autre chemin
 
-Le concept est **réimplémenté en Node.js idiomatique** : `readFileSync(0, 'utf8')` pour lire stdin, `process.exit(0)` implicite si pas de blocage, `{ decision: 'block', reason: '...' }` sur stdout pour bloquer.
+Le concept est **réimplémenté en Node.js idiomatique** : `readFileSync(0, 'utf8')` pour lire stdin, `process.exit(0)` implicite si pas de blocage, `{ decision: 'block', reason: '...' }` sur stdout pour bloquer (PreToolUse), `{ exitCode: 2, message }` + stderr pour bloquer en PostToolUse/Stop.
 
-**Contenu bilingue obligatoire** : le catalogue est multilingue. Le **français est canonique** (champs racine `name`, `description`, `use_cases`). Produire **toujours** un overlay `i18n.en` traduisant ces trois champs en anglais. Seuls ces champs en langage naturel sont traduits — jamais `slug`, `tags`, `trigger`, `code_snippet`, ni la config. Le tableau `i18n.en.use_cases` doit avoir le même nombre d'éléments que `use_cases`.
+**Langue** : le catalogue est canoniquement en **anglais** — `name`, `benefit`, `description`, `use_cases` directement dans les champs racine, sans overlay `i18n` (champ retiré du schéma). Ne pas produire `id`, `provider`, `votes` ni `community_examples` : le schéma a `additionalProperties: false` et ces champs sont morts depuis #236 (la traçabilité des sources vit dans `registry/scanned-repos.json`).
 
 **Champ `default_on` (optionnel)** : marquer `"default_on": true` si le hook est un incontournable — c'est-à-dire qu'il répond à **tous** ces critères :
 - catégorie `security` ou `validation` avec blocage `PreToolUse`
@@ -112,27 +114,20 @@ Un hook `default_on: true` sera pré-sélectionné par défaut dans le catalogue
 
 **Champ `benefit` (requis)** : une phrase courte (≤ ~60 caractères), orientée *résultat* et non *fonctionnalité — le « pourquoi je l'installe », pas le « ce qu'il fait ». Voix dev, percutante, droit au but. Ex. : `"No accidental push straight to main"`, `"Type errors caught the moment a file is saved"`. C'est le texte mis en avant dans le catalogue au survol. À distinguer de `description` (qui, elle, explique le mécanisme).
 
-**Schema d'une entrée** (toutes les clés requises) :
+**Schema d'une entrée** (format actuel, `registry/registry.schema.json`) :
 
 ```json
 {
-  "id": "kebab-case-unique",
   "slug": "kebab-case-unique",
-  "name": "Nom court en français",
+  "name": "Short English name",
   "benefit": "Outcome-framed one-liner, ≤ ~60 chars",
   "category": "security|context|validation|notification|workflow|documentation",
-  "provider": ["claude-code"],
   "hook_type": "PreToolUse|PostToolUse|UserPromptSubmit|Notification|Stop|SubagentStop|PreCompact|SessionStart|SessionEnd",
   "trigger": "Bash|Write|Edit|WebFetch|*",
-  "description": "Ce que fait ce hook, en français.",
-  "use_cases": ["cas 1", "cas 2"],
-  "i18n": {
-    "en": {
-      "name": "Short English name",
-      "description": "What this hook does, in English.",
-      "use_cases": ["case 1", "case 2"]
-    }
-  },
+  "description": "What this hook does, in English.",
+  "use_cases": ["case 1", "case 2"],
+  "tags": ["tag1", "tag2"],
+  "default_on": true,
   "implementation": {
     "type": "settings_json",
     "config": {
@@ -141,14 +136,8 @@ Un hook `default_on: true` sera pré-sélectionné par défaut dans le catalogue
       }
     },
     "script_path": ".claude/hooks/nom.mjs",
-    "code_snippet": "implémentation Node.js du concept (jamais du bash)"
-  },
-  "community_examples": [
-    { "repo": "$ARGUMENTS", "file_path": ".claude/settings.json", "added_by": "claude-code-analysis" }
-  ],
-  "tags": ["tag1", "tag2"],
-  "votes": 0,
-  "default_on": true
+    "code_snippet": "Node.js implementation of the concept (never bash)"
+  }
 }
 ```
 
@@ -166,12 +155,12 @@ HOOKS_VALID=$(cat /tmp/hookstack-validation-count.txt)
 Ce script filtre les anti-patterns agentiques (champs manquants, `PreToolUse/*` avec appels réseau,
 commandes destructives sans garde-fou) et produit :
 - `/tmp/hookstack-hooks-validated.json` — hooks retenus pour le registre
-- `/tmp/hookstack-hooks-recommended.json` — sous-ensemble bénéfique pour le projet courant
+- `/tmp/hookstack-hooks-recommended.json` — sous-ensemble bénéfique pour le projet courant (diagnostic, plus utilisé par le pipeline)
 
 ## Phase 4+5 — Merge et enregistrement (scripts, 0 token LLM)
 
 ```bash
-node .claude/skills/analyze-repo/scripts/merge-hooks.js /tmp/hookstack-hooks-validated.json registry/registry.json "$ARGUMENTS"
+node .claude/skills/analyze-repo/scripts/merge-hooks.js /tmp/hookstack-hooks-validated.json registry/registry.json
 HOOKS_FOUND=$(jq 'length' /tmp/hookstack-hooks-new.json)
 HOOKS_ADDED=$(cat /tmp/added-count.txt)
 node .claude/skills/analyze-repo/scripts/update-scanned-repos.js registry/scanned-repos.json "$ARGUMENTS" "$HOOKS_FOUND" "$HOOKS_ADDED" success
@@ -179,14 +168,13 @@ node .claude/skills/analyze-repo/scripts/update-scanned-repos.js registry/scanne
 
 ## Phase 6 — Application au projet courant (script, 0 token LLM)
 
+La mécanique canonique d'activation est **`sync-hooks`** : il seede les `.mjs` manquants depuis les `code_snippet` du registre, injecte les fingerprints `@hookstack` et reconstruit `.claude/settings.json` depuis les `implementation.config` (en préservant `permissions`). C'est exactement le garde-fou que la CI vérifie (`--check`).
+
 ```bash
-node .claude/skills/analyze-repo/scripts/apply-best-practices.js registry/registry.json .claude/settings.json /tmp/hookstack-hooks-recommended.json
-APPLIED=$(cat /tmp/applied-count.txt 2>/dev/null || echo 0)
-APPLIED_FROM_SCAN=$(cat /tmp/applied-from-scan-count.txt 2>/dev/null || echo 0)
+node .claude/sync-hooks.mjs
 ```
 
-Applique en priorité les slugs de référence (`RECOMMENDED_SLUGS`), puis les hooks de la source
-scannée marqués comme recommandés (catégorie `security`/`validation`, sans effet réseau en pre-hook).
+> Tous les hooks éligibles du registre sont dogfoodés sur le projet (sauf exclusions documentées dans `EXCLUDED_SLUGS` de `.claude/sync-hooks.mjs`). Le filtrage par catégorie `security`/`validation` n'est plus nécessaire : le sync active l'ensemble cohérent et la CI garantit sa synchronisation.
 
 ## Résumé
 
@@ -196,11 +184,11 @@ Afficher uniquement ce bloc, sans autre texte :
 Source analysée  : <url> [github|documentation]
 Hooks extraits   : <HOOKS_FOUND>
 Hooks valides    : <HOOKS_VALID> (<HOOKS_FOUND - HOOKS_VALID> rejeté(s))
-Hooks ajoutés    : <HOOKS_ADDED> (ou "0 — exemples communautaires enrichis")
-Appliqués projet : <APPLIED> dont <APPLIED_FROM_SCAN> de la source scannée (ou "déjà à jour")
+Hooks ajoutés    : <HOOKS_ADDED> (ou "0 — concepts déjà couverts")
 
 Fichiers modifiés :
   registry/registry.json
   registry/scanned-repos.json
-  .claude/settings.json
+  .claude/settings.json (reconstruit par sync-hooks)
+  .claude/hooks/ (scripts seedés depuis les snippets si absents)
 ```

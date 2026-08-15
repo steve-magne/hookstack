@@ -21,14 +21,14 @@ Install them in one command — your agent gets guardrails in under a minute.
 <!-- COVERAGE_BADGE:START -->
 
 <p align="center">
-  <img src="public/coverage-badge.svg" alt="HookStack coverage — lines 91% · statements 90% · branches 87% · functions 82%"/>
+  <img src="public/coverage-badge.svg" alt="HookStack coverage — lines 92% · statements 91% · branches 87% · functions 84%"/>
 </p>
 
 <sub>Unit-test coverage (agrégat) · gate CI : lines/statements/branches ≥ 80 %, functions ≥ 75 %</sub>
 
 <!-- COVERAGE_BADGE:END -->
 
-<img src="public/demo-hookstack.gif" alt="HookStack Mode Demo" width="600"/>
+<img src="doc/assets/demo-hookstack.gif" alt="HookStack Mode Demo" width="600"/>
 
 </div>
 
@@ -40,13 +40,13 @@ Installation takes under a minute.
 npx hookstack-cli@latest install
 ```
 
-That's it. The CLI **detects your project's setup** — its language stack (no Biome in a pure Python project) *and* the systems it uses (i18n, an `okf/` knowledge bundle, Next.js, a front-end codebase, a GitHub-hosted repo) — then walks you through picking hooks, writes the `.mjs` scripts, and patches the right config file. No manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent; `--no-detect` skips detection.
+That's it. The CLI **detects your project's setup** — its language stack (no Biome in a pure Python project) *and* the systems it uses (i18n, an `okf/` knowledge bundle, Next.js, a front-end codebase, a GitHub-hosted repo, a test suite, Claude Code skills, a hook registry, a system TTS voice, a Slack webhook, a multi-surface docs setup) — then walks you through picking hooks, writes the hook scripts (`.mjs`, or `.py` variants on Python projects), and patches the right config file. No manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent; `--no-detect` skips detection.
 
 >Want to fine-tune your Hookstack? Go to **[hookstack.app](https://www.hookstack.app)** — browse the full catalogue, select exactly what you need, copy the generated command and paste it in your terminal
 
-**Language-aware by default.** The CLI detects your project's toolchain (TypeScript/Node: `package.json`/`tsconfig.json` · Python: `pyproject.toml`/`requirements.txt`/… ) and only installs hooks that match it — a Python repo gets the ruff/pyright/pytest stack, never hooks that shell out to `npm`/`tsc`/`biome`. Mixed repos get both. Override with `--stack=typescript|python|all`.
+**Language-aware by default.** The CLI detects your project's toolchain (TypeScript/Node: `package.json`/`tsconfig.json` · Python: `pyproject.toml`/`requirements.txt`/… ) and only installs hooks that match it — a Python repo gets the ruff/pyright/pytest stack, never hooks that shell out to `npm`/`tsc`/`biome`. Mixed repos get both. When no TypeScript/Python toolchain is detected (Go, Rust, bare JS…), only the universal hooks are installed — never tsc/biome/ruff/pytest hooks the project can't run — and the CLI says so. Override with `--stack=typescript|python|all` or `--no-detect`.
 
-**Python hooks, Python tests.** On a Python project the hooks that carry a Python variant are installed as real `.py` scripts (`python3 …` commands) and `--with-tests` writes **pytest** tests instead of vitest tests — vitest is never installed on Python projects, so your GitHub Actions CI stays Python-only with no `npm` added to test the hooks. Hooks without a variant yet fall back to `.mjs` while the catalogue transcribes them (see the install summary).
+**Python hooks, Python tests.** On a Python project the hooks are installed as real `.py` scripts (`python3 …` commands) and `--with-tests` writes **pytest** tests instead of vitest tests — vitest is never installed on Python projects, so your GitHub Actions CI stays Python-only with no `npm` added to test the hooks. Every hook in the default stack carries a Python variant: a default Python install currently lands **66 hooks, 100 % as `.py`, zero `.mjs` fallback** (see the install summary).
 
 ```bash
 # In a Python project — ruff format, ruff check, pyright, pytest, uv guard
@@ -65,7 +65,7 @@ npx hookstack-cli@latest install --stack=all
 npx hookstack-cli@latest update
 ```
 
-No need to remember which hooks you picked — the CLI reads the `// @hookstack <slug>` fingerprint each installed `.mjs` already carries, re-fetches those exact hooks from the live registry, and overwrites only the scripts that changed. `settings.json` is re-merged but only actually touched if a hook's config fragment changed (the merge is idempotent). Installed somewhere other than the default project scope? Pass the same flag you installed with, e.g. `update --global` or `update --codex-project`. See [`packages/cli/README.md`](packages/cli/README.md#updating) for the full breakdown.
+No need to remember which hooks you picked — the CLI reads the `@hookstack <slug>` fingerprint each installed script carries (`// @hookstack` on `.mjs`, `# @hookstack` on `.py` variants), re-fetches those exact hooks from the live registry, and overwrites only the scripts that changed. `settings.json` is re-merged but only actually touched if a hook's config fragment changed (the merge is idempotent). Installed somewhere other than the default project scope? Pass the same flag you installed with, e.g. `update --global` or `update --codex-project`. See [`packages/cli/README.md`](packages/cli/README.md#updating) for the full breakdown.
 
 ---
 
@@ -85,7 +85,7 @@ It finds the hooks you've locally modified and opens a PR with your changes — 
 
 ## The HookStack evolution
 
-**103 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+**100 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">
@@ -178,7 +178,7 @@ Fires when a new worktree is created. Copy `.env`, assign a free port, run `pnpm
 - **pre-bash-block-destructive** — Blocks `rm -rf /`, `DROP TABLE`, direct disk writes, and other foot-guns
 - **pre-edit-protect-paths** — `.env` and key files stay untouched by the agent, always
 - **pre-read-env-guard** — `.env` secrets never enter the model context in the first place
-- **pre-bash-guard-git-push-main** — Hard stop on any `git push` targeting `main` or `master`
+- **pre-bash-guard-force-push-any** — Blocks bare `git push --force`, steering you to `--force-with-lease`
 
 ### Context
 
@@ -191,7 +191,7 @@ Fires when a new worktree is created. Copy `.env`, assign a free port, run `pnpm
 
 - **stop-per-file-coverage** — After each session, flags any file touched without test coverage ≥ 80 %
 - **stop-per-file-lint** — Biome runs on every file the agent modified before Stop fires
-- **post-write-autoformat** — Prettier auto-formats silently after every Write or Edit
+- **post-write-biome** — Biome formats and lints silently after every Write or Edit
 - **pre-bash-enforce-package-managers** — Blocks `npm` or `yarn` commands when the project uses `pnpm`
 - **post-edit-typecheck** — Runs `tsc --noEmit` on touched TypeScript files right after an edit
 - **post-edit-conflict-marker-check** — Leftover merge conflict markers caught the moment a file is written
@@ -237,7 +237,10 @@ touch tests/hooks/<slug>.test.mjs   # coverage ≥ 80 % required
 # 3. Add metadata to registry/registry.json, then sync
 node .claude/sync-hooks.mjs
 
-# 4. Open a PR — CI runs typecheck, tests, schema validation, and drift checks
+# 4. (Optional) ship a Python variant for pure-Python installs
+touch .claude/hooks/<slug>.py       # same run() contract, stdlib only
+
+# 5. Open a PR — CI runs typecheck, tests, schema validation, and drift checks
 ```
 
 ---

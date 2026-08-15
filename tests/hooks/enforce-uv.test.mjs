@@ -47,4 +47,10 @@ describe("enforce-uv", () => {
 		const r = run(bash("cd myproject && pip install -r requirements.txt"));
 		expect(r?.decision).toBe("block");
 	});
+
+	it("ignore une mention de pip install entre guillemets", () => {
+		expect(
+			run(bash('git commit -m "fix: use pip install requests"')),
+		).toBeNull();
+	});
 });
