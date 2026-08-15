@@ -85,7 +85,7 @@ It finds the hooks you've locally modified and opens a PR with your changes — 
 
 ## The HookStack evolution
 
-**106 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+**103 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">
@@ -178,7 +178,7 @@ Fires when a new worktree is created. Copy `.env`, assign a free port, run `pnpm
 - **pre-bash-block-destructive** — Blocks `rm -rf /`, `DROP TABLE`, direct disk writes, and other foot-guns
 - **pre-edit-protect-paths** — `.env` and key files stay untouched by the agent, always
 - **pre-read-env-guard** — `.env` secrets never enter the model context in the first place
-- **pre-bash-guard-git-push-main** — Hard stop on any `git push` targeting `main` or `master`
+- **pre-bash-guard-force-push-any** — Blocks bare `git push --force`, steering you to `--force-with-lease`
 
 ### Context
 
@@ -191,7 +191,7 @@ Fires when a new worktree is created. Copy `.env`, assign a free port, run `pnpm
 
 - **stop-per-file-coverage** — After each session, flags any file touched without test coverage ≥ 80 %
 - **stop-per-file-lint** — Biome runs on every file the agent modified before Stop fires
-- **post-write-autoformat** — Prettier auto-formats silently after every Write or Edit
+- **post-write-biome** — Biome formats and lints silently after every Write or Edit
 - **pre-bash-enforce-package-managers** — Blocks `npm` or `yarn` commands when the project uses `pnpm`
 - **post-edit-typecheck** — Runs `tsc --noEmit` on touched TypeScript files right after an edit
 - **post-edit-conflict-marker-check** — Leftover merge conflict markers caught the moment a file is written

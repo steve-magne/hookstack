@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # @hookstack session-start-load-git-context
-"""Injects git context (branch, status) into every prompt (UserPromptSubmit)."""
+"""Injects git context (branch, status) at session start (SessionStart)."""
 import subprocess
 import sys
 

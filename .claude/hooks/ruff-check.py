@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # @hookstack post-write-ruff-check
-"""Lints and auto-fixes the Python file with ruff after write (PostToolUse Write|Edit)."""
+"""Formats (silent) then lints and auto-fixes the Python file with ruff after
+write (PostToolUse Write|Edit) — merge of ruff-format + ruff-check."""
 import json
 import subprocess
 import sys
@@ -19,6 +20,12 @@ def run(input_data, exec_cmd=None):
     file_path = tool_input.get("file_path") or tool_input.get("path") or ""
     if not file_path.endswith(".py"):
         return None
+
+    # Format silencieux (non bloquant), puis lint --fix (erreurs remontées).
+    try:
+        exec_cmd(f'uv run ruff format "{file_path}"')
+    except Exception:
+        pass
 
     try:
         exec_cmd(f'uv run ruff check --fix "{file_path}"')

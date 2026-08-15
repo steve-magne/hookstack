@@ -14,6 +14,13 @@ describe("post-write-biome", () => {
 		run({ tool_input: { file_path: "a.json" } }, { exec });
 		expect(exec).toHaveBeenCalled();
 	});
+	it("formate ET linte en un seul passage (--write --error-on-warnings)", () => {
+		const exec = vi.fn();
+		run({ tool_input: { file_path: "a.ts" } }, { exec });
+		expect(exec).toHaveBeenCalledWith(
+			expect.stringContaining("biome check --write --error-on-warnings"),
+		);
+	});
 	it("retourne null si biome passe", () => {
 		expect(
 			run({ tool_input: { file_path: "a.ts" } }, { exec: vi.fn() }),

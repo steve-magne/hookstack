@@ -80,13 +80,13 @@ Skips all prompts — useful in CI or dotfile bootstrap scripts.
 
 ```bash
 # CI bootstrap (Claude Code, project)
-npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guard-git-push-main --yes --scope=project
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guard-force-push-any --yes --scope=project
 
 # CI bootstrap with unit tests (avoids SonarQube gating on new files without tests)
-npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guard-git-push-main --yes --with-tests
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guard-force-push-any --yes --with-tests
 
 # CI bootstrap for OpenAI Codex (committed ./.codex/hooks.json)
-npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guard-git-push-main --yes --scope=codex-project
+npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guard-force-push-any --yes --scope=codex-project
 ```
 
 ### Smart toolstack detection
@@ -194,9 +194,9 @@ Browse and filter the full catalogue at **[hookstack.app](https://www.hookstack.
 | `pre-bash-secret-detection` | `PreToolUse / Bash` | Blocks commands that would leak API keys |
 | `pre-bash-block-destructive` | `PreToolUse / Bash` | Stops `rm -rf /`, `DROP TABLE`, and similar |
 | `pre-edit-protect-paths` | `PreToolUse / Write\|Edit` | Keeps `.env` and key files untouched |
-| `pre-bash-guard-git-push-main` | `PreToolUse / Bash` | No accidental push straight to `main` |
+| `pre-bash-guard-force-push-any` | `PreToolUse / Bash` | No bare `--force` push, on any branch |
 | `session-start-load-git-context` | `SessionStart` | Every session opens with branch + status |
-| `post-write-autoformat` | `PostToolUse / Write\|Edit` | Prettier runs after every file write |
+| `post-write-biome` | `PostToolUse / Write\|Edit` | Biome formats + lints after every file write |
 | `notification-slack` | `Notification` | Pings you when the agent needs you |
 
 ---

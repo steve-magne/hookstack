@@ -32,7 +32,7 @@ def run(input_data=None, *, exec_cmd=None, platform=None):
         if platform == "darwin":
             exec_cmd(f'say "{safe}"')
         else:
-            exec_cmd(f'espeak "{safe}" 2>/dev/null')
+            exec_cmd(f'espeak "{safe}" 2>/dev/null || spd-say "{safe}"')
     except Exception:
         pass
     return text

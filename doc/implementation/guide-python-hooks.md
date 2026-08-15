@@ -9,7 +9,7 @@
 
 ## Contexte
 
-Ce guide cible les devs Python qui cherchent à brancher ruff, pyright et pytest dans leurs sessions Claude Code. Le cluster existait dans le registre (`post-write-ruff-format`, `post-write-ruff-check`, `post-edit-pyright`, `stop-pytest`, `pre-bash-enforce-uv` — tous annotés `stack: python`) mais n'avait aucune page informationnelle long-form pour les rendre découvrables. Mots-clés cibles : `claude code python hooks`, `claude code ruff hook`, `claude code pytest`, `claude code uv hook`.
+Ce guide cible les devs Python qui cherchent à brancher ruff, pyright et pytest dans leurs sessions Claude Code. Le cluster existait dans le registre (`post-write-ruff-check` (format + lint fusionnés), `post-edit-pyright`, `stop-pytest`, `pre-bash-enforce-uv` — tous annotés `stack: python`) mais n'avait aucune page informationnelle long-form pour les rendre découvrables. Mots-clés cibles : `claude code python hooks`, `claude code ruff hook`, `claude code pytest`, `claude code uv hook`.
 
 ---
 
@@ -32,7 +32,7 @@ Toutes les invocations d'outils Python passent par `uv run <tool>` plutôt qu'un
 
 ### Code des exemples tiré des `.mjs` réels
 
-Les blocs de code du guide sont des versions légèrement simplifiées des hooks réels (`ruff-format.mjs`, `ruff-check.mjs`, `pyright-check.mjs`, `pytest.mjs`, `enforce-uv.mjs`) dans `.claude/hooks/`. La simplification principale : unification du pattern `run(input, deps)` pour le hook `stop-pytest` (le hook réel prend uniquement `deps` en premier arg, le guide montre `_input, deps` pour la cohérence pédagogique avec les autres exemples).
+Les blocs de code du guide sont des versions légèrement simplifiées des hooks réels (`ruff-check.mjs`, `pyright-check.mjs`, `pytest.mjs`, `enforce-uv.mjs`) dans `.claude/hooks/`. La simplification principale : unification du pattern `run(input, deps)` pour le hook `stop-pytest` (le hook réel prend uniquement `deps` en premier arg, le guide montre `_input, deps` pour la cohérence pédagogique avec les autres exemples).
 
 ### Hooks PostToolUse : non-bloquants par convention
 

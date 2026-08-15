@@ -25,21 +25,21 @@ def _deps(present, mtimes=None):
 
 
 def test_warns_when_modules_dir_missing():
-    result = hook.run(**_deps({"requirements.txt"}))
-    assert "requirements.txt" in result["message"]
+    result = hook.run(**_deps({"uv.lock"}))
     assert ".venv absent" in result["message"]
+    assert "uv sync" in result["message"]
 
 
 def test_warns_when_lockfile_newer_than_modules():
-    present = {"requirements.txt", ".venv"}
-    mtimes = {"requirements.txt": 200, ".venv": 100}
+    present = {"uv.lock", ".venv"}
+    mtimes = {"uv.lock": 200, ".venv": 100}
     result = hook.run(**_deps(present, mtimes))
     assert "plus récent" in result["message"]
 
 
 def test_silent_when_up_to_date():
-    present = {"requirements.txt", ".venv"}
-    mtimes = {"/repo/requirements.txt": 50, "/repo/.venv": 100}
+    present = {"uv.lock", ".venv"}
+    mtimes = {"/repo/uv.lock": 50, "/repo/.venv": 100}
     result = hook.run(**_deps(present, mtimes))
     assert result["message"] == ""
 

@@ -11,9 +11,18 @@ const BLOCKED = [
 	{ re: /(^|[;&|\s`])poetry\s+install\b/, fix: "uv sync" },
 ];
 
+// Retire le contenu des chaînes entre guillemets pour éviter les faux positifs
+// quand pip/poetry apparaissent comme valeurs d'arguments texte (ex. git commit -m
+// "pip install ..."), tout en continuant à bloquer les vraies invocations.
+function stripQuotedArgs(cmd) {
+	return cmd
+		.replace(/"(?:[^"\\]|\\.)*"/g, '""')
+		.replace(/'(?:[^'\\]|\\.)*'/g, "''");
+}
+
 export function run(input) {
 	if (input.tool_name !== "Bash") return null;
-	const cmd = input.tool_input?.command ?? "";
+	const cmd = stripQuotedArgs(input.tool_input?.command ?? "");
 
 	const hit = BLOCKED.find(({ re }) => re.test(cmd));
 	if (!hit) return null;

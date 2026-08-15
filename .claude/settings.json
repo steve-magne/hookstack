@@ -20,10 +20,6 @@
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/guard-push-main.mjs"
-          },
-          {
-            "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-package-managers.mjs"
           },
           {
@@ -237,10 +233,6 @@
     "PostToolUse": [
       {
         "hooks": [
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/autoformat.mjs"
-          },
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-biome.mjs"

@@ -22,7 +22,7 @@ export function run(
 
 	try {
 		if (platform === "darwin") exec(`say "${safe}"`);
-		else exec(`espeak "${safe}" 2>/dev/null`);
+		else exec(`espeak "${safe}" 2>/dev/null || spd-say "${safe}"`);
 	} catch {}
 	return text;
 }
