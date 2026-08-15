@@ -3,6 +3,9 @@
 Historique des changements du bundle OKF. Date la plus récente en haut.
 Toute session qui enrichit le bundle ajoute une entrée ici (voir [self-improvement](meta/self-improvement.md)).
 
+## 2026-08-15
+* **Creation**: [implementation/cli-full-autonomy-detection](implementation/cli-full-autonomy-detection.md) — le CLI `install` passe de 5 à 12 signaux contextuels (`tests`, `skills`, `changelog`, `registry`, `tts`, `slack`, `docs` en plus d'i18n/okf/nextjs/frontend/github) pour installer automatiquement l'ensemble des hooks non-`default_on` pertinents du projet — CLI « vraiment autonome ». `detectProjectSignals` accepte `existsSync`/`env`/`platform` (défauts « absent » rétro-compatibles).
+
 ## 2026-08-14
 * **Update**: [implementation/python-hook-variants](implementation/python-hook-variants.md) — 22 variantes `.py` supplémentaires (TTS/sons, worktrees, permissions, vie de session) puis tri des 9 derniers fallbacks : 3 hooks taggés `stack: ["typescript"]` (`post-write-autoformat`, `session-start-node-version-check`, `stop-run-tests` dont la variante `.py` a été retirée — no-op sur Python, convention CLAUDE.md), 7 internes repo passés `default_on: false` explicite. Résultat : set d'install Python par défaut **66/66 en `.py` (100 %, zéro fallback `.mjs`)** ; 80/105 variantes au catalogue. Leçon : compter sur `default_on` (82 hooks), pas sur le catalogue complet.
 * **Update**: [README](../README.md) + [CLI README](../packages/cli/README.md) + [doc/product/01-overview](../doc/product/01-overview.md) + `--help` CLI — wording aligné sur la réalité Python (66 hooks `.py`, 100 % sur install Python, pytest/vitest, fingerprint `# @hookstack`).

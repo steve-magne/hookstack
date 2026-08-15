@@ -362,6 +362,209 @@ describe("detectProjectSignals", () => {
 			"okf",
 		]);
 	});
+
+	it("détecte tests via un dossier tests à la racine", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [dir("tests")] });
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual(["tests"]);
+	});
+
+	it("détecte tests via __tests__ ou spec", () => {
+		for (const name of ["__tests__", "spec", "test"]) {
+			const readdirSync = fakeReaddir({ [ROOT]: [dir(name)] });
+			expect(
+				detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+			).toEqual(["tests"]);
+		}
+	});
+
+	it("détecte tests via un test runner dans package.json", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("package.json")] });
+		const readFileSync = () =>
+			JSON.stringify({ devDependencies: { vitest: "^2.0.0" } });
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"tests",
+		]);
+	});
+
+	it("détecte tests via une mention pytest dans pyproject.toml", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("pyproject.toml")] });
+		const readFileSync = () => "[project.optional-dependencies]\ndev = ['pytest']\n";
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"tests",
+		]);
+	});
+
+	it("ne confond pas un pyproject sans pytest", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("pyproject.toml")] });
+		const readFileSync = () => "[project]\nname = 'app'\n";
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual(
+			[],
+		);
+	});
+
+	it("détecte skills via .claude/skills ou .claude/commands", () => {
+		for (const sub of [".claude/skills", ".claude/commands"]) {
+			const readdirSync = fakeReaddir({ [ROOT]: [] });
+			const existsSync = (p) => p.endsWith(sub);
+			expect(
+				detectProjectSignals(ROOT, {
+					readdirSync,
+					readFileSync: noPkg,
+					existsSync,
+				}),
+			).toEqual(["skills"]);
+		}
+	});
+
+	it("détecte changelog via CHANGELOG.md", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [] });
+		const existsSync = (p) => p.endsWith("CHANGELOG.md");
+		expect(
+			detectProjectSignals(ROOT, {
+				readdirSync,
+				readFileSync: noPkg,
+				existsSync,
+			}),
+		).toEqual(["changelog"]);
+	});
+
+	it("détecte registry seulement avec registry.json ET sync-hooks.mjs", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [] });
+		const both = (p) =>
+			p.endsWith("registry/registry.json") || p.endsWith(".claude/sync-hooks.mjs");
+		expect(
+			detectProjectSignals(ROOT, {
+				readdirSync,
+				readFileSync: noPkg,
+				existsSync: both,
+			}),
+		).toEqual(["registry"]);
+
+		// registry.json seul ne suffit pas (pas de script de validation).
+		const onlyJson = (p) => p.endsWith("registry/registry.json");
+		expect(
+			detectProjectSignals(ROOT, {
+				readdirSync,
+				readFileSync: noPkg,
+				existsSync: onlyJson,
+			}),
+		).toEqual([]);
+	});
+
+	it("détecte tts sur macOS", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [] });
+		expect(
+			detectProjectSignals(ROOT, {
+				readdirSync,
+				readFileSync: noPkg,
+				platform: "darwin",
+			}),
+		).toEqual(["tts"]);
+	});
+
+	it("détecte tts sur Linux si espeak/spd-say est dans le PATH", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [] });
+		const existsSync = (p) => p.endsWith("/usr/bin/espeak");
+		expect(
+			detectProjectSignals(ROOT, {
+				readdirSync,
+				readFileSync: noPkg,
+				platform: "linux",
+				env: { PATH: "/usr/bin:/bin" },
+				existsSync,
+			}),
+		).toEqual(["tts"]);
+	});
+
+	it("ne détecte pas tts sur Linux sans espeak/spd-say", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [] });
+		expect(
+			detectProjectSignals(ROOT, {
+				readdirSync,
+				readFileSync: noPkg,
+				platform: "linux",
+				env: { PATH: "/usr/bin:/bin" },
+				existsSync: () => false,
+			}),
+		).toEqual([]);
+	});
+
+	it("ne détecte pas tts sur Windows", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [] });
+		expect(
+			detectProjectSignals(ROOT, {
+				readdirSync,
+				readFileSync: noPkg,
+				platform: "win32",
+			}),
+		).toEqual([]);
+	});
+
+	it("détecte slack via la variable d'environnement", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [] });
+		expect(
+			detectProjectSignals(ROOT, {
+				readdirSync,
+				readFileSync: noPkg,
+				env: { SLACK_WEBHOOK_URL: "https://hooks.slack.com/x" },
+			}),
+		).toEqual(["slack"]);
+	});
+
+	it("détecte slack via un fichier .env", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [] });
+		const readFileSync = (p) =>
+			p.endsWith(".env.local") ? "SLACK_WEBHOOK_URL=https://hooks.slack.com/y\n" : "";
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"slack",
+		]);
+	});
+
+	it("ne détecte pas slack sans webhook", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [] });
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual([]);
+	});
+
+	it("détecte docs via README racine + packages/*/README.md", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [file("README.md"), dir("packages")],
+			"/proj/packages": [dir("cli")],
+			"/proj/packages/cli": [file("README.md")],
+		});
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual(["docs"]);
+	});
+
+	it("ne détecte pas docs avec un seul README racine", () => {
+		const readdirSync = fakeReaddir({ [ROOT]: [file("README.md")] });
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual([]);
+	});
+
+	it("cumule les nouveaux signaux avec les anciens", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [dir("tests"), file("package.json"), file("README.md"), dir("packages")],
+			"/proj/packages": [dir("web")],
+			"/proj/packages/web": [file("README.md")],
+		});
+		const readFileSync = () =>
+			JSON.stringify({ devDependencies: { react: "^18.3.1" } });
+		const existsSync = (p) => p.endsWith(".claude/skills");
+		expect(
+			detectProjectSignals(ROOT, {
+				readdirSync,
+				readFileSync,
+				existsSync,
+				platform: "darwin",
+			}),
+		).toEqual(["docs", "frontend", "skills", "tests", "tts"]);
+	});
 });
 
 describe("suggestHooksForSignals", () => {
@@ -411,6 +614,51 @@ describe("suggestHooksForSignals", () => {
 	it("mappe github → session-start-github-context", () => {
 		expect(suggestHooksForSignals(["github"])).toEqual([
 			"session-start-github-context",
+		]);
+	});
+
+	it("mappe tests → file-changed-run-tests", () => {
+		expect(suggestHooksForSignals(["tests"])).toEqual([
+			"file-changed-run-tests",
+		]);
+	});
+
+	it("mappe skills → user-prompt-expansion-skill-context", () => {
+		expect(suggestHooksForSignals(["skills"])).toEqual([
+			"user-prompt-expansion-skill-context",
+		]);
+	});
+
+	it("mappe changelog → stop-generate-changelog", () => {
+		expect(suggestHooksForSignals(["changelog"])).toEqual([
+			"stop-generate-changelog",
+		]);
+	});
+
+	it("mappe registry → les trois hooks registry", () => {
+		expect(suggestHooksForSignals(["registry"])).toEqual([
+			"registry-validate-on-change",
+			"registry-changed-auto-sync",
+			"stop-registry-drift-check",
+		]);
+	});
+
+	it("mappe tts → les quatre hooks TTS", () => {
+		expect(suggestHooksForSignals(["tts"])).toEqual([
+			"notification-tts-voice",
+			"stop-tts-completion",
+			"subagent-start-tts-announce",
+			"subagent-stop-tts-summary",
+		]);
+	});
+
+	it("mappe slack → notification-slack", () => {
+		expect(suggestHooksForSignals(["slack"])).toEqual(["notification-slack"]);
+	});
+
+	it("mappe docs → file-changed-docs-consistency", () => {
+		expect(suggestHooksForSignals(["docs"])).toEqual([
+			"file-changed-docs-consistency",
 		]);
 	});
 

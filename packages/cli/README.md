@@ -17,7 +17,7 @@ That's it. The CLI fetches the hooks, shows you what will be installed, and patc
 Running `install` with no `--hooks` installs the default HookStack — and **detects your project's setup** to pick the right hooks:
 
 - **Stack detection** (language): looks for `package.json`/`tsconfig.json`/`pyproject.toml`/etc. and skips default hooks that don't apply — e.g. no Biome hook in a pure Python project. When no TypeScript/Python toolchain is found, only the universal hooks are installed (the skipped slugs are listed), never tsc/ruff/pytest hooks the project can't run. Override with `--stacks=typescript,python` or `--no-detect`.
-- **Contextual detection** (systems): spots an i18n setup, an `okf/` knowledge bundle, a Next.js app, a front-end codebase, or a GitHub-hosted repo, and suggests (interactive) or auto-adds (`--yes`) the matching non-default hooks — see [Smart toolstack detection](#smart-toolstack-detection).
+- **Contextual detection** (systems): spots an i18n setup, an `okf/` knowledge bundle, a Next.js app, a front-end codebase, a GitHub-hosted repo, a test suite, Claude Code skills, a changelog, a hook registry, a system TTS voice, a Slack webhook, or a multi-surface docs setup — and suggests (interactive) or auto-adds (`--yes`) the matching non-default hooks — see [Smart toolstack detection](#smart-toolstack-detection).
 
 An explicit `--hooks=` list is always installed as-is, never filtered. `--no-detect` opts out of both detection layers.
 
@@ -100,6 +100,13 @@ On the **default install** (`no --hooks`), besides the language-stack filter abo
 | `nextjs` | `next` in `package.json`, or a `next.config.{js,mjs,cjs,ts}` at the root | `post-write-nextjs-quality` — catches missing `'use client'`, Pages Router patterns, and missing `next/image`/`next/link` · `seo-page-metadata-guard` · `seo-next-image-guard` · `stop-seo-structure-check` — the Next.js-only SEO guards (App Router metadata, `next/image`, robots/sitemap) |
 | `frontend` | a front-end framework in `package.json` (`react`, `vue`, `svelte`, `astro`, `preact`, `solid-js`, `@angular/core`…) | `post-edit-visual-check` — reminds the agent to verify UI changes actually render |
 | `github` | a `.github/` directory, or a git remote pointing at `github.com` | `session-start-github-context` — loads open PRs and branch check status at session start |
+| `tests` | a `tests/` / `test/` / `__tests__/` / `spec/` directory at the root, a JS/TS test runner (`vitest`, `jest`, `mocha`, `playwright`…) in `package.json`, or a `pytest` mention in a Python manifest | `file-changed-run-tests` — reruns the affected tests the moment a source file changes |
+| `skills` | a `.claude/skills/` or `.claude/commands/` directory exists | `user-prompt-expansion-skill-context` — attaches extra context when certain skills/slash-commands run |
+| `changelog` | a `CHANGELOG.md` at the root | `stop-generate-changelog` — writes a session changelog entry on every stop |
+| `registry` | a `registry/registry.json` **and** a `.claude/sync-hooks.mjs` (a HookStack-style catalogue repo) | `registry-validate-on-change` · `registry-changed-auto-sync` · `stop-registry-drift-check` — validate and re-sync the catalogue in-session |
+| `tts` | macOS (`say`), or Linux with `espeak`/`spd-say` on `PATH` | `notification-tts-voice` · `stop-tts-completion` · `subagent-start-tts-announce` · `subagent-stop-tts-summary` — announce agent events out loud |
+| `slack` | a `SLACK_WEBHOOK_URL` environment variable (or an entry in `.env` / `.env.local` / `.env.development`) | `notification-slack` — pings your Slack when the agent needs you |
+| `docs` | a root `README.md` plus at least one `packages/*/README.md` (multi-surface monorepo) | `file-changed-docs-consistency` — reminds you to keep sibling READMEs telling the same story |
 
 - **Interactive** installs ask before adding them (a multi-select, pre-checked — uncheck to skip)
 - **`--yes`** installs auto-add them and report what was detected (e.g. `⚡ Detected an i18n/translation system + an OKF knowledge bundle — auto-added: …`)
