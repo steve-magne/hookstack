@@ -277,6 +277,37 @@ const DETECT_SKIP_DIRS = new Set([
 const I18N_DIR_RE = /^(?:locales?|messages?|i18n)$/i;
 const OKF_DIR_RE = /^\.?okf$/i;
 const NEXT_CONFIG_RE = /^next\.config\.(?:[cm]?js|ts)$/;
+const TEST_DIR_RE = /^(?:tests?|__tests__|spec)$/i;
+
+// package.json dependency names that indicate a JS/TS test runner (so
+// `file-changed-run-tests` has something to run).
+const TEST_RUNNER_PACKAGES = new Set([
+	"vitest",
+	"jest",
+	"mocha",
+	"@playwright/test",
+	"playwright",
+	"ava",
+	"uvu",
+	"tap",
+	"jasmine",
+]);
+
+// Python manifests probed for a `pytest` mention.
+const PYTEST_MANIFESTS = [
+	"pyproject.toml",
+	"requirements.txt",
+	"requirements-dev.txt",
+	"setup.py",
+	"setup.cfg",
+	"Pipfile",
+	"tox.ini",
+];
+
+// TTS binaries: macOS always ships `say`; Linux needs espeak or spd-say.
+const TTS_BINARIES = ["espeak", "spd-say"];
+// Dotenv files probed for a Slack webhook (the hook no-ops without it).
+const SLACK_ENV_FILES = [".env", ".env.local", ".env.development"];
 
 // Human-readable label shown to the user when a signal is detected.
 export const SIGNAL_LABELS = {
@@ -285,6 +316,13 @@ export const SIGNAL_LABELS = {
 	nextjs: "a Next.js app",
 	frontend: "a front-end codebase",
 	github: "a GitHub-hosted repo",
+	tests: "a test suite",
+	skills: "Claude Code skills or commands",
+	changelog: "a changelog file",
+	registry: "a hook registry",
+	tts: "a system TTS voice",
+	slack: "a Slack webhook",
+	docs: "a multi-surface docs setup",
 };
 
 // Signal → catalogue slugs. A hook can unlock several signals; keep the table
@@ -307,6 +345,22 @@ export const AUTO_DETECT = {
 	],
 	frontend: ["post-edit-visual-check"],
 	github: ["session-start-github-context"],
+	tests: ["file-changed-run-tests"],
+	skills: ["user-prompt-expansion-skill-context"],
+	changelog: ["stop-generate-changelog"],
+	registry: [
+		"registry-validate-on-change",
+		"registry-changed-auto-sync",
+		"stop-registry-drift-check",
+	],
+	tts: [
+		"notification-tts-voice",
+		"stop-tts-completion",
+		"subagent-start-tts-announce",
+		"subagent-stop-tts-summary",
+	],
+	slack: ["notification-slack"],
+	docs: ["file-changed-docs-consistency"],
 };
 
 // Reads the union of all dependency flavors from package.json (or empty).
@@ -392,10 +446,123 @@ function hasGithubSignal(root, { readdirSync, readFileSync }) {
 	}
 }
 
+// True when the project has a test suite the `file-changed-run-tests` hook can
+// drive: a tests/test/__tests__/spec dir at the root, a JS/TS test runner in
+// package.json, or a pytest mention in a Python manifest.
+function hasTestsSignal(root, { readdirSync, readFileSync }) {
+	try {
+		if (
+			readdirSync(root, { withFileTypes: true }).some(
+				(ent) => ent.isDirectory() && TEST_DIR_RE.test(ent.name),
+			)
+		)
+			return true;
+	} catch {
+		// unreadable root — fall through to manifest probes
+	}
+	const deps = readPackageDeps(root, { readFileSync });
+	if (hasAnyDep(deps, TEST_RUNNER_PACKAGES)) return true;
+	for (const file of PYTEST_MANIFESTS) {
+		try {
+			if (/pytest/.test(readFileSync(join(root, file), "utf8"))) return true;
+		} catch {
+			// missing manifest — try the next
+		}
+	}
+	return false;
+}
+
+// True when the project defines Claude Code skills or slash commands
+// (`.claude/skills/` or `.claude/commands/`).
+function hasSkillsSignal(root, existsSync) {
+	return [".claude/skills", ".claude/commands"].some((dir) =>
+		existsSync(join(root, dir)),
+	);
+}
+
+// True when the root holds a CHANGELOG.md to keep up to date.
+function hasChangelogSignal(root, existsSync) {
+	return existsSync(join(root, "CHANGELOG.md"));
+}
+
+// True for a HookStack-style catalogue repo: `registry/registry.json` plus the
+// `.claude/sync-hooks.mjs` the registry hooks shell out to (avoids installing
+// `registry-validate-on-change` in a repo that has no validation script).
+function hasRegistrySignal(root, existsSync) {
+	return (
+		existsSync(join(root, "registry", "registry.json")) &&
+		existsSync(join(root, ".claude", "sync-hooks.mjs"))
+	);
+}
+
+// True when the machine can speak the agent's notifications out loud: macOS
+// always ships `say`; Linux needs espeak or spd-say on PATH.
+function hasTtsSignal({ platform, env, existsSync }) {
+	if (platform === "darwin") return true;
+	if (platform !== "linux") return false;
+	const path = env.PATH ?? env.Path ?? "";
+	if (!path) return false;
+	const sep = path.includes(";") ? ";" : ":";
+	return path
+		.split(sep)
+		.some((dir) =>
+			TTS_BINARIES.some((bin) => dir && existsSync(join(dir, bin))),
+		);
+}
+
+// True when a Slack webhook is configured (env var or dotenv file) — the hook
+// no-ops without one, so detection targets only setups where it will work.
+function hasSlackSignal(root, { env, readFileSync }) {
+	if (env.SLACK_WEBHOOK_URL) return true;
+	for (const file of SLACK_ENV_FILES) {
+		try {
+			if (/SLACK_WEBHOOK_URL\s*=/.test(readFileSync(join(root, file), "utf8")))
+				return true;
+		} catch {
+			// missing dotenv — try the next
+		}
+	}
+	return false;
+}
+
+// True for a monorepo with several product-surface READMEs (root + at least one
+// packages/*/README.md) that must stay consistent.
+function hasDocsSignal(root, { readdirSync }) {
+	let rootReadme = false;
+	try {
+		rootReadme = readdirSync(root, { withFileTypes: true }).some(
+			(ent) => ent.isFile() && ent.name === "README.md",
+		);
+	} catch {
+		return false;
+	}
+	if (!rootReadme) return false;
+	try {
+		const pkgs = readdirSync(join(root, "packages"), { withFileTypes: true });
+		for (const pkg of pkgs) {
+			if (!pkg.isDirectory()) continue;
+			if (
+				readdirSync(join(root, "packages", pkg.name), {
+					withFileTypes: true,
+				}).some((ent) => ent.isFile() && ent.name === "README.md")
+			)
+				return true;
+		}
+	} catch {
+		return false;
+	}
+	return false;
+}
+
 // Detects which contextual systems the current project has, so `install` can
-// suggest the hooks that only make sense there. Pure: all filesystem access
-// goes through the injected deps (mirrors findInstalledSlugs' DI contract).
-export function detectProjectSignals(root, { readdirSync, readFileSync }) {
+// suggest the hooks that only make sense there. Pure: all filesystem, env and
+// platform access goes through the injected deps (mirrors findInstalledSlugs'
+// DI contract). New optional deps default to "absent" so callers that only
+// probe filesystem structure keep working unchanged.
+export function detectProjectSignals(
+	root,
+	{ readdirSync, readFileSync, existsSync = () => false, env = {}, platform = "" } = {},
+) {
 	const signals = new Set();
 	const deps = readPackageDeps(root, { readFileSync });
 	if (hasI18nDir(root, 0, readdirSync) || hasAnyDep(deps, I18N_PACKAGE_NAMES)) {
@@ -407,6 +574,14 @@ export function detectProjectSignals(root, { readdirSync, readFileSync }) {
 	if (hasAnyDep(deps, FRONTEND_PACKAGE_NAMES)) signals.add("frontend");
 	if (hasGithubSignal(root, { readdirSync, readFileSync }))
 		signals.add("github");
+	if (hasTestsSignal(root, { readdirSync, readFileSync }))
+		signals.add("tests");
+	if (hasSkillsSignal(root, existsSync)) signals.add("skills");
+	if (hasChangelogSignal(root, existsSync)) signals.add("changelog");
+	if (hasRegistrySignal(root, existsSync)) signals.add("registry");
+	if (hasTtsSignal({ platform, env, existsSync })) signals.add("tts");
+	if (hasSlackSignal(root, { env, readFileSync })) signals.add("slack");
+	if (hasDocsSignal(root, { readdirSync })) signals.add("docs");
 	return [...signals].sort();
 }
 

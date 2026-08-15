@@ -21,7 +21,7 @@ Install them in one command — your agent gets guardrails in under a minute.
 <!-- COVERAGE_BADGE:START -->
 
 <p align="center">
-  <img src="public/coverage-badge.svg" alt="HookStack coverage — lines 91% · statements 90% · branches 87% · functions 82%"/>
+  <img src="public/coverage-badge.svg" alt="HookStack coverage — lines 92% · statements 91% · branches 87% · functions 84%"/>
 </p>
 
 <sub>Unit-test coverage (agrégat) · gate CI : lines/statements/branches ≥ 80 %, functions ≥ 75 %</sub>
@@ -40,7 +40,7 @@ Installation takes under a minute.
 npx hookstack-cli@latest install
 ```
 
-That's it. The CLI **detects your project's setup** — its language stack (no Biome in a pure Python project) *and* the systems it uses (i18n, an `okf/` knowledge bundle, Next.js, a front-end codebase, a GitHub-hosted repo) — then walks you through picking hooks, writes the hook scripts (`.mjs`, or `.py` variants on Python projects), and patches the right config file. No manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent; `--no-detect` skips detection.
+That's it. The CLI **detects your project's setup** — its language stack (no Biome in a pure Python project) *and* the systems it uses (i18n, an `okf/` knowledge bundle, Next.js, a front-end codebase, a GitHub-hosted repo, a test suite, Claude Code skills, a changelog, a hook registry, a system TTS voice, a Slack webhook, a multi-surface docs setup) — then walks you through picking hooks, writes the hook scripts (`.mjs`, or `.py` variants on Python projects), and patches the right config file. No manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent; `--no-detect` skips detection.
 
 >Want to fine-tune your Hookstack? Go to **[hookstack.app](https://www.hookstack.app)** — browse the full catalogue, select exactly what you need, copy the generated command and paste it in your terminal
 

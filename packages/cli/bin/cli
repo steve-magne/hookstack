@@ -191,7 +191,7 @@ function applyStackFilter(hooks, isDefault, stackFilter, log) {
 // never aborts the install.
 async function detectContextualHooks({ isDefault, args, scope, dirs, hooks }) {
   if (!isDefault || args.noDetect || isGlobalScope(scope)) return { signals: [], extra: [] }
-  const signals = detectProjectSignals(process.cwd(), { readdirSync, readFileSync })
+  const signals = detectProjectSignals(process.cwd(), { readdirSync, readFileSync, existsSync, env: process.env, platform: process.platform })
   if (signals.length === 0) return { signals, extra: [] }
   const installed = findInstalledSlugs(dirs.hooksDir, { readdirSync, readFileSync })
   const suggested = suggestHooksForSignals(signals, [...hooks.map(h => h.slug), ...installed])
