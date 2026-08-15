@@ -21,7 +21,7 @@ Install them in one command — your agent gets guardrails in under a minute.
 <!-- COVERAGE_BADGE:START -->
 
 <p align="center">
-  <img src="public/coverage-badge.svg" alt="HookStack coverage — lines 91% · statements 90% · branches 87% · functions 82%"/>
+  <img src="public/coverage-badge.svg" alt="HookStack coverage — lines 92% · statements 91% · branches 87% · functions 84%"/>
 </p>
 
 <sub>Unit-test coverage (agrégat) · gate CI : lines/statements/branches ≥ 80 %, functions ≥ 75 %</sub>
