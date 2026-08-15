@@ -837,7 +837,7 @@ describe("buildSecurityRows", () => {
 
 describe("buildPostInstallHints", () => {
 	it("retourne vide si aucun hook avec prérequis", () => {
-		expect(buildPostInstallHints([{ slug: "guard-push-main" }])).toEqual([]);
+		expect(buildPostInstallHints([{ slug: "stop-quality-check" }])).toEqual([]);
 	});
 
 	it("retourne un hint pour stop-duplication-check", () => {

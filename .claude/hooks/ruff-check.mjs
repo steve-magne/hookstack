@@ -2,26 +2,32 @@
 // @hookstack post-write-ruff-check
 import { execSync } from "node:child_process";
 // @hookstack post-write-ruff-check
-// Analyse et auto-corrige le fichier Python avec ruff après écriture (PostToolUse Write|Edit)
+// Formate (silencieux) puis analyse et auto-corrige le fichier Python avec ruff
+// après écriture (PostToolUse Write|Edit) — fusion de ruff-format + ruff-check.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 function defaultExec(cmd) {
 	return execSync(cmd, { encoding: "utf8", stdio: "pipe", timeout: 15_000 });
-}
+}	export function run(input, { exec = defaultExec } = {}) {
+		const filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? "";
+		if (!filePath.endsWith(".py")) return null;
 
-export function run(input, { exec = defaultExec } = {}) {
-	const filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? "";
-	if (!filePath.endsWith(".py")) return null;
+		// Format silencieux (non bloquant), puis lint --fix (erreurs remontées).
+		try {
+			exec(`uv run ruff format "${filePath}"`);
+		} catch {
+			// uv/ruff absent — non bloquant
+		}
 
-	try {
-		exec(`uv run ruff check --fix "${filePath}"`);
-		return null;
-	} catch (err) {
-		const output = err.stdout?.toString() ?? "";
-		return output ? { message: `[ruff-check] ${output.trim()}\n` } : null;
+		try {
+			exec(`uv run ruff check --fix "${filePath}"`);
+			return null;
+		} catch (err) {
+			const output = err.stdout?.toString() ?? "";
+			return output ? { message: `[ruff-check] ${output.trim()}\n` } : null;
+		}
 	}
-}
 
 /* v8 ignore next 5 */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

@@ -112,7 +112,7 @@ géré, `pip install pytest` fonctionne) avant le run pytest.
 
 ## Transcription — 80 hooks en 6 vagues
 
-1. **Stack Python (6)** : `post-write-ruff-format`, `post-write-ruff-check`, `post-edit-pyright`,
+1. **Stack Python (5)** : `post-write-ruff-check` (format + lint fusionnés), `post-edit-pyright`,
    `stop-pytest`, `pre-bash-enforce-uv`, `setup-check-install-deps`.
 2. **Language-aware (2)** : `stop-quality-check` (ruff + pyright via uv), `task-completed-test-gate`
    (gate pytest).

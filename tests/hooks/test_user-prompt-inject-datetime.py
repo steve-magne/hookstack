@@ -12,8 +12,8 @@ def test_returns_formatted_date_line():
     out = hook.run(now=datetime(2026, 6, 2, 12, 0, 0, tzinfo=timezone.utc))
     assert "Date et heure courantes :" in out
     assert out.endswith("\n")
-    assert "mardi" in out
-    assert "juin" in out
+    assert "2026-06-02 12:00" in out
+    assert "UTC+00:00" in out
 
 
 def test_works_without_argument():

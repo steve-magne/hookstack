@@ -1414,7 +1414,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 			"pre-write-secret-detection",
 			"pre-edit-protect-paths",
 			"pre-read-env-guard",
-			"pre-bash-guard-git-push-main",
+			"pre-bash-guard-force-push-any",
 			"pre-write-main-guard",
 			"message-display-redact-secrets",
 		],
@@ -1445,11 +1445,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 				],
 			},
 			{
-				heading: "How do you format every file the moment it is written?",
+				heading: "How do you format and lint every file the moment it is written?",
 				body: [
-					"Register a PostToolUse hook with the matcher `Write|Edit`. It fires every time the agent writes or edits a file. Filter by extension to skip non-formattable files, then call Prettier with `--write` inside a silent try/catch — if Prettier is absent, the hook exits quietly and nothing breaks.",
+					"Register a PostToolUse hook with the matcher `Write|Edit`. It fires every time the agent writes or edits a file. Filter by extension to skip non-formattable files, then call Biome with `check --write --error-on-warnings` — one pass formats the file and surfaces any remaining lint errors. If Biome is absent, the hook exits quietly and nothing breaks.",
 					{
-						code: `// .claude/hooks/post-write-autoformat.mjs
+						code: `// .claude/hooks/post-write-biome.mjs
 import { readFileSync } from 'fs'
 import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
@@ -1463,8 +1463,8 @@ export function run(input, { exec = defaultExec } = {}) {
   if (!filePath) return null
 
   try {
-    exec(\`npx --no-install prettier --write "\${filePath}"\`)
-    return { formatted: filePath }
+    exec(\`npx --no-install biome check --write --error-on-warnings "\${filePath}"\`)
+    return null
   } catch {
     return null // formatter absent or non-fatal error — stay silent
   }
@@ -1476,7 +1476,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   run(input)
 }`,
 					},
-					"Wire it in `settings.json` under `PostToolUse` with the `Write|Edit` matcher. PostToolUse hooks are non-blocking by convention: the session continues whether or not Prettier is installed.",
+					"Wire it in `settings.json` under `PostToolUse` with the `Write|Edit` matcher. PostToolUse hooks are non-blocking by convention: the session continues whether or not Biome is installed.",
 					{
 						code: `{
   "hooks": {
@@ -1484,7 +1484,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       {
         "matcher": "Write|Edit",
         "hooks": [
-          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-autoformat.mjs" }
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-biome.mjs" }
         ]
       }
     ]
@@ -1644,7 +1644,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 			{
 				heading: "How do you assemble and install a complete quality gate?",
 				body: [
-					"With the four hooks on disk, the `settings.json` wires them together — format and lint run on every write, typecheck runs once per batch, and tests gate every finished turn:",
+					"With the three hooks on disk, the `settings.json` wires them together — format and lint run on every write, typecheck runs once per batch, and tests gate every finished turn:",
 					{
 						code: `{
   "hooks": {
@@ -1652,8 +1652,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       {
         "matcher": "Write|Edit",
         "hooks": [
-          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-autoformat.mjs" },
-          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/biome-check.mjs" }
+          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-biome.mjs" }
         ]
       }
     ],
@@ -1674,7 +1673,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
 }`,
 					},
-					"All four hooks are in the HookStack catalogue. Install the full set in one command:",
+					"All three hooks are in the HookStack catalogue. Install the full set in one command:",
 					{ code: "npx hookstack-cli@latest install" },
 					"The CLI writes each script to `.claude/hooks/` and patches your `settings.json` with the correct event and matcher. From the next session on, every file the agent writes is formatted and linted immediately, types are verified after each batch of edits, and the test suite must pass before the session closes. Quality becomes an invariant, not a reminder.",
 				],
@@ -1695,7 +1694,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 			},
 			{
 				q: "Can I auto-format files in Claude Code without writing a hook myself?",
-				a: "Yes. Install the post-write-autoformat hook from the HookStack catalogue with npx hookstack-cli@latest install. The CLI writes the script and registers it in settings.json so Prettier runs on every file the agent writes without any manual setup.",
+				a: "Yes. Install the post-write-biome hook from the HookStack catalogue with npx hookstack-cli@latest install. The CLI writes the script and registers it in settings.json so Biome formats and lints every file the agent writes without any manual setup.",
 			},
 		],
 		related: [
@@ -1704,7 +1703,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 			"write-your-first-claude-code-hook",
 		],
 		relatedHookSlugs: [
-			"post-write-autoformat",
 			"post-write-biome",
 			"post-edit-typecheck",
 			"post-tool-batch-typecheck",
@@ -2632,22 +2630,29 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 			{
 				heading: "How do you format and lint every Python file on write?",
 				body: [
-					"Two PostToolUse hooks cover formatting and linting. They stack under the same `Write|Edit` matcher so both run on every Python file the agent writes or edits. The formatter (`post-write-ruff-format`) runs first and fixes code style silently. The linter (`post-write-ruff-check`) runs second and surfaces any remaining issues on stderr so the agent can correct them:",
+					"A single PostToolUse hook covers formatting and linting. It runs under the `Write|Edit` matcher on every Python file the agent writes or edits: `ruff format` applies code style silently first, then `ruff check --fix` applies auto-fixes and surfaces any remaining issues on stderr so the agent can correct them:",
 					{
-						code: `// .claude/hooks/post-write-ruff-format.mjs — silent formatter
+						code: `// .claude/hooks/post-write-ruff-check.mjs — format + lint
 import { readFileSync } from 'fs'
 import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
 
-export function run(input, { exec = (cmd) => execSync(cmd, { stdio: 'ignore', timeout: 15_000 }) } = {}) {
+export function run(input, { exec = (cmd) => execSync(cmd, { stdio: 'pipe', timeout: 15_000 }) } = {}) {
   const filePath = input.tool_input?.file_path ?? ''
   if (!filePath.endsWith('.py')) return null
 
   try {
     exec(\`uv run ruff format "\${filePath}"\`)
-    return null
   } catch {
     return null // uv / ruff absent — stay silent
+  }
+
+  try {
+    exec(\`uv run ruff check --fix "\${filePath}"\`)
+    return null
+  } catch (err) {
+    const output = err.stdout?.toString() ?? ''
+    return output ? { message: \`Ruff: \${output.trim()}\n\` } : null
   }
 }
 
@@ -2657,7 +2662,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   run(input)
 }`,
 					},
-					"Wire both hooks under `PostToolUse` in your `.claude/settings.json`. The formatter runs before the linter so the linter always sees already-formatted code:",
+					"Wire the hook under `PostToolUse` in your `.claude/settings.json`. `ruff format` runs first, so `ruff check --fix` always sees already-formatted code:",
 					{
 						code: `{
   "hooks": {
@@ -2665,7 +2670,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       {
         "matcher": "Write|Edit",
         "hooks": [
-          { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-ruff-format.mjs" },
           { "type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/post-write-ruff-check.mjs" }
         ]
       }
@@ -2673,7 +2677,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
 }`,
 					},
-					"Both hooks are non-blocking by design: a missing ruff or uv exits silently. Neither can prevent a write — they react to a completed change and surface issues the agent can fix on the next edit.",
+					"The hook is non-blocking by design: a missing ruff or uv exits silently. It cannot prevent a write — it reacts to a completed change and surfaces issues the agent can fix on the next edit.",
 				],
 			},
 			{
@@ -2851,7 +2855,7 @@ npx hookstack-cli@latest install`,
 			},
 			{
 				q: "What if uv is not installed on the machine?",
-				a: "PostToolUse hooks (ruff format, ruff check, pyright) wrap the uv call in a try/catch and exit silently when uv is absent — the session continues normally, none of the quality checks run. Install uv with the one-liner at astral.sh/uv before using this hook stack.",
+				a: "PostToolUse hooks (ruff, pyright) wrap the uv call in a try/catch and exit silently when uv is absent — the session continues normally, none of the quality checks run. Install uv with the one-liner at astral.sh/uv before using this hook stack.",
 			},
 		],
 		related: [
@@ -2860,7 +2864,6 @@ npx hookstack-cli@latest install`,
 			"pretooluse-vs-posttooluse",
 		],
 		relatedHookSlugs: [
-			"post-write-ruff-format",
 			"post-write-ruff-check",
 			"post-edit-pyright",
 			"stop-pytest",

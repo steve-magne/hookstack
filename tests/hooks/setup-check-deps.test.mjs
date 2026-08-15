@@ -21,4 +21,10 @@ describe("setup-check-deps", () => {
 		const stat = () => ({ mtimeMs: 100 });
 		expect(run({ exists, stat, projectDir: "/p" }).warnings).toHaveLength(0);
 	});
+	it("projet uv : avertit si .venv absent (uv sync)", () => {
+		const exists = (p) => p.endsWith("uv.lock");
+		const r = run({ exists, stat: () => ({ mtimeMs: 0 }), projectDir: "/p" });
+		expect(r.warnings.length).toBe(1);
+		expect(r.message).toContain("uv sync");
+	});
 });
