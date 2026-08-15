@@ -24,7 +24,6 @@ export const EXCEPTIONS = [
 	"okf-staleness-check.mjs",
 	"pre-webfetch-html-to-markdown.mjs",
 	"reload-direnv.mjs",
-	"session-changelog.mjs",
 	"session-start-github-context.mjs",
 	"session-start-pull-if-main.mjs",
 	"session-start-worktree-if-main.mjs",

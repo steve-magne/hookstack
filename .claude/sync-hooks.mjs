@@ -39,7 +39,7 @@ const EXCLUDED_STACKS = new Set(["python", "java"]);
 // Ces hooks restent visibles dans le catalogue mais ne sont pas injectés dans settings.json
 const EXCLUDED_SLUGS = new Set([
 	"notification-tts-voice", // remplacé par notification-sound
-	"stop-tts-completion", // remplacé par stop-sound
+	"stop-tts-completion", // voix de fin : Claude Code l'annonce nativement (stop-sound retiré)
 	"post-edit-typecheck", // doublon : post-tool-batch-typecheck couvre (1 tsc par lot, pas par fichier)
 	"stop-per-file-lint", // doublon : post-write-eslint (immédiat) + stop-quality-check (bilan) couvrent
 ]);

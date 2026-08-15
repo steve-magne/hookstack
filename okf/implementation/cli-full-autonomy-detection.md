@@ -1,7 +1,7 @@
 ---
 type: Playbook
 title: CLI — détection autonome complète (tous les hooks nécessaires)
-description: Le CLI install étend sa détection contextuelle de 5 à 12 signaux pour installer automatiquement l'ensemble des hooks non-default_on pertinents pour le projet (tests, skills, changelog, registry, TTS, Slack, docs).
+description: Le CLI install étend sa détection contextuelle de 5 à 11 signaux pour installer automatiquement l'ensemble des hooks non-default_on pertinents pour le projet (tests, skills, registry, TTS, Slack, docs).
 tags: [implementation, cli, install, autodetect, autonomie, signals]
 timestamp: 2026-08-15T00:00:00Z
 ---
@@ -11,7 +11,7 @@ timestamp: 2026-08-15T00:00:00Z
 ## What
 
 Le fast path (`npx hookstack-cli@latest install`, sans `--hooks=`) ne se limite plus
-à 5 signaux contextuels. Il détecte désormais **12 systèmes** et auto-ajoute
+à 5 signaux contextuels. Il détecte désormais **11 systèmes** et auto-ajoute
 (`--yes`) ou propose (interactif, multiselect pré-coché) les hooks non-`default_on`
 correspondants — l'objectif « CLI vraiment autonome » : un `install` par défaut
 couvre l'ensemble des hooks dont le projet a réellement besoin, sans sélection
@@ -31,7 +31,6 @@ Nouveaux signaux (en plus de `i18n`, `okf`, `nextjs`, `frontend`, `github`) :
 |---|---|---|
 | `tests` | dossier `tests/test/__tests__/spec` racine, OU test runner dans `package.json` (vitest/jest/mocha/playwright/…), OU mention `pytest` dans un manifeste Python | `file-changed-run-tests` |
 | `skills` | dossier `.claude/skills/` ou `.claude/commands/` | `user-prompt-expansion-skill-context` |
-| `changelog` | `CHANGELOG.md` racine | `stop-generate-changelog` |
 | `registry` | `registry/registry.json` **ET** `.claude/sync-hooks.mjs` (repo façon HookStack — évite d'installer la validation sans le script qu'elle appelle) | `registry-validate-on-change` · `registry-changed-auto-sync` · `stop-registry-drift-check` |
 | `tts` | `platform === 'darwin'` (say), OU Linux avec `espeak`/`spd-say` dans `PATH` | `notification-tts-voice` · `stop-tts-completion` · `subagent-start-tts-announce` · `subagent-stop-tts-summary` |
 | `slack` | `SLACK_WEBHOOK_URL` dans l'env OU dans `.env`/`.env.local`/`.env.development` (le hook est un no-op sans webhook) | `notification-slack` |
@@ -44,15 +43,15 @@ Nouveaux signaux (en plus de `i18n`, `okf`, `nextjs`, `frontend`, `github`) :
     — nouveaux deps optionnels avec défauts « absent » (`existsSync = () => false`,
     `env = {}`, `platform = ""`) pour que les callers structure-only restent inchangés.
   - Helpers purs : `hasTestsSignal` (réutilise `readPackageDeps`/`hasAnyDep`),
-    `hasSkillsSignal`, `hasChangelogSignal`, `hasRegistrySignal`, `hasTtsSignal`
+    `hasSkillsSignal`, `hasRegistrySignal`, `hasTtsSignal`
     (split PATH sur `:`/`;` pour Windows), `hasSlackSignal`, `hasDocsSignal`.
-  - `AUTO_DETECT` + `SIGNAL_LABELS` étendus (12 signaux).
+  - `AUTO_DETECT` + `SIGNAL_LABELS` étendus (11 signaux).
 - `packages/cli/bin/cli` :
   - `detectContextualHooks` passe `{ readdirSync, readFileSync, existsSync, env: process.env, platform: process.platform }`.
   - Aucun autre changement : le flux signal → fetch → multiselect/auto-add est générique.
 - Tests : `tests/cli/core.test.mjs` — ~20 cas `detectProjectSignals` (chaque nouveau
   signal + contre-exemples : registry.json seul, Linux sans espeak, Windows, slack
-  sans webhook, README unique) + mapping `suggestHooksForSignals` des 7 nouveaux signaux.
+  sans webhook, README unique) + mapping `suggestHooksForSignals` des 6 nouveaux signaux.
 - Docs : `packages/cli/README.md` (table de détection + intro) et `README.md` racine
   (paragraphe Installation), conformément à la règle de cohérence des deux README.
 

@@ -776,65 +776,6 @@
     ]
   },
   {
-    "benefit": "An automatic changelog of what the agent shipped",
-    "category": "documentation",
-    "default_on": false,
-    "description": "At session end, captures the diff of modified files and appends it to a timestamped change log, creating an automatic changelog of what the agent produced.",
-    "hook_type": "Stop",
-    "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// @hookstack stop-generate-changelog\n// Génère une entrée de changelog depuis le diff git de la session (Stop)\nimport { execSync } from \"node:child_process\";\nimport { appendFileSync, existsSync } from \"node:fs\";\nimport { join } from \"node:path\";\nimport { fileURLToPath } from \"node:url\";\n\nexport function run({\n\texec,\n\tappend = appendFileSync,\n\texists = existsSync,\n\tprojectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n\tnow = () => new Date().toISOString(),\n} = {}) {\n\tconst doExec =\n\t\texec ??\n\t\t((cmd) => {\n\t\t\ttry {\n\t\t\t\treturn execSync(cmd, {\n\t\t\t\t\tencoding: \"utf8\",\n\t\t\t\t\ttimeout: 10_000,\n\t\t\t\t\tcwd: projectDir,\n\t\t\t\t}).trim();\n\t\t\t} catch {\n\t\t\t\treturn \"\";\n\t\t\t}\n\t\t});\n\n\tconst branch = doExec(\"git branch --show-current\");\n\tconst diff = doExec(\n\t\t\"git diff --stat HEAD~1 HEAD 2>/dev/null || git diff --stat HEAD\",\n\t);\n\tconst commits = doExec('git log -5 --pretty=\"- %s (%h)\"');\n\n\tif (!diff && !commits) return null;\n\n\tconst date = now().split(\"T\")[0];\n\tconst entry = [\n\t\t`\\n## ${date} — Session sur \\`${branch || \"main\"}\\``,\n\t\t\"\",\n\t\tcommits ? `### Commits\\n${commits}` : \"\",\n\t\tdiff ? `### Fichiers modifiés\\n\\`\\`\\`\\n${diff}\\n\\`\\`\\`` : \"\",\n\t]\n\t\t.filter(Boolean)\n\t\t.join(\"\\n\");\n\n\tconst changelogPath = join(projectDir, \"CHANGELOG.md\");\n\tif (!exists(changelogPath)) {\n\t\treturn {\n\t\t\twritten: false,\n\t\t\tmessage: \"[session-changelog] CHANGELOG.md absent — entrée ignorée.\\n\",\n\t\t};\n\t}\n\n\tappend(changelogPath, `${entry}\\n`);\n\treturn {\n\t\twritten: true,\n\t\tentry,\n\t\tmessage: \"[session-changelog] ✓ Entrée ajoutée dans CHANGELOG.md\\n\",\n\t};\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n\tconst result = run();\n\tif (result?.message) process.stderr.write(result.message);\n}\n",
-      "config": {
-        "hooks": {
-          "Stop": [
-            {
-              "hooks": [
-                {
-                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-changelog.mjs",
-                  "type": "command"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "script_path": ".claude/hooks/session-changelog.mjs",
-      "security": {
-        "codeql": {
-          "critical": 0,
-          "high": 0,
-          "low": 0,
-          "medium": 0,
-          "scannedAt": "2026-06-05T02:10:00.374Z"
-        },
-        "snyk": {
-          "high": 0,
-          "low": 0,
-          "medium": 0,
-          "scannedAt": "2026-06-03T12:35:39.440Z"
-        }
-      },
-      "test_snippet": "// @vitest-environment node\nimport { describe, expect, it, vi } from \"vitest\";\nimport { run } from \"../../.claude/hooks/session-changelog.mjs\";\n\nconst exec = (cmd) => {\n\tif (cmd.includes(\"branch\")) return \"main\";\n\tif (cmd.includes(\"diff\")) return \" file | 2 +-\";\n\tif (cmd.includes(\"log\")) return \"- fix (abc)\";\n\treturn \"\";\n};\n\ndescribe(\"session-changelog\", () => {\n\tit(\"ajoute une entrée si CHANGELOG existe\", () => {\n\t\tconst append = vi.fn();\n\t\tconst r = run({\n\t\t\texec,\n\t\t\tappend,\n\t\t\texists: () => true,\n\t\t\tprojectDir: \"/p\",\n\t\t\tnow: () => \"2026-06-02T00:00:00Z\",\n\t\t});\n\t\texpect(r.written).toBe(true);\n\t\texpect(append).toHaveBeenCalled();\n\t});\n\tit(\"ignore si CHANGELOG absent\", () => {\n\t\tconst r = run({\n\t\t\texec,\n\t\t\tappend: vi.fn(),\n\t\t\texists: () => false,\n\t\t\tprojectDir: \"/p\",\n\t\t\tnow: () => \"2026-06-02T00:00:00Z\",\n\t\t});\n\t\texpect(r.written).toBe(false);\n\t});\n\tit(\"retourne null sans diff ni commits\", () => {\n\t\texpect(\n\t\t\trun({ exec: () => \"\", exists: () => true, projectDir: \"/p\" }),\n\t\t).toBeNull();\n\t});\n});\n",
-      "type": "settings_json",
-      "python_script_path": ".claude/hooks/session-changelog.py",
-      "python_code_snippet": "#!/usr/bin/env python3\n# @hookstack stop-generate-changelog\n\"\"\"Appends a changelog entry from the session's git diff (Stop).\"\"\"\nimport os\nimport subprocess\nimport sys\nfrom datetime import datetime, timezone\n\n\ndef _default_exec(cmd, cwd):\n    try:\n        return subprocess.run(\n            cmd,\n            shell=True,\n            capture_output=True,\n            text=True,\n            timeout=10,\n            cwd=cwd,\n            check=True,\n        ).stdout.strip()\n    except Exception:\n        return \"\"\n\n\ndef _default_append(path, content):\n    with open(path, \"a\", encoding=\"utf8\") as f:\n        f.write(content)\n\n\ndef run(\n    *,\n    exec_cmd=None,\n    append=None,\n    exists=None,\n    project_dir=None,\n    now=None,\n):\n    if project_dir is None:\n        project_dir = os.environ.get(\"CLAUDE_PROJECT_DIR\") or os.getcwd()\n    if exec_cmd is None:\n        exec_cmd = lambda cmd: _default_exec(cmd, project_dir)\n    if append is None:\n        append = _default_append\n    if exists is None:\n        exists = os.path.exists\n    if now is None:\n        now = lambda: datetime.now(timezone.utc).isoformat()\n\n    branch = exec_cmd(\"git branch --show-current\")\n    diff = exec_cmd(\"git diff --stat HEAD~1 HEAD 2>/dev/null || git diff --stat HEAD\")\n    commits = exec_cmd('git log -5 --pretty=\"- %s (%h)\"')\n\n    if not diff and not commits:\n        return None\n\n    date = now().split(\"T\")[0]\n    entry = \"\\n\".join(\n        part\n        for part in [\n            f\"\\n## {date} — Session sur `{branch or 'main'}`\",\n            \"\",\n            f\"### Commits\\n{commits}\" if commits else \"\",\n            f\"### Fichiers modifiés\\n```\\n{diff}\\n```\" if diff else \"\",\n        ]\n        if part\n    )\n\n    changelog_path = os.path.join(project_dir, \"CHANGELOG.md\")\n    if not exists(changelog_path):\n        return {\n            \"written\": False,\n            \"message\": \"[session-changelog] CHANGELOG.md absent — entrée ignorée.\\n\",\n        }\n\n    append(changelog_path, f\"{entry}\\n\")\n    return {\n        \"written\": True,\n        \"entry\": entry,\n        \"message\": \"[session-changelog] ✓ Entrée ajoutée dans CHANGELOG.md\\n\",\n    }\n\n\nif __name__ == \"__main__\":\n    result = run()\n    if result and result.get(\"message\"):\n        sys.stderr.write(result[\"message\"])\n",
-      "python_test_snippet": "import importlib.util\nfrom pathlib import Path\n\n_HOOK = Path(__file__).resolve().parents[2] / \".claude\" / \"hooks\" / \"session-changelog.py\"\n_spec = importlib.util.spec_from_file_location(\"session_changelog\", _HOOK)\nhook = importlib.util.module_from_spec(_spec)\n_spec.loader.exec_module(hook)\n\n\ndef _exec(cmd):\n    if \"branch\" in cmd:\n        return \"main\"\n    if \"diff\" in cmd:\n        return \" file | 2 +-\"\n    if \"log\" in cmd:\n        return \"- fix (abc)\"\n    return \"\"\n\n\ndef _base(**overrides):\n    deps = {\n        \"exec_cmd\": _exec,\n        \"append\": lambda p, c: None,\n        \"exists\": lambda p: True,\n        \"project_dir\": \"/p\",\n        \"now\": lambda: \"2026-06-02T00:00:00Z\",\n    }\n    deps.update(overrides)\n    return deps\n\n\ndef test_appends_entry_when_changelog_exists():\n    appends = []\n    r = hook.run(**_base(append=lambda p, c: appends.append((p, c))))\n    assert r[\"written\"] is True\n    assert appends\n\n\ndef test_ignores_when_changelog_absent():\n    r = hook.run(**_base(exists=lambda p: False))\n    assert r[\"written\"] is False\n\n\ndef test_returns_none_without_diff_or_commits():\n    assert hook.run(**_base(exec_cmd=lambda c: \"\")) is None\n"
-    },
-    "name": "Session summary generation",
-    "slug": "stop-generate-changelog",
-    "tags": [
-      "documentation",
-      "changelog",
-      "git",
-      "summary"
-    ],
-    "trigger": "*",
-    "use_cases": [
-      "Automatic changelog",
-      "Change traceability",
-      "Post-hoc review"
-    ]
-  },
-  {
     "benefit": "Forces uv and pnpm, kills pip/npm drift",
     "category": "validation",
     "default_on": true,
@@ -1625,61 +1566,6 @@
     ]
   },
   {
-    "benefit": "A satisfying chime the moment Claude finishes",
-    "category": "notification",
-    "default_on": true,
-    "description": "Plays a completion sound (Hero.aiff on macOS, paplay on Linux, PowerShell beep on Windows) when the agent stops. Instant audio feedback without TTS, no voice engine required.",
-    "hook_type": "Stop",
-    "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// @hookstack stop-sound\n// Joue un son de completion quand Claude termine une tâche (Stop)\nimport { execSync } from \"node:child_process\";\nimport { fileURLToPath } from \"node:url\";\n\nfunction defaultExec(cmd) {\n\texecSync(cmd, { timeout: 5_000, stdio: \"ignore\", shell: true });\n}\n\nexport function run({ exec = defaultExec, platform = process.platform } = {}) {\n\ttry {\n\t\tif (platform === \"darwin\") {\n\t\t\texec(\"afplay /System/Library/Sounds/Hero.aiff\");\n\t\t\texec(\n\t\t\t\t'osascript -e \\'display notification \"Claude has finished working\" with title \"Claude Code\"\\'',\n\t\t\t);\n\t\t} else if (platform === \"linux\") {\n\t\t\texec(\n\t\t\t\t\"paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || aplay /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null || true\",\n\t\t\t);\n\t\t} else if (platform === \"win32\") {\n\t\t\texec('powershell -c \"[console]::beep(880, 400)\"');\n\t\t}\n\t} catch {\n\t\t// Son absent ou erreur — non bloquant\n\t}\n\treturn null;\n}\n\n/* v8 ignore next 3 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n\trun();\n}\n",
-      "config": {
-        "hooks": {
-          "Stop": [
-            {
-              "hooks": [
-                {
-                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-sound.mjs",
-                  "type": "command"
-                }
-              ],
-              "matcher": ""
-            }
-          ]
-        }
-      },
-      "script_path": ".claude/hooks/stop-sound.mjs",
-      "security": {
-        "codeql": {
-          "critical": 0,
-          "high": 0,
-          "low": 0,
-          "medium": 0,
-          "scannedAt": "2026-06-05T02:10:00.374Z"
-        }
-      },
-      "test_snippet": "// @vitest-environment node\nimport { describe, expect, it, vi } from \"vitest\";\nimport { run } from \"../../.claude/hooks/stop-sound.mjs\";\n\ndescribe(\"stop-sound\", () => {\n\tit(\"joue Hero.aiff sur macOS\", () => {\n\t\tconst exec = vi.fn();\n\t\trun({ exec, platform: \"darwin\" });\n\t\texpect(exec).toHaveBeenCalledWith(expect.stringContaining(\"Hero.aiff\"));\n\t});\n\n\tit(\"affiche une notification macOS à la fin\", () => {\n\t\tconst exec = vi.fn();\n\t\trun({ exec, platform: \"darwin\" });\n\t\texpect(exec).toHaveBeenCalledWith(\n\t\t\texpect.stringContaining(\"display notification\"),\n\t\t);\n\t});\n\n\tit(\"joue paplay sur Linux\", () => {\n\t\tconst exec = vi.fn();\n\t\trun({ exec, platform: \"linux\" });\n\t\texpect(exec).toHaveBeenCalled();\n\t});\n\n\tit(\"joue un beep PowerShell sur Windows\", () => {\n\t\tconst exec = vi.fn();\n\t\trun({ exec, platform: \"win32\" });\n\t\texpect(exec).toHaveBeenCalledWith(expect.stringContaining(\"powershell\"));\n\t});\n\n\tit(\"retourne null (non bloquant)\", () => {\n\t\tconst exec = vi.fn();\n\t\texpect(run({ exec, platform: \"darwin\" })).toBeNull();\n\t});\n\n\tit(\"ne leve pas d'erreur si exec echoue\", () => {\n\t\tconst exec = vi.fn(() => {\n\t\t\tthrow new Error(\"afplay absent\");\n\t\t});\n\t\texpect(() => run({ exec, platform: \"darwin\" })).not.toThrow();\n\t});\n\n\tit(\"ne joue rien sur plateforme inconnue\", () => {\n\t\tconst exec = vi.fn();\n\t\trun({ exec, platform: \"freebsd\" });\n\t\texpect(exec).not.toHaveBeenCalled();\n\t});\n});\n",
-      "type": "settings_json",
-      "python_script_path": ".claude/hooks/stop-sound.py",
-      "python_code_snippet": "#!/usr/bin/env python3\n# @hookstack stop-sound\n\"\"\"Plays a completion sound when Claude finishes a task (Stop).\"\"\"\nimport subprocess\nimport sys\n\n\ndef _default_exec(cmd):\n    subprocess.run(\n        cmd, shell=True, timeout=5, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL\n    )\n\n\ndef run(*, exec_cmd=None, platform=None):\n    if exec_cmd is None:\n        exec_cmd = _default_exec\n    if platform is None:\n        platform = sys.platform\n\n    try:\n        if platform == \"darwin\":\n            exec_cmd(\"afplay /System/Library/Sounds/Hero.aiff\")\n            exec_cmd(\n                'osascript -e \\'display notification \"Claude has finished working\" with title \"Claude Code\"\\''\n            )\n        elif platform == \"linux\":\n            exec_cmd(\n                \"paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || \"\n                \"aplay /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null || true\"\n            )\n        elif platform == \"win32\":\n            exec_cmd('powershell -c \"[console]::beep(880, 400)\"')\n    except Exception:\n        # Son absent ou erreur — non bloquant\n        pass\n    return None\n\n\nif __name__ == \"__main__\":\n    run()\n",
-      "python_test_snippet": "import importlib.util\nfrom pathlib import Path\n\n_HOOK = Path(__file__).resolve().parents[2] / \".claude\" / \"hooks\" / \"stop-sound.py\"\n_spec = importlib.util.spec_from_file_location(\"stop_sound\", _HOOK)\nhook = importlib.util.module_from_spec(_spec)\n_spec.loader.exec_module(hook)\n\n\ndef test_plays_hero_aiff_on_macos():\n    calls = []\n    hook.run(exec_cmd=lambda c: calls.append(c), platform=\"darwin\")\n    assert any(\"Hero.aiff\" in c for c in calls)\n\n\ndef test_displays_macos_notification():\n    calls = []\n    hook.run(exec_cmd=lambda c: calls.append(c), platform=\"darwin\")\n    assert any(\"display notification\" in c for c in calls)\n\n\ndef test_plays_paplay_on_linux():\n    calls = []\n    hook.run(exec_cmd=lambda c: calls.append(c), platform=\"linux\")\n    assert calls\n\n\ndef test_plays_powershell_beep_on_windows():\n    calls = []\n    hook.run(exec_cmd=lambda c: calls.append(c), platform=\"win32\")\n    assert any(\"powershell\" in c for c in calls)\n\n\ndef test_returns_none_non_blocking():\n    assert hook.run(exec_cmd=lambda c: None, platform=\"darwin\") is None\n\n\ndef test_does_not_raise_when_exec_fails():\n    def exec_cmd(c):\n        raise RuntimeError(\"afplay absent\")\n\n    hook.run(exec_cmd=exec_cmd, platform=\"darwin\")\n\n\ndef test_plays_nothing_on_unknown_platform():\n    calls = []\n    hook.run(exec_cmd=lambda c: calls.append(c), platform=\"freebsd\")\n    assert calls == []\n"
-    },
-    "name": "System sound on task completion",
-    "slug": "stop-sound",
-    "tags": [
-      "stop",
-      "sound",
-      "audio",
-      "completion",
-      "cross-platform"
-    ],
-    "trigger": "*",
-    "use_cases": [
-      "Audio feedback when a long task finishes",
-      "Minimal-distraction alternative to TTS",
-      "Complement stop-tts-completion with a lighter signal"
-    ]
-  },
-  {
     "benefit": "Hear each subagent spin up",
     "category": "notification",
     "description": "Announces out loud via TTS when a subagent starts, to track parallel agent activity.",
@@ -2080,7 +1966,7 @@
       "type": "settings_json",
       "python_script_path": ".claude/hooks/setup-check-deps.py",
       "python_code_snippet": "#!/usr/bin/env python3\n# @hookstack setup-check-install-deps\n\"\"\"Checks that project dependencies are up to date at session start (SessionStart).\"\"\"\nimport os\nimport sys\n\nSPECS = [\n    (\"pnpm-lock.yaml\", \"node_modules\", \"pnpm install\"),\n    (\"package-lock.json\", \"node_modules\", \"npm ci\"),\n    (\"yarn.lock\", \"node_modules\", \"yarn install --frozen-lockfile\"),\n    # Projet uv : le lockfile uv.lock est la référence (requirements.txt n'est pas un lockfile).\n    (\"uv.lock\", \".venv\", \"uv sync\"),\n]\n\n\ndef run(*, exists=None, stat=None, project_dir=None):\n    if project_dir is None:\n        project_dir = os.environ.get(\"CLAUDE_PROJECT_DIR\") or os.getcwd()\n    if exists is None:\n        exists = lambda f: os.path.exists(os.path.join(project_dir, f))\n    if stat is None:\n        stat = os.stat\n\n    warnings = []\n    for lockfile, modules_dir, install_cmd in SPECS:\n        lock = os.path.join(project_dir, lockfile)\n        mods = os.path.join(project_dir, modules_dir)\n        if not exists(lock):\n            continue\n        if not exists(mods):\n            warnings.append(\n                f\"[setup-check-deps] ⚠ {modules_dir} absent — lancez : {install_cmd}\\n\"\n            )\n            continue\n        if stat(lock).st_mtime > stat(mods).st_mtime:\n            warnings.append(\n                f\"[setup-check-deps] ⚠ {lockfile} plus récent que {modules_dir} — lancez : {install_cmd}\\n\"\n            )\n\n    return {\"warnings\": warnings, \"message\": \"\".join(warnings)}\n\n\nif __name__ == \"__main__\":\n    result = run()\n    if result[\"message\"]:\n        sys.stderr.write(result[\"message\"])\n",
-      "python_test_snippet": "import importlib.util\nimport os\nfrom pathlib import Path\n\n_HOOK = Path(__file__).resolve().parents[2] / \".claude\" / \"hooks\" / \"setup-check-deps.py\"\n_spec = importlib.util.spec_from_file_location(\"setup_check_deps\", _HOOK)\nhook = importlib.util.module_from_spec(_spec)\n_spec.loader.exec_module(hook)\n\n\nclass _Stat:\n    def __init__(self, mtime):\n        self.st_mtime = mtime\n\n\ndef _deps(present, mtimes=None):\n    # Le hook join(project_dir, fichier) : on compare sur le basename et on indexe\n    # les mtimes par basename, comme le fait le hook.\n    mtimes = mtimes or {}\n    return {\n        \"exists\": lambda f: os.path.basename(f) in present,\n        \"stat\": lambda f: _Stat(mtimes.get(os.path.basename(f), 100)),\n        \"project_dir\": \"/repo\",\n    }\n\n\ndef test_warns_when_modules_dir_missing():\n    result = hook.run(**_deps({\"uv.lock\"}))\n    assert \"uv.lock\" in result[\"message\"]\n    assert \".venv absent\" in result[\"message\"]\n\n\ndef test_warns_when_lockfile_newer_than_modules():\n    present = {\"uv.lock\", \".venv\"}\n    mtimes = {\"uv.lock\": 200, \".venv\": 100}\n    result = hook.run(**_deps(present, mtimes))\n    assert \"plus récent\" in result[\"message\"]\n\n\ndef test_silent_when_up_to_date():\n    present = {\"uv.lock\", \".venv\"}\n    mtimes = {\"/repo/uv.lock\": 50, \"/repo/.venv\": 100}\n    result = hook.run(**_deps(present, mtimes))\n    assert result[\"message\"] == \"\"\n\n\ndef test_ignores_unknown_manifests():\n    result = hook.run(**_deps({\"Cargo.toml\"}))\n    assert result[\"message\"] == \"\"\n"
+      "python_test_snippet": "import importlib.util\nimport os\nfrom pathlib import Path\n\n_HOOK = Path(__file__).resolve().parents[2] / \".claude\" / \"hooks\" / \"setup-check-deps.py\"\n_spec = importlib.util.spec_from_file_location(\"setup_check_deps\", _HOOK)\nhook = importlib.util.module_from_spec(_spec)\n_spec.loader.exec_module(hook)\n\n\nclass _Stat:\n    def __init__(self, mtime):\n        self.st_mtime = mtime\n\n\ndef _deps(present, mtimes=None):\n    # Le hook join(project_dir, fichier) : on compare sur le basename et on indexe\n    # les mtimes par basename, comme le fait le hook.\n    mtimes = mtimes or {}\n    return {\n        \"exists\": lambda f: os.path.basename(f) in present,\n        \"stat\": lambda f: _Stat(mtimes.get(os.path.basename(f), 100)),\n        \"project_dir\": \"/repo\",\n    }\n\n\ndef test_warns_when_modules_dir_missing():\n    result = hook.run(**_deps({\"uv.lock\"}))\n    assert \".venv absent\" in result[\"message\"]\n    assert \"uv sync\" in result[\"message\"]\n\n\ndef test_warns_when_lockfile_newer_than_modules():\n    present = {\"uv.lock\", \".venv\"}\n    mtimes = {\"uv.lock\": 200, \".venv\": 100}\n    result = hook.run(**_deps(present, mtimes))\n    assert \"plus récent\" in result[\"message\"]\n\n\ndef test_silent_when_up_to_date():\n    present = {\"uv.lock\", \".venv\"}\n    mtimes = {\"/repo/uv.lock\": 50, \"/repo/.venv\": 100}\n    result = hook.run(**_deps(present, mtimes))\n    assert result[\"message\"] == \"\"\n\n\ndef test_ignores_unknown_manifests():\n    result = hook.run(**_deps({\"Cargo.toml\"}))\n    assert result[\"message\"] == \"\"\n"
     },
     "name": "Dependency check and install at startup",
     "slug": "setup-check-install-deps",

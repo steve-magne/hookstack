@@ -318,7 +318,6 @@ export const SIGNAL_LABELS = {
 	github: "a GitHub-hosted repo",
 	tests: "a test suite",
 	skills: "Claude Code skills or commands",
-	changelog: "a changelog file",
 	registry: "a hook registry",
 	tts: "a system TTS voice",
 	slack: "a Slack webhook",
@@ -347,7 +346,6 @@ export const AUTO_DETECT = {
 	github: ["session-start-github-context"],
 	tests: ["file-changed-run-tests"],
 	skills: ["user-prompt-expansion-skill-context"],
-	changelog: ["stop-generate-changelog"],
 	registry: [
 		"registry-validate-on-change",
 		"registry-changed-auto-sync",
@@ -480,11 +478,6 @@ function hasSkillsSignal(root, existsSync) {
 	);
 }
 
-// True when the root holds a CHANGELOG.md to keep up to date.
-function hasChangelogSignal(root, existsSync) {
-	return existsSync(join(root, "CHANGELOG.md"));
-}
-
 // True for a HookStack-style catalogue repo: `registry/registry.json` plus the
 // `.claude/sync-hooks.mjs` the registry hooks shell out to (avoids installing
 // `registry-validate-on-change` in a repo that has no validation script).
@@ -577,7 +570,6 @@ export function detectProjectSignals(
 	if (hasTestsSignal(root, { readdirSync, readFileSync }))
 		signals.add("tests");
 	if (hasSkillsSignal(root, existsSync)) signals.add("skills");
-	if (hasChangelogSignal(root, existsSync)) signals.add("changelog");
 	if (hasRegistrySignal(root, existsSync)) signals.add("registry");
 	if (hasTtsSignal({ platform, env, existsSync })) signals.add("tts");
 	if (hasSlackSignal(root, { env, readFileSync })) signals.add("slack");

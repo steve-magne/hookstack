@@ -418,18 +418,6 @@ describe("detectProjectSignals", () => {
 		}
 	});
 
-	it("détecte changelog via CHANGELOG.md", () => {
-		const readdirSync = fakeReaddir({ [ROOT]: [] });
-		const existsSync = (p) => p.endsWith("CHANGELOG.md");
-		expect(
-			detectProjectSignals(ROOT, {
-				readdirSync,
-				readFileSync: noPkg,
-				existsSync,
-			}),
-		).toEqual(["changelog"]);
-	});
-
 	it("détecte registry seulement avec registry.json ET sync-hooks.mjs", () => {
 		const readdirSync = fakeReaddir({ [ROOT]: [] });
 		const both = (p) =>
@@ -626,12 +614,6 @@ describe("suggestHooksForSignals", () => {
 	it("mappe skills → user-prompt-expansion-skill-context", () => {
 		expect(suggestHooksForSignals(["skills"])).toEqual([
 			"user-prompt-expansion-skill-context",
-		]);
-	});
-
-	it("mappe changelog → stop-generate-changelog", () => {
-		expect(suggestHooksForSignals(["changelog"])).toEqual([
-			"stop-generate-changelog",
 		]);
 	});
 
