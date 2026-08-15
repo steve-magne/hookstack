@@ -877,62 +877,6 @@
     ]
   },
   {
-    "benefit": "An automatic changelog of what the agent shipped",
-    "category": "documentation",
-    "default_on": false,
-    "description": "At session end, captures the diff of modified files and appends it to a timestamped change log, creating an automatic changelog of what the agent produced.",
-    "hook_type": "Stop",
-    "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// @hookstack stop-generate-changelog\n// Génère une entrée de changelog depuis le diff git de la session (Stop)\nimport { execSync } from \"node:child_process\";\nimport { appendFileSync, existsSync } from \"node:fs\";\nimport { join } from \"node:path\";\nimport { fileURLToPath } from \"node:url\";\n\nexport function run({\n\texec,\n\tappend = appendFileSync,\n\texists = existsSync,\n\tprojectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n\tnow = () => new Date().toISOString(),\n} = {}) {\n\tconst doExec =\n\t\texec ??\n\t\t((cmd) => {\n\t\t\ttry {\n\t\t\t\treturn execSync(cmd, {\n\t\t\t\t\tencoding: \"utf8\",\n\t\t\t\t\ttimeout: 10_000,\n\t\t\t\t\tcwd: projectDir,\n\t\t\t\t}).trim();\n\t\t\t} catch {\n\t\t\t\treturn \"\";\n\t\t\t}\n\t\t});\n\n\tconst branch = doExec(\"git branch --show-current\");\n\tconst diff = doExec(\n\t\t\"git diff --stat HEAD~1 HEAD 2>/dev/null || git diff --stat HEAD\",\n\t);\n\tconst commits = doExec('git log -5 --pretty=\"- %s (%h)\"');\n\n\tif (!diff && !commits) return null;\n\n\tconst date = now().split(\"T\")[0];\n\tconst entry = [\n\t\t`\\n## ${date} — Session sur \\`${branch || \"main\"}\\``,\n\t\t\"\",\n\t\tcommits ? `### Commits\\n${commits}` : \"\",\n\t\tdiff ? `### Fichiers modifiés\\n\\`\\`\\`\\n${diff}\\n\\`\\`\\`` : \"\",\n\t]\n\t\t.filter(Boolean)\n\t\t.join(\"\\n\");\n\n\tconst changelogPath = join(projectDir, \"CHANGELOG.md\");\n\tif (!exists(changelogPath)) {\n\t\treturn {\n\t\t\twritten: false,\n\t\t\tmessage: \"[session-changelog] CHANGELOG.md absent — entrée ignorée.\\n\",\n\t\t};\n\t}\n\n\tappend(changelogPath, `${entry}\\n`);\n\treturn {\n\t\twritten: true,\n\t\tentry,\n\t\tmessage: \"[session-changelog] ✓ Entrée ajoutée dans CHANGELOG.md\\n\",\n\t};\n}\n\n/* v8 ignore next 4 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n\tconst result = run();\n\tif (result?.message) process.stderr.write(result.message);\n}\n",
-      "config": {
-        "hooks": {
-          "Stop": [
-            {
-              "hooks": [
-                {
-                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-changelog.mjs",
-                  "type": "command"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "script_path": ".claude/hooks/session-changelog.mjs",
-      "security": {
-        "codeql": {
-          "critical": 0,
-          "high": 0,
-          "low": 0,
-          "medium": 0,
-          "scannedAt": "2026-06-05T02:10:00.374Z"
-        },
-        "snyk": {
-          "high": 0,
-          "low": 0,
-          "medium": 0,
-          "scannedAt": "2026-06-03T12:35:39.440Z"
-        }
-      },
-      "test_snippet": "// @vitest-environment node\nimport { describe, expect, it, vi } from \"vitest\";\nimport { run } from \"../../.claude/hooks/session-changelog.mjs\";\n\nconst exec = (cmd) => {\n\tif (cmd.includes(\"branch\")) return \"main\";\n\tif (cmd.includes(\"diff\")) return \" file | 2 +-\";\n\tif (cmd.includes(\"log\")) return \"- fix (abc)\";\n\treturn \"\";\n};\n\ndescribe(\"session-changelog\", () => {\n\tit(\"ajoute une entrée si CHANGELOG existe\", () => {\n\t\tconst append = vi.fn();\n\t\tconst r = run({\n\t\t\texec,\n\t\t\tappend,\n\t\t\texists: () => true,\n\t\t\tprojectDir: \"/p\",\n\t\t\tnow: () => \"2026-06-02T00:00:00Z\",\n\t\t});\n\t\texpect(r.written).toBe(true);\n\t\texpect(append).toHaveBeenCalled();\n\t});\n\tit(\"ignore si CHANGELOG absent\", () => {\n\t\tconst r = run({\n\t\t\texec,\n\t\t\tappend: vi.fn(),\n\t\t\texists: () => false,\n\t\t\tprojectDir: \"/p\",\n\t\t\tnow: () => \"2026-06-02T00:00:00Z\",\n\t\t});\n\t\texpect(r.written).toBe(false);\n\t});\n\tit(\"retourne null sans diff ni commits\", () => {\n\t\texpect(\n\t\t\trun({ exec: () => \"\", exists: () => true, projectDir: \"/p\" }),\n\t\t).toBeNull();\n\t});\n});\n",
-      "type": "settings_json"
-    },
-    "name": "Session summary generation",
-    "slug": "stop-generate-changelog",
-    "tags": [
-      "documentation",
-      "changelog",
-      "git",
-      "summary"
-    ],
-    "trigger": "*",
-    "use_cases": [
-      "Automatic changelog",
-      "Change traceability",
-      "Post-hoc review"
-    ]
-  },
-  {
     "benefit": "Forces uv and pnpm, kills pip/npm drift",
     "category": "validation",
     "default_on": true,
@@ -1692,58 +1636,6 @@
       "Alert the user during long autonomous runs",
       "Works in silent environments where TTS is unwanted",
       "Minimal-distraction attention signal"
-    ]
-  },
-  {
-    "benefit": "A satisfying chime the moment Claude finishes",
-    "category": "notification",
-    "default_on": true,
-    "description": "Plays a completion sound (Hero.aiff on macOS, paplay on Linux, PowerShell beep on Windows) when the agent stops. Instant audio feedback without TTS, no voice engine required.",
-    "hook_type": "Stop",
-    "implementation": {
-      "code_snippet": "#!/usr/bin/env node\n// @hookstack stop-sound\n// Joue un son de completion quand Claude termine une tâche (Stop)\nimport { execSync } from \"node:child_process\";\nimport { fileURLToPath } from \"node:url\";\n\nfunction defaultExec(cmd) {\n\texecSync(cmd, { timeout: 5_000, stdio: \"ignore\", shell: true });\n}\n\nexport function run({ exec = defaultExec, platform = process.platform } = {}) {\n\ttry {\n\t\tif (platform === \"darwin\") {\n\t\t\texec(\"afplay /System/Library/Sounds/Hero.aiff\");\n\t\t\texec(\n\t\t\t\t'osascript -e \\'display notification \"Claude has finished working\" with title \"Claude Code\"\\'',\n\t\t\t);\n\t\t} else if (platform === \"linux\") {\n\t\t\texec(\n\t\t\t\t\"paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || aplay /usr/share/sounds/alsa/Front_Center.wav 2>/dev/null || true\",\n\t\t\t);\n\t\t} else if (platform === \"win32\") {\n\t\t\texec('powershell -c \"[console]::beep(880, 400)\"');\n\t\t}\n\t} catch {\n\t\t// Son absent ou erreur — non bloquant\n\t}\n\treturn null;\n}\n\n/* v8 ignore next 3 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n\trun();\n}\n",
-      "config": {
-        "hooks": {
-          "Stop": [
-            {
-              "hooks": [
-                {
-                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-sound.mjs",
-                  "type": "command"
-                }
-              ],
-              "matcher": ""
-            }
-          ]
-        }
-      },
-      "script_path": ".claude/hooks/stop-sound.mjs",
-      "security": {
-        "codeql": {
-          "critical": 0,
-          "high": 0,
-          "low": 0,
-          "medium": 0,
-          "scannedAt": "2026-06-05T02:10:00.374Z"
-        }
-      },
-      "test_snippet": "// @vitest-environment node\nimport { describe, expect, it, vi } from \"vitest\";\nimport { run } from \"../../.claude/hooks/stop-sound.mjs\";\n\ndescribe(\"stop-sound\", () => {\n\tit(\"joue Hero.aiff sur macOS\", () => {\n\t\tconst exec = vi.fn();\n\t\trun({ exec, platform: \"darwin\" });\n\t\texpect(exec).toHaveBeenCalledWith(expect.stringContaining(\"Hero.aiff\"));\n\t});\n\n\tit(\"affiche une notification macOS à la fin\", () => {\n\t\tconst exec = vi.fn();\n\t\trun({ exec, platform: \"darwin\" });\n\t\texpect(exec).toHaveBeenCalledWith(\n\t\t\texpect.stringContaining(\"display notification\"),\n\t\t);\n\t});\n\n\tit(\"joue paplay sur Linux\", () => {\n\t\tconst exec = vi.fn();\n\t\trun({ exec, platform: \"linux\" });\n\t\texpect(exec).toHaveBeenCalled();\n\t});\n\n\tit(\"joue un beep PowerShell sur Windows\", () => {\n\t\tconst exec = vi.fn();\n\t\trun({ exec, platform: \"win32\" });\n\t\texpect(exec).toHaveBeenCalledWith(expect.stringContaining(\"powershell\"));\n\t});\n\n\tit(\"retourne null (non bloquant)\", () => {\n\t\tconst exec = vi.fn();\n\t\texpect(run({ exec, platform: \"darwin\" })).toBeNull();\n\t});\n\n\tit(\"ne leve pas d'erreur si exec echoue\", () => {\n\t\tconst exec = vi.fn(() => {\n\t\t\tthrow new Error(\"afplay absent\");\n\t\t});\n\t\texpect(() => run({ exec, platform: \"darwin\" })).not.toThrow();\n\t});\n\n\tit(\"ne joue rien sur plateforme inconnue\", () => {\n\t\tconst exec = vi.fn();\n\t\trun({ exec, platform: \"freebsd\" });\n\t\texpect(exec).not.toHaveBeenCalled();\n\t});\n});\n",
-      "type": "settings_json"
-    },
-    "name": "System sound on task completion",
-    "slug": "stop-sound",
-    "tags": [
-      "stop",
-      "sound",
-      "audio",
-      "completion",
-      "cross-platform"
-    ],
-    "trigger": "*",
-    "use_cases": [
-      "Audio feedback when a long task finishes",
-      "Minimal-distraction alternative to TTS",
-      "Complement stop-tts-completion with a lighter signal"
     ]
   },
   {

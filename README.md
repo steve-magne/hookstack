@@ -85,7 +85,7 @@ It finds the hooks you've locally modified and opens a PR with your changes — 
 
 ## The HookStack evolution
 
-**105 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+**103 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">
@@ -199,7 +199,6 @@ Fires when a new worktree is created. Copy `.env`, assign a free port, run `pnpm
 ### Notification
 
 - **notification-slack** — Pings your Slack when the agent needs you mid-session
-- **stop-sound** — A completion chime the moment Claude finishes
 - **stop-tts-completion** — Get told out loud the moment work is done
 
 ### Workflow
@@ -209,8 +208,6 @@ Fires when a new worktree is created. Copy `.env`, assign a free port, run `pnpm
 - **registry-changed-auto-sync** — Re-syncs `registry.json` whenever a hook `.mjs` is edited (meta: powers this repo)
 
 ### Documentation
-
-- **stop-generate-changelog** — An automatic changelog of what the agent shipped, session by session
 
 ---
 

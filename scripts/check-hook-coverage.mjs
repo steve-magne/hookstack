@@ -26,7 +26,6 @@ export const EXCEPTIONS = [
 	"pytest.mjs",
 	"reload-direnv.mjs",
 	"run-tests.mjs",
-	"session-changelog.mjs",
 	"session-start-github-context.mjs",
 	"session-start-pull-if-main.mjs",
 	"session-start-worktree-if-main.mjs",

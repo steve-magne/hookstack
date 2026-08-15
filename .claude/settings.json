@@ -300,10 +300,6 @@
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/session-changelog.mjs"
-          },
-          {
-            "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-quality-check.mjs",
             "timeout": 600,
             "statusMessage": "Vérification qualité en cours..."
@@ -323,10 +319,6 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/i18n-validation.mjs"
-          },
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-sound.mjs"
           },
           {
             "type": "command",
