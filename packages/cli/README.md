@@ -16,7 +16,7 @@ That's it. The CLI fetches the hooks, shows you what will be installed, and patc
 
 Running `install` with no `--hooks` installs the default HookStack — and **detects your project's setup** to pick the right hooks:
 
-- **Stack detection** (language): looks for `package.json`/`tsconfig.json`/`pyproject.toml`/etc. and skips default hooks that don't apply — e.g. no Biome hook in a pure Python project. When no TypeScript/Python toolchain is found, only the universal hooks are installed (the skipped slugs are listed), never tsc/ruff/pytest hooks the project can't run. Override with `--stacks=typescript,python` or `--no-detect`.
+- **Stack detection** (language): looks for `package.json`/`tsconfig.json`/`pyproject.toml`/`pom.xml`/`build.gradle`/etc. and skips default hooks that don't apply — e.g. no Biome hook in a pure Python project, no google-java-format hook in a pure JS project. When no TypeScript/Python/Java toolchain is found, only the universal hooks are installed (the skipped slugs are listed), never tsc/ruff/pytest/java hooks the project can't run. Override with `--stacks=typescript,python,java` or `--no-detect`.
 - **Contextual detection** (systems): spots an i18n setup, an `okf/` knowledge bundle, a Next.js app, a front-end codebase, a GitHub-hosted repo, a test suite, Claude Code skills, a hook registry, a system TTS voice, a Slack webhook, or a multi-surface docs setup — and suggests (interactive) or auto-adds (`--yes`) the matching non-default hooks — see [Smart toolstack detection](#smart-toolstack-detection).
 
 An explicit `--hooks=` list is always installed as-is, never filtered. `--no-detect` opts out of both detection layers.
@@ -42,8 +42,8 @@ Options:
   --with-tests       Also install unit tests into tests/hooks/ — vitest (.mjs) or pytest
                      (Python projects, .py variants) — install, project scope only
   --stack <s>        "auto" (default) — filter hooks to the detected project toolchain;
-                     "typescript" / "python" force one stack; "all" disables filtering
-  --stacks <list>    Override stack detection (e.g. --stacks=typescript,python)
+                     "typescript" / "python" / "java" force one stack; "all" disables filtering
+  --stacks <list>    Override stack detection (e.g. --stacks=typescript,python,java)
   --no-detect        Skip all detection (stack + contextual systems), install the full default set
   --yes, -y          Skip prompts (non-interactive / CI)
   --version, -v      Print version

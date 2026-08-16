@@ -40,11 +40,11 @@ Installation takes under a minute.
 npx hookstack-cli@latest install
 ```
 
-That's it. The CLI **detects your project's setup** — its language stack (no Biome in a pure Python project) *and* the systems it uses (i18n, an `okf/` knowledge bundle, Next.js, a front-end codebase, a GitHub-hosted repo, a test suite, Claude Code skills, a hook registry, a system TTS voice, a Slack webhook, a multi-surface docs setup) — then walks you through picking hooks, writes the hook scripts (`.mjs`, or `.py` variants on Python projects), and patches the right config file. No manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent; `--no-detect` skips detection.
+That's it. The CLI **detects your project's setup** — its language stack (no Biome in a pure Python project, no google-java-format in a pure JS project) *and* the systems it uses (i18n, an `okf/` knowledge bundle, Next.js, a front-end codebase, a GitHub-hosted repo, a test suite, Claude Code skills, a hook registry, a system TTS voice, a Slack webhook, a multi-surface docs setup) — then walks you through picking hooks, writes the hook scripts (`.mjs`, or `.py` variants on Python projects), and patches the right config file. No manual copy-paste, no JSON editing. The interactive menu lets you pick your target agent; `--no-detect` skips detection.
 
 >Want to fine-tune your Hookstack? Go to **[hookstack.app](https://www.hookstack.app)** — browse the full catalogue, select exactly what you need, copy the generated command and paste it in your terminal
 
-**Language-aware by default.** The CLI detects your project's toolchain (TypeScript/Node: `package.json`/`tsconfig.json` · Python: `pyproject.toml`/`requirements.txt`/… ) and only installs hooks that match it — a Python repo gets the ruff/pyright/pytest stack, never hooks that shell out to `npm`/`tsc`/`biome`. Mixed repos get both. When no TypeScript/Python toolchain is detected (Go, Rust, bare JS…), only the universal hooks are installed — never tsc/biome/ruff/pytest hooks the project can't run — and the CLI says so. Override with `--stack=typescript|python|all` or `--no-detect`.
+**Language-aware by default.** The CLI detects your project's toolchain (TypeScript/Node: `package.json`/`tsconfig.json` · Python: `pyproject.toml`/`requirements.txt`/… · Java: `pom.xml`/`build.gradle`/`gradlew`) and only installs hooks that match it — a Python repo gets the ruff/pyright/pytest stack, a Java repo the google-java-format/compile/test stack, never hooks that shell out to another ecosystem's tools. Mixed repos get both. When no TypeScript/Python/Java toolchain is detected (Go, Rust, bare JS…), only the universal hooks are installed — never tsc/biome/ruff/pytest/java hooks the project can't run — and the CLI says so. Override with `--stack=typescript|python|java|all` or `--no-detect`.
 
 **Python hooks, Python tests.** On a Python project the hooks are installed as real `.py` scripts (`python3 …` commands) and `--with-tests` writes **pytest** tests instead of vitest tests — vitest is never installed on Python projects, so your GitHub Actions CI stays Python-only with no `npm` added to test the hooks. Every hook in the default stack carries a Python variant: a default Python install currently lands **66 hooks, 100 % as `.py`, zero `.mjs` fallback** (see the install summary).
 
@@ -54,6 +54,7 @@ npx hookstack-cli@latest install
 
 # Force one toolchain, or install everything regardless of the detected stack
 npx hookstack-cli@latest install --stack=typescript
+npx hookstack-cli@latest install --stack=java
 npx hookstack-cli@latest install --stack=all
 ```
 
@@ -85,7 +86,7 @@ It finds the hooks you've locally modified and opens a PR with your changes — 
 
 ## The HookStack evolution
 
-**101 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+**105 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">
@@ -93,7 +94,7 @@ It finds the hooks you've locally modified and opens a PR with your changes — 
   </a>
 </p>
 
-<sub>First hook 2026-05-29 · latest 2026-08-14 · explore the live timeline → <a href="https://www.hookstack.app/evolution"><b>hookstack.app/evolution</b></a></sub>
+<sub>First hook 2026-05-29 · latest 2026-08-16 · explore the live timeline → <a href="https://www.hookstack.app/evolution"><b>hookstack.app/evolution</b></a></sub>
 
 <!-- HOOKS_TIMELINE:END -->
 

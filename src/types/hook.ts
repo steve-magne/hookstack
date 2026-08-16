@@ -1,8 +1,9 @@
-export type Stack = "typescript" | "python";
+export type Stack = "typescript" | "python" | "java";
 
 export const STACK_LABELS: Record<Stack, string> = {
 	typescript: "TypeScript",
 	python: "Python",
+	java: "Java",
 };
 
 export const STACK_COLORS: Record<Stack, { chip: string; active: string }> = {
@@ -15,6 +16,11 @@ export const STACK_COLORS: Record<Stack, { chip: string; active: string }> = {
 		chip: "border-yellow-500/40 bg-yellow-500/10 text-yellow-300",
 		active:
 			"border-yellow-500/60 bg-yellow-500/20 text-yellow-200 ring-1 ring-yellow-500/30",
+	},
+	java: {
+		chip: "border-orange-500/40 bg-orange-500/10 text-orange-300",
+		active:
+			"border-orange-500/60 bg-orange-500/20 text-orange-200 ring-1 ring-orange-500/30",
 	},
 };
 

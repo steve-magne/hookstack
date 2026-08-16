@@ -26,10 +26,12 @@ interface Props {
 const STACK_MONOGRAM: Record<Stack, string> = {
 	typescript: "TS",
 	python: "Py",
+	java: "Ja",
 };
 const STACK_MONO_COLOR: Record<Stack, string> = {
 	typescript: "bg-blue-500/20 text-blue-200",
 	python: "bg-yellow-500/20 text-yellow-100",
+	java: "bg-orange-500/20 text-orange-100",
 };
 
 export function HookRow({

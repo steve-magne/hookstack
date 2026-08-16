@@ -5517,5 +5517,210 @@
       "code_snippet": "#!/usr/bin/env node\n// @hookstack seo-schema-validation\n// Validates JSON-LD schema.org blocks after editing an HTML-like file (PostToolUse Write|Edit).\n// Adapted from https://github.com/AgriciDaniel/claude-seo (hooks/validate-schema.py).\n// Blocking (exit code 2) when a block ships placeholder text or deprecated/retired\n// schema.org types; a non-blocking warning otherwise. Silent when no markup is present.\nimport { readFileSync, statSync } from \"node:fs\";\nimport { fileURLToPath } from \"node:url\";\n\n// <script type=\"application/ld+json\">…</script>, attributes order-insensitive-ish (type first).\nconst LD_JSON_RE =\n\t/<script\\s+type=[\"']application\\/ld\\+json[\"']\\s*>(.*?)<\\/script>/gis;\n\nconst VALID_EXTENSIONS = [\n\t\".html\",\n\t\".htm\",\n\t\".jsx\",\n\t\".tsx\",\n\t\".vue\",\n\t\".svelte\",\n\t\".php\",\n\t\".ejs\",\n];\n\n// Files above this size are typically generated/minified bundles — skip them to\n// bound memory and hook latency.\nconst MAX_FILE_BYTES = 10 * 1024 * 1024;\n\n// Placeholder text that must never reach production (Google rejects it and\n// competitors index it).\nconst PLACEHOLDERS = [\n\t\"[Business Name]\",\n\t\"[City]\",\n\t\"[State]\",\n\t\"[Phone]\",\n\t\"[Address]\",\n\t\"[Your\",\n\t\"[INSERT\",\n\t\"REPLACE\",\n\t\"[URL]\",\n\t\"[Email]\",\n];\n\n// Types Google no longer accepts for rich results. Retired types also stop\n// being valid Schema.org vocabulary.\nconst DEPRECATED_TYPES = {\n\tHowTo: \"deprecated September 2023\",\n\tSpecialAnnouncement: \"deprecated July 31, 2025\",\n\tCourseInfo: \"retired June 2025\",\n\tEstimatedSalary: \"retired June 2025\",\n\tLearningVideo: \"retired June 2025\",\n\tClaimReview: \"retired June 2025; fact-check rich results discontinued\",\n\tVehicleListing:\n\t\t\"retired June 2025; vehicle listing structured data discontinued\",\n};\n\nfunction defaultGetSize(filePath) {\n\treturn statSync(filePath).size;\n}\n\nexport function run(\n\tinput,\n\t{ readFile = readFileSync, getSize = defaultGetSize } = {},\n) {\n\tconst filePath = input.tool_input?.file_path ?? \"\";\n\tif (!VALID_EXTENSIONS.some((ext) => filePath.toLowerCase().endsWith(ext))) {\n\t\treturn null;\n\t}\n\n\tlet size;\n\ttry {\n\t\tsize = getSize(filePath);\n\t} catch {\n\t\treturn null; // file missing/unreadable → nothing to validate\n\t}\n\tif (size > MAX_FILE_BYTES) return null;\n\n\tlet content;\n\ttry {\n\t\tcontent = readFile(filePath, \"utf8\");\n\t} catch {\n\t\treturn null;\n\t}\n\n\tconst errors = validateBlocks(content);\n\tif (!errors.length) return null;\n\n\tconst critical = errors.filter((e) =>\n\t\t/placeholder|deprecated|retired/i.test(e),\n\t);\n\tconst warnings = errors.filter((e) => !critical.includes(e));\n\n\tconst lines = [];\n\tif (warnings.length) {\n\t\tlines.push(\"⚠️  Schema validation warnings:\");\n\t\tlines.push(...warnings.map((w) => `  - ${w}`));\n\t}\n\tif (critical.length) {\n\t\tlines.push(\"🛑 Schema validation ERRORS (blocking):\");\n\t\tlines.push(...critical.map((e) => `  - ${e}`));\n\t}\n\tconst message = `[schema] ${filePath}\\n${lines.join(\"\\n\")}\\n`;\n\n\treturn critical.length ? { exitCode: 2, message } : { message };\n}\n\nfunction validateBlocks(content) {\n\tconst errors = [];\n\tlet blockNum = 0;\n\tfor (const match of content.matchAll(LD_JSON_RE)) {\n\t\tblockNum++;\n\t\tconst raw = match[1].trim();\n\t\tlet data;\n\t\ttry {\n\t\t\tdata = JSON.parse(raw);\n\t\t} catch (e) {\n\t\t\terrors.push(`Block ${blockNum}: invalid JSON; ${e.message}`);\n\t\t\tcontinue;\n\t\t}\n\t\tconst objects = Array.isArray(data) ? data : [data];\n\t\tfor (const obj of objects) validateObject(obj, blockNum, errors);\n\t}\n\treturn errors;\n}\n\nfunction validateObject(obj, blockNum, errors) {\n\tif (typeof obj !== \"object\" || obj === null) {\n\t\terrors.push(`Block ${blockNum}: expected a JSON object`);\n\t\treturn;\n\t}\n\tconst prefix = `Block ${blockNum}`;\n\n\tif (!Object.hasOwn(obj, \"@context\")) {\n\t\terrors.push(`${prefix}: missing @context`);\n\t} else if (\n\t\tobj[\"@context\"] !== \"https://schema.org\" &&\n\t\tobj[\"@context\"] !== \"http://schema.org\"\n\t) {\n\t\terrors.push(`${prefix}: @context should be 'https://schema.org'`);\n\t}\n\n\tif (!Object.hasOwn(obj, \"@type\")) {\n\t\terrors.push(`${prefix}: missing @type`);\n\t}\n\n\tconst text = JSON.stringify(obj);\n\tfor (const placeholder of PLACEHOLDERS) {\n\t\tif (text.toLowerCase().includes(placeholder.toLowerCase())) {\n\t\t\terrors.push(`${prefix}: contains placeholder text: ${placeholder}`);\n\t\t}\n\t}\n\n\tconst types = Array.isArray(obj[\"@type\"]) ? obj[\"@type\"] : [obj[\"@type\"]];\n\tfor (const type of types) {\n\t\tif (type && DEPRECATED_TYPES[type]) {\n\t\t\terrors.push(`${prefix}: @type '${type}' is ${DEPRECATED_TYPES[type]}`);\n\t\t}\n\t}\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n\tconst input = JSON.parse(readFileSync(0, \"utf8\"));\n\tconst result = run(input);\n\tif (result?.message) process.stderr.write(result.message);\n\tif (result?.exitCode) process.exit(result.exitCode);\n}\n",
       "test_snippet": "// @vitest-environment node\nimport { describe, expect, it } from \"vitest\";\nimport { run } from \"../../.claude/hooks/seo-schema-validation.mjs\";\n\nconst input = (file_path) => ({ tool_input: { file_path } });\nconst deps = (content, getSize = () => 100) => ({\n\treadFile: () => content,\n\tgetSize,\n});\nconst PAGE = \"/p/src/app/about/page.tsx\";\nconst HTML = \"/p/public/index.html\";\n\nconst VALID_BLOCK = (extra = {}) =>\n\t`<script type=\"application/ld+json\">${JSON.stringify({\n\t\t\"@context\": \"https://schema.org\",\n\t\t\"@type\": \"Article\",\n\t\t...extra,\n\t})}</script>`;\n\ndescribe(\"seo-schema-validation\", () => {\n\tit(\"ignore les fichiers hors extensions HTML-like\", () => {\n\t\texpect(run(input(\"/p/README.md\"), deps(\"\"))).toBeNull();\n\t\texpect(run(input(\"/p/lib/utils.ts\"), deps(\"\"))).toBeNull();\n\t});\n\n\tit(\"valide aussi les extensions en majuscules\", () => {\n\t\tconst r = run(\n\t\t\tinput(\"/p/public/INDEX.HTML\"),\n\t\t\tdeps(`<script type=\"application/ld+json\">{invalid}</script>`),\n\t\t);\n\t\texpect(r?.message).toContain(\"invalid JSON\");\n\t\texpect(r?.exitCode).toBeUndefined();\n\t});\n\n\tit(\"ignore un fichier illisible\", () => {\n\t\texpect(\n\t\t\trun(input(PAGE), {\n\t\t\t\treadFile: () => {\n\t\t\t\t\tthrow new Error(\"ENOENT\");\n\t\t\t\t},\n\t\t\t\tgetSize: () => 100,\n\t\t\t}),\n\t\t).toBeNull();\n\t});\n\n\tit(\"ignore un fichier de plus de 10 Mo\", () => {\n\t\texpect(run(input(HTML), deps(\"\", 11 * 1024 * 1024))).toBeNull();\n\t});\n\n\tit(\"silencieux quand aucun bloc ld+json n'est présent\", () => {\n\t\texpect(run(input(HTML), deps(\"<html><body>hi</body></html>\"))).toBeNull();\n\t});\n\n\tit(\"silencieux quand le bloc est valide\", () => {\n\t\texpect(run(input(HTML), deps(VALID_BLOCK()))).toBeNull();\n\t});\n\n\tit(\"signale un JSON invalide sans bloquer\", () => {\n\t\tconst r = run(\n\t\t\tinput(HTML),\n\t\t\tdeps('<script type=\"application/ld+json\">{oops</script>'),\n\t\t);\n\t\texpect(r?.message).toContain(\"invalid JSON\");\n\t\texpect(r?.message).toContain(\"Block 1\");\n\t\texpect(r?.exitCode).toBeUndefined();\n\t});\n\n\tit(\"signale un @context manquant sans bloquer\", () => {\n\t\tconst r = run(\n\t\t\tinput(HTML),\n\t\t\tdeps(`<script type=\"application/ld+json\">{\"@type\":\"Article\"}</script>`),\n\t\t);\n\t\texpect(r?.message).toContain(\"missing @context\");\n\t\texpect(r?.exitCode).toBeUndefined();\n\t});\n\n\tit(\"signale un @context non schema.org sans bloquer\", () => {\n\t\tconst r = run(\n\t\t\tinput(HTML),\n\t\t\tdeps(\n\t\t\t\t`<script type=\"application/ld+json\">{\"@context\":\"https://example.com\",\"@type\":\"Article\"}</script>`,\n\t\t\t),\n\t\t);\n\t\texpect(r?.message).toContain(\"@context should be 'https://schema.org'\");\n\t\texpect(r?.exitCode).toBeUndefined();\n\t});\n\n\tit(\"signale un @type manquant sans bloquer\", () => {\n\t\tconst r = run(\n\t\t\tinput(HTML),\n\t\t\tdeps(\n\t\t\t\t`<script type=\"application/ld+json\">{\"@context\":\"https://schema.org\"}</script>`,\n\t\t\t),\n\t\t);\n\t\texpect(r?.message).toContain(\"missing @type\");\n\t\texpect(r?.exitCode).toBeUndefined();\n\t});\n\n\tit(\"bloque sur du texte placeholder\", () => {\n\t\tconst r = run(\n\t\t\tinput(HTML),\n\t\t\tdeps(\n\t\t\t\tVALID_BLOCK({ name: \"[Business Name]\", address: \"[City], [State]\" }),\n\t\t\t),\n\t\t);\n\t\texpect(r?.exitCode).toBe(2);\n\t\texpect(r?.message).toContain(\"placeholder text: [Business Name]\");\n\t\texpect(r?.message).toContain(\"(blocking)\");\n\t});\n\n\tit(\"bloque sur un type schema.org déprécié\", () => {\n\t\tconst r = run(input(HTML), deps(VALID_BLOCK({ \"@type\": \"HowTo\" })));\n\t\texpect(r?.exitCode).toBe(2);\n\t\texpect(r?.message).toContain(\"'HowTo' is deprecated September 2023\");\n\t});\n\n\tit(\"bloque sur un type retiré\", () => {\n\t\tconst r = run(input(HTML), deps(VALID_BLOCK({ \"@type\": \"ClaimReview\" })));\n\t\texpect(r?.exitCode).toBe(2);\n\t\texpect(r?.message).toContain(\"ClaimReview\");\n\t});\n\n\tit(\"valide chaque objet d'un tableau JSON-LD\", () => {\n\t\tconst r = run(\n\t\t\tinput(HTML),\n\t\t\tdeps(\n\t\t\t\t`<script type=\"application/ld+json\">[${JSON.stringify({\n\t\t\t\t\t\"@context\": \"https://schema.org\",\n\t\t\t\t\t\"@type\": \"Article\",\n\t\t\t\t})},${JSON.stringify({ \"@type\": \"BreadcrumbList\" })}]</script>`,\n\t\t\t),\n\t\t);\n\t\t// Les deux objets sont dans le même bloc script → même numéro de bloc.\n\t\texpect(r?.message).toContain(\"Block 1: missing @context\");\n\t\texpect(r?.message).not.toContain(\"invalid JSON\");\n\t\texpect(r?.exitCode).toBeUndefined();\n\t});\n\n\tit(\"liste warnings et erreurs bloquantes ensemble\", () => {\n\t\tconst r = run(\n\t\t\tinput(HTML),\n\t\t\tdeps(\n\t\t\t\t`<script type=\"application/ld+json\">${JSON.stringify({\n\t\t\t\t\t\"@type\": \"HowTo\",\n\t\t\t\t\tname: \"[Your Project Name]\",\n\t\t\t\t})}</script>`,\n\t\t\t),\n\t\t);\n\t\texpect(r?.exitCode).toBe(2);\n\t\texpect(r?.message).toContain(\"missing @context\");\n\t\texpect(r?.message).toContain(\"placeholder text: [Your\");\n\t\texpect(r?.message).toContain(\"'HowTo' is deprecated\");\n\t});\n});\n"
     }
+  },
+  {
+    "slug": "post-write-java-format",
+    "name": "Google Java Format after write",
+    "benefit": "Java lands Google-style formatted on every save",
+    "category": "validation",
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "description": "Runs google-java-format -i on the modified .java file so style is applied silently; remaining formatting errors are reported to the agent immediately.",
+    "use_cases": [
+      "Enforce Google Java Style without a CI round-trip",
+      "Auto-format the moment a file is written",
+      "Keep diffs minimal and reviewable"
+    ],
+    "tags": [
+      "java",
+      "format",
+      "google-java-format",
+      "style",
+      "quality",
+      "validation"
+    ],
+    "default_on": true,
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/java-format.mjs",
+                  "type": "command"
+                }
+              ],
+              "matcher": "Write|Edit"
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/java-format.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// @hookstack post-write-java-format\n// Formate le fichier .java avec google-java-format après écriture (PostToolUse Write|Edit)\nimport { execSync } from \"node:child_process\";\nimport { readFileSync } from \"node:fs\";\nimport { fileURLToPath } from \"node:url\";\n\nfunction defaultExec(cmd) {\n\treturn execSync(cmd, { encoding: \"utf8\", stdio: \"pipe\", timeout: 20_000 });\n}\n\nexport function run(input, { exec = defaultExec } = {}) {\n\tconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? \"\";\n\tif (!filePath.endsWith(\".java\")) return null;\n\n\ttry {\n\t\texec(`google-java-format -i \"${filePath}\"`);\n\t\treturn null;\n\t} catch (err) {\n\t\t// google-java-format absent — non bloquant ; une erreur de parse (stdout/stderr)\n\t\t// est remontée à l'agent pour être corrigée dans la même boucle.\n\t\tconst output =\n\t\t\t(err.stdout ?? err.stderr)?.toString()?.trim() ?? \"\";\n\t\treturn output ? { message: `[java-format] ${output}\\n` } : null;\n\t}\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n\tconst input = JSON.parse(readFileSync(0, \"utf8\"));\n\tconst result = run(input);\n\tif (result?.message) process.stderr.write(result.message);\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, expect, it, vi } from \"vitest\";\nimport { run } from \"../../.claude/hooks/java-format.mjs\";\nimport { makeExecFail } from \"./_utils.mjs\";\n\ndescribe(\"java-format\", () => {\n\tit(\"ignore les fichiers non-.java\", () => {\n\t\tconst exec = vi.fn();\n\t\texpect(run({ tool_input: { file_path: \"a.kt\" } }, { exec })).toBeNull();\n\t\texpect(exec).not.toHaveBeenCalled();\n\t});\n\n\tit(\"formate un fichier .java avec google-java-format\", () => {\n\t\tconst exec = vi.fn();\n\t\trun({ tool_input: { file_path: \"Main.java\" } }, { exec });\n\t\texpect(exec).toHaveBeenCalledWith(\n\t\t\texpect.stringContaining(\"google-java-format -i\"),\n\t\t);\n\t\texpect(exec).toHaveBeenCalledWith(expect.stringContaining(\"Main.java\"));\n\t});\n\n\tit(\"supporte le champ path en plus de file_path\", () => {\n\t\tconst exec = vi.fn();\n\t\trun({ tool_input: { path: \"Service.java\" } }, { exec });\n\t\texpect(exec).toHaveBeenCalledWith(expect.stringContaining(\"Service.java\"));\n\t});\n\n\tit(\"retourne null si le format réussit\", () => {\n\t\texpect(\n\t\t\trun({ tool_input: { file_path: \"a.java\" } }, { exec: vi.fn() }),\n\t\t).toBeNull();\n\t});\n\n\tit(\"remonte une erreur de parse (stdout) dans le message\", () => {\n\t\tconst result = run(\n\t\t\t{ tool_input: { file_path: \"a.java\" } },\n\t\t\t{ exec: makeExecFail(\"error: expected ';'\") },\n\t\t);\n\t\texpect(result?.message).toContain(\"[java-format]\");\n\t\texpect(result?.message).toContain(\"expected ';'\");\n\t});\n\n\tit(\"retourne null si l'outil est absent (échec sans output)\", () => {\n\t\tconst exec = () => {\n\t\t\tthrow new Error(\"google-java-format not found\");\n\t\t};\n\t\texpect(run({ tool_input: { file_path: \"a.java\" } }, { exec })).toBeNull();\n\t});\n});\n"
+    },
+    "stack": [
+      "java"
+    ]
+  },
+  {
+    "slug": "post-edit-java-compile",
+    "name": "Java compile check after edit",
+    "benefit": "Java compile errors caught right after an edit",
+    "category": "validation",
+    "hook_type": "PostToolUse",
+    "trigger": "Write|Edit",
+    "description": "Runs the project's build-tool compile task (mvn -q compile or ./gradlew -q compileJava) on the modified .java file and reports compile errors so they are fixed within the same loop.",
+    "use_cases": [
+      "Catch compile errors immediately after an edit",
+      "Surface broken imports before they accumulate",
+      "Pair with the formatter for a complete Java quality pipeline"
+    ],
+    "tags": [
+      "java",
+      "compile",
+      "javac",
+      "typecheck",
+      "validation",
+      "quality"
+    ],
+    "default_on": true,
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/java-compile.mjs",
+                  "type": "command"
+                }
+              ],
+              "matcher": "Write|Edit"
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/java-compile.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// @hookstack post-edit-java-compile\n// Vérifie la compilation Java après édition (PostToolUse Write|Edit)\nimport { execSync } from \"node:child_process\";\nimport { readFileSync } from \"node:fs\";\nimport { fileURLToPath } from \"node:url\";\nimport { detectBuildTool } from \"./lib/java-build.mjs\";\n\nfunction makeDefaultExec(projectDir) {\n\treturn (cmd) =>\n\t\texecSync(cmd, { cwd: projectDir, stdio: \"pipe\", timeout: 60_000 });\n}\n\nexport function run(\n\tinput,\n\t{ exec, exists, projectDir = process.env.CLAUDE_PROJECT_DIR, platform } = {},\n) {\n\tconst filePath = input.tool_input?.file_path ?? input.tool_input?.path ?? \"\";\n\tif (!filePath.endsWith(\".java\")) return null;\n\n\tconst cwd = projectDir ?? process.cwd();\n\tconst build = detectBuildTool({ exists, projectDir: cwd, platform });\n\tif (!build) return null; // pas d'outil de build Java reconnu\n\n\tconst doExec = exec ?? makeDefaultExec(cwd);\n\tconst task = build.tool === \"maven\" ? \"compile\" : \"compileJava\";\n\ttry {\n\t\tdoExec(`${build.cmd} -q ${task}`);\n\t\treturn null;\n\t} catch (err) {\n\t\tconst output = err.stdout?.toString() ?? \"\";\n\t\treturn output ? { message: `[java-compile] ${output.trim()}\\n` } : null;\n\t}\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n\tconst input = JSON.parse(readFileSync(0, \"utf8\"));\n\tconst result = run(input);\n\tif (result?.message) process.stderr.write(result.message);\n}\n",
+      "companion_files": [
+        {
+          "path": ".claude/hooks/lib/java-build.mjs",
+          "snippet": "// @hookstack lib-java-build\n// Helper partagé par les hooks Java (post-edit-java-compile, stop-java-test).\n// Détecte l'outil de build du projet : wrapper Gradle (./gradlew) d'abord, puis\n// Gradle (build.gradle), puis Maven (pom.xml). Retourne { tool, cmd } ou null\n// si le projet n'a pas d'outil de build Java reconnu.\nimport { existsSync } from \"node:fs\";\nimport { join } from \"node:path\";\n\nexport function detectBuildTool({\n\texists = existsSync,\n\tprojectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n\tplatform = process.platform,\n} = {}) {\n\tconst has = (f) => exists(join(projectDir, f));\n\n\t// Le wrapper Gradle épingle la version du toolchain — toujours préféré.\n\tif (has(\"gradlew\") || has(\"gradlew.bat\"))\n\t\treturn { tool: \"gradle\", cmd: platform === \"win32\" ? \"gradlew.bat\" : \"./gradlew\" };\n\tif (has(\"build.gradle\") || has(\"build.gradle.kts\"))\n\t\treturn { tool: \"gradle\", cmd: \"gradle\" };\n\tif (has(\"pom.xml\")) return { tool: \"maven\", cmd: \"mvn\" };\n\treturn null;\n}\n"
+        }
+      ],
+      "test_snippet": "// @vitest-environment node\nimport { describe, expect, it, vi } from \"vitest\";\nimport { run } from \"../../.claude/hooks/java-compile.mjs\";\nimport { makeExecFail } from \"./_utils.mjs\";\n\nconst CWD = \"/repo\";\n\nconst fsWith = (...present) => (p) => present.some((name) => p.endsWith(name));\n\ndescribe(\"java-compile\", () => {\n\tit(\"ignore les fichiers non-.java\", () => {\n\t\tconst exec = vi.fn();\n\t\texpect(\n\t\t\trun(\n\t\t\t\t{ tool_input: { file_path: \"a.ts\" } },\n\t\t\t\t{ exec, exists: fsWith(\"pom.xml\"), projectDir: CWD, platform: \"linux\" },\n\t\t\t),\n\t\t).toBeNull();\n\t\texpect(exec).not.toHaveBeenCalled();\n\t});\n\n\tit(\"Maven → mvn -q compile\", () => {\n\t\tconst exec = vi.fn();\n\t\trun(\n\t\t\t{ tool_input: { file_path: \"Main.java\" } },\n\t\t\t{ exec, exists: fsWith(\"pom.xml\"), projectDir: CWD, platform: \"linux\" },\n\t\t);\n\t\texpect(exec).toHaveBeenCalledWith(\"mvn -q compile\");\n\t});\n\n\tit(\"Gradle wrapper → ./gradlew -q compileJava\", () => {\n\t\tconst exec = vi.fn();\n\t\trun(\n\t\t\t{ tool_input: { file_path: \"Main.java\" } },\n\t\t\t{ exec, exists: fsWith(\"gradlew\"), projectDir: CWD, platform: \"linux\" },\n\t\t);\n\t\texpect(exec).toHaveBeenCalledWith(\"./gradlew -q compileJava\");\n\t});\n\n\tit(\"retourne null sans outil de build Java reconnu\", () => {\n\t\tconst exec = vi.fn();\n\t\texpect(\n\t\t\trun(\n\t\t\t\t{ tool_input: { file_path: \"Main.java\" } },\n\t\t\t\t{ exec, exists: fsWith(\"go.mod\"), projectDir: CWD, platform: \"linux\" },\n\t\t\t),\n\t\t).toBeNull();\n\t\texpect(exec).not.toHaveBeenCalled();\n\t});\n\n\tit(\"retourne null si la compilation réussit\", () => {\n\t\texpect(\n\t\t\trun(\n\t\t\t\t{ tool_input: { file_path: \"a.java\" } },\n\t\t\t\t{\n\t\t\t\t\texec: vi.fn(),\n\t\t\t\t\texists: fsWith(\"pom.xml\"),\n\t\t\t\t\tprojectDir: CWD,\n\t\t\t\t\tplatform: \"linux\",\n\t\t\t\t},\n\t\t\t),\n\t\t).toBeNull();\n\t});\n\n\tit(\"remonte les erreurs de compilation dans le message\", () => {\n\t\tconst result = run(\n\t\t\t{ tool_input: { file_path: \"a.java\" } },\n\t\t\t{\n\t\t\t\texec: makeExecFail(\"[ERROR] cannot find symbol\"),\n\t\t\t\texists: fsWith(\"pom.xml\"),\n\t\t\t\tprojectDir: CWD,\n\t\t\t\tplatform: \"linux\",\n\t\t\t},\n\t\t);\n\t\texpect(result?.message).toContain(\"[java-compile]\");\n\t\texpect(result?.message).toContain(\"cannot find symbol\");\n\t});\n\n\tit(\"retourne null si la compilation échoue sans stdout\", () => {\n\t\tconst exec = () => {\n\t\t\tthrow new Error(\"mvn not found\");\n\t\t};\n\t\texpect(\n\t\t\trun(\n\t\t\t\t{ tool_input: { file_path: \"a.java\" } },\n\t\t\t\t{ exec, exists: fsWith(\"pom.xml\"), projectDir: CWD, platform: \"linux\" },\n\t\t\t),\n\t\t).toBeNull();\n\t});\n});\n"
+    },
+    "stack": [
+      "java"
+    ]
+  },
+  {
+    "slug": "stop-java-test",
+    "name": "Run Java tests at end of response",
+    "benefit": "Won't hand back until Java tests are green",
+    "category": "validation",
+    "hook_type": "Stop",
+    "trigger": "*",
+    "description": "When the agent finishes, runs the full test suite via the project's build tool (mvn -q test or ./gradlew -q test). If tests fail, Claude re-enters and receives the failure output as context to fix the regressions.",
+    "use_cases": [
+      "Regression safety net",
+      "Quality before handoff",
+      "Assisted TDD"
+    ],
+    "tags": [
+      "java",
+      "tests",
+      "maven",
+      "gradle",
+      "ci",
+      "validation",
+      "quality"
+    ],
+    "default_on": true,
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/java-test.mjs",
+                  "type": "command"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/java-test.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// @hookstack stop-java-test\n// Exécute les tests Java à la fin d'une session (Stop)\nimport { execSync } from \"node:child_process\";\nimport { existsSync } from \"node:fs\";\nimport { join } from \"node:path\";\nimport { fileURLToPath } from \"node:url\";\nimport { changedFiles } from \"./lib/changed-files.mjs\";\nimport { detectBuildTool } from \"./lib/java-build.mjs\";\n\nconst JAVA_MARKERS = [\n\t\"pom.xml\",\n\t\"build.gradle\",\n\t\"build.gradle.kts\",\n\t\"settings.gradle\",\n\t\"settings.gradle.kts\",\n];\nconst JAVA = /\\.java$/;\nconst JAVA_CFG =\n\t/(^|\\/)(pom\\.xml|build\\.gradle(\\.kts)?|settings\\.gradle(\\.kts)?)$/;\n\nexport function run({\n\texists = existsSync,\n\texec,\n\tcwd = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n\tchanged = changedFiles({\n\t\tcwd: process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n\t}),\n\tplatform = process.platform,\n} = {}) {\n\tconst isJava = JAVA_MARKERS.some((f) => exists(join(cwd, f)));\n\tif (!isJava) return null;\n\n\t// Aucun .java (ni config de build) modifié → inutile de relancer toute la suite.\n\tif (changed && !changed.some((f) => JAVA.test(f) || JAVA_CFG.test(f)))\n\t\treturn null;\n\n\tconst build = detectBuildTool({ exists, projectDir: cwd, platform });\n\tif (!build) return null;\n\n\tconst doExec =\n\t\texec ??\n\t\t((cmd) =>\n\t\t\texecSync(cmd, { cwd, encoding: \"utf8\", timeout: 600_000, stdio: \"pipe\" }));\n\n\ttry {\n\t\tconst out = doExec(`${build.cmd} -q test`);\n\t\tconst last = String(out ?? \"\")\n\t\t\t.split(\"\\n\")\n\t\t\t.filter(Boolean)\n\t\t\t.slice(-5)\n\t\t\t.join(\"\\n\");\n\t\treturn { status: 0, message: `[java-test] ✓ Tests passés\\n${last}\\n` };\n\t} catch (err) {\n\t\tconst status = err.status ?? 1;\n\t\tconst out = `${err.stdout ?? \"\"}${err.stderr ?? \"\"}`;\n\t\treturn {\n\t\t\tstatus,\n\t\t\tmessage: `[java-test] ÉCHEC (exit ${status})\\n${String(out).slice(-2000)}\\n`,\n\t\t};\n\t}\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n\tconst result = run();\n\tif (result) {\n\t\tprocess.stderr.write(result.message);\n\t\tif (result.status !== 0) process.exit(2);\n\t}\n}\n",
+      "companion_files": [
+        {
+          "path": ".claude/hooks/lib/changed-files.mjs",
+          "snippet": "// @hookstack lib-changed-files\n// Helper partagé par les hooks de fin de session (run-tests, stop-pytest,\n// stop-quality-check, stop-duplication-check…).\n//\n// Le bug qu'il corrige : un hook qui décide de tourner en lisant uniquement\n// `git status --porcelain` se désactive silencieusement quand l'arbre de travail\n// redevient propre — par exemple après un commit (ou un push) en cours de session.\n// Or les fichiers modifiés « en attente de validation » incluent aussi les\n// commits déjà faits sur la branche depuis le merge-base avec origin/main.\n// Ce helper combine les deux sources (union dédupliquée), comme le faisait déjà\n// missing-test-detection.mjs — et retourne null hors dépôt git pour que les\n// hooks gardent leur comportement historique (analyser quand même).\nimport { execSync } from \"node:child_process\";\n\n/** Exécute une commande git et retourne sa sortie (\"\" si échec — jamais de throw). */\nfunction defaultExec(cmd, opts = {}) {\n\ttry {\n\t\treturn execSync(cmd, {\n\t\t\tencoding: \"utf8\",\n\t\t\tcwd: opts.cwd,\n\t\t\ttimeout: 10_000,\n\t\t\tstdio: \"pipe\",\n\t\t\tshell: true,\n\t\t}).trim();\n\t} catch {\n\t\treturn \"\";\n\t}\n}\n\n/** Exécution tolérante : \"\" si la commande échoue (ou retourne null). */\nfunction safe(exec, cmd, cwd) {\n\ttry {\n\t\tconst out = exec(cmd, { cwd });\n\t\treturn (out ?? \"\").trim();\n\t} catch {\n\t\treturn \"\";\n\t}\n}\n\n/** Parcourt la sortie de `git status --porcelain` (renames → cible). */\nexport function parsePorcelain(out) {\n\treturn (out ?? \"\")\n\t\t.split(\"\\n\")\n\t\t.filter(Boolean)\n\t\t.map((l) => {\n\t\t\tconst p = l.slice(3);\n\t\t\treturn p.includes(\" -> \") ? p.split(\" -> \").pop() : p;\n\t\t});\n}\n\n/**\n * Fichiers modifiés à considérer pour la session :\n *  1. l'arbre de travail (staged + unstaged + untracked) via `git status --porcelain`\n *  2. les commits déjà faits sur la branche depuis le merge-base avec origin/main\n *     (le cas « worktree propre mais travail non livré » qui échappait aux hooks)\n *\n * Retourne un tableau dédupliqué trié, ou null hors dépôt git (les hooks\n * conservent alors leur comportement historique : tout analyser).\n */\nexport function changedFiles({\n\texec = defaultExec,\n\tcwd = process.cwd(),\n} = {}) {\n\tlet porcelain;\n\ttry {\n\t\tporcelain = exec(\"git status --porcelain\", { cwd });\n\t} catch {\n\t\treturn null; // hors dépôt git (ou git absent) → comportement historique\n\t}\n\tif (porcelain === null || porcelain === undefined) return null;\n\n\tconst paths = parsePorcelain(porcelain);\n\n\t// Commits locaux déjà faits : diff contre le merge-base avec origin/main.\n\tconst base = safe(exec, \"git merge-base origin/main HEAD\", cwd);\n\tconst head = safe(exec, \"git rev-parse HEAD\", cwd);\n\tif (base && base !== head) {\n\t\tconst committed = safe(exec, `git diff --name-only ${base} HEAD`, cwd);\n\t\tfor (const f of (committed ?? \"\").split(\"\\n\").filter(Boolean)) paths.push(f);\n\t}\n\n\treturn [...new Set(paths)].sort();\n}\n"
+        },
+        {
+          "path": ".claude/hooks/lib/java-build.mjs",
+          "snippet": "// @hookstack lib-java-build\n// Helper partagé par les hooks Java (post-edit-java-compile, stop-java-test).\n// Détecte l'outil de build du projet : wrapper Gradle (./gradlew) d'abord, puis\n// Gradle (build.gradle), puis Maven (pom.xml). Retourne { tool, cmd } ou null\n// si le projet n'a pas d'outil de build Java reconnu.\nimport { existsSync } from \"node:fs\";\nimport { join } from \"node:path\";\n\nexport function detectBuildTool({\n\texists = existsSync,\n\tprojectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n\tplatform = process.platform,\n} = {}) {\n\tconst has = (f) => exists(join(projectDir, f));\n\n\t// Le wrapper Gradle épingle la version du toolchain — toujours préféré.\n\tif (has(\"gradlew\") || has(\"gradlew.bat\"))\n\t\treturn { tool: \"gradle\", cmd: platform === \"win32\" ? \"gradlew.bat\" : \"./gradlew\" };\n\tif (has(\"build.gradle\") || has(\"build.gradle.kts\"))\n\t\treturn { tool: \"gradle\", cmd: \"gradle\" };\n\tif (has(\"pom.xml\")) return { tool: \"maven\", cmd: \"mvn\" };\n\treturn null;\n}\n"
+        }
+      ],
+      "test_snippet": "// @vitest-environment node\nimport { describe, expect, it, vi } from \"vitest\";\nimport { run } from \"../../.claude/hooks/java-test.mjs\";\n\nconst CWD = \"/fake/project\";\n\nfunction makeOpts({\n\tmarker = \"pom.xml\",\n\texecOk = true,\n\tstdout = \"BUILD SUCCESSFUL\",\n\tstderr = \"\",\n} = {}) {\n\tconst exec = vi.fn(() => {\n\t\tif (execOk) return stdout;\n\t\tconst e = new Error(\"test failed\");\n\t\te.status = 1;\n\t\te.stdout = \"\";\n\t\te.stderr = stderr;\n\t\tthrow e;\n\t});\n\treturn {\n\t\tcwd: CWD,\n\t\tchanged: [\"Main.java\"],\n\t\texists: (p) => (marker ? p.endsWith(marker) : false),\n\t\texec,\n\t\tplatform: \"linux\",\n\t};\n}\n\ndescribe(\"java-test\", () => {\n\tit(\"retourne null si projet non-Java\", () => {\n\t\tconst opts = makeOpts({ marker: null });\n\t\texpect(run(opts)).toBeNull();\n\t\texpect(opts.exec).not.toHaveBeenCalled();\n\t});\n\n\tit(\"Maven → mvn -q test\", () => {\n\t\tconst opts = makeOpts({ marker: \"pom.xml\" });\n\t\trun(opts);\n\t\texpect(opts.exec).toHaveBeenCalledWith(\"mvn -q test\");\n\t});\n\n\tit(\"Gradle wrapper → ./gradlew -q test\", () => {\n\t\tconst opts = makeOpts({ marker: \"pom.xml\" });\n\t\topts.exists = (p) => p.endsWith(\"build.gradle\") || p.endsWith(\"gradlew\");\n\t\trun(opts);\n\t\texpect(opts.exec).toHaveBeenCalledWith(\"./gradlew -q test\");\n\t});\n\n\tit(\"retourne null sans outil de build Java reconnu\", () => {\n\t\tconst opts = makeOpts({ marker: \"go.mod\" });\n\t\texpect(run(opts)).toBeNull();\n\t\texpect(opts.exec).not.toHaveBeenCalled();\n\t});\n\n\tit(\"retourne status 0 et message succès\", () => {\n\t\tconst opts = makeOpts({ stdout: \"BUILD SUCCESSFUL\\n3 tests run\" });\n\t\tconst result = run(opts);\n\t\texpect(result.status).toBe(0);\n\t\texpect(result.message).toContain(\"✓ Tests passés\");\n\t\texpect(result.message).toContain(\"3 tests run\");\n\t});\n\n\tit(\"retourne status non-0 et message échec\", () => {\n\t\tconst opts = makeOpts({\n\t\t\texecOk: false,\n\t\t\tstderr: \"FAILED: com.example.FooTest\",\n\t\t});\n\t\tconst result = run(opts);\n\t\texpect(result.status).toBe(1);\n\t\texpect(result.message).toContain(\"ÉCHEC\");\n\t\texpect(result.message).toContain(\"com.example.FooTest\");\n\t});\n\n\tit(\"court-circuite (null) si aucun .java modifié\", () => {\n\t\tconst opts = makeOpts();\n\t\topts.changed = [\"README.md\", \"src/main.ts\"];\n\t\texpect(run(opts)).toBeNull();\n\t\texpect(opts.exec).not.toHaveBeenCalled();\n\t});\n\n\tit(\"lance les tests si pom.xml a changé sans .java\", () => {\n\t\tconst opts = makeOpts();\n\t\topts.changed = [\"pom.xml\"];\n\t\texpect(run(opts)).not.toBeNull();\n\t\texpect(opts.exec).toHaveBeenCalled();\n\t});\n\n\tit(\"lance les tests hors dépôt git (changed null)\", () => {\n\t\tconst opts = makeOpts();\n\t\topts.changed = null;\n\t\texpect(run(opts)).not.toBeNull();\n\t\texpect(opts.exec).toHaveBeenCalled();\n\t});\n});\n"
+    },
+    "stack": [
+      "java"
+    ]
+  },
+  {
+    "slug": "pre-bash-enforce-java-build",
+    "name": "Enforce build wrapper",
+    "benefit": "Forces ./gradlew / ./mvnw, kills bare-tool drift",
+    "category": "validation",
+    "hook_type": "PreToolUse",
+    "trigger": "Bash",
+    "description": "Blocks bare gradle/mvn commands when the project ships a wrapper (gradlew/mvnw), keeping the build toolchain version pinned for every contributor and agent.",
+    "use_cases": [
+      "Pin the Gradle/Maven version via the wrapper",
+      "Avoid toolchain drift between machines",
+      "Standardize build invocation across a team"
+    ],
+    "tags": [
+      "java",
+      "gradle",
+      "maven",
+      "wrapper",
+      "build-tool",
+      "validation",
+      "workflow"
+    ],
+    "default_on": true,
+    "implementation": {
+      "type": "settings_json",
+      "config": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-java-build.mjs",
+                  "type": "command"
+                }
+              ],
+              "matcher": "Bash"
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/enforce-java-build.mjs",
+      "code_snippet": "#!/usr/bin/env node\n// @hookstack pre-bash-enforce-java-build\n// Bloque `gradle`/`mvn` nus quand le wrapper (gradlew/mvnw) existe — le wrapper\n// épingle la version du toolchain pour toute l'équipe (PreToolUse Bash).\nimport { existsSync, readFileSync } from \"node:fs\";\nimport { join } from \"node:path\";\nimport { fileURLToPath } from \"node:url\";\n\nconst FORBIDDEN = [\n\t{ re: /(^|[;&|\\s`])gradle(\\s|$)/, tool: \"gradle\", wrapper: \"gradlew\" },\n\t{ re: /(^|[;&|\\s`])mvn(\\s|$)/, tool: \"mvn\", wrapper: \"mvnw\" },\n];\n\n// Retire le contenu des chaînes entre guillemets pour éviter les faux positifs\n// quand gradle/mvn apparaissent comme valeurs d'arguments texte (ex. git commit -m\n// \"...gradle...\") tout en continuant à bloquer les vraies invocations.\nfunction stripQuotedArgs(cmd) {\n\treturn cmd\n\t\t.replace(/\"(?:[^\"\\\\]|\\\\.)*\"/g, '\"\"')\n\t\t.replace(/'(?:[^'\\\\]|\\\\.)*'/g, \"''\");\n}\n\nexport function run(\n\tinput,\n\t{ exists = existsSync, projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd() } = {},\n) {\n\tif (input.tool_name !== \"Bash\") return null;\n\tconst cmd = stripQuotedArgs(input.tool_input?.command ?? \"\");\n\n\tconst hit = FORBIDDEN.find(({ re }) => re.test(cmd));\n\tif (!hit) return null;\n\n\t// On n'impose le wrapper que s'il existe réellement dans le projet.\n\tif (!exists(join(projectDir, hit.wrapper))) return null;\n\n\treturn {\n\t\tdecision: \"block\",\n\t\treason: `Use './${hit.wrapper}' instead of the bare '${hit.tool}' — the wrapper pins this project's ${hit.tool === \"gradle\" ? \"Gradle\" : \"Maven\"} version.`,\n\t};\n}\n\n/* v8 ignore next 5 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n\tconst input = JSON.parse(readFileSync(0, \"utf8\"));\n\tconst result = run(input);\n\tif (result) process.stdout.write(JSON.stringify(result));\n}\n",
+      "test_snippet": "// @vitest-environment node\nimport { describe, expect, it } from \"vitest\";\nimport { run } from \"../../.claude/hooks/enforce-java-build.mjs\";\n\nconst bash = (command) => ({ tool_name: \"Bash\", tool_input: { command } });\n\nfunction opts({ gradlew = false, mvnw = false } = {}) {\n\treturn {\n\t\texists: (p) =>\n\t\t\t(gradlew && p.endsWith(\"gradlew\")) || (mvnw && p.endsWith(\"mvnw\")),\n\t\tprojectDir: \"/repo\",\n\t};\n}\n\ndescribe(\"enforce-java-build\", () => {\n\tit(\"ignore les outils non-Bash\", () => {\n\t\texpect(\n\t\t\trun(\n\t\t\t\t{ tool_name: \"Write\", tool_input: { command: \"gradle build\" } },\n\t\t\t\topts({ gradlew: true }),\n\t\t\t),\n\t\t).toBeNull();\n\t});\n\n\tit(\"laisse passer ./gradlew\", () => {\n\t\texpect(run(bash(\"./gradlew build\"), opts({ gradlew: true }))).toBeNull();\n\t});\n\n\tit(\"laisse passer gradle nu si aucun wrapper présent\", () => {\n\t\texpect(run(bash(\"gradle build\"), opts({ gradlew: false }))).toBeNull();\n\t});\n\n\tit(\"bloque gradle nu quand gradlew existe\", () => {\n\t\tconst r = run(bash(\"gradle build\"), opts({ gradlew: true }));\n\t\texpect(r?.decision).toBe(\"block\");\n\t\texpect(r?.reason).toContain(\"./gradlew\");\n\t});\n\n\tit(\"bloque mvn nu quand mvnw existe\", () => {\n\t\tconst r = run(bash(\"mvn test\"), opts({ mvnw: true }));\n\t\texpect(r?.decision).toBe(\"block\");\n\t\texpect(r?.reason).toContain(\"./mvnw\");\n\t});\n\n\tit(\"ne bloque pas gradlew (contient gradle mais sans espace après)\", () => {\n\t\texpect(run(bash(\"gradlew build\"), opts({ gradlew: true }))).toBeNull();\n\t});\n\n\tit(\"bloque gradle enchaîné après &&\", () => {\n\t\tconst r = run(bash(\"cd app && gradle build\"), opts({ gradlew: true }));\n\t\texpect(r?.decision).toBe(\"block\");\n\t});\n\n\tit(\"ignore une mention de gradle entre guillemets\", () => {\n\t\texpect(\n\t\t\trun(bash('git commit -m \"upgrade gradle build\"'), opts({ gradlew: true })),\n\t\t).toBeNull();\n\t});\n\n\tit(\"ne bloque pas une commande contenant gradle dans un nom de fichier\", () => {\n\t\texpect(run(bash(\"cat gradle-notes.md\"), opts({ gradlew: true }))).toBeNull();\n\t});\n});\n"
+    },
+    "stack": [
+      "java"
+    ]
   }
 ]
