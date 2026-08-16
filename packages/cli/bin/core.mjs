@@ -86,14 +86,14 @@ export function parseArgs(argv) {
 				? arg.slice("--stack=".length)
 				: arg.slice("--language=".length)
 			).toLowerCase();
-			if (["auto", "typescript", "python", "all"].includes(v)) {
+			if (["auto", "typescript", "python", "java", "all"].includes(v)) {
 				result.stack = v;
 			}
 			continue;
 		}
 		if ((arg === "--stack" || arg === "--language") && args[i + 1]) {
 			const v = args[++i].toLowerCase();
-			if (["auto", "typescript", "python", "all"].includes(v)) {
+			if (["auto", "typescript", "python", "java", "all"].includes(v)) {
 				result.stack = v;
 			}
 			continue;
@@ -193,6 +193,14 @@ const STACK_MANIFESTS = {
 		"Pipfile",
 		"uv.lock",
 	],
+	java: [
+		"pom.xml",
+		"build.gradle",
+		"build.gradle.kts",
+		"settings.gradle",
+		"settings.gradle.kts",
+		"gradlew",
+	],
 };
 
 export function detectStacks(cwd, { existsSync }) {
@@ -212,7 +220,7 @@ export function filterHooksByStack(hooks, stacks) {
 }
 
 // ── contextual signal detection ───────────────────────────────────────────────
-// Complementary to stack detection: stacks (typescript/python) decide which
+// Complementary to stack detection: stacks (typescript/python/java) decide which
 // default hooks apply; signals (i18n, OKF, Next.js…) decide which non-default
 // hooks to ADD for the systems the project actually uses. Signals are cheap
 // filesystem probes run against the current project; each maps to catalogue
@@ -1042,6 +1050,8 @@ export const PREREQ_HINTS = {
 		"Optional: brew install terminal-notifier  (enables click-to-focus — opens your terminal or Claude app when notification fires)",
 	"post-write-biome":
 		"Requires Biome:  pnpm add -D @biomejs/biome  (pnpm workspace? add -w · or npm install -D @biomejs/biome)",
+	"post-write-java-format":
+		"Requires google-java-format on PATH:  brew install google-java-format  (or download the jar from github.com/google/google-java-format)",
 };
 
 // Returns one hint entry per installed hook that has an external prerequisite.

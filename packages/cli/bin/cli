@@ -135,7 +135,7 @@ export function securityPanel(rows) {
 function resolveStacks(args) {
   if (args.noDetect) return { stacks: [], detected: false }
   if (args.stack === 'all') return { stacks: [], detected: false }
-  if (args.stack === 'python' || args.stack === 'typescript') {
+  if (args.stack === 'python' || args.stack === 'typescript' || args.stack === 'java') {
     return { stacks: [args.stack], detected: false }
   }
   if (args.stacks.length) return { stacks: args.stacks, detected: false }
@@ -159,9 +159,9 @@ function purePythonStack(stackFilter) {
 function applyStackFilter(hooks, isDefault, stackFilter, log) {
   if (!isDefault) return hooks
   const { stacks, detected } = stackFilter
-  // Unknown toolchain (detection ran, no TypeScript/Python manifest found — a
-  // Go, Rust or manifest-less project): only universal hooks make sense, never
-  // tsc/biome/ruff/pytest hooks the project can't run. --no-detect / --stack=all
+  // Unknown toolchain (detection ran, no TypeScript/Python/Java manifest found —
+  // a Go, Rust or manifest-less project): only universal hooks make sense, never
+  // tsc/biome/ruff/pytest/java hooks the project can't run. --no-detect / --stack=all
   // bypass detection and keep the full set.
   const filtered = detected && stacks.length === 0
     ? hooks.filter(h => !h.stack?.length)
@@ -169,7 +169,7 @@ function applyStackFilter(hooks, isDefault, stackFilter, log) {
   const skipped = hooks.length - filtered.length
   if (detected && stacks.length === 0) {
     // Say it — silence reads like detection never ran.
-    log(`No TypeScript/Python toolchain detected — installing ${plural(filtered.length, 'universal hook')} only (no tsc/biome/ruff/pytest hooks).\nUse --stacks=typescript,python or --no-detect to install the full default set.`)
+    log(`No TypeScript/Python/Java toolchain detected — installing ${plural(filtered.length, 'universal hook')} only (no tsc/biome/ruff/pytest/java hooks).\nUse --stacks=typescript,python,java or --no-detect to install the full default set.`)
   } else if (skipped > 0) {
     const label = detected ? `Detected stack: ${stacks.join(', ')}` : `Stack: ${stacks.join(', ')}`
     // Auto-detection lists exactly what was dropped (transparency); an explicit
@@ -858,7 +858,7 @@ const HELP = `
     --scope <s>       "project" (default), "global", "copilot",
                       "codex-project", or "codex-profile"
     --with-tests      Also install unit tests into tests/hooks/ — vitest on TypeScript, pytest on Python (install, project scope only)
-    --stacks <list>   Override stack detection (e.g. --stacks=typescript,python)
+    --stacks <list>   Override stack detection (e.g. --stacks=typescript,python,java)
     --no-detect       Skip all detection (stack + contextual systems), install the full default set
     --yes, -y         Skip prompts (non-interactive)
     --version, -v     Show version

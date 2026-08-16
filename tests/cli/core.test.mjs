@@ -118,6 +118,9 @@ describe("parseArgs", () => {
 			"typescript",
 		);
 	});
+	it("parse --stack=java", () => {
+		expect(parseArgs(argv("install", "--stack=java")).stack).toBe("java");
+	});
 	it("parse --language=all comme alias de --stack=all", () => {
 		expect(parseArgs(argv("install", "--language=all")).stack).toBe("all");
 	});
@@ -146,6 +149,14 @@ describe("detectStacks", () => {
 			detectStacks("/proj", fsWith(["package.json", "requirements.txt"])),
 		).toEqual(["typescript", "python"]);
 	});
+	it("pom.xml → java", () => {
+		expect(detectStacks("/proj", fsWith(["pom.xml"]))).toEqual(["java"]);
+	});
+	it("build.gradle.kts → java", () => {
+		expect(detectStacks("/proj", fsWith(["build.gradle.kts"]))).toEqual([
+			"java",
+		]);
+	});
 	it("aucun manifeste connu → []", () => {
 		expect(detectStacks("/proj", fsWith([]))).toEqual([]);
 	});
@@ -155,7 +166,8 @@ describe("filterHooksByStack", () => {
 	const universal = { slug: "u" };
 	const tsOnly = { slug: "ts", stack: ["typescript"] };
 	const pyOnly = { slug: "py", stack: ["python"] };
-	const hooks = [universal, tsOnly, pyOnly];
+	const javaOnly = { slug: "j", stack: ["java"] };
+	const hooks = [universal, tsOnly, pyOnly, javaOnly];
 
 	it("stacks vide → aucun filtrage", () => {
 		expect(filterHooksByStack(hooks, [])).toEqual(hooks);
@@ -167,7 +179,14 @@ describe("filterHooksByStack", () => {
 		expect(filterHooksByStack(hooks, ["python"])).toEqual([universal, pyOnly]);
 	});
 	it("plusieurs stacks détectés → union", () => {
-		expect(filterHooksByStack(hooks, ["typescript", "python"])).toEqual(hooks);
+		expect(filterHooksByStack(hooks, ["typescript", "python"])).toEqual([
+			universal,
+			tsOnly,
+			pyOnly,
+		]);
+	});
+	it("garde le stack java détecté", () => {
+		expect(filterHooksByStack(hooks, ["java"])).toEqual([universal, javaOnly]);
 	});
 });
 

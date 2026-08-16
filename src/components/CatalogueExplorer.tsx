@@ -36,10 +36,12 @@ const CATEGORY_ORDER: Category[] = [
 const STACK_MONOGRAM: Record<Stack, string> = {
 	typescript: "TS",
 	python: "Py",
+	java: "Ja",
 };
 const STACK_MONO_COLOR: Record<Stack, string> = {
 	typescript: "bg-blue-500/25 text-blue-100",
 	python: "bg-yellow-500/25 text-yellow-100",
+	java: "bg-orange-500/25 text-orange-100",
 };
 
 const DAY = 86_400_000;

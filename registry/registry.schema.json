@@ -121,7 +121,7 @@
 					"uniqueItems": true,
 					"items": {
 						"type": "string",
-						"enum": ["typescript", "python"]
+						"enum": ["typescript", "python", "java"]
 					},
 					"description": "Ecosystem gate. Omit for universal hooks; present only for stack-specific ones."
 				},
