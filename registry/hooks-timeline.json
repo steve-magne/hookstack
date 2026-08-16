@@ -1,9 +1,9 @@
 {
-  "total": 101,
+  "total": 105,
   "firstDate": "2026-05-29",
-  "lastDate": "2026-08-14",
+  "lastDate": "2026-08-16",
   "byDay": {
-    "2026-05-29": 14,
+    "2026-05-29": 15,
     "2026-05-30": 1,
     "2026-05-31": 24,
     "2026-06-01": 19,
@@ -17,7 +17,8 @@
     "2026-06-13": 13,
     "2026-06-20": 1,
     "2026-06-30": 3,
-    "2026-08-14": 1
+    "2026-08-14": 1,
+    "2026-08-16": 3
   },
   "hooks": [
     {
@@ -35,6 +36,12 @@
     {
       "slug": "pre-bash-enforce-package-managers",
       "name": "Enforce package managers",
+      "category": "validation",
+      "date": "2026-05-29"
+    },
+    {
+      "slug": "post-write-java-format",
+      "name": "Google Java Format after write",
       "category": "validation",
       "date": "2026-05-29"
     },
@@ -625,6 +632,24 @@
       "name": "SEO JSON-LD schema validation",
       "category": "validation",
       "date": "2026-08-14"
+    },
+    {
+      "slug": "pre-bash-enforce-java-build",
+      "name": "Enforce build wrapper",
+      "category": "validation",
+      "date": "2026-08-16"
+    },
+    {
+      "slug": "post-edit-java-compile",
+      "name": "Java compile check after edit",
+      "category": "validation",
+      "date": "2026-08-16"
+    },
+    {
+      "slug": "stop-java-test",
+      "name": "Run Java tests at end of response",
+      "category": "validation",
+      "date": "2026-08-16"
     }
   ]
 }

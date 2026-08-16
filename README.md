@@ -86,7 +86,7 @@ It finds the hooks you've locally modified and opens a PR with your changes — 
 
 ## The HookStack evolution
 
-**101 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
+**105 hooks** and counting — every one dogfooded on this repo, unit-tested, and shipped in public.
 
 <p align="center">
   <a href="https://www.hookstack.app/evolution">
@@ -94,7 +94,7 @@ It finds the hooks you've locally modified and opens a PR with your changes — 
   </a>
 </p>
 
-<sub>First hook 2026-05-29 · latest 2026-08-14 · explore the live timeline → <a href="https://www.hookstack.app/evolution"><b>hookstack.app/evolution</b></a></sub>
+<sub>First hook 2026-05-29 · latest 2026-08-16 · explore the live timeline → <a href="https://www.hookstack.app/evolution"><b>hookstack.app/evolution</b></a></sub>
 
 <!-- HOOKS_TIMELINE:END -->
 
