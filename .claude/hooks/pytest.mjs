@@ -24,6 +24,10 @@ export function run({
 		cwd: process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
 	}),
 } = {}) {
+	// CI (GitHub Action générée par le CLI) : lancer toute la suite, le scope
+	// « fichiers modifiés » n'a pas de sens sur un arbre git propre.
+	if (process.env.HOOKSTACK_FULL_CHECK === "1") changed = null;
+
 	const isPython = PYTHON_MARKERS.some((f) => exists(`${cwd}/${f}`));
 	if (!isPython) return null;
 

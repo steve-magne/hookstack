@@ -36,6 +36,11 @@ def run(*, exists=None, spawn=None, cwd=None, changed=None):
     if spawn is None:
         spawn = _spawn
 
+    # CI (GitHub Action générée par le CLI) : lancer toute la suite, le scope
+    # « fichiers modifiés » n'a pas de sens sur un arbre git propre.
+    if os.environ.get("HOOKSTACK_FULL_CHECK") == "1":
+        changed = None
+
     is_python = any(exists(f) for f in PYTHON_MARKERS)
     if not is_python:
         return None

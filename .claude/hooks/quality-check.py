@@ -37,6 +37,11 @@ def run(*, exec_cmd=None, exists=None, project_dir=None, changed=None):
     if exec_cmd is None:
         exec_cmd = _exec
 
+    # CI (GitHub Action générée par le CLI) : arbre git propre, le scope « fichiers
+    # modifiés » n'a pas de sens → vérifier tout le projet, comme hors dépôt git.
+    if os.environ.get("HOOKSTACK_FULL_CHECK") == "1":
+        changed = None
+
     # Aucun .py (ni config python) modifié → checks inutiles.
     if changed is not None and not any(
         PY.search(f) or PY_CFG.search(f) for f in changed

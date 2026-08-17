@@ -41,6 +41,10 @@ Options:
                      "codex-project", or "codex-profile"
   --with-tests       Also install unit tests into tests/hooks/ — vitest (.mjs) or pytest
                      (Python projects, .py variants) — install, project scope only
+  --pre-commit       Also wire a git pre-commit running the same quality/test gates as
+                     your agentic sessions — install, project scope only
+  --github-action    Also write .github/workflows/hookstack-gates.yml running the same
+                     gates in CI — install, GitHub-hosted project scope only
   --stack <s>        "auto" (default) — filter hooks to the detected project toolchain;
                      "typescript" / "python" / "java" force one stack; "all" disables filtering
   --stacks <list>    Override stack detection (e.g. --stacks=typescript,python,java)
@@ -73,6 +77,7 @@ When run in a terminal the CLI opens an interactive prompt:
 3. Probes the project for non-language systems (i18n, OKF, Next.js, front-end, GitHub) and offers the matching hooks as a pre-checked multi-select
 4. Shows an **installation summary** + **security panel** (shell access · network · filesystem writes · Snyk score)
 5. Asks for confirmation before writing anything
+6. Offers to install unit tests (`tests/hooks/`), a **git pre-commit**, and a **GitHub Action** — each replaying the same quality/test gates as the agentic session
 
 ### Non-interactive mode (`--yes` or piped)
 
@@ -87,6 +92,12 @@ npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guar
 
 # CI bootstrap for OpenAI Codex (committed ./.codex/hooks.json)
 npx hookstack-cli@latest install --hooks=pre-bash-secret-detection,pre-bash-guard-force-push-any --yes --scope=codex-project
+
+# CI bootstrap + git pre-commit (manual commits run the same quality/test gates)
+npx hookstack-cli@latest install --yes --with-tests --pre-commit
+
+# CI bootstrap + GitHub Action (CI runs the same quality/test gates)
+npx hookstack-cli@latest install --yes --with-tests --github-action
 ```
 
 ### Smart toolstack detection
@@ -125,7 +136,87 @@ On a pure-Python install (detected toolchain, or `--stack=python`), hooks that h
 npx hookstack-cli@latest install --with-tests
 ```
 
-Every hook in the default stack carries a Python variant, so a default Python install is **100 % `.py` — zero `.mjs` fallback** (66 Python hooks today — the install summary only prints a `N Python · M .mjs fallback` line when a fallback actually occurs). Hooks outside the default stack (picked explicitly) without a Python variant still fall back to the `.mjs`. `update` compares and refreshes the installed variant (`.py` on Python projects, `.mjs` otherwise).
+Every hook in the default stack carries a Python variant, so a default Python install is **100 % `.py` — zero `.mjs` fallback** (63 Python hooks today — the install summary only prints a `N Python · M .mjs fallback` line when a fallback actually occurs). Hooks outside the default stack (picked explicitly) without a Python variant still fall back to the `.mjs`. `update` compares and refreshes the installed variant (`.py` on Python projects, `.mjs` otherwise).
+
+---
+
+## Same gates, everywhere
+
+Install once, validate everywhere. The quality gates HookStack installs — `stop-quality-check`, `stop-run-tests`, `stop-pytest` — all call the **same hook scripts**, so the checks can never drift between your agent, your terminal, and your CI:
+
+| Surface | When it runs | Enable with | Scope |
+|---|---|---|---|
+| 🤖 **Agentic session** | at `Stop`, automatically | the default install | changed files |
+| 💻 **Git pre-commit** | `git commit` | `--pre-commit` | changed files |
+| ☁️ **GitHub CI** | every PR & push | `--github-action` | whole repo |
+
+```bash
+npx hookstack-cli@latest install --pre-commit       # gates on every git commit
+npx hookstack-cli@latest install --github-action    # gates on every PR & push
+npx hookstack-cli@latest install --pre-commit --github-action   # all three surfaces
+```
+
+### Git pre-commit
+
+Pass `--pre-commit` (or accept the interactive prompt) to wire a **git pre-commit hook** that replays the exact same quality gates an agentic session runs at `Stop`, so a manual `git commit` is checked identically to a Claude Code / Codex session:
+
+```bash
+npx hookstack-cli@latest install --pre-commit
+npx hookstack-cli@latest install --hooks=stop-quality-check --pre-commit   # explicit hooks
+```
+
+The pre-commit script **calls the installed hooks themselves** — no duplicated logic. It runs whichever of these gates were actually installed, in order:
+
+| Gate hook | What runs | Installed on |
+|---|---|---|
+| `stop-quality-check` | typecheck + lint (`tsc`/`biome` on Node, `ruff`/`pyright` via `uv` on Python) | every stack |
+| `stop-run-tests` | the project's test suite (`pnpm`/`npm`/`yarn`/`bun` `test`, scoped with `vitest --changed`/`jest --onlyChanged` where possible) | Node/TypeScript |
+| `stop-pytest` | `uv run pytest` (`-n auto` when `pytest-xdist` is present) | Python |
+
+- **Cross-OS & toolstack-aware**: the script is POSIX `sh` (native on macOS/Linux, Git Bash on Windows), resolves `python3` → `python` as a fallback, and honors the same stack detection as the install — a Python project only gets the Python gates, a TypeScript project only the Node ones. No Python gate is ever wired into a project that can't run it.
+- **Evolves, never clobbers**: if `.git/hooks/pre-commit` already exists and was written by HookStack, re-running `install --pre-commit` refreshes it in place. If it's your own script, the HookStack gates are **appended** to it — your logic stays untouched, and a later install refreshes only the HookStack part.
+- **Non-blocking report, CI-style**: all gates run (the script doesn't stop at the first failure), a `✓`/`✗` line is printed per gate, and the commit is rejected only when at least one gate fails. Bypass with `git commit --no-verify`.
+- Project scopes only (`--project`, `--codex-project`, `--copilot`) — a git hook lives in the repo, so global/profile scopes ignore `--pre-commit`.
+
+A passing commit looks like this:
+
+```
+hookstack/pre-commit › Quality gate (typecheck + lint)
+hookstack/pre-commit › ✓ Quality gate (typecheck + lint)
+hookstack/pre-commit › Test suite
+hookstack/pre-commit › ✓ Test suite
+hookstack/pre-commit › ✓ all gates passed
+```
+
+### GitHub Action
+
+Pass `--github-action` (or accept the interactive prompt) to write a **`.github/workflows/hookstack-gates.yml`** that runs the exact same gate hooks on every pull request and every push to `main`/`master` — so CI, your agentic sessions, and your manual commits all enforce one identical set of checks:
+
+```bash
+npx hookstack-cli@latest install --github-action
+```
+
+The generated workflow mirrors the install — setup steps, install step, then one `run:` per gate:
+
+```yaml
+name: HookStack gates
+on: [pull_request, push]
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    env: { HOOKSTACK_FULL_CHECK: "1" }   # full-repo check in CI
+    steps:
+      - uses: actions/checkout@v4
+      # … setup-node + install (Node) and/or setup-uv + uv sync (Python)
+      - run: node .claude/hooks/stop-quality-check.mjs
+      - run: node .claude/hooks/run-tests.mjs
+```
+
+The workflow **calls the installed hooks themselves** (no duplicated commands) and, like the pre-commit, mirrors the install: a TypeScript project gets `setup-node` + a lockfile-based install (`pnpm install --frozen-lockfile`, `npm ci`, …) and the Node gates; a Python project gets `astral-sh/setup-uv` + `uv sync` and the Python gates; a mixed project gets both. It sets `HOOKSTACK_FULL_CHECK: "1"` so the hooks check the **whole repo** in CI — the changed-files scoping used in-session and in the pre-commit is meaningless on a clean CI checkout.
+
+- **GitHub-hosted only**: the prompt appears only when the repo has a GitHub remote (or a `.github/` dir). `--github-action` on a non-GitHub repo is ignored with a warning.
+- **Evolves, never clobbers**: re-running refreshes a HookStack-generated workflow in place; an existing `hookstack-gates.yml` that isn't ours is left untouched.
+- **You validate**: interactive installs list the gates and ask y/N (default no) before writing anything; `--yes --github-action` installs it non-interactively.
 
 ---
 
@@ -136,6 +227,8 @@ For each hook the CLI:
 - Writes the hook script (`.mjs`, or the `.py` variant on pure-Python installs) to the scripts directory for the chosen agent (`.claude/hooks/`, `~/.claude/hooks/`, `.codex/hooks/`, or `~/.codex/hooks/`)
 - Patches the agent's config file (`.claude/settings.json` or `.codex/hooks.json`) to register the hook on the right lifecycle event
 - Optionally writes unit tests to `tests/hooks/` when `--with-tests` is passed (or confirmed interactively) — vitest on Node projects, pytest on Python projects
+- Optionally writes/evolves `.git/hooks/pre-commit` when `--pre-commit` is passed (or confirmed interactively) — the installed quality/test gates, replayed on every manual commit
+- Optionally writes/evolves `.github/workflows/hookstack-gates.yml` when `--github-action` is passed (or confirmed interactively) — the same gates, replayed in CI on every PR and push
 
 The same hook code is used regardless of agent — Claude Code and Codex share lifecycle event names, so only the config file format changes. No new dependencies are added to your project. Hooks are plain Node.js/Python scripts — no SDK, no agent modification.
 

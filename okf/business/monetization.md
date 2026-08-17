@@ -20,7 +20,7 @@ Le cœur du produit reste gratuit de façon durable :
 - Le **CLI** (`hookstack-cli` sur npm) — installation des hooks vers les 5 scopes multi-agent
 - La **contribution communautaire** — soumission de repos GitHub pour enrichir le catalogue
 
-> Le catalogue gratuit est un actif stratégique : il entretient l'effet réseau, valide le produit en dogfood (72 hooks actifs sur le repo lui-même) et assure la visibilité communautaire. Le freiner derrière un paywall casserait la boucle d'enrichissement.
+> Le catalogue gratuit est un actif stratégique : il entretient l'effet réseau, valide le produit en dogfood (93 hooks actifs sur le repo lui-même) et assure la visibilité communautaire. Le freiner derrière un paywall casserait la boucle d'enrichissement.
 
 ## Tier Pro — futur envisagé (Priorité 4)
 

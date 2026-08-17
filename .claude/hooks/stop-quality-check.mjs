@@ -40,6 +40,10 @@ export function run({
 		cwd: process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
 	}),
 } = {}) {
+	// CI (GitHub Action générée par le CLI) : arbre git propre, le scope « fichiers
+	// modifiés » n'a pas de sens → vérifier tout le projet, comme hors dépôt git.
+	if (process.env.HOOKSTACK_FULL_CHECK === "1") changed = null;
+
 	// Aucun fichier JS/TS ni Python (ni config associée) modifié → checks inutiles.
 	if (
 		changed &&

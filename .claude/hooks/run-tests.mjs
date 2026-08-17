@@ -85,6 +85,10 @@ export function run({
 		cwd: process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
 	}),
 } = {}) {
+	// CI (GitHub Action générée par le CLI) : lancer toute la suite, le scope
+	// « fichiers modifiés » n'a pas de sens sur un arbre git propre.
+	if (process.env.HOOKSTACK_FULL_CHECK === "1") changed = null;
+
 	// Rien en attente, ou uniquement des fichiers docs/binaires → relancer toute
 	// la suite à chaque fin de session ne sert à rien. (changed === null → hors git,
 	// on garde le comportement historique et on lance.)

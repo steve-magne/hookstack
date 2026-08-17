@@ -66,6 +66,12 @@ jobs:
       - name: Coverage badge drift guard
         run: node scripts/coverage-badge.mjs --check
 
+      # Comptes de hooks cités dans les READMEs (« 63 hooks, 100 % .py ») : doivent
+      # refléter le registre (default_on + stack + variantes .py), sinon les READMEs
+      # promettent un chiffre périmé. Générateur déterministe, cf. coverage-badge.
+      - name: README hook counts drift guard
+        run: node scripts/readme-hook-counts.mjs --check
+
       - name: Unit tests (pytest — .py hook variants)
         run: |
           pip install pytest

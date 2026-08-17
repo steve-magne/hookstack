@@ -51,6 +51,8 @@ export function parseArgs(argv) {
 		stack: "auto",
 		yes: false,
 		withTests: false,
+		preCommit: false,
+		githubAction: false,
 		stacks: [],
 		noDetect: false,
 	};
@@ -73,6 +75,14 @@ export function parseArgs(argv) {
 			result.withTests = true;
 			continue;
 		}
+		if (arg === "--pre-commit") {
+			result.preCommit = true;
+			continue;
+		}
+		if (arg === "--github-action") {
+			result.githubAction = true;
+			continue;
+		}
 		if (arg === "--no-detect") {
 			result.noDetect = true;
 			continue;
@@ -82,9 +92,10 @@ export function parseArgs(argv) {
 			continue;
 		}
 		if (arg.startsWith("--stack=") || arg.startsWith("--language=")) {
-			const v = (arg.includes("--stack=")
-				? arg.slice("--stack=".length)
-				: arg.slice("--language=".length)
+			const v = (
+				arg.includes("--stack=")
+					? arg.slice("--stack=".length)
+					: arg.slice("--language=".length)
 			).toLowerCase();
 			if (["auto", "typescript", "python", "java", "all"].includes(v)) {
 				result.stack = v;
@@ -417,7 +428,8 @@ function hasI18nDir(dir, depth, readdirSync) {
 			if (I18N_DIR_RE.test(ent.name)) return true;
 			if (hasI18nDir(join(dir, ent.name), depth + 1, readdirSync)) return true;
 		} else if (ent.isFile()) {
-			if (I18N_EXT_RE.test(ent.name) || I18N_FILE_RE.test(ent.name)) return true;
+			if (I18N_EXT_RE.test(ent.name) || I18N_FILE_RE.test(ent.name))
+				return true;
 		}
 	}
 	return false;
@@ -581,7 +593,13 @@ function hasDocsSignal(root, { readdirSync }) {
 // probe filesystem structure keep working unchanged.
 export function detectProjectSignals(
 	root,
-	{ readdirSync, readFileSync, existsSync = () => false, env = {}, platform = "" } = {},
+	{
+		readdirSync,
+		readFileSync,
+		existsSync = () => false,
+		env = {},
+		platform = "",
+	} = {},
 ) {
 	const signals = new Set();
 	const deps = readPackageDeps(root, { readFileSync });
@@ -594,8 +612,7 @@ export function detectProjectSignals(
 	if (hasAnyDep(deps, FRONTEND_PACKAGE_NAMES)) signals.add("frontend");
 	if (hasGithubSignal(root, { readdirSync, readFileSync }))
 		signals.add("github");
-	if (hasTestsSignal(root, { readdirSync, readFileSync }))
-		signals.add("tests");
+	if (hasTestsSignal(root, { readdirSync, readFileSync })) signals.add("tests");
 	if (hasSkillsSignal(root, existsSync)) signals.add("skills");
 	if (hasRegistrySignal(root, existsSync)) signals.add("registry");
 	if (hasTtsSignal({ platform, env, existsSync })) signals.add("tts");
@@ -648,9 +665,7 @@ export function mergeHooks(existing, incoming) {
 // Python toolchain (mixed TS+Python repos keep the .mjs, node being present
 // there).
 function usePythonVariant(hook, python) {
-	return Boolean(
-		python && hook.python_script_path && hook.python_code_snippet,
-	);
+	return Boolean(python && hook.python_script_path && hook.python_code_snippet);
 }
 
 // Rewrites a hook command for its Python variant:
@@ -1091,4 +1106,267 @@ export function buildSecurityRows(hooks) {
 		snyk: snykVerdict(h.security?.snyk),
 		codeql: codeqlVerdict(h.security?.codeql),
 	}));
+}
+
+// ── git pre-commit gate ──────────────────────────────────────────────────────
+// `--pre-commit` wires the installed Stop-quality hooks into .git/hooks/pre-commit
+// so a manual `git commit` runs the exact same checks an agentic session runs at
+// Stop. The gates ARE the hooks themselves (no duplicated logic): the installer
+// points the pre-commit script at the already-installed .mjs/.py files.
+
+// Ordered gates — quality first, then tests. Labels surface in the installer
+// prompt and in the generated script's per-gate output.
+export const PRE_COMMIT_GATE_LABELS = {
+	"stop-quality-check": "Quality gate (typecheck + lint)",
+	"stop-run-tests": "Test suite",
+	"stop-pytest": "Pytest (Python)",
+};
+export const PRE_COMMIT_GATE_SLUGS = Object.keys(PRE_COMMIT_GATE_LABELS);
+
+// Markers written into the generated pre-commit so a later install can recognize
+// and evolve its own output without clobbering a user's hand-written script.
+export const PRE_COMMIT_MARKER = "# @hookstack pre-commit";
+export const PRE_COMMIT_BLOCK_START = "# @hookstack pre-commit (start)";
+export const PRE_COMMIT_BLOCK_END = "# @hookstack pre-commit (end)";
+
+// Resolves which installed hooks double as a pre-commit gate, honoring the same
+// Python-variant + Codex-relocation rules as the install itself. The order
+// follows PRE_COMMIT_GATE_SLUGS so the pre-commit runs quality before tests.
+export function resolvePreCommitGates(
+	hooks,
+	{ scope = "project", python = false } = {},
+) {
+	const gates = [];
+	for (const slug of PRE_COMMIT_GATE_SLUGS) {
+		const hook = hooks.find((h) => h.slug === slug);
+		if (!hook) continue;
+		const usePy = usePythonVariant(hook, python);
+		const scriptPath = usePy ? hook.python_script_path : hook.script_path;
+		if (!scriptPath) continue;
+		gates.push({
+			slug,
+			label: PRE_COMMIT_GATE_LABELS[slug],
+			interpreter: usePy ? "python3" : "node",
+			path: resolveScriptPath(scriptPath, scope),
+		});
+	}
+	return gates;
+}
+
+// POSIX sh body that runs every gate and reports a pass/fail summary without
+// aborting early, so a developer sees all failing checks at once (CI-style).
+// Works on macOS/Linux natively and on Windows through Git Bash (the shell git
+// itself uses to run hooks). `python3` falls back to `python` for Windows.
+function buildPreCommitBody(gates) {
+	const lines = [
+		"ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {",
+		'  echo "hookstack/pre-commit › not a git repository" >&2',
+		"  exit 0",
+		"}",
+		'cd "$ROOT" || exit 1',
+		"",
+		"PYTHON=python3",
+		"command -v python3 >/dev/null 2>&1 || PYTHON=python",
+		"",
+		"FAIL=0",
+		"",
+		"run_gate() {",
+		'  label="$1"; shift',
+		'  echo ""',
+		'  echo "hookstack/pre-commit › $label"',
+		'  if "$@"; then',
+		'    echo "hookstack/pre-commit › ✓ $label"',
+		"  else",
+		"    code=$?",
+		'    echo "hookstack/pre-commit › ✗ $label (exit $code)" >&2',
+		"    FAIL=1",
+		"  fi",
+		"}",
+		"",
+	];
+	for (const gate of gates) {
+		const bin = gate.interpreter === "python3" ? '"$PYTHON"' : "node";
+		lines.push(`run_gate "${gate.label}" ${bin} "$ROOT/${gate.path}"`);
+	}
+	lines.push(
+		"",
+		'if [ "$FAIL" -ne 0 ]; then',
+		'  echo ""',
+		'  echo "hookstack/pre-commit › ✗ some gates failed — fix the issues above, then commit again." >&2',
+		'  echo "hookstack/pre-commit › (skip with: git commit --no-verify)" >&2',
+		"  exit 1",
+		"fi",
+		"",
+		'echo ""',
+		'echo "hookstack/pre-commit › ✓ all gates passed"',
+	);
+	return lines;
+}
+
+// Full standalone pre-commit file (shebang + marker + body).
+export function buildPreCommitScript(gates) {
+	return `${[
+		"#!/bin/sh",
+		PRE_COMMIT_MARKER,
+		"# Runs the same quality gates an agentic session runs (the Stop hooks).",
+		"# Generated by hookstack-cli — refresh with:",
+		"#   npx hookstack-cli@latest install --pre-commit",
+		"# Skip everything with: git commit --no-verify",
+		"",
+		...buildPreCommitBody(gates),
+	].join("\n")}\n`;
+}
+
+// Self-contained block appended to an existing user pre-commit (no shebang).
+export function buildPreCommitBlock(gates) {
+	return [
+		PRE_COMMIT_BLOCK_START,
+		"# HookStack quality gates — appended by hookstack-cli, safe to remove.",
+		"",
+		...buildPreCommitBody(gates),
+		PRE_COMMIT_BLOCK_END,
+	].join("\n");
+}
+
+// Merges a freshly generated pre-commit with whatever already sits in
+// .git/hooks/pre-commit: creates it when absent, replaces it when it was ours,
+// refreshes just our block when we previously appended to a user's script, and
+// appends to an untouched user script. Never clobbers a user's own logic.
+export function mergePreCommit(existing, { script, block }) {
+	if (!existing || existing.trim() === "") {
+		return { content: script, mode: "created" };
+	}
+	// The full file is "ours" only when its 2nd line is the exact marker — the
+	// appended-block marker `# @hookstack pre-commit (start)` must NOT count, or
+	// we'd clobber the user script we appended to.
+	const lines = existing.trimStart().split("\n");
+	const isOurs =
+		lines[0].trim() === "#!/bin/sh" && lines[1]?.trim() === PRE_COMMIT_MARKER;
+	if (isOurs) {
+		return existing === script
+			? { content: existing, mode: "unchanged" }
+			: { content: script, mode: "replaced" };
+	}
+	const start = existing.indexOf(PRE_COMMIT_BLOCK_START);
+	const end = existing.indexOf(PRE_COMMIT_BLOCK_END);
+	if (start !== -1 && end !== -1) {
+		const before = existing.slice(0, start).trimEnd();
+		const after = existing
+			.slice(end + PRE_COMMIT_BLOCK_END.length)
+			.replace(/^\n+/, "");
+		const content = `${before}\n\n${block}${after ? `\n${after}` : ""}\n`;
+		return { content, mode: "replaced" };
+	}
+	const content = `${existing.trimEnd()}\n\n${block}\n`;
+	return { content, mode: "appended" };
+}
+
+// ── GitHub Action gate ───────────────────────────────────────────────────────
+// `--github-action` writes a `.github/workflows/` job that runs the same gate
+// hooks in CI. The gates are identical to the pre-commit ones (resolved by
+// resolvePreCommitGates) — CI is the third replay of the same checks, after the
+// agentic Stop and the manual `git commit`. The workflow sets
+// HOOKSTACK_FULL_CHECK=1 so the hooks check the whole repo instead of scoping
+// to changed files (meaningless on a clean CI checkout).
+
+// First line of the generated workflow — lets a later install recognize and
+// refresh its own file without overwriting a hand-written workflow.
+export const WORKFLOW_MARKER = "# @hookstack github-action";
+
+// Detects the project's package manager from its lockfile so the generated
+// workflow can install dependencies before running the Node gates. Matches the
+// precedence used by the hooks themselves (pnpm > bun > yarn > npm).
+export function detectPackageManager(root, { existsSync }) {
+	if (existsSync(join(root, "pnpm-lock.yaml")))
+		return { name: "pnpm", install: "pnpm install --frozen-lockfile" };
+	if (existsSync(join(root, "bun.lock")) || existsSync(join(root, "bun.lockb")))
+		return { name: "bun", install: "bun install --frozen-lockfile" };
+	if (existsSync(join(root, "yarn.lock")))
+		return { name: "yarn", install: "yarn install --frozen-lockfile" };
+	if (existsSync(join(root, "package-lock.json")))
+		return { name: "npm", install: "npm ci" };
+	return { name: "npm", install: "npm install" };
+}
+
+// True when the project is hosted on GitHub (a .github/ dir, or a git remote
+// pointing at github.com) — a GitHub Action only makes sense there.
+export function isGithubHosted(root, { readdirSync, readFileSync }) {
+	return hasGithubSignal(root, { readdirSync, readFileSync });
+}
+
+// Generates `.github/workflows/hookstack-gates.yml`. Pure string builder, unit-
+// tested; the only inputs are the resolved gates and the detected package
+// manager, so the workflow exactly mirrors what was installed.
+export function buildWorkflowYaml(gates, { packageManager }) {
+	const hasNode = gates.some((g) => g.interpreter === "node");
+	const hasPython = gates.some((g) => g.interpreter === "python3");
+
+	const steps = ["      - uses: actions/checkout@v4", ""];
+	if (hasNode) {
+		steps.push(
+			"      - uses: actions/setup-node@v4",
+			"        with:",
+			'          node-version: "22"',
+			"",
+			"      - name: Install dependencies",
+			`        run: ${packageManager.install}`,
+			"",
+		);
+	}
+	if (hasPython) {
+		steps.push(
+			"      - uses: astral-sh/setup-uv@v5",
+			"",
+			"      - name: Install Python dependencies",
+			"        run: uv sync",
+			"",
+		);
+	}
+	for (const gate of gates) {
+		steps.push(
+			`      - name: ${gate.label}`,
+			`        run: ${gate.interpreter} ${gate.path}`,
+			"",
+		);
+	}
+	// Drop the trailing blank line — the join below already ends with "\n".
+	while (steps.length > 0 && steps[steps.length - 1] === "") steps.pop();
+
+	return `${[
+		WORKFLOW_MARKER,
+		"# Generated by hookstack-cli — runs the same quality gates as your agentic",
+		"# sessions and your git pre-commit. Refresh with:",
+		"#   npx hookstack-cli@latest install --github-action",
+		"name: HookStack gates",
+		"",
+		"on:",
+		"  pull_request:",
+		"  push:",
+		"    branches: [main, master]",
+		"",
+		"jobs:",
+		"  gates:",
+		"    runs-on: ubuntu-latest",
+		"    env:",
+		'      HOOKSTACK_FULL_CHECK: "1"',
+		"    steps:",
+		...steps,
+	].join("\n")}\n`;
+}
+
+// Merges a freshly generated workflow with whatever already sits at
+// .github/workflows/hookstack-gates.yml. Unlike the pre-commit (a shell script
+// that can be appended to), a workflow is a single YAML document — it can only
+// be created or replaced, never appended. An existing workflow without our
+// marker is left untouched (mode "skipped") so the CLI never clobbers it.
+export function mergeWorkflow(existing, generated) {
+	if (!existing || existing.trim() === "") {
+		return { content: generated, mode: "created" };
+	}
+	if (existing.trimStart().startsWith(WORKFLOW_MARKER)) {
+		return existing === generated
+			? { content: existing, mode: "unchanged" }
+			: { content: generated, mode: "replaced" };
+	}
+	return { mode: "skipped" };
 }

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, realpathSync, mkdtempSync, rmSync, copyFileSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, realpathSync, mkdtempSync, rmSync, copyFileSync, chmodSync } from 'fs'
 import { join as pathJoin } from 'path'
 import { homedir, tmpdir } from 'os'
-import { join, dirname, relative } from 'path'
+import { join, dirname, relative, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { execFileSync } from 'node:child_process'
 import pc from 'picocolors'
@@ -32,6 +32,14 @@ import {
   detectProjectSignals,
   suggestHooksForSignals,
   SIGNAL_LABELS,
+  resolvePreCommitGates,
+  buildPreCommitScript,
+  buildPreCommitBlock,
+  mergePreCommit,
+  detectPackageManager,
+  isGithubHosted,
+  buildWorkflowYaml,
+  mergeWorkflow,
 } from './core.mjs'
 
 const API_BASE = process.env.HOOKSTACK_API_BASE || 'https://hookstack.vercel.app'
@@ -41,6 +49,14 @@ const REPO_URL = 'github.com/steve-magne/hookstack'
 const formatHint = h => h.hint.startsWith('Optional')
   ? pc.dim(`○  ${h.slug}: ${h.hint}`)
   : pc.yellow(`⚠  ${h.slug}: ${h.hint}`)
+
+// Human-readable verb for the pre-commit summary line ("created", "replaced"…).
+const preCommitModeLabel = mode => ({
+  created: 'created',
+  replaced: 'updated',
+  appended: 'extended',
+  unchanged: 'up to date',
+}[mode] ?? mode)
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const VERSION = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8')).version
 
@@ -263,6 +279,81 @@ function doInstall(hooks, dirs, scope, log, { python = false } = {}) {
   return { hookCount: hooks.length, scriptCount, pythonScriptCount, companionCount }
 }
 
+// Writes/evolves .git/hooks/pre-commit so a manual commit runs the same
+// Stop-quality gates as an agentic session. Returns null when there is nothing
+// to wire (no gate hooks installed, or not a git repo). Existing user scripts
+// are never clobbered — the gates are appended unless the file is already ours.
+function installPreCommit(hooks, scope, pythonMode, log) {
+  const gates = resolvePreCommitGates(hooks, { scope, python: pythonMode })
+  if (gates.length === 0) return null
+
+  let gitHooksDir
+  try {
+    const commonDir = run('git', ['rev-parse', '--git-common-dir']).trim()
+    gitHooksDir = resolve(process.cwd(), commonDir, 'hooks')
+  } catch {
+    log.warn('Not a git repository — skipped the pre-commit hook.')
+    return null
+  }
+
+  const preCommitPath = pathJoin(gitHooksDir, 'pre-commit')
+  let existing = null
+  if (existsSync(preCommitPath)) {
+    try {
+      existing = readFileSync(preCommitPath, 'utf8')
+    } catch {
+      log.warn(`Could not read existing pre-commit at ${preCommitPath} — starting fresh.`)
+    }
+  }
+
+  const script = buildPreCommitScript(gates)
+  const block = buildPreCommitBlock(gates)
+  const merged = mergePreCommit(existing, { script, block })
+  if (merged.mode === 'unchanged') return { mode: merged.mode, path: preCommitPath, gates }
+
+  mkdirSync(gitHooksDir, { recursive: true })
+  writeFileSync(preCommitPath, merged.content, 'utf8')
+  chmodSync(preCommitPath, 0o755)
+  return { mode: merged.mode, path: preCommitPath, gates }
+}
+
+// Writes/evolves .github/workflows/hookstack-gates.yml so CI replays the same
+// gates. Returns null when there is nothing to wire (no gate hooks, no
+// GitHub remote, or an existing hand-written workflow we must not clobber).
+function installGithubAction(hooks, scope, pythonMode, log) {
+  const gates = resolvePreCommitGates(hooks, { scope, python: pythonMode })
+  if (gates.length === 0) return null
+
+  if (!isGithubHosted(process.cwd(), { readdirSync, readFileSync })) {
+    log.warn('Not a GitHub-hosted repository — skipped the GitHub Action.')
+    return null
+  }
+
+  const packageManager = detectPackageManager(process.cwd(), { existsSync })
+  const generated = buildWorkflowYaml(gates, { packageManager })
+  const workflowsDir = pathJoin(process.cwd(), '.github', 'workflows')
+  const workflowPath = pathJoin(workflowsDir, 'hookstack-gates.yml')
+  let existing = null
+  if (existsSync(workflowPath)) {
+    try {
+      existing = readFileSync(workflowPath, 'utf8')
+    } catch {
+      log.warn(`Could not read existing workflow at ${workflowPath} — starting fresh.`)
+    }
+  }
+
+  const merged = mergeWorkflow(existing, generated)
+  if (merged.mode === 'unchanged') return { mode: merged.mode, path: workflowPath, gates }
+  if (merged.mode === 'skipped') {
+    log.warn(`Existing workflow at ${workflowPath} is not a HookStack workflow — leaving it untouched.`)
+    return null
+  }
+
+  mkdirSync(workflowsDir, { recursive: true })
+  writeFileSync(workflowPath, merged.content, 'utf8')
+  return { mode: merged.mode, path: workflowPath, gates }
+}
+
 // ── flows ─────────────────────────────────────────────────────────────────────
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
@@ -342,6 +433,12 @@ async function interactiveInstall(slugs, args) {
   })
   if (p.isCancel(scopeResult)) return onCancel()
   scope = scopeResult
+  if (args.preCommit && isGlobalScope(scope)) {
+    p.log.warn('--pre-commit ignored: a git pre-commit only makes sense for project scopes (project/copilot/codex-project).')
+  }
+  if (args.githubAction && isGlobalScope(scope)) {
+    p.log.warn('--github-action ignored: a GitHub Action only makes sense for project scopes (project/copilot/codex-project).')
+  }
 
   const pythonMode = purePythonStack(stackFilter)
   const dirs = resolveScopeRoot(scope, { cwd: process.cwd(), home: homedir() })
@@ -414,6 +511,50 @@ async function interactiveInstall(slugs, args) {
     }
   }
 
+  // Git pre-commit prompt (project scopes only, when quality/test gates landed)
+  let preCommitResult = null
+  const gates = resolvePreCommitGates(hooks, { scope, python: pythonMode })
+  if (!isGlobalScope(scope) && gates.length > 0) {
+    p.note(
+      gates.map(g => pc.cyan(`  ${g.label}`) + pc.dim(`  →  ${g.interpreter} ${g.path}`)).join('\n'),
+      'Git pre-commit — same gates as your agentic sessions',
+    )
+    const wantPreCommit = args.preCommit || await p.confirm({
+      message: `Wire these ${plural(gates.length, 'gate')} into ${pc.cyan('.git/hooks/pre-commit')}?`,
+      initialValue: false,
+    })
+    if (!p.isCancel(wantPreCommit) && wantPreCommit) {
+      try {
+        preCommitResult = installPreCommit(hooks, scope, pythonMode, { warn: m => p.log.warn(m) })
+      } catch (e) {
+        p.log.warn(`Could not write the pre-commit hook: ${e.message}`)
+      }
+    }
+  }
+
+  // GitHub Action prompt (project scopes, GitHub-hosted repo, when gates landed)
+  let githubActionResult = null
+  const githubHosted = !isGlobalScope(scope) && isGithubHosted(process.cwd(), { readdirSync, readFileSync })
+  if (githubHosted && gates.length > 0) {
+    p.note(
+      gates.map(g => pc.cyan(`  ${g.label}`) + pc.dim(`  →  ${g.interpreter} ${g.path}`)).join('\n'),
+      'GitHub Action — same gates in CI',
+    )
+    const wantGithubAction = args.githubAction || await p.confirm({
+      message: `Add a GitHub Action running these ${plural(gates.length, 'gate')} on every PR and push?`,
+      initialValue: false,
+    })
+    if (!p.isCancel(wantGithubAction) && wantGithubAction) {
+      try {
+        githubActionResult = installGithubAction(hooks, scope, pythonMode, { warn: m => p.log.warn(m) })
+      } catch (e) {
+        p.log.warn(`Could not write the GitHub Action: ${e.message}`)
+      }
+    }
+  } else if (args.githubAction && !isGlobalScope(scope) && !githubHosted) {
+    p.log.warn('--github-action ignored: this repository is not hosted on GitHub.')
+  }
+
   // Result panel
   const hints = buildPostInstallHints(hooks)
   const resultLines = [
@@ -429,6 +570,12 @@ async function interactiveInstall(slugs, args) {
       : null,
     testResult?.testCount > 0
       ? pc.green(`✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} written to tests/hooks/`)
+      : null,
+    preCommitResult
+      ? pc.green(`✓ git pre-commit ${preCommitModeLabel(preCommitResult.mode)} (${preCommitResult.gates.map(g => g.label).join(' · ')})`)
+      : null,
+    githubActionResult
+      ? pc.green(`✓ GitHub Action ${preCommitModeLabel(githubActionResult.mode)} (.github/workflows/hookstack-gates.yml)`)
       : null,
     hints.length > 0 ? '' : null,
     ...hints.map(formatHint),
@@ -484,6 +631,24 @@ async function directInstall(slugs, args) {
         console.log(`  ✓ ${testResult.testCount} test file${testResult.testCount === 1 ? '' : 's'} (${pythonMode ? 'pytest' : 'vitest'}) written to tests/hooks/`)
     } catch (e) {
       console.warn(`  ! Could not write tests: ${e.message}`)
+    }
+  }
+  if (args.preCommit) {
+    if (isGlobalScope(args.scope)) {
+      console.warn(`  ! --pre-commit ignored: a git pre-commit only makes sense for project scopes (project/copilot/codex-project).`)
+    } else {
+      const preCommitResult = installPreCommit(hooks, args.scope, pythonMode, { warn: m => console.warn(`  ! ${m}`) })
+      if (preCommitResult)
+        console.log(`  ✓ git pre-commit ${preCommitModeLabel(preCommitResult.mode)} (${preCommitResult.gates.map(g => g.label).join(' · ')})`)
+    }
+  }
+  if (args.githubAction) {
+    if (isGlobalScope(args.scope)) {
+      console.warn(`  ! --github-action ignored: a GitHub Action only makes sense for project scopes (project/copilot/codex-project).`)
+    } else {
+      const githubActionResult = installGithubAction(hooks, args.scope, pythonMode, { warn: m => console.warn(`  ! ${m}`) })
+      if (githubActionResult)
+        console.log(`  ✓ GitHub Action ${preCommitModeLabel(githubActionResult.mode)} (.github/workflows/hookstack-gates.yml)`)
     }
   }
   const hints = buildPostInstallHints(hooks)
@@ -858,6 +1023,10 @@ const HELP = `
     --scope <s>       "project" (default), "global", "copilot",
                       "codex-project", or "codex-profile"
     --with-tests      Also install unit tests into tests/hooks/ — vitest on TypeScript, pytest on Python (install, project scope only)
+    --pre-commit      Also wire a git pre-commit running the same quality/test gates
+                      as your agentic sessions (install, project scope only)
+    --github-action   Also write .github/workflows/hookstack-gates.yml running the
+                      same gates in CI (install, GitHub-hosted project scope only)
     --stacks <list>   Override stack detection (e.g. --stacks=typescript,python,java)
     --no-detect       Skip all detection (stack + contextual systems), install the full default set
     --yes, -y         Skip prompts (non-interactive)
