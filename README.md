@@ -32,6 +32,12 @@ Install them in one command — your agent gets guardrails in under a minute.
 
 </div>
 
+<!-- HOOK_COUNTS:START -->
+
+<p align="center"><sub>105 hooks · 79 default · 76 .py variants · TypeScript 18 · Python 5 · Java 4 · 93 dogfooded</sub></p>
+
+<!-- HOOK_COUNTS:END -->
+
 ## Installation
 
 Installation takes under a minute.
@@ -46,7 +52,9 @@ That's it. The CLI **detects your project's setup** — its language stack (no B
 
 **Language-aware by default.** The CLI detects your project's toolchain (TypeScript/Node: `package.json`/`tsconfig.json` · Python: `pyproject.toml`/`requirements.txt`/… · Java: `pom.xml`/`build.gradle`/`gradlew`) and only installs hooks that match it — a Python repo gets the ruff/pyright/pytest stack, a Java repo the google-java-format/compile/test stack, never hooks that shell out to another ecosystem's tools. Mixed repos get both. When no TypeScript/Python/Java toolchain is detected (Go, Rust, bare JS…), only the universal hooks are installed — never tsc/biome/ruff/pytest/java hooks the project can't run — and the CLI says so. Override with `--stack=typescript|python|java|all` or `--no-detect`.
 
-**Python hooks, Python tests.** On a Python project the hooks are installed as real `.py` scripts (`python3 …` commands) and `--with-tests` writes **pytest** tests instead of vitest tests — vitest is never installed on Python projects, so your GitHub Actions CI stays Python-only with no `npm` added to test the hooks. Every hook in the default stack carries a Python variant: a default Python install currently lands **66 hooks, 100 % as `.py`, zero `.mjs` fallback** (see the install summary).
+**Python hooks, Python tests.** On a Python project the hooks are installed as real `.py` scripts (`python3 …` commands) and `--with-tests` writes **pytest** tests instead of vitest tests — vitest is never installed on Python projects, so your GitHub Actions CI stays Python-only with no `npm` added to test the hooks. Every hook in the default stack carries a Python variant: a default Python install currently lands **63 hooks, 100 % as `.py`, zero `.mjs` fallback** (see the install summary).
+
+**Same gates, everywhere.** `--pre-commit` adds a git pre-commit hook, and `--github-action` adds CI — both replay the exact same quality/test gates your agent runs at `Stop`, so the agent, your terminal, and GitHub all enforce one identical set of checks. [See the breakdown →](#the-same-gates-everywhere)
 
 ```bash
 # In a Python project — ruff format, ruff check, pyright, pytest, uv guard
@@ -57,6 +65,31 @@ npx hookstack-cli@latest install --stack=typescript
 npx hookstack-cli@latest install --stack=java
 npx hookstack-cli@latest install --stack=all
 ```
+
+---
+
+## The same gates, everywhere
+
+HookStack's quality gates aren't just for your agent. One install can wire the **exact same checks** into three surfaces, all driven by the same hook scripts — so they can never drift apart:
+
+| Surface | When it fires | Enable with | What it checks |
+|---|---|---|---|
+| 🤖 **Agentic session** | at `Stop`, automatically | the default install | changed files |
+| 💻 **Your terminal** | `git commit` | `--pre-commit` | changed files |
+| ☁️ **GitHub CI** | every PR & push to `main`/`master` | `--github-action` | the whole repo |
+
+```bash
+npx hookstack-cli@latest install --pre-commit       # gates on every git commit
+npx hookstack-cli@latest install --github-action    # gates on every PR & push
+npx hookstack-cli@latest install --pre-commit --github-action   # all three
+```
+
+- **One source of truth.** The pre-commit and the workflow call the installed hooks themselves — no duplicated `tsc`/`biome`/`ruff`/`pytest` commands to keep in sync.
+- **Toolstack-aware & cross-OS.** A Python project gets ruff/pyright/pytest, a TypeScript project gets tsc/biome + its test runner. POSIX `sh` with a `python3` → `python` fallback covers macOS, Linux, and Windows (Git Bash).
+- **Never clobbers you.** Your own pre-commit is appended to, not replaced; a `hookstack-gates.yml` that isn't ours is left untouched.
+- **You validate.** Interactive installs list the gates and ask y/N before writing anything; `--yes --pre-commit --github-action` installs both non-interactively.
+
+See [`packages/cli/README.md` → Same gates, everywhere](packages/cli/README.md#same-gates-everywhere) for the full reference.
 
 ---
 

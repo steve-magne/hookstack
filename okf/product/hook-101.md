@@ -104,7 +104,7 @@ Tout hook Hookstack obéit à un pattern qui rend sa logique pure et testable :
 - Les effets de bord (`execSync`, `fs`, `fetch`, `process.platform`, horloge) passent par des dépendances injectées avec des valeurs par défaut réelles.
 - Une **garde d'entrée** fait le marshalling réel (lecture stdin, appel `run`, écriture stdout/exit), couverte par `/* v8 ignore */` pour ne pas polluer la couverture.
 
-C'est ce pattern qui autorise 62+ hooks dogfoodés sans dette de confiance : chaque hook a son test qui injecte des fakes (`vi.fn()`).
+C'est ce pattern qui autorise 93 hooks dogfoodés sans dette de confiance : chaque hook a son test qui injecte des fakes (`vi.fn()`).
 
 ## Concepts voisins
 

@@ -59,7 +59,7 @@ Le catalogue ne disparaît pas — il reste le moteur. Mais la *vitrine* évolue
 
 ## Pourquoi le projet existe (vision founder)
 
-- **Usage perso** : utilisé sur chaque nouveau projet — le fondateur est son propre premier beta-testeur (dogfood complet avec 62 hooks actifs)
+- **Usage perso** : utilisé sur chaque nouveau projet — le fondateur est son propre premier beta-testeur (dogfood complet avec 93 hooks actifs)
 - **Partage rapide** : envoyer un lien à un collègue → il repart avec sa config en 2 min
 - **Visibilité communautaire** : "J'ai fait le site qui configure les hooks Claude Code" — très visible dans la communauté dev IA
 - **Effet réseau** : chaque repo contribué enrichit le catalogue → le site s'améliore automatiquement

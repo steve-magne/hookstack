@@ -156,3 +156,11 @@ def test_multiple_touched_py_files_both_invocations():
     hook.run(**{k: v for k, v in m.items() if k != "calls"})
     joined_paths_call = [c for c in m["calls"] if "ruff" in c]
     assert any('"a.py"' in c and '"b.py"' in c and '"c.py"' in c for c in joined_paths_call)
+
+
+def test_full_check_runs_even_for_doc_only_changes(monkeypatch):
+    monkeypatch.setenv("HOOKSTACK_FULL_CHECK", "1")
+    m = _make(changed=["README.md"])
+    result = hook.run(**{k: v for k, v in m.items() if k != "calls"})
+    assert result["checks"] >= 2
+    assert any("ruff" in c for c in m["calls"])

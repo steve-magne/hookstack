@@ -6,9 +6,13 @@ import {
 	buildContributionBranch,
 	buildContributionPr,
 	buildPostInstallHints,
+	buildPreCommitBlock,
+	buildPreCommitScript,
 	buildSecurityRows,
 	buildSummaryRows,
+	buildWorkflowYaml,
 	collectIncomingHooks,
+	detectPackageManager,
 	detectProjectSignals,
 	detectScriptChanges,
 	detectStacks,
@@ -20,11 +24,18 @@ import {
 	findInstalledSlugs,
 	isBlockingEvent,
 	isCodexScope,
+	isGithubHosted,
 	isGlobalScope,
 	mergeHooks,
+	mergePreCommit,
+	mergeWorkflow,
+	PRE_COMMIT_BLOCK_END,
+	PRE_COMMIT_BLOCK_START,
+	PRE_COMMIT_MARKER,
 	PREREQ_HINTS,
 	parseArgs,
 	resolveContributionTarget,
+	resolvePreCommitGates,
 	resolveScopeRoot,
 	resolveScriptPath,
 	resolveTestDest,
@@ -32,6 +43,7 @@ import {
 	shortRepo,
 	snykVerdict,
 	suggestHooksForSignals,
+	WORKFLOW_MARKER,
 } from "../../packages/cli/bin/core.mjs";
 
 const argv = (...a) => ["node", "cli.mjs", ...a];
@@ -106,6 +118,20 @@ describe("parseArgs", () => {
 	});
 	it("défaut noDetect false", () => {
 		expect(parseArgs(argv("install")).noDetect).toBe(false);
+	});
+	it("--pre-commit", () => {
+		expect(parseArgs(argv("install", "--pre-commit")).preCommit).toBe(true);
+	});
+	it("défaut preCommit false", () => {
+		expect(parseArgs(argv("install")).preCommit).toBe(false);
+	});
+	it("--github-action", () => {
+		expect(parseArgs(argv("install", "--github-action")).githubAction).toBe(
+			true,
+		);
+	});
+	it("défaut githubAction false", () => {
+		expect(parseArgs(argv("install")).githubAction).toBe(false);
 	});
 	it("--stack défaut auto", () => {
 		expect(parseArgs(argv("install")).stack).toBe("auto");
@@ -270,7 +296,12 @@ describe("detectProjectSignals", () => {
 	});
 
 	it("détecte i18n via un fichier de traduction (po/ftl/arb/strings)", () => {
-		for (const name of ["fr.po", "app.ftl", "app_en.arb", "Localizable.strings"]) {
+		for (const name of [
+			"fr.po",
+			"app.ftl",
+			"app_en.arb",
+			"Localizable.strings",
+		]) {
 			const readdirSync = fakeReaddir({ [ROOT]: [file(name)] });
 			expect(
 				detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
@@ -279,7 +310,11 @@ describe("detectProjectSignals", () => {
 	});
 
 	it("détecte i18n via Android (values/strings.xml) et les bundles Java", () => {
-		for (const file_ of ["strings.xml", "messages.properties", "messages_fr.properties"]) {
+		for (const file_ of [
+			"strings.xml",
+			"messages.properties",
+			"messages_fr.properties",
+		]) {
 			const readdirSync = fakeReaddir({ [ROOT]: [file(file_)] });
 			expect(
 				detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
@@ -453,7 +488,8 @@ describe("detectProjectSignals", () => {
 
 	it("détecte tests via une mention pytest dans pyproject.toml", () => {
 		const readdirSync = fakeReaddir({ [ROOT]: [file("pyproject.toml")] });
-		const readFileSync = () => "[project.optional-dependencies]\ndev = ['pytest']\n";
+		const readFileSync = () =>
+			"[project.optional-dependencies]\ndev = ['pytest']\n";
 		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
 			"tests",
 		]);
@@ -484,7 +520,8 @@ describe("detectProjectSignals", () => {
 	it("détecte registry seulement avec registry.json ET sync-hooks.mjs", () => {
 		const readdirSync = fakeReaddir({ [ROOT]: [] });
 		const both = (p) =>
-			p.endsWith("registry/registry.json") || p.endsWith(".claude/sync-hooks.mjs");
+			p.endsWith("registry/registry.json") ||
+			p.endsWith(".claude/sync-hooks.mjs");
 		expect(
 			detectProjectSignals(ROOT, {
 				readdirSync,
@@ -567,7 +604,9 @@ describe("detectProjectSignals", () => {
 	it("détecte slack via un fichier .env", () => {
 		const readdirSync = fakeReaddir({ [ROOT]: [] });
 		const readFileSync = (p) =>
-			p.endsWith(".env.local") ? "SLACK_WEBHOOK_URL=https://hooks.slack.com/y\n" : "";
+			p.endsWith(".env.local")
+				? "SLACK_WEBHOOK_URL=https://hooks.slack.com/y\n"
+				: "";
 		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
 			"slack",
 		]);
@@ -600,7 +639,12 @@ describe("detectProjectSignals", () => {
 
 	it("cumule les nouveaux signaux avec les anciens", () => {
 		const readdirSync = fakeReaddir({
-			[ROOT]: [dir("tests"), file("package.json"), file("README.md"), dir("packages")],
+			[ROOT]: [
+				dir("tests"),
+				file("package.json"),
+				file("README.md"),
+				dir("packages"),
+			],
 			"/proj/packages": [dir("web")],
 			"/proj/packages/web": [file("README.md")],
 		});
@@ -1017,7 +1061,10 @@ describe("collectIncomingHooks", () => {
 				},
 			},
 		];
-		const out = collectIncomingHooks(h, { scope: "codex-project", python: true });
+		const out = collectIncomingHooks(h, {
+			scope: "codex-project",
+			python: true,
+		});
 		expect(out.PreToolUse[0].hooks[0].command).toBe(
 			"python3 .codex/hooks/s.py",
 		);
@@ -1660,5 +1707,403 @@ describe("resolveTestDest", () => {
 			existsSync: (p) => p.endsWith("biome-check.test.mjs"),
 		});
 		expect(dest).toBe("/proj/tests/hooks/biome-check.test.mjs");
+	});
+});
+
+describe("resolvePreCommitGates", () => {
+	const hook = (slug, extra = {}) => ({
+		slug,
+		script_path: `.claude/hooks/${slug}.mjs`,
+		...extra,
+	});
+
+	it("retourne les gates installés dans l'ordre quality → tests", () => {
+		const gates = resolvePreCommitGates([
+			hook("stop-pytest"),
+			hook("stop-quality-check"),
+			hook("stop-run-tests"),
+		]);
+		expect(gates.map((g) => g.slug)).toEqual([
+			"stop-quality-check",
+			"stop-run-tests",
+			"stop-pytest",
+		]);
+	});
+
+	it("ignore les hooks absents et non-gate", () => {
+		const gates = resolvePreCommitGates([hook("post-write-biome")]);
+		expect(gates).toEqual([]);
+	});
+
+	it("utilise node + .mjs par défaut", () => {
+		const [g] = resolvePreCommitGates([hook("stop-quality-check")]);
+		expect(g.interpreter).toBe("node");
+		expect(g.path).toBe(".claude/hooks/stop-quality-check.mjs");
+	});
+
+	it("utilise la variante python quand python est actif", () => {
+		const [g] = resolvePreCommitGates(
+			[
+				hook("stop-quality-check", {
+					python_script_path: ".claude/hooks/quality-check.py",
+					python_code_snippet: "#!/usr/bin/env python3\n",
+				}),
+			],
+			{ python: true },
+		);
+		expect(g.interpreter).toBe("python3");
+		expect(g.path).toBe(".claude/hooks/quality-check.py");
+	});
+
+	it("relocalise les chemins pour les scopes codex", () => {
+		const [g] = resolvePreCommitGates([hook("stop-quality-check")], {
+			scope: "codex-project",
+		});
+		expect(g.path).toBe(".codex/hooks/stop-quality-check.mjs");
+	});
+
+	it("ignore un gate sans script_path", () => {
+		const gates = resolvePreCommitGates([{ slug: "stop-quality-check" }]);
+		expect(gates).toEqual([]);
+	});
+});
+
+describe("buildPreCommitScript", () => {
+	const gates = [
+		{
+			slug: "stop-quality-check",
+			label: "Quality gate",
+			interpreter: "node",
+			path: ".claude/hooks/stop-quality-check.mjs",
+		},
+		{
+			slug: "stop-pytest",
+			label: "Pytest",
+			interpreter: "python3",
+			path: ".claude/hooks/pytest.py",
+		},
+	];
+
+	it("commence par le shebang et le marker", () => {
+		const script = buildPreCommitScript(gates);
+		expect(script.startsWith("#!/bin/sh\n")).toBe(true);
+		expect(script).toContain(PRE_COMMIT_MARKER);
+	});
+
+	it("invoque chaque gate avec le bon interpréteur", () => {
+		const script = buildPreCommitScript(gates);
+		expect(script).toContain(
+			'run_gate "Quality gate" node "$ROOT/.claude/hooks/stop-quality-check.mjs"',
+		);
+		expect(script).toContain(
+			'run_gate "Pytest" "$PYTHON" "$ROOT/.claude/hooks/pytest.py"',
+		);
+	});
+
+	it("reste un script sh valide avec le fallback python3 → python", () => {
+		const script = buildPreCommitScript(gates);
+		expect(script).toContain("PYTHON=python3");
+		expect(script).toContain(
+			"command -v python3 >/dev/null 2>&1 || PYTHON=python",
+		);
+	});
+
+	it("termine par un seul retour à la ligne", () => {
+		expect(buildPreCommitScript(gates).endsWith("\n")).toBe(true);
+		expect(buildPreCommitScript(gates).endsWith("\n\n")).toBe(false);
+	});
+});
+
+describe("buildPreCommitBlock", () => {
+	it("n'a pas de shebang mais porte les markers de bloc", () => {
+		const block = buildPreCommitBlock([
+			{
+				slug: "stop-quality-check",
+				label: "Quality",
+				interpreter: "node",
+				path: ".claude/hooks/stop-quality-check.mjs",
+			},
+		]);
+		expect(block.startsWith("#!/bin/sh")).toBe(false);
+		expect(block.startsWith(PRE_COMMIT_BLOCK_START)).toBe(true);
+		expect(block.trimEnd().endsWith(PRE_COMMIT_BLOCK_END)).toBe(true);
+	});
+});
+
+describe("mergePreCommit", () => {
+	const gates = [
+		{
+			slug: "stop-quality-check",
+			label: "Quality gate",
+			interpreter: "node",
+			path: ".claude/hooks/stop-quality-check.mjs",
+		},
+	];
+	const script = buildPreCommitScript(gates);
+	const block = buildPreCommitBlock(gates);
+
+	it("crée quand le fichier est absent ou vide", () => {
+		expect(mergePreCommit(null, { script, block })).toEqual({
+			content: script,
+			mode: "created",
+		});
+		expect(mergePreCommit("  \n ", { script, block }).mode).toBe("created");
+	});
+
+	it("remplace quand le fichier est le nôtre (marker en tête)", () => {
+		const existing = script.replace("Quality gate", "Old gate");
+		expect(mergePreCommit(existing, { script, block }).mode).toBe("replaced");
+		expect(mergePreCommit(existing, { script, block }).content).toBe(script);
+	});
+
+	it("ne réécrit pas un fichier déjà identique", () => {
+		expect(mergePreCommit(script, { script, block })).toEqual({
+			content: script,
+			mode: "unchanged",
+		});
+	});
+
+	it("ajoute notre bloc à un script utilisateur existant", () => {
+		const existing = "#!/bin/sh\necho custom\n";
+		const merged = mergePreCommit(existing, { script, block });
+		expect(merged.mode).toBe("appended");
+		expect(merged.content.startsWith("#!/bin/sh\necho custom\n\n")).toBe(true);
+		expect(merged.content).toContain(PRE_COMMIT_BLOCK_START);
+	});
+
+	it("rafraîchit uniquement notre bloc quand il a déjà été ajouté", () => {
+		const existing = `#!/bin/sh\necho custom\n\n${buildPreCommitBlock([
+			{
+				slug: "stop-quality-check",
+				label: "Old gate",
+				interpreter: "node",
+				path: ".claude/hooks/stop-quality-check.mjs",
+			},
+		])}\n`;
+		const merged = mergePreCommit(existing, { script, block });
+		expect(merged.mode).toBe("replaced");
+		expect(merged.content.startsWith("#!/bin/sh\necho custom\n\n")).toBe(true);
+		expect(merged.content).toContain('run_gate "Quality gate"');
+		expect(merged.content).not.toContain("Old gate");
+		expect(merged.content.trimEnd().endsWith(PRE_COMMIT_BLOCK_END)).toBe(true);
+	});
+});
+
+describe("detectPackageManager", () => {
+	const fsWith = (present) => ({
+		existsSync: (p) => present.some((name) => p.endsWith(name)),
+	});
+
+	it("pnpm-lock.yaml → pnpm (frozen lockfile)", () => {
+		expect(detectPackageManager("/proj", fsWith(["pnpm-lock.yaml"]))).toEqual({
+			name: "pnpm",
+			install: "pnpm install --frozen-lockfile",
+		});
+	});
+	it("bun.lock/bun.lockb → bun", () => {
+		expect(detectPackageManager("/proj", fsWith(["bun.lockb"]))).toEqual({
+			name: "bun",
+			install: "bun install --frozen-lockfile",
+		});
+		expect(detectPackageManager("/proj", fsWith(["bun.lock"])).name).toBe(
+			"bun",
+		);
+	});
+	it("yarn.lock → yarn", () => {
+		expect(detectPackageManager("/proj", fsWith(["yarn.lock"])).name).toBe(
+			"yarn",
+		);
+	});
+	it("package-lock.json → npm ci", () => {
+		expect(
+			detectPackageManager("/proj", fsWith(["package-lock.json"])),
+		).toEqual({ name: "npm", install: "npm ci" });
+	});
+	it("aucun lockfile → npm install (fallback)", () => {
+		expect(detectPackageManager("/proj", fsWith([]))).toEqual({
+			name: "npm",
+			install: "npm install",
+		});
+	});
+	it("pnpm prioritaire sur bun/yarn", () => {
+		expect(
+			detectPackageManager(
+				"/proj",
+				fsWith(["yarn.lock", "pnpm-lock.yaml", "bun.lock"]),
+			).name,
+		).toBe("pnpm");
+	});
+});
+
+describe("isGithubHosted", () => {
+	const ROOT = "/proj";
+	const dir = (name) => ({
+		name,
+		isDirectory: () => true,
+		isFile: () => false,
+	});
+	const file = (name) => ({
+		name,
+		isDirectory: () => false,
+		isFile: () => true,
+	});
+
+	it("détecte un dossier .github", () => {
+		expect(
+			isGithubHosted(ROOT, {
+				readdirSync: () => [dir(".github")],
+				readFileSync: () => "",
+			}),
+		).toBe(true);
+	});
+
+	it("détecte une remote github.com", () => {
+		expect(
+			isGithubHosted(ROOT, {
+				readdirSync: () => [dir(".git")],
+				readFileSync: () =>
+					'[remote "origin"]\n\turl = https://github.com/acme/repo.git',
+			}),
+		).toBe(true);
+	});
+
+	it("ignore une remote non-GitHub", () => {
+		expect(
+			isGithubHosted(ROOT, {
+				readdirSync: () => [dir(".git")],
+				readFileSync: () =>
+					'[remote "origin"]\n\turl = git@gitlab.com:acme/repo.git',
+			}),
+		).toBe(false);
+	});
+
+	it("false sans signal git", () => {
+		expect(
+			isGithubHosted(ROOT, {
+				readdirSync: () => [file("README.md")],
+				readFileSync: () => "",
+			}),
+		).toBe(false);
+	});
+});
+
+describe("buildWorkflowYaml", () => {
+	const gates = [
+		{
+			slug: "stop-quality-check",
+			label: "Quality gate",
+			interpreter: "node",
+			path: ".claude/hooks/stop-quality-check.mjs",
+		},
+		{
+			slug: "stop-pytest",
+			label: "Pytest",
+			interpreter: "python3",
+			path: ".claude/hooks/pytest.py",
+		},
+	];
+	const pm = { name: "pnpm", install: "pnpm install --frozen-lockfile" };
+
+	it("commence par le marker et un name valide", () => {
+		const yaml = buildWorkflowYaml(gates, { packageManager: pm });
+		expect(yaml.startsWith(`${WORKFLOW_MARKER}\n`)).toBe(true);
+		expect(yaml).toContain("name: HookStack gates");
+	});
+
+	it("déclenche sur pull_request et push main/master", () => {
+		const yaml = buildWorkflowYaml(gates, { packageManager: pm });
+		expect(yaml).toContain("  pull_request:");
+		expect(yaml).toContain("    branches: [main, master]");
+	});
+
+	it("pose HOOKSTACK_FULL_CHECK=1 pour un check complet en CI", () => {
+		const yaml = buildWorkflowYaml(gates, { packageManager: pm });
+		expect(yaml).toContain('      HOOKSTACK_FULL_CHECK: "1"');
+	});
+
+	it("ajoute setup-node + install quand un gate node est présent", () => {
+		const yaml = buildWorkflowYaml(gates, { packageManager: pm });
+		expect(yaml).toContain("actions/setup-node@v4");
+		expect(yaml).toContain("        run: pnpm install --frozen-lockfile");
+	});
+
+	it("ajoute setup-uv + uv sync quand un gate python est présent", () => {
+		const yaml = buildWorkflowYaml(gates, { packageManager: pm });
+		expect(yaml).toContain("astral-sh/setup-uv@v5");
+		expect(yaml).toContain("        run: uv sync");
+	});
+
+	it("ajoute une step par gate avec le bon interpréteur", () => {
+		const yaml = buildWorkflowYaml(gates, { packageManager: pm });
+		expect(yaml).toContain(
+			"      - name: Quality gate\n        run: node .claude/hooks/stop-quality-check.mjs",
+		);
+		expect(yaml).toContain(
+			"      - name: Pytest\n        run: python3 .claude/hooks/pytest.py",
+		);
+	});
+
+	it("node-only : pas de setup-uv ni uv sync", () => {
+		const yaml = buildWorkflowYaml([gates[0]], { packageManager: pm });
+		expect(yaml).toContain("actions/setup-node@v4");
+		expect(yaml).not.toContain("astral-sh/setup-uv");
+		expect(yaml).not.toContain("uv sync");
+	});
+
+	it("python-only : pas de setup-node ni d'install npm", () => {
+		const yaml = buildWorkflowYaml([gates[1]], { packageManager: pm });
+		expect(yaml).not.toContain("actions/setup-node@v4");
+		expect(yaml).toContain("astral-sh/setup-uv@v5");
+	});
+
+	it("termine par un seul retour à la ligne", () => {
+		const yaml = buildWorkflowYaml(gates, { packageManager: pm });
+		expect(yaml.endsWith("\n")).toBe(true);
+		expect(yaml.endsWith("\n\n")).toBe(false);
+	});
+});
+
+describe("mergeWorkflow", () => {
+	const generated = buildWorkflowYaml(
+		[
+			{
+				slug: "stop-quality-check",
+				label: "Quality gate",
+				interpreter: "node",
+				path: ".claude/hooks/stop-quality-check.mjs",
+			},
+		],
+		{
+			packageManager: {
+				name: "pnpm",
+				install: "pnpm install --frozen-lockfile",
+			},
+		},
+	);
+
+	it("crée quand le fichier est absent ou vide", () => {
+		expect(mergeWorkflow(null, generated)).toEqual({
+			content: generated,
+			mode: "created",
+		});
+		expect(mergeWorkflow("  \n", generated).mode).toBe("created");
+	});
+
+	it("remplace quand le fichier porte notre marker", () => {
+		const existing = generated.replace("Quality gate", "Old gate");
+		expect(mergeWorkflow(existing, generated).mode).toBe("replaced");
+		expect(mergeWorkflow(existing, generated).content).toBe(generated);
+	});
+
+	it("ne réécrit pas un fichier déjà identique", () => {
+		expect(mergeWorkflow(generated, generated)).toEqual({
+			content: generated,
+			mode: "unchanged",
+		});
+	});
+
+	it("saute un workflow existant qui n'est pas le nôtre", () => {
+		const existing = "name: my own CI\non: push\n";
+		expect(mergeWorkflow(existing, generated)).toEqual({ mode: "skipped" });
 	});
 });

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { detect, run } from "../../.claude/hooks/run-tests.mjs";
 
 const PROJECT_DIR = "/fake/project";
@@ -277,5 +277,19 @@ describe("run", () => {
 		const opts = makeOpts({ spawnStatus: 0 });
 		opts.changed = null;
 		expect(run(opts).status).toBe(0);
+	});
+
+	it("HOOKSTACK_FULL_CHECK force la suite complète même si rien n'est en attente", () => {
+		vi.stubEnv("HOOKSTACK_FULL_CHECK", "1");
+		try {
+			const opts = makeOpts({ spawnStatus: 0 });
+			opts.changed = [];
+			const result = run(opts);
+			expect(result.status).toBe(0);
+			expect(result.runner[1]).not.toContain("--changed");
+			expect(result.message).toContain("Tests passés");
+		} finally {
+			vi.unstubAllEnvs();
+		}
 	});
 });

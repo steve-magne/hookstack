@@ -99,4 +99,17 @@ describe("pytest", () => {
 		opts.changed = null;
 		expect(run(opts)).not.toBeNull();
 	});
+
+	it("HOOKSTACK_FULL_CHECK force pytest même sans .py modifié", () => {
+		vi.stubEnv("HOOKSTACK_FULL_CHECK", "1");
+		try {
+			const opts = makeOpts();
+			opts.changed = ["README.md"];
+			const result = run(opts);
+			expect(result).not.toBeNull();
+			expect(opts.spawn).toHaveBeenCalled();
+		} finally {
+			vi.unstubAllEnvs();
+		}
+	});
 });

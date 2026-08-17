@@ -77,3 +77,16 @@ def test_reports_failure_status():
     )
     assert result["status"] == 1
     assert "ÉCHEC" in result["message"]
+
+
+def test_full_check_runs_even_without_python_changes(monkeypatch):
+    monkeypatch.setenv("HOOKSTACK_FULL_CHECK", "1")
+    m = _make(spawn_status=0)
+    result = hook.run(
+        exists=m["exists"],
+        spawn=m["spawn"],
+        changed=["README.md"],
+        cwd="/repo",
+    )
+    assert result is not None
+    assert result["status"] == 0

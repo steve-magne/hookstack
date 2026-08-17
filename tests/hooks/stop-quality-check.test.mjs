@@ -243,4 +243,17 @@ describe("stop-quality-check", () => {
 		expect(result.failed).toBeGreaterThanOrEqual(1);
 		expect(result.message).toContain("✗ Ruff");
 	});
+
+	it("HOOKSTACK_FULL_CHECK force le check complet même sans fichier de code modifié", () => {
+		vi.stubEnv("HOOKSTACK_FULL_CHECK", "1");
+		try {
+			const opts = makeOpts();
+			opts.changed = ["README.md"];
+			const result = run(opts);
+			expect(result.checks).toBeGreaterThan(0);
+			expect(opts.exec).toHaveBeenCalledWith(expect.stringContaining("tsc"));
+		} finally {
+			vi.unstubAllEnvs();
+		}
+	});
 });
