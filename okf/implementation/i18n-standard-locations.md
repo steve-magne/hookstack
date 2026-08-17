@@ -61,6 +61,14 @@ l'ensemble des emplacements imposés par les standards :
   identiques sous des contextes différents restent des clés distinctes, donc
   un contexte oublié dans une locale est signalé (et pas de faux positif
   entre contextes). Le msgid_plural du même bloc conserve le préfixe.
+- **Clés du code source** : `run()` scanne aussi les fichiers source
+  (TS/JS/Vue/Svelte/Python/PHP, tests exclus) et vérifie que chaque clé
+  appelée existe dans l'union des clés de traduction. Appels reconnus :
+  `t('…')`, `i18n.t('…')`, `gettext('…')`, `ngettext('a','b',n)` (deux
+  clés), `pgettext('ctx','msg')` (clé `ctx\x04msg`, alignée sur msgctxt),
+  `_('…')`/`__('…')`/`N_('…')`, `formatMessage({id:'…'})`. Les clés JSON
+  sont **aplaties** en chemins pointés (`header.title`) pour matcher les
+  références i18next/next-intl ; les méta-clés ARB (`@…`) sont ignorées.
 
 ## Where
 

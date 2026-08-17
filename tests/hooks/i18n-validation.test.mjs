@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	extractKeys,
+	extractSourceKeys,
 	findTranslationFiles,
 	run,
 } from "../../.claude/hooks/i18n-validation.mjs";
@@ -160,6 +161,45 @@ msgstr "sans contexte"
 			const keys = extractKeys('{"@@locale":"fr","title":"Titre","@@x":1}', "arb");
 			expect([...keys]).toEqual(["title"]);
 		});
+
+		it("aplatit les clés JSON imbriquées et ignore les méta ARB @", () => {
+			expect([...extractKeys('{"a":{"b":1},"c":[1,2]}', "json")]).toEqual([
+				"a.b",
+				"c",
+			]);
+			expect([...extractKeys('{"title":"x","@title":{"description":"d"}}', "arb")]).toEqual([
+				"title",
+			]);
+		});
+	});
+
+	describe("extractSourceKeys", () => {
+		it("extrait les clés des appels i18n du code source", () => {
+			const src = `import { useTranslation } from "react-i18next";
+const { t } = useTranslation();
+const a = t("header.title");
+const b = t('menu.open');
+const c = i18n.t('common.ok');
+const d = gettext("Open the file");
+const e = ngettext("%d item", "%d items", n);
+const f = pgettext("menu", "Open");
+const g = _('legacy.key');
+const h = formatMessage({ id: 'profile.name' });
+`;
+			expect(extractSourceKeys(src)).toEqual(
+				new Set([
+					"header.title",
+					"menu.open",
+					"common.ok",
+					"Open the file",
+					"%d item",
+					"%d items",
+					"menu\u0004Open",
+					"legacy.key",
+					"profile.name",
+				]),
+			);
+		});
 	});
 
 	describe("run()", () => {
@@ -250,6 +290,40 @@ msgstr "sans contexte"
 			expect(r.issues).toHaveLength(1);
 			expect(r.message).toContain("en/common.json");
 		});
+		it("signale les clés du code absentes des traductions", () => {
+			const exec = () => "./locales/fr.json\n./src/App.tsx";
+			const readFile = (p) =>
+				p.includes("fr.json")
+					? '{"a":1}'
+					: 't("a")\nt("missing.key")\ngettext("Missing text")';
+			const r = run({ exec, readFile, projectDir: "/p" });
+			expect(r.issues).toHaveLength(1);
+			expect(r.message).toContain("absentes des fichiers de traduction");
+			expect(r.message).toContain("missing.key, Missing text");
+		});
+
+		it("ne signale rien si toutes les clés du code existent", () => {
+			const exec = () => "./locales/fr.json\n./locales/en.json\n./src/App.tsx";
+			const readFile = (p) => {
+				if (p.includes("App.tsx")) return 't("a")\nt("b")';
+				return '{"a":1,"b":2}';
+			};
+			const r = run({ exec, readFile, projectDir: "/p" });
+			expect(r.issues).toHaveLength(0);
+		});
+
+		it("compare les JSON imbriqués par chemin complet", () => {
+			const exec = () => "./locales/fr.json\n./locales/en.json";
+			const readFile = (p) =>
+				p.includes("fr.json")
+					? '{"a":{"b":1}}'
+					: '{"a":{"b":1,"d":2}}';
+			const r = run({ exec, readFile, projectDir: "/p" });
+			expect(r.issues).toHaveLength(1);
+			expect(r.message).toContain("fr.json");
+			expect(r.message).toContain("a.d");
+		});
+
 		it("parcours natif de bout en bout (locales fr/en)", () => {
 			const dir = mkdtempSync(join(tmpdir(), "i18n-e2e-"));
 			mkdirSync(join(dir, "locales"));

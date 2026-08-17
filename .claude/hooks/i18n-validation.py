@@ -265,12 +265,27 @@ def ts_keys(content):
     return keys
 
 
+def flatten_keys(obj, prefix, out, skip_meta=False):
+    """Aplatit un objet JSON en clés pointées (i18next/next-intl référencent
+    `header.title`). Les tableaux restent des feuilles. `skip_meta` retire
+    les méta-clés ARB (`@description`…)."""
+    for k, v in obj.items():
+        if skip_meta and k.startswith("@"):
+            continue
+        path = f"{prefix}.{k}" if prefix else k
+        if v is not None and isinstance(v, dict):
+            flatten_keys(v, path, out, skip_meta)
+        else:
+            out.add(path)
+    return out
+
+
 def extract_keys(content, kind):
     """Extrait les clés de traduction d'un contenu selon le format détecté."""
     if kind == "json":
-        return set(json.loads(content).keys())
+        return flatten_keys(json.loads(content), "", set())
     if kind == "arb":
-        return {k for k in json.loads(content).keys() if not k.startswith("@@")}
+        return flatten_keys(json.loads(content), "", set(), True)
     if kind == "po":
         return po_keys(content)
     if kind == "ftl":
@@ -284,6 +299,80 @@ def extract_keys(content, kind):
     if kind == "qt":
         return ts_keys(content)
     return set()
+
+
+# ── Clés appelées dans le code source ──────────────────────────────────────
+
+# Extensions de fichiers source parcourus (JS/TS, Vue, Svelte, Python, PHP).
+SOURCE_EXT = re.compile(r"\.(?:tsx?|jsx?|mjs|cjs|vue|svelte|py|php)$", re.IGNORECASE)
+# Fichiers de test exclus : ils référencent volontairement des clés inexistantes.
+SOURCE_SKIP_NAME = re.compile(r"\.(?:test|spec)\.[a-z]+$", re.IGNORECASE)
+SOURCE_SKIP_DIR = {"tests", "__tests__", "test"}
+
+# Appels i18n reconnus dans le code. Un argument littéral (chaîne simple) est
+# la clé ; `pgettext('ctx', 'msg')` référence le msgctxt gettext (contexte + EOT).
+SRC_T = re.compile(r"\bt\(\s*['\"]([^'\"\n]+)['\"]")
+SRC_I18N_T = re.compile(r"\bi18n\.t\(\s*['\"]([^'\"\n]+)['\"]")
+SRC_GETTEXT = re.compile(r"\bgettext\(\s*['\"]([^'\"\n]+)['\"]")
+SRC_NGETTEXT = re.compile(r"\bngettext\(\s*['\"]([^'\"\n]+)['\"]\s*,\s*['\"]([^'\"\n]+)['\"]")
+SRC_PGETTEXT = re.compile(r"\bpgettext\(\s*['\"]([^'\"\n]+)['\"]\s*,\s*['\"]([^'\"\n]+)['\"]")
+SRC_UNDERSCORE = re.compile(r"\b(?:_|__|N_)\(\s*['\"]([^'\"\n]+)['\"]")
+SRC_FORMAT_MESSAGE = re.compile(r"\bformatMessage\(\s*\{\s*id\s*:\s*['\"]([^'\"\n]+)['\"]")
+
+
+def extract_source_keys(content):
+    """Extrait les clés i18n référencées dans un fichier source."""
+    keys = set()
+    keys.update(m.group(1) for m in SRC_T.finditer(content))
+    keys.update(m.group(1) for m in SRC_I18N_T.finditer(content))
+    keys.update(m.group(1) for m in SRC_GETTEXT.finditer(content))
+    for m in SRC_NGETTEXT.finditer(content):
+        keys.add(m.group(1))
+        keys.add(m.group(2))
+    keys.update(f"{m.group(1)}\u0004{m.group(2)}" for m in SRC_PGETTEXT.finditer(content))
+    keys.update(m.group(1) for m in SRC_UNDERSCORE.finditer(content))
+    keys.update(m.group(1) for m in SRC_FORMAT_MESSAGE.finditer(content))
+    return keys
+
+
+def is_source_file(rel):
+    """True quand un chemin relatif pointe un fichier source analysable."""
+    clean = re.sub(r"^\./", "", rel)
+    slash = clean.rfind("/")
+    base = clean[slash + 1 :] if slash != -1 else clean
+    if not SOURCE_EXT.search(base) or SOURCE_SKIP_NAME.search(base):
+        return False
+    dirs = clean.split("/")[:-1]
+    return not any(d in SOURCE_SKIP_DIR for d in dirs)
+
+
+def find_source_files(project_dir, *, listdir=None, isdir=None, isfile=None):
+    if listdir is None:
+        listdir = os.listdir
+    if isdir is None:
+        isdir = os.path.isdir
+    if isfile is None:
+        isfile = os.path.isfile
+
+    out = []
+
+    def walk(d):
+        try:
+            names = listdir(d)
+        except OSError:
+            return
+        for name in names:
+            p = os.path.join(d, name)
+            if isdir(p):
+                if name in SKIP_DIRS or name in SOURCE_SKIP_DIR:
+                    continue
+                walk(p)
+            elif isfile(p) and is_source_file(name):
+                rel = os.path.relpath(p, project_dir).replace(os.sep, "/")
+                out.append(f"./{rel}")
+
+    walk(project_dir)
+    return out
 
 
 def find_translation_files(project_dir, *, listdir=None, isdir=None, isfile=None):
@@ -340,6 +429,7 @@ def run(
     try:
         if exec_cmd:
             files = []
+            sources = []
             for line in exec_cmd("find . -print").split("\n"):
                 line = line.strip()
                 if not line:
@@ -347,15 +437,22 @@ def run(
                 c = classify_file(line)
                 if c:
                     files.append(c)
+                elif is_source_file(line):
+                    sources.append(line)
         else:
             files = find_translation_files(
+                project_dir, listdir=listdir, isdir=isdir, isfile=isfile
+            )
+            sources = find_source_files(
                 project_dir, listdir=listdir, isdir=isdir, isfile=isfile
             )
     except Exception:
         # Un Stop hook non bloquant ne doit pas crasher (ex. ETIMEDOUT) — on rend la main.
         return None
 
-    if len(files) < 2:
+    if len(files) == 0:
+        return None
+    if len(files) < 2 and len(sources) == 0:
         return None
 
     # Groupe par clé locale-agnostique et vérifie la cohérence des clés
@@ -384,6 +481,32 @@ def run(
                 shown = ", ".join(missing[:5])
                 suffix = "…" if len(missing) > 5 else ""
                 issues.append(f"{p['rel']} manque {len(missing)} clé(s) : {shown}{suffix}")
+
+    # Clés utilisées dans le code : elles doivent exister dans les traductions
+    # (union de toutes les locales, tous formats). pgettext préfixe msgctxt+EOT.
+    if sources:
+        translation_keys = set()
+        for f in files:
+            try:
+                translation_keys.update(
+                    extract_keys(read_file(os.path.join(project_dir, f["rel"])), f["kind"])
+                )
+            except Exception:
+                # fichier illisible — ignoré
+                continue
+        if translation_keys:
+            missing = set()
+            for rel in sources:
+                try:
+                    content = read_file(os.path.join(project_dir, rel))
+                    missing.update(k for k in extract_source_keys(content) if k not in translation_keys)
+                except Exception:
+                    # fichier illisible — ignoré
+                    continue
+            if missing:
+                shown = ", ".join(sorted(missing)[:10])
+                suffix = f"… (+{len(missing) - 10})" if len(missing) > 10 else ""
+                issues.append(f"Clé(s) du code absentes des fichiers de traduction ({len(missing)}) : {shown}{suffix}")
 
     message = (
         "[i18n-validation] Incohérences détectées :\n"

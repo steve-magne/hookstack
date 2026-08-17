@@ -125,6 +125,36 @@ def test_extract_apple_android_java_qt_keys():
     assert hook.extract_keys("<message><source>Save</source></message>", "qt") == {"Save"}
 
 
+def test_flattens_nested_json_and_skips_arb_meta():
+    assert hook.extract_keys('{"a":{"b":1},"c":[1,2]}', "json") == {"a.b", "c"}
+    assert hook.extract_keys('{"title":"x","@title":{"description":"d"}}', "arb") == {"title"}
+
+
+def test_extract_source_keys():
+    src = '''import { useTranslation } from "react-i18next";
+const { t } = useTranslation();
+const a = t("header.title");
+const b = t('menu.open');
+const c = i18n.t('common.ok');
+const d = gettext("Open the file");
+const e = ngettext("%d item", "%d items", n);
+const f = pgettext("menu", "Open");
+const g = _('legacy.key');
+const h = formatMessage({ id: 'profile.name' });
+'''
+    assert hook.extract_source_keys(src) == {
+        "header.title",
+        "menu.open",
+        "common.ok",
+        "Open the file",
+        "%d item",
+        "%d items",
+        "menu\u0004Open",
+        "legacy.key",
+        "profile.name",
+    }
+
+
 def test_extract_arb_keys_without_meta():
     keys = hook.extract_keys('{"@@locale":"fr","title":"Titre","@@x":1}', "arb")
     assert keys == {"title"}
@@ -221,6 +251,42 @@ def test_locale_subdir_grouping():
     r = hook.run(exec_cmd=exec_cmd, read_file=read_file, project_dir="/p")
     assert len(r["issues"]) == 1
     assert "en/common.json" in r["message"]
+
+
+def test_source_key_missing_reported():
+    exec_cmd = lambda c: "./locales/fr.json\n./src/App.tsx"  # noqa: E731
+
+    def read_file(p):
+        if "fr.json" in p:
+            return '{"a":1}'
+        return 't("a")\nt("missing.key")\ngettext("Missing text")'
+
+    r = hook.run(exec_cmd=exec_cmd, read_file=read_file, project_dir="/p")
+    assert len(r["issues"]) == 1
+    assert "absentes des fichiers de traduction" in r["message"]
+    assert "missing.key" in r["message"]
+    assert "Missing text" in r["message"]
+
+
+def test_source_keys_all_present():
+    exec_cmd = lambda c: "./locales/fr.json\n./locales/en.json\n./src/App.tsx"  # noqa: E731
+
+    def read_file(p):
+        if "App.tsx" in p:
+            return 't("a")\nt("b")'
+        return '{"a":1,"b":2}'
+
+    r = hook.run(exec_cmd=exec_cmd, read_file=read_file, project_dir="/p")
+    assert r["issues"] == []
+
+
+def test_nested_json_compared_by_full_path():
+    exec_cmd = lambda c: "./locales/fr.json\n./locales/en.json"  # noqa: E731
+    read_file = lambda p: '{"a":{"b":1}}' if "fr.json" in p else '{"a":{"b":1,"d":2}}'  # noqa: E731
+    r = hook.run(exec_cmd=exec_cmd, read_file=read_file, project_dir="/p")
+    assert len(r["issues"]) == 1
+    assert "fr.json" in r["message"]
+    assert "a.d" in r["message"]
 
 
 def test_native_walk_end_to_end(tmp_path):

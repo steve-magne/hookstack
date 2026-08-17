@@ -261,15 +261,29 @@ function tsKeys(content) {
 	return keys;
 }
 
+// Aplatit un objet JSON en clés pointées : i18next/next-intl référencent
+// `header.title` dans le code, pas l'objet imbriqué. Les tableaux restent
+// des feuilles. `skipMeta` retire les méta-clés ARB (`@description`…).
+function flattenKeys(obj, prefix, out, skipMeta) {
+	for (const [k, v] of Object.entries(obj)) {
+		if (skipMeta && k.startsWith("@")) continue;
+		const path = prefix ? `${prefix}.${k}` : k;
+		if (v !== null && typeof v === "object" && !Array.isArray(v)) {
+			flattenKeys(v, path, out, skipMeta);
+		} else {
+			out.add(path);
+		}
+	}
+	return out;
+}
+
 /** Extrait les clés de traduction d'un contenu selon le format détecté. */
 export function extractKeys(content, kind) {
 	switch (kind) {
 		case "json":
-			return new Set(Object.keys(JSON.parse(content)));
+			return flattenKeys(JSON.parse(content), "", new Set());
 		case "arb":
-			return new Set(
-				Object.keys(JSON.parse(content)).filter((k) => !k.startsWith("@@")),
-			);
+			return flattenKeys(JSON.parse(content), "", new Set(), true);
 		case "po":
 			return poKeys(content);
 		case "ftl":
@@ -285,6 +299,76 @@ export function extractKeys(content, kind) {
 		default:
 			return new Set();
 	}
+}
+
+// ── Clés appelées dans le code source ───────────────────────────────────────
+
+// Extensions de fichiers source parcourus (JS/TS, Vue, Svelte, Python, PHP).
+const SOURCE_EXT = /\.(?:tsx?|jsx?|mjs|cjs|vue|svelte|py|php)$/i;
+// Fichiers de test exclus : ils référencent volontairement des clés inexistantes.
+const SOURCE_SKIP_NAME = /\.(?:test|spec)\.[a-z]+$/i;
+const SOURCE_SKIP_DIR = new Set(["tests", "__tests__", "test"]);
+
+// Appels i18n reconnus dans le code. Un argument littéral (chaîne simple) est
+// la clé ; `pgettext('ctx', 'msg')` référence le msgctxt gettext (contexte + EOT).
+const SRC_T = /\bt\(\s*['"]([^'"\n]+)['"]/g;
+const SRC_I18N_T = /\bi18n\.t\(\s*['"]([^'"\n]+)['"]/g;
+const SRC_GETTEXT = /\bgettext\(\s*['"]([^'"\n]+)['"]/g;
+const SRC_NGETTEXT = /\bngettext\(\s*['"]([^'"\n]+)['"]\s*,\s*['"]([^'"\n]+)['"]/g;
+const SRC_PGETTEXT = /\bpgettext\(\s*['"]([^'"\n]+)['"]\s*,\s*['"]([^'"\n]+)['"]/g;
+const SRC_UNDERSCORE = /\b(?:_|__|N_)\(\s*['"]([^'"\n]+)['"]/g;
+const SRC_FORMAT_MESSAGE = /\bformatMessage\(\s*\{\s*id\s*:\s*['"]([^'"\n]+)['"]/g;
+
+/** Extrait les clés i18n référencées dans un fichier source. */
+export function extractSourceKeys(content) {
+	const keys = new Set();
+	for (const m of content.matchAll(SRC_T)) keys.add(m[1]);
+	for (const m of content.matchAll(SRC_I18N_T)) keys.add(m[1]);
+	for (const m of content.matchAll(SRC_GETTEXT)) keys.add(m[1]);
+	for (const m of content.matchAll(SRC_NGETTEXT)) {
+		keys.add(m[1]);
+		keys.add(m[2]);
+	}
+	for (const m of content.matchAll(SRC_PGETTEXT)) keys.add(`${m[1]}\u0004${m[2]}`);
+	for (const m of content.matchAll(SRC_UNDERSCORE)) keys.add(m[1]);
+	for (const m of content.matchAll(SRC_FORMAT_MESSAGE)) keys.add(m[1]);
+	return keys;
+}
+
+/** True quand un chemin relatif pointe un fichier source analysable. */
+export function isSourceFile(rel) {
+	const clean = rel.replace(/^\.\//, "");
+	const slash = clean.lastIndexOf("/");
+	const base = slash === -1 ? clean : clean.slice(slash + 1);
+	if (!SOURCE_EXT.test(base) || SOURCE_SKIP_NAME.test(base)) return false;
+	const dirs = clean.split("/").slice(0, -1);
+	return !dirs.some((d) => SOURCE_SKIP_DIR.has(d));
+}
+
+// Parcours natif des fichiers source (tests exclus, dossiers lourds sautés).
+export function findSourceFiles(projectDir) {
+	const out = [];
+	const walk = (dir) => {
+		let ents;
+		try {
+			ents = readdirSync(dir, { withFileTypes: true });
+		} catch {
+			return;
+		}
+		for (const ent of ents) {
+			if (ent.isDirectory()) {
+				if (SKIP_DIRS.has(ent.name) || SOURCE_SKIP_DIR.has(ent.name)) continue;
+				walk(join(dir, ent.name));
+			} else if (ent.isFile() && isSourceFile(ent.name)) {
+				const rel = relative(projectDir, join(dir, ent.name))
+					.split(sep)
+					.join("/");
+				out.push(`./${rel}`);
+			}
+		}
+	};
+	walk(projectDir);
+	return out;
 }
 
 // Parcours natif (pas de spawn de shell) : rapide même sur un gros monorepo.
@@ -324,20 +408,25 @@ export function run({
 	// Ponytail: try/catch conservé — un mock qui throw ne doit pas crasher un Stop
 	// hook non bloquant ; on rend la main silencieusement.
 	let files;
+	let sources;
 	try {
-		files = exec
-			? exec('find . -print')
-					.split("\n")
-					.map((f) => f.trim())
-					.filter(Boolean)
-					.map(classifyFile)
-					.filter(Boolean)
-			: findTranslationFiles(projectDir);
+		if (exec) {
+			const lines = exec('find . -print')
+				.split("\n")
+				.map((f) => f.trim())
+				.filter(Boolean);
+			files = lines.map(classifyFile).filter(Boolean);
+			sources = lines.filter(isSourceFile);
+		} else {
+			files = findTranslationFiles(projectDir);
+			sources = findSourceFiles(projectDir);
+		}
 	} catch {
 		return null;
 	}
 
-	if (files.length < 2) return null;
+	if (files.length === 0) return null;
+	if (files.length < 2 && sources.length === 0) return null;
 
 	// Groupe par clé locale-agnostique et vérifie la cohérence des clés
 	const byGroup = new Map();
@@ -369,6 +458,43 @@ export function run({
 				issues.push(
 					`${rel} manque ${missing.length} clé(s) : ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "…" : ""}`,
 				);
+		}
+	}
+
+	// Clés utilisées dans le code : elles doivent exister dans les traductions
+	// (union de toutes les locales, tous formats). pgettext préfixe msgctxt+EOT.
+	if (sources.length > 0) {
+		const translationKeys = new Set();
+		for (const f of files) {
+			try {
+				for (const k of extractKeys(
+					readFile(join(projectDir, f.rel), "utf8"),
+					f.kind,
+				))
+					translationKeys.add(k);
+			} catch {
+				// fichier illisible — ignoré
+			}
+		}
+		if (translationKeys.size > 0) {
+			const missing = new Set();
+			for (const rel of sources) {
+				try {
+					for (const k of extractSourceKeys(
+						readFile(join(projectDir, rel), "utf8"),
+					)) {
+						if (!translationKeys.has(k)) missing.add(k);
+					}
+				} catch {
+					// fichier illisible — ignoré
+				}
+			}
+			if (missing.size > 0) {
+				const shown = [...missing].slice(0, 10).join(", ");
+				issues.push(
+					`Clé(s) du code absentes des fichiers de traduction (${missing.size}) : ${shown}${missing.size > 10 ? `… (+${missing.size - 10})` : ""}`,
+				);
+			}
 		}
 	}
 
