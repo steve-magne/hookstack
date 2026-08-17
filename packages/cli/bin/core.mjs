@@ -282,7 +282,20 @@ const DETECT_SKIP_DIRS = new Set([
 	"target",
 ]);
 
-const I18N_DIR_RE = /^(?:locales?|messages?|i18n)$/i;
+// Directory names that mark a translation store. Covers the de facto web
+// conventions (locales/messages/i18n/translations/lang/l10n) plus the
+// ecosystem standards: GNU gettext (po, LC_MESSAGES) and Apple (*.lproj).
+// Android `values*` and Qt `translations/*.ts` are handled by the file probe
+// (strings.xml / .ts under an i18n dir) — a bare `values/` dir is not a
+// translation store by itself.
+const I18N_DIR_RE =
+	/^(?:locales?|messages?|translations?|langs?|l10n|i18n|po|LC_MESSAGES|.*\.lproj)$/i;
+// Translation file names/extensions that are unambiguous regardless of
+// location: gettext (.po/.pot), Project Fluent (.ftl), Flutter ARB (.arb),
+// Apple (.strings), Android (strings.xml) and Java resource bundles
+// (messages*.properties, case-insensitive — covers MessagesBundle*).
+const I18N_EXT_RE = /\.(?:po|pot|ftl|arb|strings)$/i;
+const I18N_FILE_RE = /^(?:strings\.xml|messages.*\.properties)$/i;
 const OKF_DIR_RE = /^\.?okf$/i;
 const NEXT_CONFIG_RE = /^next\.config\.(?:[cm]?js|ts)$/;
 const TEST_DIR_RE = /^(?:tests?|__tests__|spec)$/i;
@@ -387,7 +400,9 @@ function readPackageDeps(root, { readFileSync }) {
 const hasAnyDep = (deps, names) => [...deps].some((name) => names.has(name));
 
 // Depth-limited walk looking for an i18n directory (locales/locale/messages/
-// message/i18n), short-circuiting on the first match. Skips heavy/vendored dirs.
+// i18n/translations/po/l10n/*.lproj…) or a translation file (.po/.ftl/.arb/
+// .strings/strings.xml…), short-circuiting on the first match. Skips
+// heavy/vendored dirs.
 function hasI18nDir(dir, depth, readdirSync) {
 	if (depth > 5) return false;
 	let entries;
@@ -397,9 +412,13 @@ function hasI18nDir(dir, depth, readdirSync) {
 		return false;
 	}
 	for (const ent of entries) {
-		if (!ent.isDirectory() || DETECT_SKIP_DIRS.has(ent.name)) continue;
-		if (I18N_DIR_RE.test(ent.name)) return true;
-		if (hasI18nDir(join(dir, ent.name), depth + 1, readdirSync)) return true;
+		if (DETECT_SKIP_DIRS.has(ent.name)) continue;
+		if (ent.isDirectory()) {
+			if (I18N_DIR_RE.test(ent.name)) return true;
+			if (hasI18nDir(join(dir, ent.name), depth + 1, readdirSync)) return true;
+		} else if (ent.isFile()) {
+			if (I18N_EXT_RE.test(ent.name) || I18N_FILE_RE.test(ent.name)) return true;
+		}
 	}
 	return false;
 }
