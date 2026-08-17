@@ -112,33 +112,74 @@ function poKeys(content) {
 	// GNU gettext : msgid (éventuellement msgid_plural), multiligne via "...".
 	// L'en-tête du fichier (premier bloc déclaré `msgid ""`) est ignoré, même si
 	// ses lignes de continuation l'alimentent (Content-Type, Plural-Forms…).
+	// Un `msgctxt` préfixe la clé (contexte + EOT \x04, comme gettext) : deux
+	// msgid identiques sous des contextes différents deviennent des clés distinctes
+	// — pas de faux positif ni d'oubli masqué entre locales.
 	const keys = new Set();
-	let current = null; // id en cours (null = hors bloc msgid)
+	let current = null; // msgid en cours (null = hors bloc)
+	let plural = null; // msgid_plural du bloc (conserve le même contexte)
+	let prefix = ""; // contexte capturé au début du bloc + "\u0004"
+	let mode = null; // "context" | "msgid" | "plural" — lignes de continuation
 	let first = true;
 	let skipBlock = false; // seul le premier bloc `msgid ""` (en-tête) est ignoré
+	const addId = (id) => {
+		if (id !== null && id !== "" && !skipBlock) keys.add(`${prefix}${id}`);
+	};
 	const flush = () => {
-		if (current !== null && current !== "" && !skipBlock) keys.add(current);
+		addId(current);
+		addId(plural);
 		current = null;
+		plural = null;
+		prefix = "";
+		mode = null;
 		skipBlock = false;
 	};
 	for (const raw of content.split("\n")) {
 		const line = raw.trim();
+		if (line.startsWith("msgctxt")) {
+			flush(); // clôt tout bloc précédent (le msgctxt ouvre un nouveau contexte)
+			const m = /^msgctxt\s*("(?:[^"\\]|\\.)*")?/.exec(line);
+			const ctx = m?.[1] ? m[1].slice(1, -1) : "";
+			prefix = ctx ? `${ctx}\u0004` : "";
+			mode = "context";
+			continue;
+		}
+		if (mode === "context" && line.startsWith('"')) {
+			const m = /^"((?:[^"\\]|\\.)*)"/.exec(line);
+			if (m) prefix = `${prefix ? prefix.slice(0, -1) : ""}${m[1]}\u0004`;
+			continue;
+		}
+		if (/^msgid_plural/.test(line)) {
+			// Même bloc que msgid : on ajoute le msgid capturé, le pluriel
+			// garde le même préfixe de contexte.
+			const m = /^msgid_plural\s*("(?:[^"\\]|\\.)*")?/.exec(line);
+			addId(current);
+			current = null;
+			plural = m?.[1] ? m[1].slice(1, -1) : "";
+			mode = "plural";
+			continue;
+		}
 		if (/^msgid/.test(line)) {
-			flush();
-			const m = /^msgid(?:_plural)?\s*("(?:[^"\\]|\\.)*")?/.exec(line);
+			// Ne flushe que si un bloc est réellement ouvert : un msgctxt qui vient
+			// d'être lu a déjà clos le précédent et ne doit pas effacer le préfixe.
+			if (current !== null || plural !== null) flush();
+			const m = /^msgid\s*("(?:[^"\\]|\\.)*")?/.exec(line);
 			current = m?.[1] ? m[1].slice(1, -1) : "";
+			mode = "msgid";
 			if (first) {
 				skipBlock = current === "";
 				first = false;
 			}
 			continue;
 		}
-		if (current !== null && line.startsWith('"')) {
+		if (mode !== null && line.startsWith('"')) {
 			const m = /^"((?:[^"\\]|\\.)*)"/.exec(line);
-			if (m) current += m[1];
+			if (!m) continue;
+			if (mode === "msgid") current += m[1];
+			else if (mode === "plural") plural += m[1];
 			continue;
 		}
-		if (current !== null && /^msg(?:str|ctxt)/.test(line)) flush();
+		if (/^msgstr/.test(line)) flush();
 	}
 	flush();
 	return keys;

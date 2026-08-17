@@ -103,6 +103,34 @@ msgstr[1] "%d éléments"
 			expect(keys.size).toBe(3);
 		});
 
+		it("préfixe les clés par msgctxt (gettext)", () => {
+			const po = `msgctxt "menu"
+msgid "Open"
+msgstr "Ouvrir"
+
+msgctxt "file"
+msgid "Open"
+msgstr "Ouvrir"
+
+msgctxt "plural"
+msgid "item"
+msgid_plural "items"
+msgstr[0] "élément"
+msgstr[1] "éléments"
+
+msgid "no-context"
+msgstr "sans contexte"
+`;
+			const keys = extractKeys(po, "po");
+			expect(keys.has("menu\u0004Open")).toBe(true);
+			expect(keys.has("file\u0004Open")).toBe(true);
+			expect(keys.has("plural\u0004item")).toBe(true);
+			expect(keys.has("plural\u0004items")).toBe(true);
+			expect(keys.has("no-context")).toBe(true);
+			expect(keys.has("Open")).toBe(false);
+			expect(keys.size).toBe(5);
+		});
+
 		it("extrait les identifiants Fluent (termes et attributs exclus)", () => {
 			const ftl = "hello = Hello\n  .attr = x\n-brand = B\nwelcome { $name }";
 			expect([...extractKeys(ftl, "ftl")]).toEqual(["hello", "welcome"]);
@@ -201,6 +229,19 @@ msgstr[1] "%d éléments"
 			expect(r.message).toContain("fr.lproj/Localizable.strings");
 			expect(r.message).toContain("LC_MESSAGES/app.po");
 		});
+		it("distingue les contextes gettext entre locales (pas de faux positif)", () => {
+			// Sans msgctxt, les deux fichiers auraient la même clé "Open" → 0 issue
+			// (oubli masqué). Avec le préfixe de contexte, "file" manque en en.po.
+			const frPo =
+				'msgctxt "menu"\nmsgid "Open"\nmsgstr "Ouvrir"\n\nmsgctxt "file"\nmsgid "Open"\nmsgstr "Ouvrir"\n';
+			const enPo = 'msgctxt "menu"\nmsgid "Open"\nmsgstr "Open"\n';
+			const exec = () => "./po/fr.po\n./po/en.po";
+			const readFile = (p) => (p.includes("fr.po") ? frPo : enPo);
+			const r = run({ exec, readFile, projectDir: "/p" });
+			expect(r.issues).toHaveLength(1);
+			expect(r.message).toContain("po/en.po");
+		});
+
 		it("compare les dossiers par-locale (locales/fr/ vs locales/en/)", () => {
 			const exec = () => "./locales/fr/common.json\n./locales/en/common.json";
 			const readFile = (p) =>

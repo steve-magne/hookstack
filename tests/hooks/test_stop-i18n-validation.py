@@ -80,6 +80,34 @@ msgstr[1] "%d éléments"
     assert len(keys) == 3
 
 
+def test_extract_po_keys_with_context():
+    po = '''msgctxt "menu"
+msgid "Open"
+msgstr "Ouvrir"
+
+msgctxt "file"
+msgid "Open"
+msgstr "Ouvrir"
+
+msgctxt "plural"
+msgid "item"
+msgid_plural "items"
+msgstr[0] "élément"
+msgstr[1] "éléments"
+
+msgid "no-context"
+msgstr "sans contexte"
+'''
+    keys = hook.extract_keys(po, "po")
+    assert "menu\u0004Open" in keys
+    assert "file\u0004Open" in keys
+    assert "plural\u0004item" in keys
+    assert "plural\u0004items" in keys
+    assert "no-context" in keys
+    assert "Open" not in keys
+    assert len(keys) == 5
+
+
 def test_extract_ftl_keys():
     ftl = "hello = Hello\n  .attr = x\n-brand = B\nwelcome { $name }"
     assert hook.extract_keys(ftl, "ftl") == {"hello", "welcome"}
@@ -173,6 +201,18 @@ def test_lproj_and_lc_messages_grouping():
     assert len(r["issues"]) == 2
     assert "fr.lproj/Localizable.strings" in r["message"]
     assert "LC_MESSAGES/app.po" in r["message"]
+
+
+def test_context_avoids_false_positive_between_locales():
+    # Sans msgctxt, les deux fichiers auraient la même clé "Open" → 0 issue
+    # (oubli masqué). Avec le préfixe de contexte, "file" manque en en.po.
+    fr_po = 'msgctxt "menu"\nmsgid "Open"\nmsgstr "Ouvrir"\n\nmsgctxt "file"\nmsgid "Open"\nmsgstr "Ouvrir"\n'
+    en_po = 'msgctxt "menu"\nmsgid "Open"\nmsgstr "Open"\n'
+    exec_cmd = lambda c: "./po/fr.po\n./po/en.po"  # noqa: E731
+    read_file = lambda p: fr_po if "fr.po" in p else en_po  # noqa: E731
+    r = hook.run(exec_cmd=exec_cmd, read_file=read_file, project_dir="/p")
+    assert len(r["issues"]) == 1
+    assert "po/en.po" in r["message"]
 
 
 def test_locale_subdir_grouping():

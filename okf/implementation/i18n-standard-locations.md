@@ -19,7 +19,7 @@ l'ensemble des emplacements imposés par les standards :
 | Écosystème | Standard | Emplacements / formats |
 |---|---|---|
 | Web (i18next, next-intl…) | convention | `locales/`, `locale/`, `messages/`, `i18n/`, `translations/`, `lang/`, `l10n/` — JSON |
-| GNU gettext | standard | `po/`, `LC_MESSAGES/` — `.po`, `.pot` (msgid, msgid_plural, multiligne, en-tête ignoré) |
+| GNU gettext | standard | `po/`, `LC_MESSAGES/` — `.po`, `.pot` (msgid, msgid_plural, multiligne, en-tête ignoré, **msgctxt = préfixe de clé** contexte + EOT `\x04`) |
 | Android | imposé | `res/values*/strings.xml` (seuls `values` et `values-<locale>` comparés ; `values-night`, `values-land`, `values-sw600dp`… exclus) |
 | Apple (iOS/macOS) | imposé | `*.lproj/*.strings` (`Base.lproj`, `<lang>.lproj`) |
 | Flutter | de-facto | `l10n/` — `.arb` (méta-clés `@@*` ignorées) |
@@ -57,6 +57,10 @@ l'ensemble des emplacements imposés par les standards :
   extensions sont sans ambiguïté. `.json`/`.properties`/`.ts` restent
   conditionnés à un dossier i18n (ou à un nom `messages*`/`strings.xml`).
 - **En-tête gettext** : le premier bloc `msgid ""` (métadonnées) est ignoré.
+- **msgctxt** : le contexte préfixe la clé (`menu\x04Open`) — deux msgid
+  identiques sous des contextes différents restent des clés distinctes, donc
+  un contexte oublié dans une locale est signalé (et pas de faux positif
+  entre contextes). Le msgid_plural du même bloc conserve le préfixe.
 
 ## Where
 

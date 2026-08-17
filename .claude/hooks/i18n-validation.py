@@ -123,35 +123,77 @@ def group_of(dirname, base, kind):
 
 def po_keys(content):
     """GNU gettext : msgid (éventuellement msgid_plural), multiligne via "...".
-    L'en-tête du fichier (premier bloc déclaré `msgid ""`) est ignoré."""
+    L'en-tête du fichier (premier bloc déclaré `msgid ""`) est ignoré.
+    Un `msgctxt` préfixe la clé (contexte + EOT \x04, comme gettext) : deux
+    msgid identiques sous des contextes différents deviennent des clés distinctes."""
     keys = set()
-    current = None  # id en cours (None = hors bloc msgid)
+    current = None  # msgid en cours (None = hors bloc)
+    plural = None  # msgid_plural du bloc (conserve le même contexte)
+    prefix = ""  # contexte capturé au début du bloc + "\u0004"
+    mode = None  # "context" | "msgid" | "plural" — lignes de continuation
     first = True
     skip_block = False  # seul le premier bloc `msgid ""` (en-tête) est ignoré
 
+    def add_id(id_):
+        if id_ is not None and id_ != "" and not skip_block:
+            keys.add(f"{prefix}{id_}")
+
     def flush():
-        nonlocal current, skip_block
-        if current is not None and current != "" and not skip_block:
-            keys.add(current)
+        nonlocal current, plural, prefix, mode, skip_block
+        add_id(current)
+        add_id(plural)
         current = None
+        plural = None
+        prefix = ""
+        mode = None
         skip_block = False
 
     for raw in content.split("\n"):
         line = raw.strip()
+        if line.startswith("msgctxt"):
+            flush()  # clôt tout bloc précédent (le msgctxt ouvre un nouveau contexte)
+            m = re.match(r'^msgctxt\s*("(?:[^"\\]|\\.)*")?', line)
+            ctx = m.group(1)[1:-1] if m and m.group(1) else ""
+            prefix = f"{ctx}\u0004" if ctx else ""
+            mode = "context"
+            continue
+        if mode == "context" and line.startswith('"'):
+            m = re.match(r'^"((?:[^"\\]|\\.)*)"', line)
+            if m:
+                prefix = f"{prefix[:-1] if prefix else ''}{m.group(1)}\u0004"
+            continue
+        if re.match(r"^msgid_plural", line):
+            # Même bloc que msgid : on ajoute le msgid capturé, le pluriel
+            # garde le même préfixe de contexte.
+            m = re.match(r'^msgid_plural\s*("(?:[^"\\]|\\.)*")?', line)
+            add_id(current)
+            current = None
+            plural = m.group(1)[1:-1] if m and m.group(1) else ""
+            mode = "plural"
+            continue
         if re.match(r"^msgid", line):
-            flush()
-            m = re.match(r'^msgid(?:_plural)?\s*("(?:[^"\\]|\\.)*")?', line)
+            # Ne flushe que si un bloc est réellement ouvert : un msgctxt qui
+            # vient d'être lu a déjà clos le précédent et ne doit pas effacer
+            # le préfixe.
+            if current is not None or plural is not None:
+                flush()
+            m = re.match(r'^msgid\s*("(?:[^"\\]|\\.)*")?', line)
             current = m.group(1)[1:-1] if m and m.group(1) else ""
+            mode = "msgid"
             if first:
                 skip_block = current == ""
                 first = False
             continue
-        if current is not None and line.startswith('"'):
+        if mode is not None and line.startswith('"'):
             m = re.match(r'^"((?:[^"\\]|\\.)*)"', line)
-            if m:
+            if not m:
+                continue
+            if mode == "msgid":
                 current += m.group(1)
+            elif mode == "plural":
+                plural += m.group(1)
             continue
-        if current is not None and re.match(r"^msg(?:str|ctxt)", line):
+        if re.match(r"^msgstr", line):
             flush()
     flush()
     return keys
