@@ -253,6 +253,50 @@ describe("detectProjectSignals", () => {
 		);
 	});
 
+	it("détecte i18n via les dossiers standards (translations/lang/l10n/po/lproj)", () => {
+		for (const name of [
+			"translations",
+			"lang",
+			"l10n",
+			"po",
+			"LC_MESSAGES",
+			"fr.lproj",
+		]) {
+			const readdirSync = fakeReaddir({ [ROOT]: [dir(name)] });
+			expect(
+				detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+			).toEqual(["i18n"]);
+		}
+	});
+
+	it("détecte i18n via un fichier de traduction (po/ftl/arb/strings)", () => {
+		for (const name of ["fr.po", "app.ftl", "app_en.arb", "Localizable.strings"]) {
+			const readdirSync = fakeReaddir({ [ROOT]: [file(name)] });
+			expect(
+				detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+			).toEqual(["i18n"]);
+		}
+	});
+
+	it("détecte i18n via Android (values/strings.xml) et les bundles Java", () => {
+		for (const file_ of ["strings.xml", "messages.properties", "messages_fr.properties"]) {
+			const readdirSync = fakeReaddir({ [ROOT]: [file(file_)] });
+			expect(
+				detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+			).toEqual(["i18n"]);
+		}
+	});
+
+	it("ignore les fichiers non-traduction même dans un dossier values", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [dir("values")],
+			"/proj/values": [file("colors.xml")],
+		});
+		expect(
+			detectProjectSignals(ROOT, { readdirSync, readFileSync: noPkg }),
+		).toEqual([]);
+	});
+
 	it("détecte okf, OKF et .okf (insensible à la casse)", () => {
 		for (const name of ["okf", "OKF", ".okf"]) {
 			const readdirSync = fakeReaddir({ [ROOT]: [dir(name)] });
