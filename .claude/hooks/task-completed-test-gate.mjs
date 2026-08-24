@@ -6,9 +6,15 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { hookSpawnEnv } from "./lib/spawn-env.mjs";
 
-function defaultExec(cmd) {
-	return execSync(cmd, { stdio: "pipe", timeout: 120_000 });
+function defaultExec(projectDir) {
+	return (cmd) =>
+		execSync(cmd, {
+			stdio: "pipe",
+			timeout: 120_000,
+			env: hookSpawnEnv(projectDir),
+		});
 }
 
 // Détecte le gestionnaire de paquets depuis le lockfile (cohérent avec enforce-package-managers).
@@ -41,9 +47,9 @@ function hasPythonTests({ exists, projectDir }) {
 export function run(
 	input,
 	{
-		exec = defaultExec,
 		exists = existsSync,
 		projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+		exec = defaultExec(projectDir),
 	} = {},
 ) {
 	const commands = [];

@@ -5,6 +5,7 @@ import { execSync } from "node:child_process";
 // Lint Biome chaque fichier .js/.ts modifié depuis la merge base (Stop)
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { hookSpawnEnv } from "./lib/spawn-env.mjs";
 
 const pid = process.ppid ?? "unknown";
 
@@ -28,13 +29,14 @@ export function isBiomeUnavailable(output) {
 }
 
 // Retourne null si le fichier passe Biome (ou si Biome est indisponible), sinon la sortie d'erreur.
-/* v8 ignore next 14 */
+/* v8 ignore next 15 */
 function defaultLint(file) {
 	try {
 		execSync(`npx --no-install biome lint --error-on-warnings "${file}"`, {
 			encoding: "utf8",
 			stdio: "pipe",
 			timeout: 15_000,
+			env: hookSpawnEnv(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
 		});
 		return null;
 	} catch (err) {

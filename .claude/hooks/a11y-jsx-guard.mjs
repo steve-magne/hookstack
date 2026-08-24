@@ -10,11 +10,17 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { hookSpawnEnv } from "./lib/spawn-env.mjs";
 
 // ── Chemin Biome ───────────────────────────────────────────────────────────────
 
 function defaultExec(cmd) {
-	return execSync(cmd, { stdio: "pipe", timeout: 20_000, encoding: "utf8" });
+	return execSync(cmd, {
+		stdio: "pipe",
+		timeout: 20_000,
+		encoding: "utf8",
+		env: hookSpawnEnv(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
+	});
 }
 
 function runBiome(filePath, { exec }) {

@@ -8,6 +8,7 @@
 import { execSync, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { hookSpawnEnv } from "./lib/spawn-env.mjs";
 
 /* v8 ignore next 3 */
 function defaultExec(cmd, opts = {}) {
@@ -18,12 +19,13 @@ function defaultExec(cmd, opts = {}) {
 	}
 }
 
-/* v8 ignore next 8 */
+/* v8 ignore next 9 */
 function defaultDetach(cmd, args, cwd) {
 	const child = spawn(cmd, args, {
 		cwd,
 		detached: true,
 		stdio: "ignore",
+		env: hookSpawnEnv(cwd),
 	});
 	child.unref();
 }

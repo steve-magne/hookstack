@@ -8,6 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { changedFiles } from "./lib/changed-files.mjs";
+import { hookSpawnEnv } from "./lib/spawn-env.mjs";
 
 // Fichiers concernés par un typecheck/lint JS-TS. Une session qui ne touche que
 // du Markdown ou des assets n'a rien à vérifier ici.
@@ -56,7 +57,12 @@ export function run({
 	const doExec =
 		exec ??
 		((cmd) =>
-			execSync(cmd, { cwd: projectDir, stdio: "pipe", timeout: 60_000 }));
+			execSync(cmd, {
+				cwd: projectDir,
+				stdio: "pipe",
+				timeout: 60_000,
+				env: hookSpawnEnv(projectDir),
+			}));
 
 	const messages = [];
 	function check(label, cmd) {

@@ -10,11 +10,15 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { hookSpawnEnv } from "./lib/spawn-env.mjs";
 
 function defaultExec(cmd) {
 	return execSync(cmd, {
 		timeout: 90_000,
-		env: { ...process.env, CI: "true" },
+		env: {
+			...hookSpawnEnv(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
+			CI: "true",
+		},
 	});
 }
 

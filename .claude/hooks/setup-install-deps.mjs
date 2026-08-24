@@ -7,6 +7,7 @@ import { execSync } from "node:child_process";
 // s'abstient pour éviter la race condition (deux pnpm install concurrents → ENOTEMPTY).
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { hookSpawnEnv } from "./lib/spawn-env.mjs";
 
 export function run(input, { exec, exists = existsSync } = {}) {
 	const cwd = input.cwd;
@@ -36,7 +37,14 @@ export function run(input, { exec, exists = existsSync } = {}) {
 	if (!cmd) return null;
 
 	const doExec =
-		exec ?? ((c) => execSync(c, { cwd, stdio: "inherit", timeout: 180_000 }));
+		exec ??
+		((c) =>
+			execSync(c, {
+				cwd,
+				stdio: "inherit",
+				timeout: 180_000,
+				env: hookSpawnEnv(cwd),
+			}));
 	try {
 		doExec(cmd);
 		return { cmd, message: `[setup-install-deps] Running: ${cmd}\n` };
