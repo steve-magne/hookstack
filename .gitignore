@@ -46,3 +46,9 @@ __pycache__/
 
 # Freebuff desktop app (local database)
 .freebuff/
+
+# Cache npx/npm local des hooks (sandbox : ~/.npm hors workspace → EPERM)
+.npm-cache-tmp/
+
+# Store pnpm de secours (sandbox : store global non inscriptible → bascule locale)
+.pnpm-store/

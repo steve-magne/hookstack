@@ -5,9 +5,14 @@ import { execSync } from "node:child_process";
 // Vérifie les types TypeScript après un lot d'écritures (PostToolBatch)
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { hookSpawnEnv } from "./lib/spawn-env.mjs";
 
 function defaultExec(cmd) {
-	return execSync(cmd, { stdio: "pipe", timeout: 30_000 });
+	return execSync(cmd, {
+		stdio: "pipe",
+		timeout: 30_000,
+		env: hookSpawnEnv(process.env.CLAUDE_PROJECT_DIR ?? process.cwd()),
+	});
 }
 
 export function run(input, { exec = defaultExec } = {}) {

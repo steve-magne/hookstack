@@ -6,10 +6,16 @@ import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { hookSpawnEnv } from "./lib/spawn-env.mjs";
 
 function makeDefaultExec(projectDir) {
 	return (cmd) =>
-		execSync(cmd, { cwd: projectDir, stdio: "pipe", timeout: 30_000 });
+		execSync(cmd, {
+			cwd: projectDir,
+			stdio: "pipe",
+			timeout: 30_000,
+			env: hookSpawnEnv(projectDir),
+		});
 }
 
 export function run(

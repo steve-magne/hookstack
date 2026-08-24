@@ -245,6 +245,22 @@ describe("run", () => {
 		expect(spawnCalls[0]).toBe(PROJECT_DIR);
 	});
 
+	it("relocalise le cache npm dans le repo (spawn sandboxé → EPERM sur ~/.npm)", () => {
+		const spawnOptsSeen = [];
+		const opts = {
+			...makeOpts(),
+			spawn: (_cmd, _args, spawnOpts) => {
+				spawnOptsSeen.push(spawnOpts);
+				return { status: 0, stdout: "ok", stderr: "" };
+			},
+		};
+		run(opts);
+		expect(spawnOptsSeen[0].env.NPM_CONFIG_CACHE).toBe(
+			`${PROJECT_DIR}/.npm-cache-tmp`,
+		);
+		expect(spawnOptsSeen[0].env.CI).toBe("true");
+	});
+
 	it("court-circuite (null) si rien en attente", () => {
 		const opts = {
 			...makeOpts(),

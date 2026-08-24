@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { changedFiles } from "./lib/changed-files.mjs";
+import { hookSpawnEnv } from "./lib/spawn-env.mjs";
 
 // Fichiers purement documentaires/binaires : ne peuvent pas casser la suite de tests.
 const DOC_ONLY =
@@ -116,7 +117,7 @@ export function run({
 		encoding: "utf8",
 		timeout: 300_000,
 		stdio: ["ignore", "pipe", "pipe"],
-		env: { ...process.env, CI: "true" },
+		env: { ...hookSpawnEnv(runDir), CI: "true" },
 	});
 
 	const out = (result.stdout ?? "") + (result.stderr ?? "");
