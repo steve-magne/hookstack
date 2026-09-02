@@ -5784,5 +5784,49 @@
     "stack": [
       "java"
     ]
+  },
+  {
+    "benefit": "No mobile screen or component ships without its test",
+    "category": "validation",
+    "default_on": false,
+    "description": "Blocks the session from ending when a React Native screen or component (src/screens/**/*.tsx, src/components/**/*.tsx — monorepo-prefix aware) was changed without its matching regression test (flat tests/screens|components/<Name>.test.tsx convention, same package prefix). Detects changes via git diff and untracked files. No-op on non-git projects.",
+    "hook_type": "Stop",
+    "implementation": {
+      "code_snippet": "#!/usr/bin/env node\n// @hookstack stop-mobile-ui-test-gate\n// Bloque la fin de session lorsqu'un écran ou composant mobile est modifié sans\n// test de régression ajusté dans le même diff (Stop).\nimport { execSync } from \"node:child_process\";\nimport { readFileSync } from \"node:fs\";\nimport { fileURLToPath } from \"node:url\";\n\nfunction defaultExec(command, options) {\n\treturn execSync(command, { encoding: \"utf8\", timeout: 10_000, ...options });\n}\n\nfunction changedFiles(exec, projectDir) {\n\tconst modified = exec(\"git diff --name-only HEAD\", { cwd: projectDir });\n\tconst untracked = exec(\"git ls-files --others --exclude-standard\", {\n\t\tcwd: projectDir,\n\t});\n\treturn new Set(\n\t\t[...modified.split(\"\\n\"), ...untracked.split(\"\\n\")]\n\t\t\t.map((file) => file.trim())\n\t\t\t.filter(Boolean),\n\t);\n}\n\n// Capture le préfixe avant src/ (rien en repo simple, \"apps/mobile/\" en monorepo)\n// pour que le test attendu reste dans le même package — jamais de mélange entre apps.\nconst UI_FILE_RE = /^(.*?)src\\/(screens|components)\\/.+\\.tsx$/;\n\n// La structure de tests est plate (tests/screens|components/<Name>.test.tsx),\n// sans miroir des sous-dossiers de src/ (ex. src/components/game/*.tsx).\nfunction expectedTest(sourceFile) {\n\tconst match = sourceFile.match(UI_FILE_RE);\n\tif (!match) return null;\n\tconst [, prefix, kind] = match;\n\tconst base = sourceFile\n\t\t.split(\"/\")\n\t\t.pop()\n\t\t.replace(/\\.tsx$/, \".test.tsx\");\n\treturn `${prefix}tests/${kind}/${base}`;\n}\n\nexport function run(\n\t_input,\n\t{\n\t\texec = defaultExec,\n\t\tprojectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),\n\t} = {},\n) {\n\tlet files;\n\ttry {\n\t\tfiles = changedFiles(exec, projectDir);\n\t} catch {\n\t\treturn null; // pas un dépôt git ou git absent → no-op\n\t}\n\n\tconst changedUi = [...files].filter((file) => UI_FILE_RE.test(file));\n\tconst missingTests = changedUi.filter(\n\t\t(sourceFile) => !files.has(expectedTest(sourceFile)),\n\t);\n\tif (!missingTests.length) return null;\n\n\treturn {\n\t\texitCode: 2,\n\t\tmessage:\n\t\t\t`[mobile-ui-test-gate] Test de régression mobile non ajusté pour :\\n${missingTests\n\t\t\t\t.map((file) => `  - ${file} (attendu : ${expectedTest(file)})`)\n\t\t\t\t.join(\"\\n\")}\\n` +\n\t\t\t\"→ Créer ou modifier le test correspondant avant de terminer.\\n\",\n\t};\n}\n\n/* v8 ignore next 6 */\nif (process.argv[1] === fileURLToPath(import.meta.url)) {\n\tJSON.parse(readFileSync(0, \"utf8\"));\n\tconst result = run();\n\tif (result?.message) process.stderr.write(result.message);\n\tif (result?.exitCode) process.exit(result.exitCode);\n}\n",
+      "config": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-mobile-ui-test-gate.mjs",
+                  "type": "command"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "script_path": ".claude/hooks/stop-mobile-ui-test-gate.mjs",
+      "test_snippet": "// @vitest-environment node\nimport { describe, expect, it, vi } from \"vitest\";\nimport { run } from \"../../.claude/hooks/stop-mobile-ui-test-gate.mjs\";\n\nfunction makeExec(modified = \"\", untracked = \"\") {\n\treturn vi.fn((cmd) => {\n\t\tif (cmd.startsWith(\"git diff\")) return modified;\n\t\tif (cmd.startsWith(\"git ls-files\")) return untracked;\n\t\treturn \"\";\n\t});\n}\n\ndescribe(\"stop-mobile-ui-test-gate\", () => {\n\tit(\"no-op quand git échoue (pas de dépôt)\", () => {\n\t\tconst exec = vi.fn(() => {\n\t\t\tthrow new Error(\"not a git repo\");\n\t\t});\n\t\texpect(run(null, { exec, projectDir: \"/p\" })).toBeNull();\n\t});\n\n\tit(\"bloque quand un screen mobile change sans son test\", () => {\n\t\tconst exec = makeExec(\"apps/mobile/src/screens/ProfileScreen.tsx\\n\");\n\t\tconst r = run(null, { exec, projectDir: \"/p\" });\n\t\texpect(r?.exitCode).toBe(2);\n\t\texpect(r?.message).toContain(\"ProfileScreen.tsx\");\n\t\texpect(r?.message).toContain(\n\t\t\t\"apps/mobile/tests/screens/ProfileScreen.test.tsx\",\n\t\t);\n\t});\n\n\tit(\"laisse passer un screen mobile avec son test de régression ajusté\", () => {\n\t\tconst exec = makeExec(\n\t\t\t\"apps/mobile/src/screens/ProfileScreen.tsx\\napps/mobile/tests/screens/ProfileScreen.test.tsx\\n\",\n\t\t);\n\t\texpect(run(null, { exec, projectDir: \"/p\" })).toBeNull();\n\t});\n\n\tit(\"reconnaît la structure plate pour un composant niché (src/components/game/*)\", () => {\n\t\tconst exec = makeExec(\n\t\t\t\"apps/mobile/src/components/game/GameControlBar.tsx\\napps/mobile/tests/components/GameControlBar.test.tsx\\n\",\n\t\t);\n\t\texpect(run(null, { exec, projectDir: \"/p\" })).toBeNull();\n\t});\n\n\tit(\"ignore les fichiers hors screens/components (ex. src/lib)\", () => {\n\t\tconst exec = makeExec(\"apps/mobile/src/lib/mobileAccount.ts\\n\");\n\t\texpect(run(null, { exec, projectDir: \"/p\" })).toBeNull();\n\t});\n\n\tit(\"détecte un test ajouté en untracked (pas encore stagé)\", () => {\n\t\tconst exec = makeExec(\n\t\t\t\"apps/mobile/src/screens/ProfileScreen.tsx\\n\",\n\t\t\t\"apps/mobile/tests/screens/ProfileScreen.test.tsx\\n\",\n\t\t);\n\t\texpect(run(null, { exec, projectDir: \"/p\" })).toBeNull();\n\t});\n\n\tit(\"fonctionne aussi hors monorepo (pas de préfixe apps/*)\", () => {\n\t\tconst exec = makeExec(\"src/screens/Home.tsx\\n\");\n\t\tconst r = run(null, { exec, projectDir: \"/p\" });\n\t\texpect(r?.exitCode).toBe(2);\n\t\texpect(r?.message).toContain(\"tests/screens/Home.test.tsx\");\n\t});\n\n\tit(\"liste tous les fichiers manquants dans un même message\", () => {\n\t\tconst exec = makeExec(\n\t\t\t\"apps/mobile/src/screens/A.tsx\\napps/mobile/src/components/B.tsx\\n\",\n\t\t);\n\t\tconst r = run(null, { exec, projectDir: \"/p\" });\n\t\texpect(r?.message).toContain(\"A.tsx\");\n\t\texpect(r?.message).toContain(\"B.tsx\");\n\t});\n});\n",
+      "type": "settings_json"
+    },
+    "name": "Mobile UI test gate",
+    "slug": "stop-mobile-ui-test-gate",
+    "stack": [
+      "typescript"
+    ],
+    "tags": [
+      "mobile",
+      "react-native",
+      "tests",
+      "regression",
+      "gate"
+    ],
+    "trigger": "*",
+    "use_cases": [
+      "Stop a React Native screen or component from shipping without its regression test",
+      "Enforce a flat tests/screens|components convention across a mobile app"
+    ]
   }
 ]

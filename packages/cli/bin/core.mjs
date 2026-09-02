@@ -367,6 +367,7 @@ export const AUTO_DETECT = {
 		"okf-validate-on-change",
 		"session-start-okf-staleness",
 		"stop-okf-staleness-check",
+		"stop-force-implementation-doc",
 	],
 	nextjs: [
 		"post-write-nextjs-quality",
@@ -408,6 +409,90 @@ function readPackageDeps(root, { readFileSync }) {
 	}
 }
 
+// Reads npm/yarn workspace globs from <root>/package.json — the array form
+// (`"workspaces": ["apps/*"]`) or Yarn's object form (`{ packages: [...] }`).
+// Absent/malformed → no globs, treated as a single-package repo.
+function readPackageJsonWorkspaceGlobs(root, readFileSync) {
+	try {
+		const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+		if (Array.isArray(pkg.workspaces)) return pkg.workspaces;
+		if (Array.isArray(pkg.workspaces?.packages)) return pkg.workspaces.packages;
+		return [];
+	} catch {
+		return [];
+	}
+}
+
+// Reads pnpm's `packages:` list from pnpm-workspace.yaml. Real-world files are
+// always a flat "packages:\n  - glob" block, so a line-based mini-parser is
+// enough — pulling in a YAML dependency for one list would be overkill.
+function readPnpmWorkspaceGlobs(root, readFileSync) {
+	let text;
+	try {
+		text = readFileSync(join(root, "pnpm-workspace.yaml"), "utf8");
+	} catch {
+		return [];
+	}
+	const lines = text.split("\n");
+	const start = lines.findIndex((line) => line.trim() === "packages:");
+	if (start === -1) return [];
+	const globs = [];
+	for (const line of lines.slice(start + 1)) {
+		const match = line.match(/^\s*-\s*(.+?)\s*$/);
+		if (!match) break;
+		globs.push(match[1].replace(/^["']|["']$/g, ""));
+	}
+	return globs;
+}
+
+// Expands the one workspace glob shape that shows up in practice: a trailing
+// `/*` segment (apps/*, packages/*) listing every immediate subdirectory. An
+// exact path (no `*`) passes through unchanged; anything fancier (**,
+// mid-segment `*`, braces) is dropped rather than reimplementing a glob engine
+// for a field that's a flat list in every real-world config.
+function expandWorkspaceGlob(root, glob, readdirSync) {
+	if (!glob.includes("*")) return [join(root, glob)];
+	if (!glob.endsWith("/*") || glob.slice(0, -2).includes("*")) return [];
+	const parent = join(root, glob.slice(0, -2));
+	try {
+		return readdirSync(parent, { withFileTypes: true })
+			.filter((ent) => ent.isDirectory())
+			.map((ent) => join(parent, ent.name));
+	} catch {
+		return [];
+	}
+}
+
+// Combines npm/yarn and pnpm workspace declarations into a flat list of member
+// directories, so contextual detection can look beyond the repo root in a
+// monorepo (e.g. `react` in apps/web/package.json or next.config.ts nested
+// under apps/web/ rather than at the root). May return directories with no
+// package.json — downstream readers already handle that with a try/catch.
+function resolveWorkspaceDirs(root, { readFileSync, readdirSync }) {
+	const globs = [
+		...readPackageJsonWorkspaceGlobs(root, readFileSync),
+		...readPnpmWorkspaceGlobs(root, readFileSync),
+	];
+	const dirs = new Set();
+	for (const glob of globs) {
+		for (const dir of expandWorkspaceGlob(root, glob, readdirSync))
+			dirs.add(dir);
+	}
+	return [...dirs];
+}
+
+// Union of dependency names across the repo root and every workspace member.
+// readPackageDeps alone misses a monorepo where the relevant dependency (e.g.
+// react, next) lives only in a workspace package's package.json, not the
+// root's — see resolveWorkspaceDirs.
+function readAllPackageDeps(root, { readFileSync, readdirSync }) {
+	const deps = readPackageDeps(root, { readFileSync });
+	for (const dir of resolveWorkspaceDirs(root, { readFileSync, readdirSync })) {
+		for (const dep of readPackageDeps(dir, { readFileSync })) deps.add(dep);
+	}
+	return deps;
+}
+
 const hasAnyDep = (deps, names) => [...deps].some((name) => names.has(name));
 
 // Depth-limited walk looking for an i18n directory (locales/locale/messages/
@@ -446,15 +531,22 @@ function hasOkfDir(root, readdirSync) {
 	}
 }
 
-// True when the root holds a next.config.{js,mjs,cjs,ts} file.
-function hasNextConfig(root, readdirSync) {
-	try {
-		return readdirSync(root, { withFileTypes: true }).some(
-			(ent) => ent.isFile() && NEXT_CONFIG_RE.test(ent.name),
-		);
-	} catch {
-		return false;
-	}
+// True when the root — or, in a monorepo, any workspace member — holds a
+// next.config.{js,mjs,cjs,ts} file (e.g. apps/web/next.config.ts).
+function hasNextConfig(root, { readFileSync, readdirSync }) {
+	const dirs = [
+		root,
+		...resolveWorkspaceDirs(root, { readFileSync, readdirSync }),
+	];
+	return dirs.some((dir) => {
+		try {
+			return readdirSync(dir, { withFileTypes: true }).some(
+				(ent) => ent.isFile() && NEXT_CONFIG_RE.test(ent.name),
+			);
+		} catch {
+			return false;
+		}
+	});
 }
 
 // True when the project is hosted on GitHub: a .github/ dir, or a git remote
@@ -497,7 +589,7 @@ function hasTestsSignal(root, { readdirSync, readFileSync }) {
 	} catch {
 		// unreadable root — fall through to manifest probes
 	}
-	const deps = readPackageDeps(root, { readFileSync });
+	const deps = readAllPackageDeps(root, { readFileSync, readdirSync });
 	if (hasAnyDep(deps, TEST_RUNNER_PACKAGES)) return true;
 	for (const file of PYTEST_MANIFESTS) {
 		try {
@@ -602,12 +694,12 @@ export function detectProjectSignals(
 	} = {},
 ) {
 	const signals = new Set();
-	const deps = readPackageDeps(root, { readFileSync });
+	const deps = readAllPackageDeps(root, { readFileSync, readdirSync });
 	if (hasI18nDir(root, 0, readdirSync) || hasAnyDep(deps, I18N_PACKAGE_NAMES)) {
 		signals.add("i18n");
 	}
 	if (hasOkfDir(root, readdirSync)) signals.add("okf");
-	if (deps.has("next") || hasNextConfig(root, readdirSync))
+	if (deps.has("next") || hasNextConfig(root, { readFileSync, readdirSync }))
 		signals.add("nextjs");
 	if (hasAnyDep(deps, FRONTEND_PACKAGE_NAMES)) signals.add("frontend");
 	if (hasGithubSignal(root, { readdirSync, readFileSync }))
