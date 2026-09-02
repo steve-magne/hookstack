@@ -660,6 +660,107 @@ describe("detectProjectSignals", () => {
 			}),
 		).toEqual(["docs", "frontend", "skills", "tests", "tts"]);
 	});
+
+	it("détecte frontend via react dans apps/web/package.json (monorepo, workspaces npm/yarn)", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [file("package.json"), dir("apps")],
+			"/proj/apps": [dir("web")],
+		});
+		const readFileSync = (p) => {
+			if (p === "/proj/package.json")
+				return JSON.stringify({
+					workspaces: ["apps/*"],
+					devDependencies: { typescript: "^5.0.0", eslint: "^9.0.0" },
+				});
+			if (p === "/proj/apps/web/package.json")
+				return JSON.stringify({
+					dependencies: { react: "^18.3.1", "react-dom": "^18.3.1" },
+				});
+			throw new Error("ENOENT");
+		};
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"frontend",
+		]);
+	});
+
+	it("détecte nextjs via apps/web/next.config.ts (monorepo, workspaces npm/yarn)", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [file("package.json"), dir("apps")],
+			"/proj/apps": [dir("web")],
+			"/proj/apps/web": [file("next.config.ts")],
+		});
+		const readFileSync = (p) => {
+			if (p === "/proj/package.json")
+				return JSON.stringify({ workspaces: ["apps/*"] });
+			throw new Error("ENOENT");
+		};
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"nextjs",
+		]);
+	});
+
+	it("détecte frontend via pnpm-workspace.yaml (packages: apps/* et packages/*)", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [
+				file("package.json"),
+				file("pnpm-workspace.yaml"),
+				dir("apps"),
+				dir("packages"),
+			],
+			"/proj/apps": [dir("web")],
+			"/proj/packages": [dir("shared")],
+		});
+		const readFileSync = (p) => {
+			if (p === "/proj/package.json")
+				return JSON.stringify({ devDependencies: { typescript: "^5.0.0" } });
+			if (p === "/proj/pnpm-workspace.yaml")
+				return "packages:\n  - apps/*\n  - packages/*\n";
+			if (p === "/proj/apps/web/package.json")
+				return JSON.stringify({ dependencies: { react: "^18.3.1" } });
+			throw new Error("ENOENT");
+		};
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual([
+			"frontend",
+		]);
+	});
+
+	it("ne détecte ni frontend ni nextjs si aucun package du workspace n'a la dépendance (pas de faux positif)", () => {
+		const readdirSync = fakeReaddir({
+			[ROOT]: [file("package.json"), dir("apps")],
+			"/proj/apps": [dir("web"), dir("api")],
+		});
+		const readFileSync = (p) => {
+			if (p === "/proj/package.json")
+				return JSON.stringify({
+					workspaces: ["apps/*"],
+					devDependencies: { typescript: "^5.0.0" },
+				});
+			if (p === "/proj/apps/web/package.json")
+				return JSON.stringify({ dependencies: { vite: "^5.0.0" } });
+			if (p === "/proj/apps/api/package.json")
+				return JSON.stringify({ dependencies: { express: "^4.19.0" } });
+			throw new Error("ENOENT");
+		};
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual(
+			[],
+		);
+	});
+
+	it("résiste à un glob workspace vers un dossier illisible ou inexistant", () => {
+		const readdirSync = (p) => {
+			if (p === ROOT) return [file("package.json")];
+			if (p === "/proj/apps") throw new Error("ENOENT");
+			return [];
+		};
+		const readFileSync = (p) => {
+			if (p === "/proj/package.json")
+				return JSON.stringify({ workspaces: ["apps/*"] });
+			throw new Error("ENOENT");
+		};
+		expect(detectProjectSignals(ROOT, { readdirSync, readFileSync })).toEqual(
+			[],
+		);
+	});
 });
 
 describe("suggestHooksForSignals", () => {
@@ -667,17 +768,22 @@ describe("suggestHooksForSignals", () => {
 		expect(suggestHooksForSignals(["i18n"])).toEqual(["stop-i18n-validation"]);
 	});
 
-	it("mappe okf → les trois hooks OKF", () => {
+	it("mappe okf → les quatre hooks OKF", () => {
 		expect(suggestHooksForSignals(["okf"])).toEqual([
 			"okf-validate-on-change",
 			"session-start-okf-staleness",
 			"stop-okf-staleness-check",
+			"stop-force-implementation-doc",
 		]);
 	});
 
 	it("exclut les slugs déjà sélectionnés", () => {
 		expect(suggestHooksForSignals(["okf"], ["okf-validate-on-change"])).toEqual(
-			["session-start-okf-staleness", "stop-okf-staleness-check"],
+			[
+				"session-start-okf-staleness",
+				"stop-okf-staleness-check",
+				"stop-force-implementation-doc",
+			],
 		);
 	});
 

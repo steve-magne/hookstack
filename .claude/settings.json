@@ -345,6 +345,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-dead-image-checker.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/stop-mobile-ui-test-gate.mjs"
           }
         ]
       }

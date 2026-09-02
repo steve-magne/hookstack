@@ -34,7 +34,7 @@ Install them in one command — your agent gets guardrails in under a minute.
 
 <!-- HOOK_COUNTS:START -->
 
-<p align="center"><sub>105 hooks · 79 default · 76 .py variants · TypeScript 18 · Python 5 · Java 4 · 93 dogfooded</sub></p>
+<p align="center"><sub>106 hooks · 79 default · 76 .py variants · TypeScript 19 · Python 5 · Java 4 · 94 dogfooded</sub></p>
 
 <!-- HOOK_COUNTS:END -->
 
