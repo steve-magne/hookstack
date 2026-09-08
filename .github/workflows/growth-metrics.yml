@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   snapshot:
@@ -26,14 +27,26 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: node .claude/skills/growth-coach/scripts/metrics.mjs
 
-      - name: Commit log if changed
+      # main est protégée (PR obligatoire) : on ne peut plus pousser directement.
+      - name: Open PR if changed
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- doc/hookstack/growth/metrics.log.ndjson; then
-            git add doc/hookstack/growth/metrics.log.ndjson
-            git commit -m "chore(growth): weekly metrics snapshot"
-            git push
-          else
+          if git diff --quiet -- doc/hookstack/growth/metrics.log.ndjson; then
             echo "No metrics change to commit."
+            exit 0
+          fi
+          BRANCH="chore/growth-metrics-sync"
+          git checkout -B "$BRANCH"
+          git add doc/hookstack/growth/metrics.log.ndjson
+          git commit -m "chore(growth): weekly metrics snapshot"
+          git push --force origin "$BRANCH"
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')" ]; then
+            gh pr create --title "chore(growth): weekly metrics snapshot" \
+              --body "Snapshot hebdomadaire régénéré automatiquement par \`.claude/skills/growth-coach/scripts/metrics.mjs\`." \
+              --base main --head "$BRANCH"
+          else
+            echo "PR already open for $BRANCH — branch updated in place."
           fi
