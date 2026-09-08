@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   scan:
@@ -35,14 +36,26 @@ jobs:
           SNYK_CFG_ORG: ${{ vars.SNYK_ORG }}
         run: node .claude/scan-snyk.mjs
 
-      - name: Commit refreshed verdicts
+      # main est protégée (PR obligatoire) : on ne peut plus pousser directement.
+      - name: Open PR with refreshed verdicts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if git diff --quiet registry/registry.json; then
             echo "No verdict changes."
+            exit 0
+          fi
+          BRANCH="chore/snyk-verdicts-sync"
+          git checkout -B "$BRANCH"
+          git add registry/registry.json
+          git commit -m "chore(security): refresh Snyk verdicts"
+          git push --force origin "$BRANCH"
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')" ]; then
+            gh pr create --title "chore(security): refresh Snyk verdicts" \
+              --body "Verdicts Snyk régénérés automatiquement par \`.claude/scan-snyk.mjs\` (job hebdomadaire)." \
+              --base main --head "$BRANCH"
           else
-            git add registry/registry.json
-            git commit -m "chore(security): refresh Snyk verdicts [skip ci]"
-            git push
+            echo "PR already open for $BRANCH — branch updated in place."
           fi
