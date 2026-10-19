@@ -1,4 +1,5 @@
 import importlib.util
+import re
 from pathlib import Path
 
 _HOOK = (
@@ -49,6 +50,11 @@ def _input(url):
     return {"tool_name": "WebFetch", "tool_input": {"url": url}}
 
 
+def _domain_in_reason(reason):
+    match = re.search(r"^\[webfetch-html-to-markdown\] `([^`]+)`", reason)
+    return match.group(1) if match else None
+
+
 def test_passes_through_non_webfetch_tool():
     assert hook.run({"tool_name": "Read", "tool_input": {"url": "https://example.com"}}, **_run_kwargs(_deps())) is None
 
@@ -74,7 +80,7 @@ def test_passes_through_non_html_response():
 def test_converts_html_with_pandoc():
     result = hook.run(_input("https://docs.example.com/guide"), **_run_kwargs(_deps()))
     assert result["decision"] == "block"
-    assert "docs.example.com" in result["reason"]
+    assert _domain_in_reason(result["reason"]) == "docs.example.com"
     assert "# Hello" in result["reason"]
 
 
@@ -111,4 +117,4 @@ def test_passes_through_empty_converted_result():
 
 def test_includes_domain_in_reason():
     result = hook.run(_input("https://nextjs.org/docs"), **_run_kwargs(_deps()))
-    assert "nextjs.org" in result["reason"]
+    assert _domain_in_reason(result["reason"]) == "nextjs.org"
