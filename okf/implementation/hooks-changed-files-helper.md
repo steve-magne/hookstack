@@ -3,7 +3,7 @@ type: Playbook
 title: Helper commun « fichiers modifiés » — porcelain + commits locaux
 description: Les hooks Stop décidaient de tourner en lisant uniquement `git status --porcelain` — après un commit/push en session, l'arbre propre les désactivait silencieusement. Correction structurelle : module partagé lib/changed-files (mjs + py) combinant porcelain et diff merge-base/origin-main, livré aux côtés des hooks via companion_files.
 tags: [implementation, hooks, git, cli, registry, sync, tests]
-timestamp: 2026-08-14T00:00:00Z
+timestamp: 2026-10-19T00:00:00Z
 ---
 
 # Helper commun « fichiers modifiés » — porcelain + commits locaux
@@ -120,6 +120,16 @@ couvre la dérive companion_files.
   à brancher si la feature est un jour activée.
 - `contribute` du CLI ne pousse pas les libs — le PR de contribution d'un hook qui
   importe `lib/` doit inclure le fichier à la main.
+- **Bug apparenté observé (oct. 2026)** : `block-push-closed-pr.mjs` lit la
+  branche via `exec("git rev-parse --abbrev-ref HEAD")` **sans `cwd` explicite** —
+  il hérite du cwd du process hook, qui peut diverger de la session quand celle-ci
+  tourne dans un worktree imbriqué sous `.claude/worktrees/<nom>/` (cf. aussi
+  `fix-i18n-hook-timeout.md`). Résultat observé : le hook a bloqué une opération
+  d'envoi légitime (git, verbe push) en rapportant la branche d'un **autre**
+  worktree. Tout hook qui fait du `git rev-parse`/`gh pr view` sans passer
+  `{ cwd: projectDir }` explicite à `exec` est exposé au même risque dans ce
+  contexte — pas encore corrigé, à traiter comme `changedFiles({ cwd })` le fait
+  déjà ici.
 
 Voir [/architecture/cli-scopes](/architecture/cli-scopes.md) pour les scopes
 d'installation et [/implementation/python-hook-variants](/implementation/python-hook-variants.md)

@@ -3,6 +3,10 @@
 Historique des changements du bundle OKF. Date la plus récente en haut.
 Toute session qui enrichit le bundle ajoute une entrée ici (voir [self-improvement](meta/self-improvement.md)).
 
+## 2026-10-19
+* **Passe d'enrichissement (anti-staleness)** : bundle périmé depuis le 2026-09-02 (47 jours). Aucune correction de code durant cette session (3 alertes CodeQL corrigées sur `pre-webfetch-html-to-markdown.mjs/.py`, non structurelles — rien à capturer).
+* **Update**: [implementation/hooks-changed-files-helper](implementation/hooks-changed-files-helper.md) — nouveau piège documenté : des hooks (ex. `block-push-closed-pr.mjs`) résolvent le contexte git (`git rev-parse`, `gh pr view`) sans `cwd` explicite, risquant de capter le mauvais contexte quand la session tourne dans un worktree imbriqué sous `.claude/worktrees/<nom>/` — observé en conditions réelles (mauvaise branche rapportée). Pas encore corrigé ; pattern à réutiliser : `{ cwd: projectDir }` explicite comme le fait déjà `changedFiles`.
+
 ## 2026-09-02
 * **Creation**: [implementation/hook-mobile-ui-test-gate](implementation/hook-mobile-ui-test-gate.md) — nouveau hook catalogue `stop-mobile-ui-test-gate` (gate Stop, bloque la fin de session si un écran/composant React Native change sans son test de régression). Trouvé déjà écrit avec fingerprint `@hookstack` dans un projet consommateur mais jamais catalogué (jamais poussé via `contribute`) — généralisé (chemin monorepo en dur `apps/mobile/` remplacé par une capture de préfixe) avant intégration, test réécrit en style vitest.
 * **Creation**: [implementation/cli-okf-signal-force-implementation-doc](implementation/cli-okf-signal-force-implementation-doc.md) — `stop-force-implementation-doc` (gate note `okf/implementation/` en fin de session) n'était rattaché à aucun signal `AUTO_DETECT` contrairement à ses 3 cousins OKF — un projet avec un vrai bundle `okf/` ne le recevait jamais à l'install par défaut. Ajouté à `AUTO_DETECT.okf` (4 slugs désormais).
