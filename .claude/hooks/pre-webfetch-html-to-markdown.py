@@ -45,8 +45,8 @@ def _has_pandoc():
 
 
 def strip_html(html):
-    out = re.sub(r"<script\b[^>]*>[\s\S]*?</script\s*>", "", html, flags=re.IGNORECASE)
-    out = re.sub(r"<style\b[^>]*>[\s\S]*?</style\s*>", "", out, flags=re.IGNORECASE)
+    out = re.sub(r"<script\b[^>]*>[\s\S]*?</script\b[^>]*>", "", html, flags=re.IGNORECASE)
+    out = re.sub(r"<style\b[^>]*>[\s\S]*?</style\b[^>]*>", "", out, flags=re.IGNORECASE)
     out = re.sub(r"<[^>]+>", " ", out)
     out = out.replace("&amp;", "&")
     out = out.replace("&lt;", "<")
